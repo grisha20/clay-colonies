@@ -2,6 +2,7 @@ import type { Ant, Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
 import { tickCache } from "../cache";
+import { registerScoutFoodReport } from "../foodMemory";
 import type { UndergroundNode } from "../nav";
 import { isDugTile, tileCenter } from "../underground";
 import type { World } from "../world";
@@ -405,6 +406,42 @@ export function applySeparation(world: World, ant: Ant, desired: Vec2): Vec2 {
 }
 
 export function tryCrossLayer(world: World, ant: Ant): boolean {
+  if (ant.layer === "underground") {
+    ant.layer = "surface";
+    ant.state = "search";
+    ant.pos = { ...world.surface.entrance };
+    ant.heading = fanDirection(randomHeading(), ant.id);
+    clampToSurface(ant, world);
+    return true;
+  }
+
+  if (ant.layer === "surface" && isWithinRadius(ant.pos, world.surface.entrance, Math.max(CONFIG.entranceRadiusSurface + CONFIG.workerSurfaceSpeed * 3, 5.0))) {
+    if (ant.carrying > 0 || ant.state === "carry" || ant.state === "return") {
+      if (ant.carrying > 0) {
+        registerScoutFoodReport(world, ant);
+        world.colony.food += ant.carrying;
+        world.fitness.totalFoodDeposited += ant.carrying;
+        ant.carrying = 0;
+      } else if (canUseCampMeal(world)) {
+        world.colony.food -= CONFIG.workerMealCost;
+        ant.energy = CONFIG.maxEnergy;
+      }
+      ant.state = "search";
+      ant.job = "forage";
+      ant.surfaceExitCooldown = 10;
+      ant.heading = fanDirection(randomHeading(), ant.id);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function canUseCampMeal(world: World): boolean {
+  return world.colony.food >= CONFIG.workerMealCost;
+}
+
+export function legacyTryCrossLayer(world: World, ant: Ant): boolean {
   const undergroundExitRadius = Math.max(CONFIG.entranceRadiusUnderground, 4.2);
   if (ant.layer === "underground" && isWithinRadius(ant.pos, world.underground.entrance, undergroundExitRadius)) {
     ant.layer = "surface";

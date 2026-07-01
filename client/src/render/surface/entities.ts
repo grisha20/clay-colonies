@@ -4,9 +4,63 @@ import { acquireSprite, antRotation, beginPool, deterministicOffset, endPool, pl
 import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import {
-  getAntTexture
+  getClayfolkTexture
 } from "../../sprites";
 import { drawPebble, drawLeaf } from "./ground";
+
+function drawSoftShadow(graphics: Graphics, x: number, y: number, rx: number, ry: number, alpha: number): void {
+  graphics.ellipse(x + rx * 0.08, y + ry * 0.18, rx, ry).fill({ color: 0x1e130c, alpha });
+  graphics.ellipse(x, y, rx * 0.62, ry * 0.58).fill({ color: 0x1e130c, alpha: alpha * 0.34 });
+}
+
+export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  graphics.clear();
+
+  for (const source of world.surface.foodSources) {
+    if (source.amount <= 0 || !isInBounds(source.pos, bounds, 6)) {
+      continue;
+    }
+    const size = Math.min(20, 7 + Math.sqrt(source.amount) * 1.8);
+    drawSoftShadow(graphics, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.42, 0.16);
+  }
+
+  for (const source of world.surface.carrion) {
+    if (source.amount <= 0 || !isInBounds(source.pos, bounds, 5)) {
+      continue;
+    }
+    const size = Math.min(18, 8 + Math.sqrt(source.amount) * 1.4);
+    drawSoftShadow(graphics, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.4, 0.18);
+  }
+
+  for (const enemy of world.enemies) {
+    if (enemy.type !== "spider") {
+      continue;
+    }
+    if (isInBounds(enemy.lair, bounds, 5)) {
+      drawSoftShadow(graphics, enemy.lair.x * cell, enemy.lair.y * cell + 7, 20, 8, 0.2);
+    }
+    if (enemy.hp > 0 && isInBounds(enemy.pos, bounds, 5)) {
+      drawSoftShadow(graphics, enemy.pos.x * cell, enemy.pos.y * cell + 6, 18, 7, 0.22);
+    }
+  }
+
+  for (const ant of world.ants) {
+    if (ant.layer !== "surface" || !isInBounds(ant.pos, bounds, 7)) {
+      continue;
+    }
+    const carrying = ant.state === "carry" || ant.carrying > 0 || !!ant.carryingDebris;
+    drawSoftShadow(graphics, ant.pos.x * cell, ant.pos.y * cell + 22, carrying ? 18 : 16, carrying ? 6.5 : 5.8, 0.24);
+  }
+
+  if (world.surface.debris) {
+    for (const item of world.surface.debris) {
+      if (!isInBounds(item.pos, bounds, 3)) {
+        continue;
+      }
+      drawSoftShadow(graphics, item.pos.x * cell, item.pos.y * cell + 3, item.type === "pebble" ? 5.5 : 4.5, 2.2, 0.11);
+    }
+  }
+}
 
 export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool);
@@ -155,22 +209,25 @@ export function updateSurfaceAnts(
     if (ant.layer !== "surface") {
       continue;
     }
-    if (!isInBounds(ant.pos, bounds, 2)) {
+    if (!isInBounds(ant.pos, bounds, 7)) {
       continue;
     }
 
     const carrying = ant.state === "carry" || ant.carrying > 0 || !!ant.carryingDebris;
     const color = ant.colonyId === "colony-2" ? "red" : "dark";
     const sprite = acquireSprite(pool);
-    sprite.texture = getAntTexture(carrying, color);
-    sprite.scale.set(ant.state === "carry" ? 2.8 : 2.45);
+    sprite.texture = getClayfolkTexture(carrying, color);
+    const spriteScale = ant.state === "carry" ? 3.05 : 2.85;
+    const facing = ant.heading.x < -0.05 ? -1 : 1;
+    sprite.scale.set(spriteScale * facing, spriteScale);
     sprite.tint = 0xffffff;
-    const rot = antRotation(ant);
+    const headingAngle = antRotation(ant);
+    const rot = Math.max(-0.14, Math.min(0.14, ant.heading.x * 0.12));
     placeSprite(sprite, ant.pos.x * cell, ant.pos.y * cell, rot);
 
     if (ant.carryingDebris) {
-      const hX = Math.cos(rot);
-      const hY = Math.sin(rot);
+      const hX = Math.cos(headingAngle);
+      const hY = Math.sin(headingAngle);
       const offsetDist = cell * 0.7;
       const debrisX = ant.pos.x * cell + hX * offsetDist;
       const debrisY = ant.pos.y * cell + hY * offsetDist;

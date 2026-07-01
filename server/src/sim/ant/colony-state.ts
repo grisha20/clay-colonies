@@ -22,16 +22,15 @@ export function surfaceFoodTotal(world: World): number {
 }
 
 export function isColonyStarving(world: World): boolean {
-  return surfaceFoodTotal(world) <= CONFIG.starveFoodThreshold && world.underground.foodStorage <= world.directives.spiderAttackStorage;
+  return surfaceFoodTotal(world) <= CONFIG.starveFoodThreshold && world.colony.food <= world.directives.spiderAttackStorage;
 }
 
 export function isColonyWarHungry(world: World): boolean {
   const noKnownFood = !world.colony.activeFoodTargetId && world.colony.knownFood.length === 0;
   return (
     surfaceFoodTotal(world) <= CONFIG.starveFoodThreshold ||
-    (noKnownFood && world.underground.foodStorage <= CONFIG.warHungerThreshold) ||
-    world.underground.queen.starve > 0
-  ) && world.underground.foodStorage <= CONFIG.warHungerThreshold;
+    (noKnownFood && world.colony.food <= CONFIG.warHungerThreshold)
+  ) && world.colony.food <= CONFIG.warHungerThreshold;
 }
 
 export function hasAvailableSurfaceFood(world: World): boolean {
@@ -39,7 +38,7 @@ export function hasAvailableSurfaceFood(world: World): boolean {
 }
 
 export function canUseStorageMeal(world: World, ignoreSurfaceFood = false): boolean {
-  return (ignoreSurfaceFood || !hasAvailableSurfaceFood(world)) && world.underground.foodStorage >= CONFIG.workerMealCost;
+  return (ignoreSurfaceFood || !hasAvailableSurfaceFood(world)) && world.colony.food >= CONFIG.workerMealCost;
 }
 
 export function maybeFeedUndergroundAnt(world: World, ant: Ant, ignoreSurfaceFood = false): boolean {
@@ -47,7 +46,7 @@ export function maybeFeedUndergroundAnt(world: World, ant: Ant, ignoreSurfaceFoo
     return false;
   }
 
-  world.underground.foodStorage -= CONFIG.workerMealCost;
+  world.colony.food -= CONFIG.workerMealCost;
   ant.energy = CONFIG.maxEnergy;
   return true;
 }

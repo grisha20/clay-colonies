@@ -1,6 +1,6 @@
 import type { Container, Graphics, Sprite, RenderTexture } from "pixi.js";
 
-export type ViewMode = "surface" | "underground";
+export type ViewMode = "surface";
 export type Camera = {
   x: number;
   y: number;
@@ -30,6 +30,7 @@ export type SpritePool = {
 export type SurfaceScene = {
   root: Container;
   staticLayer: Container;
+  shadowLayer: Graphics;
   entranceLayer: Container;
   pheromones: Graphics;
   webs: Graphics;
@@ -65,7 +66,6 @@ export type UndergroundScene = {
 export type RendererState = {
   stage: Container | null;
   surface: SurfaceScene;
-  underground: UndergroundScene;
 };
 
 export type ViewBounds = {

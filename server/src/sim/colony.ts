@@ -17,17 +17,18 @@ export function createColony(
     activeFoodTargetId: undefined,
     food: CONFIG.startingFoodStorage,
     population: {
-      workers: CONFIG.startingWorkers + CONFIG.startingMiners,
+      workers: CONFIG.startingWorkers,
       scouts: CONFIG.startingScouts,
-      nurses: CONFIG.startingNurses,
-      eggs: CONFIG.startingEggs,
-      larvae: CONFIG.startingLarvae
+      nurses: 0,
+      eggs: 0,
+      larvae: 0
     },
     queenAlive: true,
     queenStress: 0,
     queenAge: 0,
+    reproductionCooldown: CONFIG.broodLayCooldownTicks,
     princesses: 0,
-    nestCapacity: CONFIG.nestCapacity,
+    nestCapacity: CONFIG.maxPopulation,
     detailLevel: "full",
     generation,
     generationsRun,
@@ -48,6 +49,7 @@ export function syncColonyStats(
   queenAlive: boolean,
   queenStress: number,
   queenAge: number,
+  reproductionCooldown: number,
   princessCount: number,
   bestFitness: number,
   spiderGeneration: number,
@@ -63,6 +65,7 @@ export function syncColonyStats(
   colony.queenAlive = queenAlive;
   colony.queenStress = queenStress;
   colony.queenAge = queenAge;
+  colony.reproductionCooldown = reproductionCooldown;
   colony.princesses = princessCount;
   colony.bestFitness = bestFitness;
   colony.spiderGeneration = spiderGeneration;

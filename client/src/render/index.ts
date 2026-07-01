@@ -3,14 +3,12 @@ import type { Vec2, WorldSnapshot } from "../../../shared/types";
 import type { Camera, RendererState, ViewMode } from "./types";
 import { SURFACE_TILE_SIZE } from "./types";
 import { createSurfaceScene, renderSurface } from "./surface/scene";
-import { createUndergroundScene, renderUnderground } from "./underground/scene";
 
 export type { Camera, ViewMode } from "./types";
 
 const rendererState: RendererState = {
   stage: null,
-  surface: createSurfaceScene(),
-  underground: createUndergroundScene()
+  surface: createSurfaceScene()
 };
 
 function ensureStage(stage: Container): void {
@@ -19,45 +17,23 @@ function ensureStage(stage: Container): void {
   }
 
   rendererState.stage = stage;
-  stage.addChild(rendererState.surface.root, rendererState.underground.root);
-}
-
-function undergroundWorld(world: WorldSnapshot, colonyIndex: number): WorldSnapshot {
-  const colony = world.colonies?.[colonyIndex];
-  if (!colony) {
-    return world;
-  }
-
-  return {
-    ...world,
-    underground: colony.underground,
-    colony: colony.colony,
-    ants: world.ants.filter((ant) => ant.colonyId === colony.id)
-  };
+  stage.addChild(rendererState.surface.root);
 }
 
 export function renderWorld(
   stage: Container,
   renderer: Renderer,
   world: WorldSnapshot,
-  mode: ViewMode,
+  _mode: ViewMode,
   viewportWidth = 900,
   viewportHeight = 760,
   camera: Camera = { x: world.surface.entrance.x, y: world.surface.entrance.y, zoom: 1 },
-  undergroundColonyIndex = 0,
+  _undergroundColonyIndex = 0,
   trampleEnabled = true
 ): void {
   ensureStage(stage);
-
-  rendererState.surface.root.visible = mode === "surface";
-  rendererState.underground.root.visible = mode === "underground";
-
-  if (mode === "surface") {
-    renderSurface(rendererState.surface, renderer, world, viewportWidth, viewportHeight, camera, trampleEnabled);
-    return;
-  }
-
-  renderUnderground(rendererState.underground, undergroundWorld(world, undergroundColonyIndex), viewportWidth, viewportHeight);
+  rendererState.surface.root.visible = true;
+  renderSurface(rendererState.surface, renderer, world, viewportWidth, viewportHeight, camera, trampleEnabled);
 }
 
 export function surfaceTileFromGlobal(world: WorldSnapshot, globalX: number, globalY: number): Vec2 | null {

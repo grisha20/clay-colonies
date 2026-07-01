@@ -106,7 +106,7 @@ function selectNearestKnownFood(world: World): void {
 
 export function scoutLimitForColony(world: World): number {
   const livingWorkers = world.ants.filter((ant) => ant.state !== "dead" && ant.job !== "nurse").length;
-  const growthScouts = CONFIG.startingScouts + Math.floor(Math.max(0, livingWorkers - CONFIG.startingWorkers - CONFIG.startingMiners) / 4);
+  const growthScouts = CONFIG.startingScouts + Math.floor(Math.max(0, livingWorkers - CONFIG.startingWorkers) / 4);
   return Math.min(CONFIG.maxScouts, CONFIG.scoutCount, growthScouts, livingWorkers);
 }
 
@@ -114,49 +114,22 @@ export function assignForageRoles(world: World): void {
   const scoutLimit = scoutLimitForColony(world);
   const hasActiveTarget = !!world.colony.activeFoodTargetId;
   const activeTargetId = world.colony.activeFoodTargetId;
-  const activeDiggers = world.ants.filter(
-    (ant) => ant.state !== "dead" && (ant.state === "dig" || ant.state === "carryDirt" || ant.carryingDirt)
-  ).length;
-  const hasDigNeed = world.underground.digTasks.some((task) => task.status !== "done") || world.tick < 30;
-  const shouldReserveDiggers = hasDigNeed;
   const availableWorkers = world.ants.filter(
-    (ant) =>
-      ant.state !== "dead" &&
-      ant.job !== "nurse" &&
-      !ant.carryingDebris &&
-      !ant.carryingDirt
+    (ant) => ant.state !== "dead" && !ant.carryingDebris && !ant.carryingDirt
   ).length;
   const reserveTarget = hasActiveTarget && availableWorkers >= 16 ? Math.max(1, Math.ceil(availableWorkers * 0.1)) : 0;
-  const digReserve = shouldReserveDiggers ? Math.min(world.directives.diggerTarget, CONFIG.startingMiners, Math.max(0, availableWorkers - scoutLimit - reserveTarget)) : 0;
   const foragerLimit = hasActiveTarget
-    ? Math.max(0, Math.min(CONFIG.maxForagers, availableWorkers - scoutLimit - reserveTarget - digReserve))
-    : Math.max(0, Math.min(CONFIG.maxSearchAssistants, availableWorkers - scoutLimit - digReserve));
+    ? Math.max(0, Math.min(CONFIG.maxForagers, availableWorkers - scoutLimit - reserveTarget))
+    : Math.max(0, Math.min(CONFIG.maxSearchAssistants, availableWorkers - scoutLimit));
   const regularCandidates = world.ants
     .filter((ant) =>
       ant.state !== "dead" &&
-      ant.job !== "nurse" &&
-      ant.job !== "dig" &&
-      ant.state !== "dig" &&
-      ant.state !== "carryDirt" &&
       !ant.carryingDebris &&
-      !ant.carryingDirt &&
-      (
-        ant.forageRole === "scout" ||
-        ant.job === "forage" ||
-        ant.state === "search" ||
-        ant.state === "toEntrance" ||
-        ant.state === "carry" ||
-        ant.carrying > 0 ||
-        ant.carrying <= 0
-      )
+      !ant.carryingDirt
     );
   const scoutCandidates = world.ants
     .filter((ant) =>
       ant.state !== "dead" &&
-      ant.job !== "nurse" &&
-      ant.job !== "dig" &&
-      ant.state !== "dig" &&
-      ant.state !== "carryDirt" &&
       !ant.carryingDebris &&
       !ant.carryingDirt &&
       (ant.carrying <= 0 || ant.forageRole === "scout")
@@ -190,36 +163,24 @@ export function assignForageRoles(world: World): void {
   }
   const regularCandidateIds = new Set(regularCandidates.map((ant) => ant.id));
   const foragerIds = new Set<string>();
-  for (const ant of regularCandidates.sort((a, b) => {
-    if (shouldReserveDiggers && a.preferredTask !== b.preferredTask) {
-      return a.preferredTask === "dig" ? 1 : -1;
-    }
-    return Number(a.id.replace("ant-", "")) - Number(b.id.replace("ant-", ""));
-  })) {
+  for (const ant of regularCandidates.sort((a, b) => Number(a.id.replace("ant-", "")) - Number(b.id.replace("ant-", "")))) {
     if (scoutIds.has(ant.id) || foragerIds.size >= foragerLimit) {
       continue;
     }
     foragerIds.add(ant.id);
   }
-  const diggerIds = new Set<string>();
-  if (digReserve > 0) {
-    for (const ant of regularCandidates.sort((a, b) => {
-      if (a.preferredTask !== b.preferredTask) {
-        return a.preferredTask === "dig" ? -1 : 1;
-      }
-      return Number(a.id.replace("ant-", "")) - Number(b.id.replace("ant-", ""));
-    })) {
-      if (scoutIds.has(ant.id) || foragerIds.has(ant.id) || ant.carrying > 0) {
-        continue;
-      }
-      diggerIds.add(ant.id);
-      if (diggerIds.size >= digReserve) {
-        break;
-      }
-    }
-  }
   for (const ant of world.ants) {
-    if (ant.job === "nurse" || ant.job === "dig" || ant.state === "dead") {
+    ant.layer = "surface";
+    ant.job = "forage";
+    ant.preferredTask = undefined;
+    ant.carryingDirt = false;
+    ant.dirtLoad = 0;
+    ant.digTaskId = undefined;
+    ant.digTarget = undefined;
+    ant.digStandPos = undefined;
+    ant.digProgress = undefined;
+
+    if (ant.state === "dead") {
       if (!scoutIds.has(ant.id)) {
         ant.forageRole = undefined;
         ant.foundFoodSourceId = undefined;
@@ -238,7 +199,7 @@ export function assignForageRoles(world: World): void {
       ant.carryingDirt = false;
       ant.dirtLoad = 0;
       if (ant.state === "dig" || ant.state === "carryDirt") {
-        ant.state = "idle";
+        ant.state = "search";
       }
       continue;
     }
@@ -250,7 +211,6 @@ export function assignForageRoles(world: World): void {
       } else if (
         activeTargetId &&
         (
-          ant.layer === "underground" ||
           ant.state === "return" ||
           ant.state === "deposit" ||
           distanceSq(ant.pos, world.surface.entrance) <= 10 * 10
@@ -264,32 +224,6 @@ export function assignForageRoles(world: World): void {
         ant.foundFoodSourceId = undefined;
         ant.foundFoodTrail = undefined;
         ant.scoutTrail = undefined;
-      }
-      if (ant.state === "dig") {
-        ant.state = "idle";
-      }
-      if (hasActiveTarget && ant.layer === "underground" && ant.state === "idle") {
-        ant.state = "toEntrance";
-      }
-      ant.digTaskId = undefined;
-      ant.digTarget = undefined;
-      ant.digStandPos = undefined;
-      ant.digProgress = undefined;
-    } else if (diggerIds.has(ant.id) && ant.carrying <= 0) {
-      ant.forageRole = undefined;
-      ant.foundFoodSourceId = undefined;
-      ant.foundFoodTrail = undefined;
-      ant.scoutTrail = undefined;
-      ant.knownActiveFoodTargetId = undefined;
-      ant.preferredTask = "dig";
-      if (ant.layer === "underground" && (ant.state === "idle" || ant.state === "toEntrance" || ant.state === "search")) {
-        ant.state = "idle";
-      }
-      if (ant.layer === "surface" && ant.state === "search") {
-        ant.state = "return";
-      }
-      if (ant.job === "forage" || ant.job === "idle") {
-        ant.job = "idle";
       }
     } else if (ant.carrying <= 0) {
       ant.forageRole = undefined;

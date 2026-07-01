@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 1;
-export const CURRENT_PROTOCOL_VERSION = 1;
+export const CURRENT_SNAPSHOT_VERSION = 2;
+export const CURRENT_PROTOCOL_VERSION = 2;
 
 export type Vec2 = {
   x: number;
@@ -160,6 +160,7 @@ export type Colony = {
   queenAlive: boolean;
   queenStress: number;
   queenAge: number;
+  reproductionCooldown: number;
   princesses: number;
   nestCapacity: number;
   detailLevel: DetailLevel;

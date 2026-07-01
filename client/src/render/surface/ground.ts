@@ -58,18 +58,18 @@ export function drawSurfaceGround(root: Container, width: number, height: number
   const right = Math.min(width, Math.ceil(bounds.right));
   const top = Math.max(0, Math.floor(bounds.top));
   const bottom = Math.min(height, Math.ceil(bounds.bottom));
-  bg.rect(left * cell, top * cell, (right - left) * cell, (bottom - top) * cell).fill(0x8a672f);
+  bg.rect(left * cell, top * cell, (right - left) * cell, (bottom - top) * cell).fill(0xa8743e);
 
   for (let y = top; y < bottom; y += 1) {
     for (let x = left; x < right; x += 1) {
       const noise = hash2(x, y, 1);
       const speckle = hash2(x, y, 2);
-      const color = noise < 0.18 ? 0x755222 : noise > 0.82 ? 0x9b783d : speckle > 0.92 ? 0xb09358 : 0x8a672f;
+      const color = noise < 0.18 ? 0x8e5f2f : noise > 0.82 ? 0xbc8a4b : speckle > 0.92 ? 0xd0aa6a : 0xa8743e;
       bg.rect(Math.round(x * cell), Math.round(y * cell), Math.ceil(cell), Math.ceil(cell)).fill(color);
       if (speckle > 0.965) {
-        bg.rect(Math.round((x + 0.35) * cell), Math.round((y + 0.35) * cell), Math.max(1, Math.ceil(cell * 0.25)), Math.max(1, Math.ceil(cell * 0.25))).fill(0xc1b07a);
+        bg.rect(Math.round((x + 0.35) * cell), Math.round((y + 0.35) * cell), Math.max(1, Math.ceil(cell * 0.25)), Math.max(1, Math.ceil(cell * 0.25))).fill(0xe0c58a);
       } else if (speckle < 0.035) {
-        bg.rect(Math.round((x + 0.45) * cell), Math.round((y + 0.45) * cell), Math.max(1, Math.ceil(cell * 0.2)), Math.max(1, Math.ceil(cell * 0.2))).fill(0x4f3518);
+        bg.rect(Math.round((x + 0.45) * cell), Math.round((y + 0.45) * cell), Math.max(1, Math.ceil(cell * 0.2)), Math.max(1, Math.ceil(cell * 0.2))).fill(0x6f4520);
       }
     }
   }
@@ -97,7 +97,7 @@ export function drawSurfaceGround(root: Container, width: number, height: number
 
   const grid = new Graphics();
   if (cell >= 7) {
-    grid.setStrokeStyle({ width: 1, color: 0x5e441f, alpha: 0.08 });
+    grid.setStrokeStyle({ width: 1, color: 0x6d4825, alpha: 0.07 });
     for (let line = Math.floor(left / 10) * 10; line <= right; line += 10) {
       const p = Math.round(line * cell);
       grid.moveTo(p, top * cell);

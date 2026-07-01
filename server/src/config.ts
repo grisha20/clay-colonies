@@ -72,6 +72,8 @@ export const CONFIG = {
   startingEggs: 2,
   startingLarvae: 0,
   startingFoodStorage: 100,
+  maxPopulation: 30,
+  campSpawnRadius: 5,
   nestCapacity: 300,
 
   // Worker movement and state-machine balance.

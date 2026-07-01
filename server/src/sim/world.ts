@@ -23,7 +23,7 @@ import { CONFIG } from "../config";
 import { createColony, syncColonyStats } from "./colony";
 import { createSpider, syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
-import { createUnderground, ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
+import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 
 export type ColonyRuntime = {
   id: string;
@@ -65,6 +65,42 @@ const MAX_SNAPSHOT_STORAGE_ROOMS = 15;
 const MAX_SURFACE_FOOD_SOURCES = 40;
 const FOOD_MERGE_RADIUS = 4;
 const LEGACY_ANT_CORPSE_AMOUNT = 16;
+
+function makeLegacyEmptyUnderground(surfaceEntrance: Vec2): Underground {
+  const camp = { x: surfaceEntrance.x, y: surfaceEntrance.y };
+  return {
+    width: 1,
+    height: 1,
+    entrance: { x: 0, y: 0 },
+    junction: { x: 0, y: 0 },
+    gridVersion: 1,
+    roomsVersion: 1,
+    digTasksVersion: 1,
+    grid: [[{ type: "entrance" }]],
+    rooms: [],
+    digTasks: [],
+    dirtMound: 0,
+    queen: {
+      pos: camp,
+      alive: true,
+      layCooldown: CONFIG.broodLayCooldownTicks,
+      starve: 0,
+      stress: 0,
+      hp: CONFIG.queenMaxHp,
+      age: 0
+    },
+    brood: [],
+    ants: [],
+    foodStorage: 0,
+    storage: camp,
+    queenChamber: camp,
+    nursery: camp,
+    barracksA: camp,
+    barracksB: camp,
+    princesses: [],
+    carrion: []
+  };
+}
 
 function distanceSq(a: { x: number; y: number }, b: { x: number; y: number }): number {
   const dx = a.x - b.x;
@@ -345,13 +381,6 @@ export function respawnCarrion(world: World): void {
         source.amount = Math.max(0, source.amount * (1 - CONFIG.carrionDecayFraction));
       }
     }
-    for (const colony of world.colonies) {
-      for (const source of colony.underground.carrion) {
-        if (source.kind === "antCorpse" || source.kind === "carrion") {
-          source.amount = Math.max(0, source.amount * (1 - CONFIG.carrionDecayFraction));
-        }
-      }
-    }
   }
   if (CONFIG.carrionRespawnEveryTicks <= 0 || world.tick % CONFIG.carrionRespawnEveryTicks !== 0) {
     return;
@@ -371,11 +400,7 @@ export function addAntCorpse(world: World, ant: Ant): FoodSource {
     createdAt: world.tick
   };
   nextCarrionId += 1;
-  if (ant.layer === "underground") {
-    world.underground.carrion.push(source);
-  } else {
-    world.surface.carrion.push(source);
-  }
+  world.surface.carrion.push(source);
   return source;
 }
 
@@ -437,7 +462,7 @@ export function addFoodSource(
 
 export function createWorkerAnt(
   pos: { x: number; y: number },
-  layer: "surface" | "underground" = "underground",
+  layer: "surface" | "underground" = "surface",
   colonyId = "colony-1",
   strength = 1
 ): Ant {
@@ -450,7 +475,7 @@ export function createWorkerAnt(
     role: "worker",
     strength,
     layer,
-    state: layer === "underground" ? "idle" : "search",
+    state: "search",
     pos: {
       x: pos.x + (Math.random() - 0.5) * 8,
       y: pos.y + (Math.random() - 0.5) * 8
@@ -485,7 +510,7 @@ function makeDefaultDirectives(): ColonyDirectives {
     foragerTarget: CONFIG.minForagers,
     activeTarget: CONFIG.minForagers,
     nurseTarget: 0,
-    diggerTarget: Math.min(CONFIG.maxDiggers, CONFIG.startingMiners),
+    diggerTarget: 0,
     queenRearThreshold: CONFIG.queenRearStressThreshold,
     aggression: 0.3
   };
@@ -508,19 +533,17 @@ export function createColonyRuntime(
     spiderGenomeState.current.generation,
     spiderGenomeState.generationsRun
   );
-  const underground = createUnderground(id);
-  const ants = Array.from({ length: CONFIG.startingWorkers + CONFIG.startingMiners }, () => createWorkerAnt(underground.queenChamber, "underground", id));
+  const underground = makeLegacyEmptyUnderground(surfaceEntrance);
+  const ants = Array.from({ length: CONFIG.startingWorkers }, () => createWorkerAnt(surfaceEntrance, "surface", id));
   for (let index = 0; index < ants.length; index += 1) {
     if (index < CONFIG.startingScouts) {
       ants[index].job = "forage";
       ants[index].forageRole = "scout";
-    } else if (index < CONFIG.startingScouts + CONFIG.startingNurses) {
-      ants[index].job = "nurse";
-    } else if (index >= CONFIG.startingWorkers) {
-      ants[index].preferredTask = "dig";
+    } else {
+      ants[index].job = "forage";
+      ants[index].forageRole = "forager";
     }
   }
-  underground.ants = ants.map((ant) => ant.id);
   const runtime: ColonyRuntime = {
     id,
     color,
@@ -565,14 +588,15 @@ export function syncColonyStatsForRuntime(runtime: ColonyRuntime): void {
     runtime.colony,
     runtime.ants.length,
     runtime.ants.filter((ant) => ant.forageRole === "scout" && ant.state !== "dead").length,
-    runtime.ants.filter((ant) => ant.job === "nurse" && ant.state !== "dead").length,
-    runtime.underground.brood.filter((brood) => brood.stage === "egg").length,
-    runtime.underground.brood.filter((brood) => brood.stage === "larva").length,
-    runtime.underground.foodStorage,
-    runtime.underground.queen.alive,
-    runtime.underground.queen.stress,
-    runtime.underground.queen.age,
-    runtime.underground.princesses.length,
+    0,
+    0,
+    0,
+    runtime.colony.food,
+    runtime.colony.queenAlive,
+    runtime.colony.queenStress,
+    runtime.colony.queenAge,
+    runtime.colony.reproductionCooldown,
+    0,
     runtime.genomeState.bestFitness,
     runtime.colony.spiderGeneration,
     runtime.genomeState.generationsRun,
@@ -656,6 +680,12 @@ export function worldFromSnapshot(
       `Snapshot version ${snapshotVersion} is newer than supported ${CURRENT_SNAPSHOT_VERSION}; trying best-effort load.`
     );
   }
+  if (snapshotVersion !== CURRENT_SNAPSHOT_VERSION) {
+    console.warn(
+      `Snapshot version ${snapshotVersion} is incompatible with surface-only Clayfolk ${CURRENT_SNAPSHOT_VERSION}; starting a clean world.`
+    );
+    return createWorld(genomeState, spiderGenomeState, genomeStateB);
+  }
 
   if (!snapshot.colonies?.length) {
     return createWorld(genomeState, spiderGenomeState, genomeStateB);
@@ -681,20 +711,23 @@ export function worldFromSnapshot(
   nextCarrionId = Math.max(nextCarrionId, maxCarrionId + 1);
   const genomeStates = [genomeState, genomeStateB];
   const colonies = snapshot.colonies.map((colonySnapshot, index): ColonyRuntime => {
-    const underground = normalizeUndergroundSnapshot(colonySnapshot.underground);
-    syncBroodIdCounter(underground.brood);
+    const surfaceEntrance = snapshot.surface.entrances?.[index] ?? (index === 0 ? CONFIG.surfaceEntrance : CONFIG.surfaceEntranceB);
+    const underground = makeLegacyEmptyUnderground(surfaceEntrance);
     const runtime: ColonyRuntime = {
       id: colonySnapshot.id,
       color: colonySnapshot.color,
-      surfaceEntrance: snapshot.surface.entrances?.[index] ?? (index === 0 ? CONFIG.surfaceEntrance : CONFIG.surfaceEntranceB),
+      surfaceEntrance,
       underground,
       colony: {
         ...colonySnapshot.colony,
         population: {
           ...colonySnapshot.colony.population,
           scouts: colonySnapshot.colony.population.scouts ?? 0,
-          nurses: colonySnapshot.colony.population.nurses ?? 0
+          nurses: 0,
+          eggs: 0,
+          larvae: 0
         },
+        food: colonySnapshot.colony.food ?? colonySnapshot.underground.foodStorage ?? CONFIG.startingFoodStorage,
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,
@@ -702,13 +735,30 @@ export function worldFromSnapshot(
         generationsRun: genomeStates[index]?.generationsRun ?? genomeState.generationsRun,
         bestFitness: genomeStates[index]?.bestFitness ?? genomeState.bestFitness,
         spiderGeneration: spiderGenomeState.current.generation,
-        spiderGenerationsRun: spiderGenomeState.generationsRun
+        spiderGenerationsRun: spiderGenomeState.generationsRun,
+        queenAlive: colonySnapshot.colony.queenAlive ?? true,
+        queenStress: 0,
+        queenAge: colonySnapshot.colony.queenAge ?? 0,
+        reproductionCooldown: colonySnapshot.colony.reproductionCooldown ?? CONFIG.broodLayCooldownTicks,
+        princesses: 0,
+        nestCapacity: CONFIG.maxPopulation
       },
       ants: colonySnapshot.ants.map((ant) => ({
         ...ant,
+        layer: "surface",
+        state: ant.state === "dead" ? "dead" : ant.carrying > 0 ? "carry" : "search",
         colonyId: colonySnapshot.id,
         strength: ant.strength ?? 1,
-        dirtLoad: ant.dirtLoad ?? 0
+        job: "forage",
+        preferredTask: undefined,
+        broodId: undefined,
+        carryingBrood: undefined,
+        carryingDirt: false,
+        dirtLoad: 0,
+        digTaskId: undefined,
+        digTarget: undefined,
+        digStandPos: undefined,
+        digProgress: undefined
       })),
       genomeState: genomeStates[index] ?? genomeState,
       directives: makeDefaultDirectives(),
@@ -883,33 +933,28 @@ function lightweightUnderground(underground: Underground): Underground {
   };
 }
 
-function normalizeNetworkView(view?: Partial<NetworkViewState>): NetworkViewState {
+function normalizeNetworkView(_view?: Partial<NetworkViewState>): NetworkViewState {
   return {
-    mode: view?.mode === "underground" ? "underground" : "surface",
-    undergroundColonyIndex: Math.max(0, Math.min(1, Math.floor(view?.undergroundColonyIndex ?? 0)))
+    mode: "surface",
+    undergroundColonyIndex: 0
   };
 }
 
 export function toNetworkSnapshot(world: World, includePheromones = true, view?: Partial<NetworkViewState>): NetworkWorldSnapshot {
   const networkView = normalizeNetworkView(view);
-  const isUndergroundView = networkView.mode === "underground";
-  const selectedColony = world.colonies[networkView.undergroundColonyIndex] ?? world.colonies[0];
-  const ants = isUndergroundView
-    ? selectedColony.ants.filter((ant) => ant.layer === "underground")
-    : world.ants.filter((ant) => ant.layer === "surface");
-  const snapshot = toSnapshot(world, includePheromones && !isUndergroundView);
+  const ants = world.ants.filter((ant) => ant.layer === "surface");
+  const snapshot = toSnapshot(world, includePheromones);
 
   return {
     ...snapshot,
     networkView,
-    underground: isUndergroundView ? selectedColony.underground : lightweightUnderground(world.underground),
-    colony: isUndergroundView ? selectedColony.colony : world.colony,
-    colonies: world.colonies.map((colony, index) => {
-      const includeFullUnderground = isUndergroundView && index === networkView.undergroundColonyIndex;
+    underground: lightweightUnderground(world.underground),
+    colony: world.colony,
+    colonies: world.colonies.map((colony) => {
       return {
         id: colony.id,
         color: colony.color,
-        underground: includeFullUnderground ? colony.underground : lightweightUnderground(colony.underground),
+        underground: lightweightUnderground(colony.underground),
         colony: colony.colony,
         ants: []
       };

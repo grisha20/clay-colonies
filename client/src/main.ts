@@ -13,7 +13,7 @@ appRoot.innerHTML = `
     <section class="panel topPanel">
       <div class="brand">
         <span class="mark"></span>
-        <strong>AntColonyAI</strong>
+        <strong>Clayfolk</strong>
       </div>
       <div class="segmented" role="tablist" aria-label="Слой">
         <button class="active" data-view="surface" type="button">Поверхность</button>
@@ -47,7 +47,7 @@ appRoot.innerHTML = `
       </div>
       <div class="colonyGrid">
         <section class="colonyStats colonyA">
-          <h2>Колония A</h2>
+          <h2>Племя A</h2>
           <div><span>Поколение</span><strong id="colony-a-generation">1</strong></div>
           <div><span>Поколений</span><strong id="colony-a-generations-run">0</strong></div>
           <div><span>Рабочие</span><strong id="colony-a-workers">0</strong></div>
@@ -56,13 +56,13 @@ appRoot.innerHTML = `
           <div><span>Склад</span><strong id="colony-a-storage">0</strong></div>
           <div><span>Яйца</span><strong id="colony-a-eggs">0</strong></div>
           <div><span>Личинки</span><strong id="colony-a-larvae">0</strong></div>
-          <div><span>Матка</span><strong id="colony-a-queen">жива</strong></div>
+          <div><span>Королевская пара</span><strong id="colony-a-queen">жива</strong></div>
           <div><span>Стресс</span><strong id="colony-a-stress">0</strong></div>
           <div><span>Возраст</span><strong id="colony-a-age">0</strong></div>
           <div><span>Принцессы</span><strong id="colony-a-princesses">0</strong></div>
         </section>
         <section class="colonyStats colonyB">
-          <h2>Колония B</h2>
+          <h2>Племя B</h2>
           <div><span>Поколение</span><strong id="colony-b-generation">1</strong></div>
           <div><span>Поколений</span><strong id="colony-b-generations-run">0</strong></div>
           <div><span>Рабочие</span><strong id="colony-b-workers">0</strong></div>
@@ -71,7 +71,7 @@ appRoot.innerHTML = `
           <div><span>Склад</span><strong id="colony-b-storage">0</strong></div>
           <div><span>Яйца</span><strong id="colony-b-eggs">0</strong></div>
           <div><span>Личинки</span><strong id="colony-b-larvae">0</strong></div>
-          <div><span>Матка</span><strong id="colony-b-queen">жива</strong></div>
+          <div><span>Королевская пара</span><strong id="colony-b-queen">жива</strong></div>
           <div><span>Стресс</span><strong id="colony-b-stress">0</strong></div>
           <div><span>Возраст</span><strong id="colony-b-age">0</strong></div>
           <div><span>Принцессы</span><strong id="colony-b-princesses">0</strong></div>
@@ -203,16 +203,8 @@ style.textContent = `
     display: none;
   }
 
-  .app.undergroundView .nestControls {
-    display: grid;
-  }
-
   .trampleControls {
     display: grid;
-  }
-
-  .app.undergroundView .trampleControls {
-    display: none;
   }
 
   .hud {
@@ -323,6 +315,23 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+document.querySelector("[data-view='surface']")?.closest(".segmented")?.remove();
+document.querySelector(".nestControls")?.remove();
+for (const id of [
+  "colony-a-nurses",
+  "colony-a-eggs",
+  "colony-a-larvae",
+  "colony-a-stress",
+  "colony-a-princesses",
+  "colony-b-nurses",
+  "colony-b-eggs",
+  "colony-b-larvae",
+  "colony-b-stress",
+  "colony-b-princesses"
+]) {
+  document.querySelector(`#${id}`)?.closest("div")?.remove();
+}
+
 const canvasHost = document.querySelector<HTMLDivElement>("#canvas-host");
 const appShell = document.querySelector<HTMLElement>(".app");
 const status = document.querySelector<HTMLElement>("#status");
@@ -350,14 +359,9 @@ const colonyNodes = [0, 1].map((index) => {
     generationsRun: document.querySelector<HTMLElement>(`#colony-${key}-generations-run`),
     workers: document.querySelector<HTMLElement>(`#colony-${key}-workers`),
     scouts: document.querySelector<HTMLElement>(`#colony-${key}-scouts`),
-    nurses: document.querySelector<HTMLElement>(`#colony-${key}-nurses`),
     storage: document.querySelector<HTMLElement>(`#colony-${key}-storage`),
-    eggs: document.querySelector<HTMLElement>(`#colony-${key}-eggs`),
-    larvae: document.querySelector<HTMLElement>(`#colony-${key}-larvae`),
     queen: document.querySelector<HTMLElement>(`#colony-${key}-queen`),
-    stress: document.querySelector<HTMLElement>(`#colony-${key}-stress`),
-    age: document.querySelector<HTMLElement>(`#colony-${key}-age`),
-    princesses: document.querySelector<HTMLElement>(`#colony-${key}-princesses`)
+    age: document.querySelector<HTMLElement>(`#colony-${key}-age`)
   };
 });
 
@@ -397,19 +401,15 @@ const colonyStatNodes = colonyNodes.map((nodes) => ({
   generationsRun: nodes.generationsRun as HTMLElement,
   workers: nodes.workers as HTMLElement,
   scouts: nodes.scouts as HTMLElement,
-  nurses: nodes.nurses as HTMLElement,
   storage: nodes.storage as HTMLElement,
-  eggs: nodes.eggs as HTMLElement,
-  larvae: nodes.larvae as HTMLElement,
   queen: nodes.queen as HTMLElement,
-  stress: nodes.stress as HTMLElement,
-  age: nodes.age as HTMLElement,
-  princesses: nodes.princesses as HTMLElement
+  age: nodes.age as HTMLElement
 }));
 
 const SURFACE_TILE_SIZE = 8;
-const MIN_ZOOM = 0.45;
-const MAX_ZOOM = 2.5;
+const DEFAULT_SURFACE_ZOOM = 1.45;
+const MIN_ZOOM = 0.65;
+const MAX_ZOOM = 3;
 let packetInterval = 100;
 
 type CameraMode = "follow" | "free";
@@ -427,7 +427,7 @@ let currentView: ViewMode = "surface";
 let currentUndergroundColony = 0;
 let cameraMode: CameraMode = "follow";
 let currentSpeed = 1;
-let camera: Camera = { x: 50, y: 50, zoom: 1 };
+let camera: Camera = { x: 50, y: 50, zoom: DEFAULT_SURFACE_ZOOM };
 let latestWorld: NetworkWorldSnapshot | null = null;
 let lastRenderAt = 0;
 let lastPacketTime = 0;
@@ -512,14 +512,9 @@ function updateHud(world: WorldSnapshot): void {
       nodes.generationsRun.textContent = "-";
       nodes.workers.textContent = "-";
       nodes.scouts.textContent = "-";
-      nodes.nurses.textContent = "-";
       nodes.storage.textContent = "-";
-      nodes.eggs.textContent = "-";
-      nodes.larvae.textContent = "-";
       nodes.queen.textContent = "-";
-      nodes.stress.textContent = "-";
       nodes.age.textContent = "-";
-      nodes.princesses.textContent = "-";
       return;
     }
 
@@ -527,14 +522,9 @@ function updateHud(world: WorldSnapshot): void {
     nodes.generationsRun.textContent = String(item.colony.generationsRun);
     nodes.workers.textContent = String(item.colony.population.workers);
     nodes.scouts.textContent = String(item.colony.population.scouts ?? 0);
-    nodes.nurses.textContent = String(item.colony.population.nurses ?? 0);
-    nodes.storage.textContent = String(Math.floor(item.underground.foodStorage));
-    nodes.eggs.textContent = String(item.colony.population.eggs);
-    nodes.larvae.textContent = String(item.colony.population.larvae ?? 0);
+    nodes.storage.textContent = String(Math.floor(item.colony.food ?? 0));
     nodes.queen.textContent = item.colony.queenAlive ? "жива" : "погибла";
-    nodes.stress.textContent = String(Math.round(item.colony.queenStress ?? 0));
     nodes.age.textContent = String(Math.floor(item.colony.queenAge ?? 0));
-    nodes.princesses.textContent = String(item.colony.princesses ?? 0);
   });
 }
 
@@ -591,24 +581,6 @@ btnTrample.addEventListener("click", () => {
   btnTrample.classList.toggle("active", trampleEnabled);
   btnTrample.textContent = `Тропинки: ${trampleEnabled ? "Вкл" : "Выкл"}`;
 });
-
-for (const button of viewButtons) {
-  button.addEventListener("click", () => {
-    currentView = button.dataset.view as ViewMode;
-    appShellNode.classList.toggle("undergroundView", currentView === "underground");
-    for (const item of viewButtons) {
-      item.classList.toggle("active", item === button);
-    }
-    requestNetworkView();
-  });
-}
-
-for (const button of nestButtons) {
-  button.addEventListener("click", () => {
-    setUndergroundColony(Number(button.dataset.nest ?? 0));
-    requestNetworkView();
-  });
-}
 
 for (const button of cameraButtons) {
   button.addEventListener("click", () => {

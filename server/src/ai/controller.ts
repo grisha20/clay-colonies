@@ -38,9 +38,8 @@ function isWithinRadius(a: { x: number; y: number }, b: { x: number; y: number }
 
 export function computeDirectives(world: World, genome: Genome): ColonyDirectives {
   const workerCount = Math.max(1, world.ants.length);
-  const fullStoragePressure = world.underground.foodStorage >= CONFIG.queenMinFoodReserve * 2 ? 0.85 : 1;
+  const fullStoragePressure = world.colony.food >= CONFIG.queenMinFoodReserve * 2 ? 0.85 : 1;
   const hasKnownFoodTarget = !!world.colony.activeFoodTargetId;
-  const hasBrood = world.underground.brood.length > 0;
   const spiderNearNest = world.enemies.some((enemy) => {
     if (enemy.type !== "spider" || enemy.hp <= 0) {
       return false;
@@ -48,7 +47,7 @@ export function computeDirectives(world: World, genome: Genome): ColonyDirective
 
     return isWithinRadius(enemy.pos, world.surface.entrance, CONFIG.spiderNearNestRadius);
   });
-  const nurseTarget = hasBrood ? Math.min(CONFIG.maxNurses, workerCount) : 0;
+  const nurseTarget = 0;
   const availableForSearch = Math.max(1, workerCount - nurseTarget);
   const rawActiveTarget = hasKnownFoodTarget
     ? Math.max(CONFIG.minForagers, Math.round(workerCount * CONFIG.foragerFraction))
@@ -65,19 +64,7 @@ export function computeDirectives(world: World, genome: Genome): ColonyDirective
     0,
     Math.min(CONFIG.maxDirectiveNurses, nurseTarget)
   );
-  const hasDigNeed = world.underground.digTasks.some((task) => task.status !== "done");
-  const hasCriticalDigNeed = world.underground.digTasks.some(
-    (task) =>
-      task.status !== "done" &&
-      (task.roomType === "egg" || task.roomType === "nursery" || task.roomType === "storage")
-  );
-  const diggersWhenFoodKnown = hasKnownFoodTarget && !hasCriticalDigNeed ? 1 : CONFIG.startingMiners;
-  const minDiggersWhenNeeded = hasDigNeed ? Math.min(diggersWhenFoodKnown, workerCount) : 0;
-  const diggerTarget = clamp(
-    Math.max(minDiggersWhenNeeded, Math.round(workerCount * genome.genes.digFraction)),
-    0,
-    hasKnownFoodTarget && !hasCriticalDigNeed ? Math.min(1, CONFIG.maxDiggers) : CONFIG.maxDiggers
-  );
+  const diggerTarget = 0;
   const queenRearThreshold = clamp(85 - genome.genes.queenRearBias * 50, 35, 85);
 
   return {
@@ -110,8 +97,7 @@ export function computeDirectives(world: World, genome: Genome): ColonyDirective
     queenRearThreshold,
     aggression: clamp(
       genome.genes.aggression +
-        (!hasKnownFoodTarget && world.underground.foodStorage <= CONFIG.warHungerThreshold ? 0.35 : 0) +
-        (world.underground.queen.starve > 0 ? Math.min(0.3, world.underground.queen.starve * 0.04) : 0),
+        (!hasKnownFoodTarget && world.colony.food <= CONFIG.warHungerThreshold ? 0.35 : 0),
       CONFIG.genomeGeneBounds.aggression.min,
       CONFIG.genomeGeneBounds.aggression.max
     )
@@ -130,7 +116,7 @@ export function createFitnessState(): FitnessState {
 }
 
 export function updateFitness(world: World): void {
-  const population = world.ants.length + world.underground.brood.length;
+  const population = world.ants.length;
   world.fitness.survivalTicks += 1;
   world.fitness.peakPopulation = Math.max(world.fitness.peakPopulation, population);
   world.fitness.populationIntegral += population;

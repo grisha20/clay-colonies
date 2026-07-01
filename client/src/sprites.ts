@@ -63,6 +63,16 @@ const darkAnt = 0x1b1210;
 const midAnt = 0x402019;
 const antHighlight = 0x6a3a27;
 const foodYellow = 0xe6c45a;
+const clayShadow = 0x5b281c;
+const clayDark = 0x8b3f2a;
+const clayMid = 0xbc6240;
+const clayLight = 0xd78358;
+const clayTop = 0xef9a64;
+const redClayShadow = 0x692018;
+const redClayDark = 0x9c3524;
+const redClayMid = 0xd05236;
+const redClayLight = 0xee7a52;
+const redClayTop = 0xff916a;
 
 const redAntDark = 0x5a1210;
 const redAntMid = 0xa62b1b;
@@ -93,6 +103,50 @@ export const spriteMaps = {
     ".1111.11.1..",
     "...1..1.1.1.",
     "..1..1......"
+  ],
+  clayfolk: [
+    ".......11111.......",
+    ".....112222211.....",
+    "....12233733221....",
+    "...1223377433221...",
+    "...1233444443321...",
+    "...1234444444321...",
+    "....12347744321....",
+    ".....112222211.....",
+    "......1222221......",
+    "....11233733211....",
+    "...1223377333221...",
+    "..12233774433221..",
+    "..12233333333321..",
+    "...122222222221...",
+    "....1222222221....",
+    "....1221...1221....",
+    "...1221.....1221...",
+    "...121.......121...",
+    "....1.........1....",
+    "..................."
+  ],
+  clayfolkCarry: [
+    ".......55555.......",
+    "......5566655......",
+    ".......55555.......",
+    ".......11111.......",
+    ".....112222211.....",
+    "....12233733221....",
+    "...1223377433221...",
+    "...1233444443321...",
+    "...1234444444321...",
+    "....12347744321....",
+    ".....112222211.....",
+    "......1222221......",
+    "....11233733211....",
+    "...1223377333221...",
+    "..12233774433221..",
+    "..12233333333321..",
+    "...122222222221...",
+    "....1221...1221....",
+    "...1221.....1221...",
+    "...121.......121..."
   ],
   queen: [
     "....1111.......",
@@ -173,6 +227,24 @@ export const spritePalettes = {
     "2": redAntMid,
     "3": foodYellow
   },
+  clayfolk: {
+    "1": clayShadow,
+    "2": clayDark,
+    "3": clayMid,
+    "4": clayLight,
+    "5": foodYellow,
+    "6": 0xffe08a,
+    "7": clayTop
+  },
+  clayfolkRed: {
+    "1": redClayShadow,
+    "2": redClayDark,
+    "3": redClayMid,
+    "4": redClayLight,
+    "5": foodYellow,
+    "6": 0xffe08a,
+    "7": redClayTop
+  },
   queen: {
     "1": 0x26130f,
     "2": 0x5a2b22
@@ -224,6 +296,12 @@ export function getAntTexture(carrying: boolean, color: AntColor = "dark"): Text
   return makeTexture(key, carrying ? [...spriteMaps.antCarry] : [...spriteMaps.ant], palette);
 }
 
+export function getClayfolkTexture(carrying: boolean, color: AntColor = "dark"): Texture {
+  const key = carrying ? `clayfolkCarry_${color}` : `clayfolk_${color}`;
+  const palette = color === "red" ? spritePalettes.clayfolkRed : spritePalettes.clayfolk;
+  return makeTexture(key, carrying ? [...spriteMaps.clayfolkCarry] : [...spriteMaps.clayfolk], palette);
+}
+
 export function getQueenTexture(color: AntColor = "dark"): Texture {
   const key = `queen_${color}`;
   const palette = color === "red" ? spritePalettes.queenRed : spritePalettes.queen;
@@ -260,6 +338,10 @@ export function getGrainTexture(): Texture {
 
 export function createAntSprite(carrying: boolean, scale = 2.5): Sprite {
   return makePixelSprite(getAntTexture(carrying), scale);
+}
+
+export function createClayfolkSprite(carrying: boolean, scale = 2.5): Sprite {
+  return makePixelSprite(getClayfolkTexture(carrying), scale);
 }
 
 export function createQueenSprite(scale = 3.5): Sprite {

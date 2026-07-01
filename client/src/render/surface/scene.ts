@@ -4,7 +4,7 @@ import { createSpritePool } from "../spritePool";
 import type { Camera, SurfaceScene, ViewBounds } from "../types";
 import { SURFACE_TILE_SIZE } from "../types";
 import {
-  createAntSprite,
+  createClayfolkSprite,
   createCarrionSprite,
   createFoodSprite,
   createSpiderLairSprite,
@@ -13,7 +13,7 @@ import {
 import { drawSurfaceGround } from "./ground";
 import { drawSurfacePheromones } from "./pheromones";
 import { drawSurfaceEntrance } from "./entrance";
-import { updateSurfaceFood, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceDebris } from "./entities";
+import { updateSurfaceFood, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceDebris, updateSurfaceShadows } from "./entities";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
   return (
@@ -38,6 +38,7 @@ export function visibleSurfaceBounds(camera: Camera, viewportWidth: number, view
 export function createSurfaceScene(): SurfaceScene {
   const root = new Container();
   const staticLayer = new Container();
+  const shadowLayer = new Graphics();
   const entranceLayer = new Container();
   const pheromones = new Graphics();
   const webs = new Graphics();
@@ -49,11 +50,12 @@ export function createSurfaceScene(): SurfaceScene {
   const carriedCarrionContainer = new Container();
   const antContainer = new Container();
 
-  root.addChild(staticLayer, entranceLayer, pheromones, webs, debrisGraphics, foodContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
+  root.addChild(staticLayer, shadowLayer, entranceLayer, pheromones, webs, debrisGraphics, foodContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
 
   return {
     root,
     staticLayer,
+    shadowLayer,
     entranceLayer,
     pheromones,
     webs,
@@ -63,7 +65,7 @@ export function createSurfaceScene(): SurfaceScene {
     lairPool: createSpritePool(lairContainer, () => createSpiderLairSprite(3.4)),
     carriedCarrionPool: createSpritePool(carriedCarrionContainer, () => createCarrionSprite(1.7)),
     enemyPool: createSpritePool(enemyContainer, () => createSpiderSprite(4)),
-    antPool: createSpritePool(antContainer, () => createAntSprite(false, 2.45)),
+    antPool: createSpritePool(antContainer, () => createClayfolkSprite(false, 2.85)),
     staticKey: "",
     entranceKey: ""
   };
@@ -239,13 +241,14 @@ export function renderSurface(
     updateTrample(scene, renderer, world);
   }
 
-  const dirtMounds = world.colonies?.map((c) => Math.floor((c.underground?.dirtMound ?? 0) / 30)) ?? [Math.floor((world.underground.dirtMound ?? 0) / 30)];
+  const storageLevels = world.colonies?.map((c) => Math.floor((c.colony.food ?? 0) / 10)) ?? [Math.floor((world.colony.food ?? 0) / 10)];
   const entranceKey = [
     ...(world.surface.entrances ?? [world.surface.entrance]).flatMap((entrance) => [entrance.x, entrance.y]),
-    ...dirtMounds
+    ...storageLevels
   ].join(":");
   updateSurfaceEntrances(scene, world, cell, entranceKey);
 
+  updateSurfaceShadows(scene.shadowLayer, world, cell, bounds);
   drawSurfacePheromones(scene.pheromones, world, cell, bounds);
   updateSurfaceWebs(scene.webs, world, cell, bounds);
   updateSurfaceDebris(scene.debrisGraphics, world, cell, bounds);
