@@ -87,9 +87,9 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       pathVertical: crop(tilesUrl, 352, 192, 32, 128)
     },
     props: {
-      treeTall: crop(assetsUrl, 0, 0, 128, 216),
-      treeRound: crop(assetsUrl, 150, 0, 150, 210),
-      treeWide: crop(assetsUrl, 332, 0, 165, 214),
+      treeTall: crop(assetsUrl, 0, 0, 160, 240),
+      treeRound: crop(assetsUrl, 176, 34, 164, 210),
+      treeWide: crop(assetsUrl, 360, 26, 152, 218),
       log: crop(assetsUrl, 0, 226, 102, 36),
       stump: crop(assetsUrl, 178, 228, 70, 54),
       bushLarge: crop(assetsUrl, 0, 365, 76, 66),

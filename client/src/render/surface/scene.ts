@@ -227,7 +227,8 @@ export function renderSurface(
   const bounds = visibleSurfaceBounds(camera, viewportWidth, viewportHeight);
   const staticKey = [
     world.surface.width,
-    world.surface.height
+    world.surface.height,
+    "surface-art-edge-trees-v3"
   ].join(":");
   if (scene.staticKey !== staticKey) {
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);

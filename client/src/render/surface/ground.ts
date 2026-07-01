@@ -1,5 +1,5 @@
 import { Graphics, Sprite } from "pixi.js";
-import type { Container } from "pixi.js";
+import type { Container, Texture } from "pixi.js";
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import type { ViewBounds } from "../types";
 import { getEnvironmentTextures } from "./environment";
@@ -157,6 +157,133 @@ function drawTree(root: Graphics, x: number, y: number, scale: number): void {
   for (const [dx, dy, radius, color] of crowns) {
     root.circle(x + dx * scale, y + dy * scale, radius * scale).fill(color);
     root.circle(x + (dx - radius * 0.28) * scale, y + (dy - radius * 0.28) * scale, radius * scale * 0.32).fill({ color: 0x9abf57, alpha: 0.26 });
+  }
+}
+
+type ForestTree = {
+  x: number;
+  y: number;
+  scale: number;
+  texture: Texture;
+  tint: number;
+};
+
+function addAssetTree(root: Container, tree: ForestTree): void {
+  const shadow = new Graphics();
+  shadow.ellipse(tree.x + tree.scale * 8, tree.y - tree.scale * 2, tree.scale * 54, tree.scale * 14).fill({ color: 0x1d160d, alpha: 0.24 });
+  shadow.ellipse(tree.x - tree.scale * 3, tree.y - tree.scale * 5, tree.scale * 35, tree.scale * 8).fill({ color: 0x1d160d, alpha: 0.1 });
+  root.addChild(shadow);
+
+  const sprite = new Sprite(tree.texture);
+  sprite.anchor.set(0.5, 1);
+  sprite.position.set(tree.x, tree.y);
+  sprite.scale.set(tree.scale);
+  sprite.tint = tree.tint;
+  root.addChild(sprite);
+}
+
+function drawForestBorder(root: Container, world: WorldSnapshot, cell: number): void {
+  const props = getEnvironmentTextures().props;
+  const textures = [props.treeTall, props.treeRound, props.treeWide];
+  const trees: ForestTree[] = [];
+  const widthPx = world.surface.width * cell;
+  const heightPx = world.surface.height * cell;
+
+  function addTree(tileX: number, tileY: number, seed: number): void {
+    const jitterX = (hash2(seed, 0, 701) - 0.5) * cell * 4;
+    const jitterY = (hash2(seed, 0, 702) - 0.5) * cell * 3;
+    const texture = textures[Math.floor(hash2(seed, 0, 703) * textures.length) % textures.length];
+    const scale = 0.78 + hash2(seed, 0, 704) * 0.24;
+    const tintRoll = hash2(seed, 0, 705);
+    const tint = tintRoll > 0.66 ? 0xe1ffbf : tintRoll > 0.33 ? 0xc9ef9a : 0xb8dc82;
+    trees.push({
+      x: tileX * cell + jitterX,
+      y: tileY * cell + jitterY,
+      scale,
+      texture,
+      tint
+    });
+  }
+
+  const borderTrees: Array<[number, number, number]> = [
+    [17, 30, 10],
+    [30, 50, 11],
+    [18, 72, 12],
+    [31, 96, 13],
+    [17, 121, 14],
+    [30, 146, 15],
+    [18, 171, 16],
+    [31, 196, 17],
+    [17, 222, 18],
+    [30, 248, 19],
+    [18, 274, 20],
+    [31, 300, 21],
+    [17, 326, 22],
+    [30, 352, 23],
+    [18, 378, 24],
+    [31, 404, 25],
+    [17, 430, 26],
+    [30, 455, 27],
+    [20, 38, 30],
+    [48, 35, 31],
+    [77, 41, 32],
+    [107, 36, 33],
+    [137, 42, 34],
+    [168, 37, 35],
+    [199, 43, 36],
+    [230, 36, 37],
+    [261, 42, 38],
+    [292, 37, 39],
+    [323, 43, 40],
+    [354, 36, 41],
+    [385, 42, 42],
+    [416, 37, 43],
+    [447, 43, 44],
+    [world.surface.width - 17, 30, 50],
+    [world.surface.width - 30, 53, 51],
+    [world.surface.width - 18, 77, 52],
+    [world.surface.width - 31, 102, 53],
+    [world.surface.width - 17, 127, 54],
+    [world.surface.width - 30, 152, 55],
+    [world.surface.width - 18, 177, 56],
+    [world.surface.width - 31, 202, 57],
+    [world.surface.width - 17, 228, 58],
+    [world.surface.width - 30, 254, 59],
+    [world.surface.width - 18, 280, 60],
+    [world.surface.width - 31, 306, 61],
+    [world.surface.width - 17, 332, 62],
+    [world.surface.width - 30, 358, 63],
+    [world.surface.width - 18, 384, 64],
+    [world.surface.width - 31, 410, 65],
+    [world.surface.width - 17, 436, 66],
+    [world.surface.width - 30, 458, 67],
+    [22, world.surface.height - 6, 70],
+    [52, world.surface.height - 17, 71],
+    [82, world.surface.height - 7, 72],
+    [112, world.surface.height - 19, 73],
+    [142, world.surface.height - 8, 74],
+    [172, world.surface.height - 17, 75],
+    [202, world.surface.height - 6, 76],
+    [232, world.surface.height - 19, 77],
+    [262, world.surface.height - 8, 78],
+    [292, world.surface.height - 17, 79],
+    [322, world.surface.height - 6, 80],
+    [352, world.surface.height - 19, 81],
+    [382, world.surface.height - 8, 82],
+    [412, world.surface.height - 17, 83],
+    [442, world.surface.height - 6, 84]
+  ];
+
+  for (const [x, y, seed] of borderTrees) {
+    addTree(x, y, seed);
+  }
+
+  trees.sort((a, b) => a.y - b.y);
+  for (const tree of trees) {
+    if (tree.x < -96 || tree.x > widthPx + 96 || tree.y < -140 || tree.y > heightPx + 140) {
+      continue;
+    }
+    addAssetTree(root, tree);
   }
 }
 
@@ -415,4 +542,6 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
     drawTinyPlants(decor, x - 112, y + 28, cell * 0.52);
     drawTinyPlants(decor, x + 116, y + 30, cell * 0.5);
   }
+
+  drawForestBorder(root, world, cell);
 }

@@ -690,6 +690,12 @@ export function worldFromSnapshot(
   if (!snapshot.colonies?.length) {
     return createWorld(genomeState, spiderGenomeState, genomeStateB);
   }
+  if (snapshot.surface.width !== CONFIG.mapWidth || snapshot.surface.height !== CONFIG.mapHeight) {
+    console.warn(
+      `Snapshot surface ${snapshot.surface.width}x${snapshot.surface.height} does not match configured ${CONFIG.mapWidth}x${CONFIG.mapHeight}; starting a clean world.`
+    );
+    return createWorld(genomeState, spiderGenomeState, genomeStateB);
+  }
 
   const snapshotAnts = snapshot.colonies.flatMap((colony) => colony.ants);
   const maxAntId = snapshotAnts.reduce((max, ant) => {

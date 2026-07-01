@@ -28,9 +28,9 @@ export const CONFIG = {
 
   // Surface is the only true grid in the first step.
   mapWidth: 480,
-  mapHeight: 300,
-  surfaceEntrance: { x: 120, y: 150 },
-  surfaceEntranceB: { x: 360, y: 150 },
+  mapHeight: 480,
+  surfaceEntrance: { x: 120, y: 240 },
+  surfaceEntranceB: { x: 360, y: 240 },
 
   // Underground still keeps the old nav nodes, plus a new diggable grid layer.
   undergroundWidth: 140,
