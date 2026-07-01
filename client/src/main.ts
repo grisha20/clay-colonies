@@ -1,6 +1,7 @@
 import { Application } from "pixi.js";
 import { CURRENT_PROTOCOL_VERSION, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
+import { preloadEnvironmentAssets } from "./render/surface/environment";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) {
@@ -493,6 +494,7 @@ await pixi.init({
   resizeTo: window,
   antialias: false
 });
+await preloadEnvironmentAssets();
 canvasHost.appendChild(pixi.canvas);
 
 function updateHud(world: WorldSnapshot): void {

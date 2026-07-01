@@ -104,7 +104,7 @@ function rebuildSurfaceStatic(
     top: 0,
     bottom: world.surface.height
   };
-  drawSurfaceGround(tempContainer, world.surface.width, world.surface.height, cell, fullBounds);
+  drawSurfaceGround(tempContainer, world, cell, fullBounds);
 
   const widthPx = world.surface.width * cell;
   const heightPx = world.surface.height * cell;
@@ -129,8 +129,8 @@ function rebuildSurfaceStatic(
   const trampleSprite = new Sprite(trampleTexture);
   trampleSprite.width = world.surface.width * cell;
   trampleSprite.height = world.surface.height * cell;
-  trampleSprite.tint = 0x5a4325; // Цвет протоптанной земли (темный)
-  trampleSprite.alpha = 0.65; // Просвечивание
+  trampleSprite.tint = 0x6d5934; // Цвет протоптанной земли
+  trampleSprite.alpha = 0.28; // Тропинки не перекрывают тайлы окружения
 
   scene.trampleTexture = trampleTexture;
   scene.trampleSprite = trampleSprite;

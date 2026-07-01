@@ -2,50 +2,50 @@
   {
     "pack": "summer-plains",
     "name": "summer_plains_v1.0_standard.zip",
-    "downloadPath": "client/public/assets/environment/_downloads/summer-plains__summer_plains_v1.0_standard.zip",
     "extractedPath": "client/public/assets/environment/summer-plains",
+    "archiveStatus": "removed after extraction",
     "source": "https://schwarnhild.itch.io/summer-plains-tileset-and-asset-pack-32x32-pixels"
   },
   {
     "pack": "summer-plains",
     "name": "water_animation_demo.zip",
-    "downloadPath": "client/public/assets/environment/_downloads/summer-plains__water_animation_demo.zip",
     "extractedPath": "client/public/assets/environment/summer-plains-water-animation-demo",
+    "archiveStatus": "removed after extraction",
     "source": "https://schwarnhild.itch.io/summer-plains-tileset-and-asset-pack-32x32-pixels"
   },
   {
     "pack": "topdown-fantasy-forest",
     "name": "TopDownFantasy_Forest_v1.zip",
-    "downloadPath": "client/public/assets/environment/_downloads/topdown-fantasy-forest__TopDownFantasy_Forest_v1.zip",
     "extractedPath": "client/public/assets/environment/topdown-fantasy-forest",
+    "archiveStatus": "removed after extraction",
     "source": "https://aamatniekss.itch.io/topdown-fantasy-forest"
   },
   {
     "pack": "grassy-topdown-cc0",
     "name": "grassy top-down tileset.zip",
-    "downloadPath": "client/public/assets/environment/_downloads/grassy-topdown-cc0__grassy_top-down_tileset.zip",
     "extractedPath": "client/public/assets/environment/grassy-topdown-cc0",
+    "archiveStatus": "removed after extraction",
     "source": "https://ringosnoop.itch.io/grassy-top-down-tileset"
   },
   {
     "pack": "forest-tent-tileset",
     "name": "Tileset + Sprites",
-    "downloadPath": "client/public/assets/environment/_downloads/forest-tent-tileset__Tileset_+_Sprites.png",
     "extractedPath": "client/public/assets/environment/forest-tent-tileset/tileset-and-sprites.png",
+    "archiveStatus": "source PNG copied into working folder",
     "source": "https://thomaswastaken.itch.io/tileset"
   },
   {
     "pack": "forest-tent-tileset",
     "name": "Animated Campfire",
-    "downloadPath": "client/public/assets/environment/_downloads/forest-tent-tileset__Animated_Campfire.png",
     "extractedPath": "client/public/assets/environment/forest-tent-tileset/animated-campfire.png",
+    "archiveStatus": "source PNG copied into working folder",
     "source": "https://thomaswastaken.itch.io/tileset"
   },
   {
     "pack": "epic-rpg-world-grassland-demo",
     "name": "EPIC RPG World Pack-[FREE Demo]Grass Land 2.0.zip",
-    "downloadPath": "client/public/assets/environment/_downloads/epic-rpg-world-grassland-demo__EPIC_RPG_World_Pack-[FREE_Demo]Grass_Land_2.0.zip",
     "extractedPath": "client/public/assets/environment/epic-rpg-world-grassland-demo",
+    "archiveStatus": "removed after extraction",
     "source": "https://rafaelmatos.itch.io/epic-rpg-world-free-demograss-land-20"
   }
 ]
