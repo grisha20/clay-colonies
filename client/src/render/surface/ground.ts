@@ -1,7 +1,8 @@
-import { Graphics } from "pixi.js";
+import { Graphics, Sprite } from "pixi.js";
 import type { Container } from "pixi.js";
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import type { ViewBounds } from "../types";
+import { getEnvironmentTextures } from "./environment";
 
 export function hash2(x: number, y: number, salt = 0): number {
   const value = Math.sin((x * 127.1 + y * 311.7 + salt * 74.7) * 0.0174533) * 43758.5453123;
@@ -30,12 +31,19 @@ function smoothStep(edge0: number, edge1: number, value: number): number {
   return t * t * (3 - 2 * t);
 }
 
-function terrainScore(x: number, y: number, salt = 0): number {
-  return (
-    hash2(Math.floor(x / 4), Math.floor(y / 4), 101 + salt) * 0.32 +
-    hash2(Math.floor(x / 10), Math.floor(y / 10), 102 + salt) * 0.42 +
-    hash2(Math.floor(x / 25), Math.floor(y / 25), 103 + salt) * 0.26
-  );
+function campDirtShapeValue(x: number, y: number, entrance: Vec2, index: number): number {
+  const seed = index * 37 + Math.floor(entrance.x * 0.7 + entrance.y * 1.3);
+  const angle = Math.atan2(y - entrance.y, x - entrance.x);
+  const baseX = 42 + hash2(seed, 0, 601) * 12;
+  const baseY = 30 + hash2(seed, 1, 602) * 9;
+  const lobe =
+    1 +
+    Math.sin(angle * 3 + seed * 0.17) * (0.12 + hash2(seed, 2, 603) * 0.1) +
+    Math.cos(angle * 5 + seed * 0.11) * (0.08 + hash2(seed, 3, 604) * 0.08) +
+    Math.sin(angle * 8 + seed * 0.07) * 0.045;
+  const dx = (x - entrance.x) / (baseX * lobe);
+  const dy = (y - entrance.y) / (baseY * (1 + (lobe - 1) * 0.55));
+  return dx * dx + dy * dy;
 }
 
 function isCampOrFoodClearing(x: number, y: number, world: WorldSnapshot): number {
@@ -73,16 +81,11 @@ function drawSoftBlob(root: Graphics, x: number, y: number, rx: number, ry: numb
   root.ellipse(x - rx * 0.16, y - ry * 0.08, rx * 0.72, ry * 0.7).fill({ color: 0xf0d28d, alpha: alpha * 0.18 });
 }
 
-function drawGrassPatch(root: Graphics, x: number, y: number, rx: number, ry: number, seed: number): void {
-  root.ellipse(x, y, rx, ry).fill({ color: 0x668f38, alpha: 0.5 });
-  root.ellipse(x - rx * 0.18, y - ry * 0.12, rx * 0.72, ry * 0.68).fill({ color: 0x84ad4d, alpha: 0.34 });
-  root.ellipse(x + rx * 0.18, y + ry * 0.1, rx * 0.62, ry * 0.56).fill({ color: 0x4f7d30, alpha: 0.22 });
-  for (let i = 0; i < 18; i += 1) {
-    const px = x + (hash2(seed, i, 151) - 0.5) * rx * 1.65;
-    const py = y + (hash2(seed, i, 152) - 0.5) * ry * 1.45;
-    const dot = 1.2 + hash2(seed, i, 153) * 2.4;
-    root.circle(px, py, dot).fill({ color: hash2(seed, i, 154) > 0.45 ? 0x9ab75b : 0x456f2b, alpha: 0.32 });
-  }
+function drawPixelFleck(root: Graphics, x: number, y: number, size: number, color: number, alpha: number): void {
+  const px = Math.round(x);
+  const py = Math.round(y);
+  const s = Math.max(1, Math.round(size));
+  root.rect(px, py, s, s).fill({ color, alpha });
 }
 
 function drawPond(root: Graphics, x: number, y: number, rx: number, ry: number, seed: number): void {
@@ -207,8 +210,95 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
   const top = Math.max(0, Math.floor(bounds.top));
   const bottom = Math.min(height, Math.ceil(bounds.bottom));
 
+  const textures = getEnvironmentTextures().terrain;
+  const grassTexture = textures.grass;
+  const dirtTexture = textures.dirt;
+  const tileSize = 32;
+  const pixelLeft = Math.floor((left * cell) / tileSize) * tileSize;
+  const pixelRight = Math.ceil((right * cell) / tileSize) * tileSize;
+  const pixelTop = Math.floor((top * cell) / tileSize) * tileSize;
+  const pixelBottom = Math.ceil((bottom * cell) / tileSize) * tileSize;
+  for (let y = pixelTop; y < pixelBottom; y += tileSize) {
+    for (let x = pixelLeft; x < pixelRight; x += tileSize) {
+      const tile = new Sprite(grassTexture);
+      tile.position.set(x, y);
+      tile.tint = 0xa0b85c;
+      root.addChild(tile);
+    }
+  }
+
+  const entrances = world.surface.entrances ?? [world.surface.entrance];
+  const dirtStep = 8;
+  const dirtLeft = Math.floor((left * cell) / dirtStep) * dirtStep;
+  const dirtRight = Math.ceil((right * cell) / dirtStep) * dirtStep;
+  const dirtTop = Math.floor((top * cell) / dirtStep) * dirtStep;
+  const dirtBottom = Math.ceil((bottom * cell) / dirtStep) * dirtStep;
+  const dirtEdge = new Graphics();
+  for (let y = dirtTop; y < dirtBottom; y += dirtStep) {
+    for (let x = dirtLeft; x < dirtRight; x += dirtStep) {
+      const worldX = (x + dirtStep * 0.5) / cell;
+      const worldY = (y + dirtStep * 0.5) / cell;
+      let bestShape = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < entrances.length; i += 1) {
+        const shape = campDirtShapeValue(worldX, worldY, entrances[i], i);
+        if (shape < bestShape) {
+          bestShape = shape;
+        }
+      }
+      const edgeNoise = (hash2(Math.floor(worldX * 1.8), Math.floor(worldY * 1.8), 501) - 0.5) * 0.22;
+      const shapeValue = bestShape + edgeNoise;
+      const fringe = 1 - smoothStep(0.84, 1.18, shapeValue);
+      const edgeBand = 1 - Math.min(1, Math.abs(shapeValue - 1) / 0.34);
+      const keep = shapeValue < 1.05;
+      if (!keep) {
+        if (shapeValue < 1.38 && hash2(Math.floor(worldX * 3.5), Math.floor(worldY * 3.5), 503) > 0.72) {
+          const px = x + hash2(worldX, worldY, 504) * dirtStep;
+          const py = y + hash2(worldX, worldY, 505) * dirtStep;
+          const r = 1.1 + hash2(worldX, worldY, 506) * 2.2;
+          drawPixelFleck(dirtEdge, px, py, r, 0xc99c54, 0.45);
+          if (hash2(worldX, worldY, 507) > 0.72) {
+            drawPixelFleck(dirtEdge, px + r * 1.6, py - r * 0.4, r * 0.65, 0xe2bf73, 0.36);
+          }
+        }
+        continue;
+      }
+      const tile = new Sprite(dirtTexture);
+      tile.position.set(x, y);
+      tile.scale.set(dirtStep / tileSize);
+      if (shapeValue > 0.84) {
+        tile.alpha = 0.7 + fringe * 0.3;
+      }
+      root.addChild(tile);
+      if (shapeValue > 0.64 && edgeBand > 0 && hash2(Math.floor(worldX * 4), Math.floor(worldY * 4), 508) > 0.28 + edgeBand * 0.18) {
+        const px = x + hash2(worldX, worldY, 509) * dirtStep;
+        const py = y + hash2(worldX, worldY, 510) * dirtStep;
+        drawPixelFleck(dirtEdge, px, py, 1 + hash2(worldX, worldY, 511) * 2.2, 0x87a23e, 0.82);
+        if (edgeBand > 0.36 && hash2(worldX, worldY, 512) > 0.38) {
+          drawPixelFleck(
+            dirtEdge,
+            px + (hash2(worldX, worldY, 513) - 0.5) * 9,
+            py + (hash2(worldX, worldY, 514) - 0.5) * 9,
+            1 + hash2(worldX, worldY, 515) * 2.6,
+            hash2(worldX, worldY, 516) > 0.42 ? 0xa8c950 : 0x6f8c34,
+            0.78
+          );
+        }
+        if (edgeBand > 0.58 && hash2(worldX, worldY, 517) > 0.62) {
+          drawPixelFleck(
+            dirtEdge,
+            px + (hash2(worldX, worldY, 518) - 0.5) * 13,
+            py + (hash2(worldX, worldY, 519) - 0.5) * 13,
+            1 + hash2(worldX, worldY, 520) * 1.8,
+            0xbee264,
+            0.64
+          );
+        }
+      }
+    }
+  }
+  root.addChild(dirtEdge);
+
   const ground = new Graphics();
-  ground.rect(left * cell, top * cell, (right - left) * cell, (bottom - top) * cell).fill(0xd8ad63);
   for (let y = top; y < bottom; y += 1) {
     for (let x = left; x < right; x += 1) {
       const noise = hash2(x, y, 1);
@@ -228,30 +318,6 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
         ground.rect(Math.round((x + 0.35) * cell), Math.round((y + 0.35) * cell), Math.max(1, Math.ceil(cell * 0.2)), Math.max(1, Math.ceil(cell * 0.2))).fill({ color: 0xf0d28d, alpha: 0.55 });
       } else if (speckle < 0.035) {
         ground.rect(Math.round((x + 0.45) * cell), Math.round((y + 0.45) * cell), Math.max(1, Math.ceil(cell * 0.16)), Math.max(1, Math.ceil(cell * 0.16))).fill({ color: 0x7f6135, alpha: 0.24 });
-      }
-    }
-  }
-
-  const patchLeft = Math.floor(left / 26) * 26;
-  const patchRight = Math.ceil(right / 26) * 26;
-  const patchTop = Math.floor(top / 26) * 26;
-  const patchBottom = Math.ceil(bottom / 26) * 26;
-  for (let gy = patchTop; gy <= patchBottom; gy += 26) {
-    for (let gx = patchLeft; gx <= patchRight; gx += 26) {
-      const cx = gx + 7 + hash2(gx, gy, 91) * 16;
-      const cy = gy + 6 + hash2(gx, gy, 92) * 16;
-      const edge = Math.max(
-        1 - smoothStep(0, 28, cx),
-        1 - smoothStep(0, 28, cy),
-        smoothStep(width - 28, width, cx),
-        smoothStep(height - 28, height, cy)
-      );
-      const clearing = isCampOrFoodClearing(cx, cy, world);
-      const roll = terrainScore(gx, gy, 93) + edge * 0.38 - clearing * 0.72;
-      if (roll > 0.62 && !isWaterPatch(cx, cy, world)) {
-        const rx = cell * (7 + hash2(gx, gy, 94) * 8);
-        const ry = cell * (4 + hash2(gx, gy, 95) * 6);
-        drawGrassPatch(ground, cx * cell, cy * cell, rx, ry, gx * 997 + gy);
       }
     }
   }
@@ -334,13 +400,9 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
     }
   }
 
-  const entrances = world.surface.entrances ?? [world.surface.entrance];
   for (const entrance of entrances) {
     const x = entrance.x * cell;
     const y = entrance.y * cell;
-    drawGrassPatch(decor, x - 138, y + 92, 76, 34, Math.round(x + y + 11));
-    drawGrassPatch(decor, x + 146, y + 86, 70, 30, Math.round(x + y + 17));
-    drawGrassPatch(decor, x - 42, y - 132, 62, 25, Math.round(x + y + 23));
     drawLog(decor, x - 82, y + 72, 1.18, -0.28);
     drawLog(decor, x + 85, y + 66, 1.12, 0.22);
     drawRockCluster(decor, x - 62, y + 52, 0.72);

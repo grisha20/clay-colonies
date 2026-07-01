@@ -77,9 +77,9 @@ function buildEnvironmentTextures(): EnvironmentTextures {
   const assetsUrl = `${summerBase}/assets.png`;
   environmentTextures = {
     terrain: {
-      grass: crop(cc0TilesUrl, 80, 16, 32, 32),
-      grassDeep: crop(cc0TilesUrl, 80, 16, 32, 32),
-      dirt: crop(cc0TilesUrl, 144, 208, 32, 32),
+      grass: crop(tilesUrl, 16, 16, 32, 32),
+      grassDeep: crop(tilesUrl, 16, 16, 32, 32),
+      dirt: crop(tilesUrl, 128, 20, 32, 32),
       dirtSoft: crop(cc0TilesUrl, 80, 80, 32, 32),
       water: crop(cc0TilesUrl, 144, 144, 32, 32),
       sandPatch: crop(tilesUrl, 272, 192, 64, 64),
