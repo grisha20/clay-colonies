@@ -42,40 +42,21 @@ appRoot.innerHTML = `
     <aside class="panel hud">
       <div class="hudCommon">
         <div><span>Тик</span><strong id="tick">0</strong></div>
-        <div><span>Паук</span><strong id="spider-generation">G1</strong></div>
-        <div><span>Поколений паука</span><strong id="spider-generations-run">0</strong></div>
-        <div><span>Лучший фитнес</span><strong id="best-fitness">0</strong></div>
+        <div><span>Население</span><strong id="population">0</strong></div>
+        <div><span>Паук</span><strong id="spider-status">-</strong></div>
       </div>
       <div class="colonyGrid">
         <section class="colonyStats colonyA">
           <h2>Племя A</h2>
-          <div><span>Поколение</span><strong id="colony-a-generation">1</strong></div>
-          <div><span>Поколений</span><strong id="colony-a-generations-run">0</strong></div>
-          <div><span>Рабочие</span><strong id="colony-a-workers">0</strong></div>
+          <div><span>Жители</span><strong id="colony-a-workers">0</strong></div>
           <div><span>Разведка</span><strong id="colony-a-scouts">0</strong></div>
-          <div><span>Няньки</span><strong id="colony-a-nurses">0</strong></div>
-          <div><span>Склад</span><strong id="colony-a-storage">0</strong></div>
-          <div><span>Яйца</span><strong id="colony-a-eggs">0</strong></div>
-          <div><span>Личинки</span><strong id="colony-a-larvae">0</strong></div>
-          <div><span>Королевская пара</span><strong id="colony-a-queen">жива</strong></div>
-          <div><span>Стресс</span><strong id="colony-a-stress">0</strong></div>
-          <div><span>Возраст</span><strong id="colony-a-age">0</strong></div>
-          <div><span>Принцессы</span><strong id="colony-a-princesses">0</strong></div>
+          <div><span>Еда</span><strong id="colony-a-storage">0</strong></div>
         </section>
         <section class="colonyStats colonyB">
           <h2>Племя B</h2>
-          <div><span>Поколение</span><strong id="colony-b-generation">1</strong></div>
-          <div><span>Поколений</span><strong id="colony-b-generations-run">0</strong></div>
-          <div><span>Рабочие</span><strong id="colony-b-workers">0</strong></div>
+          <div><span>Жители</span><strong id="colony-b-workers">0</strong></div>
           <div><span>Разведка</span><strong id="colony-b-scouts">0</strong></div>
-          <div><span>Няньки</span><strong id="colony-b-nurses">0</strong></div>
-          <div><span>Склад</span><strong id="colony-b-storage">0</strong></div>
-          <div><span>Яйца</span><strong id="colony-b-eggs">0</strong></div>
-          <div><span>Личинки</span><strong id="colony-b-larvae">0</strong></div>
-          <div><span>Королевская пара</span><strong id="colony-b-queen">жива</strong></div>
-          <div><span>Стресс</span><strong id="colony-b-stress">0</strong></div>
-          <div><span>Возраст</span><strong id="colony-b-age">0</strong></div>
-          <div><span>Принцессы</span><strong id="colony-b-princesses">0</strong></div>
+          <div><span>Еда</span><strong id="colony-b-storage">0</strong></div>
         </section>
       </div>
     </aside>
@@ -224,7 +205,7 @@ style.textContent = `
   }
 
   .hudCommon {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .colonyGrid {
@@ -318,20 +299,6 @@ document.head.appendChild(style);
 
 document.querySelector("[data-view='surface']")?.closest(".segmented")?.remove();
 document.querySelector(".nestControls")?.remove();
-for (const id of [
-  "colony-a-nurses",
-  "colony-a-eggs",
-  "colony-a-larvae",
-  "colony-a-stress",
-  "colony-a-princesses",
-  "colony-b-nurses",
-  "colony-b-eggs",
-  "colony-b-larvae",
-  "colony-b-stress",
-  "colony-b-princesses"
-]) {
-  document.querySelector(`#${id}`)?.closest("div")?.remove();
-}
 
 const canvasHost = document.querySelector<HTMLDivElement>("#canvas-host");
 const appShell = document.querySelector<HTMLElement>(".app");
@@ -342,9 +309,8 @@ const speedButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[d
 const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-camera]"));
 const btnTrample = document.querySelector<HTMLButtonElement>("#btn-trample");
 const tick = document.querySelector<HTMLElement>("#tick");
-const spiderGeneration = document.querySelector<HTMLElement>("#spider-generation");
-const spiderGenerationsRun = document.querySelector<HTMLElement>("#spider-generations-run");
-const bestFitness = document.querySelector<HTMLElement>("#best-fitness");
+const population = document.querySelector<HTMLElement>("#population");
+const spiderStatus = document.querySelector<HTMLElement>("#spider-status");
 const fps = document.querySelector<HTMLElement>("#fps");
 const packetMs = document.querySelector<HTMLElement>("#packet-ms");
 const payloadKb = document.querySelector<HTMLElement>("#payload-kb");
@@ -356,13 +322,9 @@ let trampleEnabled = true;
 const colonyNodes = [0, 1].map((index) => {
   const key = index === 0 ? "a" : "b";
   return {
-    generation: document.querySelector<HTMLElement>(`#colony-${key}-generation`),
-    generationsRun: document.querySelector<HTMLElement>(`#colony-${key}-generations-run`),
     workers: document.querySelector<HTMLElement>(`#colony-${key}-workers`),
     scouts: document.querySelector<HTMLElement>(`#colony-${key}-scouts`),
-    storage: document.querySelector<HTMLElement>(`#colony-${key}-storage`),
-    queen: document.querySelector<HTMLElement>(`#colony-${key}-queen`),
-    age: document.querySelector<HTMLElement>(`#colony-${key}-age`)
+    storage: document.querySelector<HTMLElement>(`#colony-${key}-storage`)
   };
 });
 
@@ -371,9 +333,8 @@ if (
   !appShell ||
   !status ||
   !tick ||
-  !spiderGeneration ||
-  !spiderGenerationsRun ||
-  !bestFitness ||
+  !population ||
+  !spiderStatus ||
   !fps ||
   !packetMs ||
   !payloadKb ||
@@ -389,22 +350,17 @@ const canvasHostNode = canvasHost;
 const appShellNode = appShell;
 const statusNode = status;
 const tickNode = tick;
-const spiderGenerationNode = spiderGeneration;
-const spiderGenerationsRunNode = spiderGenerationsRun;
-const bestFitnessNode = bestFitness;
+const populationNode = population;
+const spiderStatusNode = spiderStatus;
 const fpsNode = fps;
 const packetMsNode = packetMs;
 const payloadKbNode = payloadKb;
 const renderMsNode = renderMs;
 const antsCountNode = antsCount;
 const colonyStatNodes = colonyNodes.map((nodes) => ({
-  generation: nodes.generation as HTMLElement,
-  generationsRun: nodes.generationsRun as HTMLElement,
   workers: nodes.workers as HTMLElement,
   scouts: nodes.scouts as HTMLElement,
-  storage: nodes.storage as HTMLElement,
-  queen: nodes.queen as HTMLElement,
-  age: nodes.age as HTMLElement
+  storage: nodes.storage as HTMLElement
 }));
 
 const SURFACE_TILE_SIZE = 8;
@@ -499,34 +455,26 @@ canvasHost.appendChild(pixi.canvas);
 
 function updateHud(world: WorldSnapshot): void {
   tickNode.textContent = String(world.tick);
-  spiderGenerationNode.textContent = `G${world.colony.spiderGeneration}`;
-  spiderGenerationsRunNode.textContent = String(world.colony.spiderGenerationsRun);
+  populationNode.textContent = String(world.ants.length);
+  const spider = world.enemies.find((enemy) => enemy.type === "spider");
+  spiderStatusNode.textContent = spider && spider.hp > 0 ? "жив" : "нет";
 
   const colonies = world.colonies?.length
     ? world.colonies
     : [{ colony: world.colony, underground: world.underground }];
-  bestFitnessNode.textContent = String(Math.round(Math.max(...colonies.map((item) => item.colony.bestFitness))));
 
   colonyStatNodes.forEach((nodes, index) => {
     const item = colonies[index];
     if (!item) {
-      nodes.generation.textContent = "-";
-      nodes.generationsRun.textContent = "-";
       nodes.workers.textContent = "-";
       nodes.scouts.textContent = "-";
       nodes.storage.textContent = "-";
-      nodes.queen.textContent = "-";
-      nodes.age.textContent = "-";
       return;
     }
 
-    nodes.generation.textContent = String(item.colony.generation);
-    nodes.generationsRun.textContent = String(item.colony.generationsRun);
     nodes.workers.textContent = String(item.colony.population.workers);
     nodes.scouts.textContent = String(item.colony.population.scouts ?? 0);
     nodes.storage.textContent = String(Math.floor(item.colony.food ?? 0));
-    nodes.queen.textContent = item.colony.queenAlive ? "жива" : "погибла";
-    nodes.age.textContent = String(Math.floor(item.colony.queenAge ?? 0));
   });
 }
 

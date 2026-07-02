@@ -40,6 +40,7 @@ export function createSurfaceScene(): SurfaceScene {
   const staticLayer = new Container();
   const shadowLayer = new Graphics();
   const entranceLayer = new Container();
+  const fireGlow = new Graphics();
   const pheromones = new Graphics();
   const webs = new Graphics();
   const debrisGraphics = new Graphics();
@@ -50,13 +51,14 @@ export function createSurfaceScene(): SurfaceScene {
   const carriedCarrionContainer = new Container();
   const antContainer = new Container();
 
-  root.addChild(staticLayer, shadowLayer, entranceLayer, pheromones, webs, debrisGraphics, foodContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
+  root.addChild(staticLayer, shadowLayer, entranceLayer, fireGlow, pheromones, webs, debrisGraphics, foodContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
 
   return {
     root,
     staticLayer,
     shadowLayer,
     entranceLayer,
+    fireGlow,
     pheromones,
     webs,
     debrisGraphics,
@@ -154,6 +156,21 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
   scene.entranceKey = entranceKey;
 }
 
+// Живое мерцание костра поверх статичного лагеря: два тёплых круга с альфой от тика.
+function updateFireGlow(glow: Graphics, world: WorldSnapshot, cell: number): void {
+  glow.clear();
+  const entrances = world.surface.entrances ?? [world.surface.entrance];
+  const t = world.tick;
+  for (let index = 0; index < entrances.length; index += 1) {
+    const entrance = entrances[index];
+    const x = Math.round(entrance.x * cell);
+    const y = Math.round(entrance.y * cell) + 6;
+    const flicker = 0.5 + 0.5 * Math.sin(t * 0.9 + index * 2.1) * Math.sin(t * 0.37 + index);
+    glow.circle(x, y, 16 + flicker * 5).fill({ color: 0xffa63c, alpha: 0.1 + flicker * 0.08 });
+    glow.circle(x + Math.sin(t * 0.7 + index) * 1.5, y - 2, 7 + flicker * 3).fill({ color: 0xffe07a, alpha: 0.16 + flicker * 0.12 });
+  }
+}
+
 function updateTrample(scene: SurfaceScene, renderer: Renderer, world: WorldSnapshot): void {
   if (!scene.trampleTexture || !scene.trampleSprite) {
     return;
@@ -248,6 +265,7 @@ export function renderSurface(
     ...storageLevels
   ].join(":");
   updateSurfaceEntrances(scene, world, cell, entranceKey);
+  updateFireGlow(scene.fireGlow, world, cell);
 
   updateSurfaceShadows(scene.shadowLayer, world, cell, bounds);
   drawSurfacePheromones(scene.pheromones, world, cell, bounds);

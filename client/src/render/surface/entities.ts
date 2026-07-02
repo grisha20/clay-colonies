@@ -70,11 +70,13 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
       continue;
     }
 
-    const chunks = Math.max(1, Math.min(18, Math.ceil(source.amount / 6)));
+    // Еда лежит плотной кучкой: маленький разброс, крупнее в центре.
+    const chunks = Math.max(1, Math.min(14, Math.ceil(source.amount / 7)));
     for (let index = 0; index < chunks; index += 1) {
       const sprite = acquireSprite(pool);
-      const offset = deterministicOffset(index + source.id.length, 18);
-      sprite.scale.set(2.2);
+      const spread = index === 0 ? 0 : 4 + Math.min(9, index * 1.6);
+      const offset = deterministicOffset(index + source.id.length, spread);
+      sprite.scale.set(index === 0 ? 2.6 : 2.1);
       placeSprite(sprite, source.pos.x * cell + offset.x, source.pos.y * cell + offset.y, (index % 4) * 0.2);
     }
   }
