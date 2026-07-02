@@ -1,3 +1,5 @@
+// LEGACY: не выполняется в surface-only Clayfolk. Не менять без отдельного решения.
+// См. docs/Помощь от Fable 5.md, раздел 0.2.
 import type { Brood, DigTask, Underground, UndergroundRoom, UndergroundTile, UndergroundTileType, Vec2 } from "../../../shared/types";
 import { CONFIG } from "../config";
 

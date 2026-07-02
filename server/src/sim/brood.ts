@@ -1,3 +1,5 @@
+// LEGACY: не выполняется в surface-only Clayfolk. Не менять без отдельного решения.
+// См. docs/Помощь от Fable 5.md, раздел 0.2.
 import { CONFIG } from "../config";
 import { makeBrood } from "./underground";
 import { createWorkerAnt, type World } from "./world";

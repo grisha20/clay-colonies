@@ -1,3 +1,5 @@
+// LEGACY: не выполняется в surface-only Clayfolk. Не менять без отдельного решения.
+// См. docs/Помощь от Fable 5.md, раздел 0.2.
 import { Container, Graphics } from "pixi.js";
 import type { WorldSnapshot } from "../../../../shared/types";
 import { createSpritePool, fitRoot } from "../spritePool";

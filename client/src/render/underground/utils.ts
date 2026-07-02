@@ -1,3 +1,5 @@
+// LEGACY: не выполняется в surface-only Clayfolk. Не менять без отдельного решения.
+// См. docs/Помощь от Fable 5.md, раздел 0.2.
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import { clamp01 } from "../spritePool";
 import { UNDERGROUND_WIDTH, UNDERGROUND_HEIGHT, undergroundLayout } from "../types";

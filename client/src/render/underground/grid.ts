@@ -1,3 +1,5 @@
+// LEGACY: не выполняется в surface-only Clayfolk. Не менять без отдельного решения.
+// См. docs/Помощь от Fable 5.md, раздел 0.2.
 import { Graphics } from "pixi.js";
 import type { WorldSnapshot } from "../../../../shared/types";
 import { UNDERGROUND_WIDTH, UNDERGROUND_HEIGHT, SHOW_UNDERGROUND_DEBUG, undergroundLayout } from "../types";
