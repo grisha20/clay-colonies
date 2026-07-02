@@ -2,7 +2,7 @@
 // Ум на уровне племени: пока запас ниже цели, несколько свободных рабочих
 // назначаются сборщиками (job = "harvest") на ближайшие узлы ресурсов.
 // Никакого генома: цели заданы константами конфига (позже их заменят приоритеты игрока).
-import type { ResourceKind, ResourceNode } from "../../../shared/types";
+import type { Ant, Building, ResourceKind, ResourceNode } from "../../../shared/types";
 import { CONFIG } from "../config";
 import type { World } from "./world";
 import { zoneIndexAt } from "./zones";
@@ -13,9 +13,16 @@ export function colonyWantsResource(world: World, kind: ResourceKind): boolean {
   return stock < target + demandFromBuildings(world, kind);
 }
 
-// Задел под Фазу 4: недостроенные здания повышают спрос на свои ресурсы.
-function demandFromBuildings(_world: World, _kind: ResourceKind): number {
-  return 0;
+// Недостроенные здания повышают спрос племени на свои ресурсы.
+function demandFromBuildings(world: World, kind: ResourceKind): number {
+  let demand = 0;
+  for (const building of world.surface.buildings) {
+    if (building.colonyId !== world.colony.id || building.stage === "built") {
+      continue;
+    }
+    demand += Math.max(0, building.cost[kind] - building.delivered[kind]);
+  }
+  return demand;
 }
 
 function nodeById(world: World, id?: string): ResourceNode | undefined {
@@ -110,3 +117,82 @@ export function assignHarvestJobs(world: World): void {
     }
   }
 }
+
+function isFreeForAssignment(ant: Ant): boolean {
+  return (
+    ant.job === "forage" &&
+    ant.forageRole !== "scout" &&
+    ant.carrying <= 0 &&
+    !ant.carryingDebris &&
+    ant.state !== "fight" &&
+    ant.state !== "return"
+  );
+}
+
+// Назначение строителей: до maxBuildersPerSite на площадку, maxActiveBuilders всего.
+export function assignBuildJobs(world: World): void {
+  const live = world.ants.filter((ant) => ant.state !== "dead");
+  const sites = world.surface.buildings.filter(
+    (building) => building.colonyId === world.colony.id && building.stage !== "built"
+  );
+  const buildReady = world.colony.food >= CONFIG.buildMinFood;
+
+  const perSite = new Map<string, number>();
+  let totalBuilders = 0;
+  for (const ant of live) {
+    if (ant.job !== "build") {
+      continue;
+    }
+    const site = sites.find((building) => building.id === ant.buildTargetId);
+    if (!site || !buildReady) {
+      if (ant.carrying <= 0) {
+        ant.job = "forage";
+        ant.buildTargetId = undefined;
+        ant.carryKind = undefined;
+        continue;
+      }
+    }
+    if (site) {
+      perSite.set(site.id, (perSite.get(site.id) ?? 0) + 1);
+    }
+    totalBuilders += 1;
+  }
+
+  if (!buildReady || sites.length === 0) {
+    return;
+  }
+
+  for (const site of sites) {
+    if (totalBuilders >= CONFIG.maxActiveBuilders) {
+      break;
+    }
+    let assigned = perSite.get(site.id) ?? 0;
+    while (assigned < CONFIG.maxBuildersPerSite && totalBuilders < CONFIG.maxActiveBuilders) {
+      let best: Ant | null = null;
+      let bestDistanceSq = Number.POSITIVE_INFINITY;
+      for (const ant of live) {
+        if (!isFreeForAssignment(ant)) {
+          continue;
+        }
+        const dx = ant.pos.x - site.pos.x;
+        const dy = ant.pos.y - site.pos.y;
+        const distanceSq = dx * dx + dy * dy;
+        if (distanceSq < bestDistanceSq) {
+          bestDistanceSq = distanceSq;
+          best = ant;
+        }
+      }
+      if (!best) {
+        return;
+      }
+      best.job = "build";
+      best.buildTargetId = site.id;
+      best.forageRole = undefined;
+      assigned += 1;
+      totalBuilders += 1;
+    }
+  }
+}
+
+type BuildingList = Building[];
+export type { BuildingList };

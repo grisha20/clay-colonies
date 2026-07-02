@@ -442,6 +442,10 @@ export function applySeparation(world: World, ant: Ant, desired: Vec2): Vec2 {
 }
 
 export function tryCrossLayer(world: World, ant: Ant): boolean {
+  // Строитель с материалом несёт его на площадку, а не в общий склад.
+  if (ant.job === "build" && ant.carrying > 0) {
+    return false;
+  }
   if (ant.layer === "underground") {
     ant.layer = "surface";
     ant.state = "search";

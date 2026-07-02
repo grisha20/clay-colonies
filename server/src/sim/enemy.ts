@@ -4,6 +4,7 @@ import { recordAndEvolveSpider, saveSpiderGenome } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
 import { tickCache } from "./cache";
 import { isWithinRadius } from "./ant/utils";
+import { resolveWallCollision } from "./building";
 import { addFoodSource, type World } from "./world";
 
 const enemyQueryScratch: Ant[] = [];
@@ -363,7 +364,10 @@ export function updateEnemies(world: World): void {
     if (isSpiderUnderPressure(world, enemy)) {
       spiderModes.delete(enemy.id);
     }
+    const prevSpiderX = enemy.pos.x;
+    const prevSpiderY = enemy.pos.y;
     moveSpider(world, enemy, liveAntsCount);
+    resolveWallCollision(world, enemy.pos, prevSpiderX, prevSpiderY);
     const hungry = enemy.hunger >= CONFIG.spiderHungryThreshold;
     const attackRadius = hungry ? CONFIG.spiderHungryAttackRadius : CONFIG.spiderAttackRadius;
     const damage = hungry ? CONFIG.spiderHungryDamage : CONFIG.spiderDamagePerTick;

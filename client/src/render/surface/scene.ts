@@ -1,5 +1,5 @@
 import { Container, Graphics, RenderTexture, Sprite, Renderer } from "pixi.js";
-import { ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
+import { WALL_CELL_SIZE, ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
 import { createSpritePool } from "../spritePool";
 import type { Camera, SurfaceScene, ViewBounds } from "../types";
 import { SURFACE_TILE_SIZE } from "../types";
@@ -43,6 +43,7 @@ export function createSurfaceScene(): SurfaceScene {
   const entranceLayer = new Container();
   const fireGlow = new Graphics();
   const zonesOverlay = new Graphics();
+  const buildingsLayer = new Graphics();
   const pheromones = new Graphics();
   const webs = new Graphics();
   const debrisGraphics = new Graphics();
@@ -54,7 +55,7 @@ export function createSurfaceScene(): SurfaceScene {
   const carriedCarrionContainer = new Container();
   const antContainer = new Container();
 
-  root.addChild(staticLayer, shadowLayer, zonesOverlay, entranceLayer, fireGlow, pheromones, webs, debrisGraphics, foodContainer, resourceContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
+  root.addChild(staticLayer, shadowLayer, zonesOverlay, buildingsLayer, entranceLayer, fireGlow, pheromones, webs, debrisGraphics, foodContainer, resourceContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
 
   return {
     root,
@@ -63,6 +64,7 @@ export function createSurfaceScene(): SurfaceScene {
     entranceLayer,
     fireGlow,
     zonesOverlay,
+    buildingsLayer,
     pheromones,
     webs,
     debrisGraphics,
@@ -160,6 +162,55 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
 
   drawSurfaceEntrance(scene.entranceLayer, world, cell);
   scene.entranceKey = entranceKey;
+}
+
+// Постройки: площадка (контур) -> стройка (полупрозрачно) -> готово (плотный цвет глины).
+function updateBuildings(layer: Graphics, world: WorldSnapshot, cell: number): void {
+  layer.clear();
+  const buildings = world.surface.buildings ?? [];
+  for (const building of buildings) {
+    const isRed = building.colonyId === "colony-2";
+    const clayColor = isRed ? 0xd05236 : 0xbc6240;
+    const darkColor = isRed ? 0x692018 : 0x5b281c;
+    const x = building.pos.x * cell;
+    const y = building.pos.y * cell;
+
+    if (building.type === "wall") {
+      const half = (WALL_CELL_SIZE / 2) * cell;
+      if (building.stage === "site") {
+        layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.4, color: clayColor, alpha: 0.55 });
+      } else if (building.stage === "inProgress") {
+        layer.rect(x - half, y - half, half * 2, half * 2).fill({ color: clayColor, alpha: 0.28 + building.progress * 0.4 });
+        layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.4, color: darkColor, alpha: 0.7 });
+      } else {
+        layer.rect(x - half, y - half + 2, half * 2, half * 2).fill({ color: darkColor, alpha: 0.9 });
+        layer.rect(x - half, y - half, half * 2, half * 2 - 2).fill({ color: clayColor, alpha: 1 });
+        layer.rect(x - half + 1.5, y - half + 1.5, half * 2 - 3, 2.5).fill({ color: 0xef9a64, alpha: 0.7 });
+      }
+      continue;
+    }
+
+    // Хижина.
+    const radius = 2.1 * cell;
+    if (building.stage === "site") {
+      layer.circle(x, y, radius).stroke({ width: 1.6, color: clayColor, alpha: 0.6 });
+      const deliveredTotal = building.delivered.clay + building.delivered.wood;
+      const costTotal = Math.max(1, building.cost.clay + building.cost.wood);
+      const fillRadius = radius * Math.min(1, deliveredTotal / costTotal);
+      if (fillRadius > 1) {
+        layer.circle(x, y, fillRadius).fill({ color: clayColor, alpha: 0.3 });
+      }
+    } else if (building.stage === "inProgress") {
+      layer.circle(x, y, radius).fill({ color: clayColor, alpha: 0.35 + building.progress * 0.5 });
+      layer.circle(x, y, radius).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
+    } else {
+      layer.ellipse(x + 2, y + radius * 0.55, radius * 1.15, radius * 0.4).fill({ color: 0x24190f, alpha: 0.22 });
+      layer.circle(x, y, radius).fill({ color: darkColor, alpha: 1 });
+      layer.circle(x, y - radius * 0.15, radius * 0.88).fill({ color: clayColor, alpha: 1 });
+      layer.circle(x - radius * 0.3, y - radius * 0.42, radius * 0.3).fill({ color: 0xef9a64, alpha: 0.75 });
+      layer.rect(x - radius * 0.28, y + radius * 0.25, radius * 0.56, radius * 0.6).fill({ color: 0x2f1812, alpha: 0.85 });
+    }
+  }
 }
 
 // Зоны игрока: полупрозрачный слой поверх земли (зелёная — добыча, красная — запрет).
@@ -304,6 +355,7 @@ export function renderSurface(
   updateSurfaceEntrances(scene, world, cell, entranceKey);
   updateFireGlow(scene.fireGlow, world, cell);
   updateZonesOverlay(scene, world, cell);
+  updateBuildings(scene.buildingsLayer, world, cell);
 
   updateSurfaceShadows(scene.shadowLayer, world, cell, bounds);
   drawSurfacePheromones(scene.pheromones, world, cell, bounds);

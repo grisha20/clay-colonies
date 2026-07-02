@@ -34,6 +34,7 @@ export type SurfaceScene = {
   entranceLayer: Container;
   fireGlow: Graphics;
   zonesOverlay: Graphics;
+  buildingsLayer: Graphics;
   pheromones: Graphics;
   webs: Graphics;
   debrisGraphics: Graphics;

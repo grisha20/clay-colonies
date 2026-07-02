@@ -1,8 +1,10 @@
 import type { Ant } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
+import { resolveWallCollision } from "../building";
 import type { World } from "../world";
 import { isWithinRadius } from "./utils";
+import { moveBuilding } from "./build";
 import { tryCrossLayer } from "./movement";
 import { canUseStorageMeal, shouldReturnFromSurface } from "./colony-state";
 import { handleEnemyColonyCombat, moveFighting } from "./combat";
@@ -39,6 +41,10 @@ export function stepSurface(world: World, ant: Ant): void {
   }
 
   if (profiler.measure("stepAnt.surface.combat", () => handleEnemyColonyCombat(world, ant))) {
+    return;
+  }
+
+  if (ant.job === "build" && moveBuilding(world, ant)) {
     return;
   }
 
@@ -124,5 +130,9 @@ export function stepAnt(world: World, ant: Ant): void {
     }
   }
 
+  const prevX = ant.pos.x;
+  const prevY = ant.pos.y;
   stepSurface(world, ant);
+  // Достроенные стены непроходимы: скольжение вдоль стены или откат.
+  resolveWallCollision(world, ant.pos, prevX, prevY);
 }

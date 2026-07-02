@@ -25,6 +25,7 @@ import { createColony, syncColonyStats } from "./colony";
 import { createSpider, syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
 import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
+import { rebuildWallBlocked, syncBuildingIdCounter } from "./building";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 
 export type ColonyRuntime = {
@@ -53,6 +54,8 @@ export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | 
     score: number;
   };
   zoneSets: ZoneSets;
+  // Клетки, занятые ДОСТРОЕННЫМИ стенами (индексы стенной сетки 2x2). Общие для всего мира.
+  wallBlocked: Set<number>;
   pheromones: {
     width: number;
     height: number;
@@ -668,7 +671,8 @@ export function createWorld(
     foodSources: makeFoodSources(),
     carrion: makeCarrionSources(),
     debris: makeDebrisSources(entrances),
-    resourceNodes: makeResourceNodes()
+    resourceNodes: makeResourceNodes(),
+    buildings: []
   };
   const enemies = [createSpider()];
   const colonies = [
@@ -688,6 +692,7 @@ export function createWorld(
     fitness: colonies[0].fitness,
     spiderFitness: createSpiderFitnessState(),
     zoneSets: colonies[0].zoneSets,
+    wallBlocked: new Set<number>(),
     ants: colonies.flatMap((colony) => colony.ants),
     enemies,
     pheromones: {
@@ -758,6 +763,8 @@ export function worldFromSnapshot(
     return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
   }, 0);
   nextResourceNodeId = Math.max(nextResourceNodeId, maxResourceId + 1);
+  const buildings = snapshot.surface.buildings ?? [];
+  syncBuildingIdCounter(buildings);
   const colonies = snapshot.colonies.map((colonySnapshot, index): ColonyRuntime => {
     const surfaceEntrance = snapshot.surface.entrances?.[index] ?? (index === 0 ? CONFIG.surfaceEntrance : CONFIG.surfaceEntranceB);
     const underground = makeLegacyEmptyUnderground(surfaceEntrance);
@@ -833,7 +840,8 @@ export function worldFromSnapshot(
       carrion,
       entrances,
       debris,
-      resourceNodes
+      resourceNodes,
+      buildings
     },
     colony: colonies[0].colony,
     underground: colonies[0].underground,
@@ -845,6 +853,7 @@ export function worldFromSnapshot(
     fitness: colonies[0].fitness,
     spiderFitness: createSpiderFitnessState(),
     zoneSets: colonies[0].zoneSets,
+    wallBlocked: new Set<number>(),
     ants: snapshotAnts,
     pheromones: {
       width: snapshot.pheromones.width,
@@ -853,6 +862,7 @@ export function worldFromSnapshot(
       home: colonies[0].homePheromone
     }
   };
+  rebuildWallBlocked(world);
   for (const colony of world.colonies) {
     colony.directives = computeDirectives(colonyWorldView(world, colony), colony.genomeState.current);
   }

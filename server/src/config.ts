@@ -249,6 +249,23 @@ export const CONFIG = {
   harvestMinWorkers: 10,
   harvestMinFood: 30,
 
+  // Постройки: хижина (точкой) и стена (кистью).
+  hutCost: { clay: 8, wood: 5 },
+  hutMaxHp: 120,
+  hutPopulationBonus: 4,
+  hutBuildTicks: 260,
+  wallCost: { clay: 2, wood: 0 },
+  wallMaxHp: 80,
+  wallBuildTicks: 70,
+  maxBuildersPerSite: 2,
+  maxActiveBuilders: 4,
+  buildMinFood: 15,
+  buildingDeliverRadius: 2.4,
+  buildRadius: 2.6,
+  buildingEntranceMargin: 7,
+  maxHutsPerColony: 8,
+  maxWallSegmentsPerColony: 160,
+
   genomeGeneBounds: {
     nurseFraction: { min: 0.1, max: 0.6 },
     digFraction: { min: 0.05, max: 0.45 },

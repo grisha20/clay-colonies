@@ -4,7 +4,7 @@ import { stepAnt, clearDeadAntPaths } from "./ant";
 import { updateTickCache, updateWorldSurfaceCache } from "./cache";
 import { profiler } from "../utils/profiler";
 import { updateEnemies } from "./enemy";
-import { assignHarvestJobs } from "./economy";
+import { assignBuildJobs, assignHarvestJobs } from "./economy";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
 import {
   addAntCorpse,
@@ -81,8 +81,15 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
   }
 
   colony.colony.reproductionCooldown = Math.max(0, (colony.colony.reproductionCooldown ?? CONFIG.broodLayCooldownTicks) - 1);
-  const totalPopulation = world.colonies.reduce((total, item) => total + item.ants.length, 0);
-  if (totalPopulation >= CONFIG.maxPopulation) {
+  // Лимит населения: базовая доля мира + бонус за достроенные хижины племени.
+  const builtHuts = world.surface.buildings.filter(
+    (building) => building.colonyId === colony.id && building.type === "hut" && building.stage === "built"
+  ).length;
+  const perColonyCap =
+    Math.floor(CONFIG.maxPopulation / Math.max(1, world.colonies.length)) +
+    builtHuts * CONFIG.hutPopulationBonus;
+  colony.colony.nestCapacity = perColonyCap;
+  if (colony.ants.length >= perColonyCap) {
     return;
   }
   if (colony.colony.reproductionCooldown > 0 || colony.colony.food < CONFIG.queenMinFoodReserve + CONFIG.eggCost) {
@@ -124,6 +131,7 @@ export function step(world: World): void {
       colony.directives = computeDirectives(scopedWorld, colony.genomeState.current);
       assignForageRoles(scopedWorld);
       assignHarvestJobs(scopedWorld);
+      assignBuildJobs(scopedWorld);
       updateTickCache(scopedWorld);
       profiler.measure("stepAnt", () => {
         for (const ant of colony.ants) {

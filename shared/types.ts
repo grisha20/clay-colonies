@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 3;
-export const CURRENT_PROTOCOL_VERSION = 3;
+export const CURRENT_SNAPSHOT_VERSION = 4;
+export const CURRENT_PROTOCOL_VERSION = 4;
 
 export type Vec2 = {
   x: number;
@@ -78,6 +78,24 @@ export type Debris = {
 export const ZONE_CELL_SIZE = 4;
 export type ZoneType = "harvest" | "forbid";
 
+// Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
+export const WALL_CELL_SIZE = 2;
+export type BuildingType = "hut" | "wall";
+export type BuildingStage = "site" | "inProgress" | "built";
+
+export type Building = {
+  id: string;
+  colonyId: string;
+  type: BuildingType;
+  stage: BuildingStage;
+  pos: Vec2;
+  cost: { clay: number; wood: number };
+  delivered: { clay: number; wood: number };
+  progress: number;
+  hp: number;
+  maxHp: number;
+};
+
 // Новые ресурсы Clayfolk: узлы глины и дерева на поверхности.
 export type ResourceKind = "clay" | "wood";
 
@@ -93,9 +111,10 @@ export type Ant = {
   colonyId: string;
   role: "worker";
   strength: number;
-  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest";
+  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build";
   carryKind?: "food" | ResourceKind;
   harvestNodeId?: string;
+  buildTargetId?: string;
   forageRole?: "scout" | "forager";
   preferredTask?: "dig";
   layer: Layer;
@@ -225,6 +244,7 @@ export type Surface = {
   carrion: FoodSource[];
   debris: Debris[];
   resourceNodes: ResourceNode[];
+  buildings: Building[];
 };
 
 export type SparseGrid = {

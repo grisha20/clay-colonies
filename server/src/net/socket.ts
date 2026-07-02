@@ -18,6 +18,20 @@ export type ClientCommand =
       cells: number[];
     }
   | {
+      type: "placeBuilding";
+      building: "hut";
+      x: number;
+      y: number;
+    }
+  | {
+      type: "paintWall";
+      cells: number[];
+    }
+  | {
+      type: "eraseBuild";
+      cells: number[];
+    }
+  | {
       type: "setSpeed";
       value: number;
     }
@@ -62,6 +76,37 @@ function parseCommand(raw: string): ClientCommand | null {
         mode,
         undergroundColonyIndex
       };
+    }
+
+    if (command.type === "placeBuilding") {
+      if (
+        command.building !== "hut" ||
+        typeof command.x !== "number" ||
+        typeof command.y !== "number" ||
+        !Number.isFinite(command.x) ||
+        !Number.isFinite(command.y) ||
+        command.x < 0 ||
+        command.y < 0 ||
+        command.x >= CONFIG.mapWidth ||
+        command.y >= CONFIG.mapHeight
+      ) {
+        return null;
+      }
+      return { type: "placeBuilding", building: "hut", x: command.x, y: command.y };
+    }
+
+    if (command.type === "paintWall" || command.type === "eraseBuild") {
+      const rawCells = Array.isArray(command.cells) ? (command.cells as unknown[]) : [];
+      const cells: number[] = [];
+      for (const cell of rawCells.slice(0, 512)) {
+        if (typeof cell === "number" && Number.isInteger(cell) && cell >= 0) {
+          cells.push(cell);
+        }
+      }
+      if (cells.length === 0) {
+        return null;
+      }
+      return command.type === "paintWall" ? { type: "paintWall", cells } : { type: "eraseBuild", cells };
     }
 
     if (command.type === "paintZone" || command.type === "eraseZone") {

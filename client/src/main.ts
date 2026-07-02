@@ -1,5 +1,5 @@
 import { Application } from "pixi.js";
-import { CURRENT_PROTOCOL_VERSION, ZONE_CELL_SIZE, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
+import { CURRENT_PROTOCOL_VERSION, WALL_CELL_SIZE, ZONE_CELL_SIZE, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
 
@@ -37,6 +37,8 @@ appRoot.innerHTML = `
         <button class="active" data-tool="food" type="button">Еда</button>
         <button data-tool="harvest" type="button">Зона добычи</button>
         <button data-tool="forbid" type="button">Зона запрета</button>
+        <button data-tool="hut" type="button">Хижина</button>
+        <button data-tool="wall" type="button">Стена</button>
         <button data-tool="erase" type="button">Ластик</button>
       </div>
       <div class="segmented cameraControls" aria-label="Камера">
@@ -331,18 +333,21 @@ const antsCount = document.querySelector<HTMLElement>("#ants-count");
 
 let trampleEnabled = true;
 
-// Инструменты игрока: клик-еда и кисть зон.
-type PlayerTool = "food" | "harvest" | "forbid" | "erase";
+// Инструменты игрока: клик-еда, кисть зон, постройки.
+type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "wall" | "erase";
 let currentTool: PlayerTool = "food";
 let isPainting = false;
 const paintPending = new Set<number>();
-let paintZoneKind: "harvest" | "forbid" | "erase" | null = null;
+const wallPending = new Set<number>();
+let paintZoneKind: "harvest" | "forbid" | "wall" | "erase" | null = null;
 
 const TOOL_HINTS: Record<PlayerTool, string> = {
   food: "Клик по карте - подкинуть еду",
   harvest: "Зажми ЛКМ и рисуй зону добычи",
   forbid: "Зажми ЛКМ и рисуй зону запрета",
-  erase: "Зажми ЛКМ и стирай зоны"
+  hut: "Клик - поставить хижину (8 глины + 5 дерева, +4 к лимиту жителей)",
+  wall: "Зажми ЛКМ и рисуй стену (2 глины за сегмент)",
+  erase: "Зажми ЛКМ и стирай зоны и стены"
 };
 
 const colonyNodes = [0, 1].map((index) => {
@@ -577,21 +582,32 @@ for (const button of toolButtons) {
 }
 
 function flushPaint(): void {
-  if (!paintZoneKind || paintPending.size === 0 || socket.readyState !== WebSocket.OPEN) {
+  if (!paintZoneKind || socket.readyState !== WebSocket.OPEN) {
     return;
   }
-  const cells = [...paintPending];
-  paintPending.clear();
-  if (paintZoneKind === "erase") {
-    socket.send(JSON.stringify({ type: "eraseZone", cells }));
-  } else {
-    socket.send(JSON.stringify({ type: "paintZone", zone: paintZoneKind, cells }));
+  if (paintPending.size > 0) {
+    const cells = [...paintPending];
+    paintPending.clear();
+    if (paintZoneKind === "erase") {
+      socket.send(JSON.stringify({ type: "eraseZone", cells }));
+    } else if (paintZoneKind === "harvest" || paintZoneKind === "forbid") {
+      socket.send(JSON.stringify({ type: "paintZone", zone: paintZoneKind, cells }));
+    }
+  }
+  if (wallPending.size > 0) {
+    const cells = [...wallPending];
+    wallPending.clear();
+    if (paintZoneKind === "wall") {
+      socket.send(JSON.stringify({ type: "paintWall", cells }));
+    } else if (paintZoneKind === "erase") {
+      socket.send(JSON.stringify({ type: "eraseBuild", cells }));
+    }
   }
 }
 
 setInterval(flushPaint, 120);
 
-// Кисть: закрашиваем 3x3 клетки зоны вокруг курсора.
+// Кисть: зоны красим 3x3 клетки, стену — тонкой линией (одна стенная клетка 2x2).
 function paintAtPointer(event: PointerEvent): void {
   if (!latestWorld) {
     return;
@@ -603,6 +619,20 @@ function paintAtPointer(event: PointerEvent): void {
   if (!tile) {
     return;
   }
+
+  if (paintZoneKind === "wall" || paintZoneKind === "erase") {
+    const wallGridWidth = Math.ceil(latestWorld.surface.width / WALL_CELL_SIZE);
+    const wallGridHeight = Math.ceil(latestWorld.surface.height / WALL_CELL_SIZE);
+    const wallX = Math.floor(tile.x / WALL_CELL_SIZE);
+    const wallY = Math.floor(tile.y / WALL_CELL_SIZE);
+    if (wallX >= 0 && wallX < wallGridWidth && wallY >= 0 && wallY < wallGridHeight) {
+      wallPending.add(wallY * wallGridWidth + wallX);
+    }
+    if (paintZoneKind === "wall") {
+      return;
+    }
+  }
+
   const gridWidth = Math.ceil(latestWorld.surface.width / ZONE_CELL_SIZE);
   const gridHeight = Math.ceil(latestWorld.surface.height / ZONE_CELL_SIZE);
   const cellX = Math.floor(tile.x / ZONE_CELL_SIZE);
@@ -704,7 +734,7 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
   lastPointer = { x: event.clientX, y: event.clientY };
   pixi.canvas.setPointerCapture(event.pointerId);
 
-  if (currentTool !== "food") {
+  if (currentTool === "harvest" || currentTool === "forbid" || currentTool === "wall" || currentTool === "erase") {
     isPainting = true;
     paintZoneKind = currentTool;
     paintAtPointer(event);
@@ -721,7 +751,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  if (currentTool !== "food") {
+  if (currentTool !== "food" && currentTool !== "hut") {
     return;
   }
 
@@ -752,7 +782,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (
-    currentTool !== "food" ||
+    (currentTool !== "food" && currentTool !== "hut") ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||
@@ -769,6 +799,10 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
+  if (currentTool === "hut") {
+    socket.send(JSON.stringify({ type: "placeBuilding", building: "hut", x: tile.x, y: tile.y }));
+    return;
+  }
   socket.send(JSON.stringify({ type: "dropFood", x: tile.x, y: tile.y }));
 });
 
