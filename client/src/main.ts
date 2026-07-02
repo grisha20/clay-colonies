@@ -1,5 +1,5 @@
 import { Application } from "pixi.js";
-import { CURRENT_PROTOCOL_VERSION, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
+import { CURRENT_PROTOCOL_VERSION, ZONE_CELL_SIZE, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
 
@@ -32,6 +32,12 @@ appRoot.innerHTML = `
       </div>
       <div class="segmented trampleControls" aria-label="Тропинки">
         <button class="active" id="btn-trample" type="button">Тропинки: Вкл</button>
+      </div>
+      <div class="segmented toolControls" aria-label="Инструмент">
+        <button class="active" data-tool="food" type="button">Еда</button>
+        <button data-tool="harvest" type="button">Зона добычи</button>
+        <button data-tool="forbid" type="button">Зона запрета</button>
+        <button data-tool="erase" type="button">Ластик</button>
       </div>
       <div class="segmented cameraControls" aria-label="Камера">
         <button class="active" data-camera="follow" type="button">Слежение</button>
@@ -66,7 +72,7 @@ appRoot.innerHTML = `
     </aside>
     <footer class="panel status">
       <span id="status">Подключение к ws://localhost:8787</span>
-      <span>Клик по карте - подкинуть еду</span>
+      <span id="tool-hint">Клик по карте - подкинуть еду</span>
       <span class="perfStat">FPS <strong id="fps">0</strong></span>
       <span class="perfStat">Packet <strong id="packet-ms">0</strong> ms</span>
       <span class="perfStat">Payload <strong id="payload-kb">0</strong> KB</span>
@@ -312,6 +318,8 @@ const nestButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[da
 const speedButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-speed]"));
 const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-camera]"));
 const btnTrample = document.querySelector<HTMLButtonElement>("#btn-trample");
+const toolButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tool]"));
+const toolHint = document.querySelector<HTMLElement>("#tool-hint");
 const tick = document.querySelector<HTMLElement>("#tick");
 const population = document.querySelector<HTMLElement>("#population");
 const spiderStatus = document.querySelector<HTMLElement>("#spider-status");
@@ -322,6 +330,20 @@ const renderMs = document.querySelector<HTMLElement>("#render-ms");
 const antsCount = document.querySelector<HTMLElement>("#ants-count");
 
 let trampleEnabled = true;
+
+// Инструменты игрока: клик-еда и кисть зон.
+type PlayerTool = "food" | "harvest" | "forbid" | "erase";
+let currentTool: PlayerTool = "food";
+let isPainting = false;
+const paintPending = new Set<number>();
+let paintZoneKind: "harvest" | "forbid" | "erase" | null = null;
+
+const TOOL_HINTS: Record<PlayerTool, string> = {
+  food: "Клик по карте - подкинуть еду",
+  harvest: "Зажми ЛКМ и рисуй зону добычи",
+  forbid: "Зажми ЛКМ и рисуй зону запрета",
+  erase: "Зажми ЛКМ и стирай зоны"
+};
 
 const colonyNodes = [0, 1].map((index) => {
   const key = index === 0 ? "a" : "b";
@@ -538,6 +560,64 @@ function draw(interpT: number): void {
   lastRenderCostMs = performance.now() - renderStart;
 }
 
+function setTool(tool: PlayerTool): void {
+  currentTool = tool;
+  for (const button of toolButtons) {
+    button.classList.toggle("active", button.dataset.tool === tool);
+  }
+  if (toolHint) {
+    toolHint.textContent = TOOL_HINTS[tool];
+  }
+}
+
+for (const button of toolButtons) {
+  button.addEventListener("click", () => {
+    setTool((button.dataset.tool as PlayerTool) ?? "food");
+  });
+}
+
+function flushPaint(): void {
+  if (!paintZoneKind || paintPending.size === 0 || socket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+  const cells = [...paintPending];
+  paintPending.clear();
+  if (paintZoneKind === "erase") {
+    socket.send(JSON.stringify({ type: "eraseZone", cells }));
+  } else {
+    socket.send(JSON.stringify({ type: "paintZone", zone: paintZoneKind, cells }));
+  }
+}
+
+setInterval(flushPaint, 120);
+
+// Кисть: закрашиваем 3x3 клетки зоны вокруг курсора.
+function paintAtPointer(event: PointerEvent): void {
+  if (!latestWorld) {
+    return;
+  }
+  const rect = pixi.canvas.getBoundingClientRect();
+  const globalX = (event.clientX - rect.left) * (pixi.screen.width / Math.max(1, rect.width));
+  const globalY = (event.clientY - rect.top) * (pixi.screen.height / Math.max(1, rect.height));
+  const tile = surfaceTileFromGlobal(latestWorld, globalX, globalY);
+  if (!tile) {
+    return;
+  }
+  const gridWidth = Math.ceil(latestWorld.surface.width / ZONE_CELL_SIZE);
+  const gridHeight = Math.ceil(latestWorld.surface.height / ZONE_CELL_SIZE);
+  const cellX = Math.floor(tile.x / ZONE_CELL_SIZE);
+  const cellY = Math.floor(tile.y / ZONE_CELL_SIZE);
+  for (let dy = -1; dy <= 1; dy += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const nx = cellX + dx;
+      const ny = cellY + dy;
+      if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight) {
+        paintPending.add(ny * gridWidth + nx);
+      }
+    }
+  }
+}
+
 btnTrample.addEventListener("click", () => {
   trampleEnabled = !trampleEnabled;
   btnTrample.classList.toggle("active", trampleEnabled);
@@ -623,10 +703,25 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
   dragDistance = 0;
   lastPointer = { x: event.clientX, y: event.clientY };
   pixi.canvas.setPointerCapture(event.pointerId);
+
+  if (currentTool !== "food") {
+    isPainting = true;
+    paintZoneKind = currentTool;
+    paintAtPointer(event);
+  }
 });
 
 pixi.canvas.addEventListener("pointermove", (event) => {
   if (!pointerDown || currentView !== "surface" || !latestWorld) {
+    return;
+  }
+
+  if (isPainting) {
+    paintAtPointer(event);
+    return;
+  }
+
+  if (currentTool !== "food") {
     return;
   }
 
@@ -649,7 +744,15 @@ pixi.canvas.addEventListener("pointermove", (event) => {
 pixi.canvas.addEventListener("pointerup", (event) => {
   pointerDown = false;
   pixi.canvas.releasePointerCapture(event.pointerId);
+
+  if (isPainting) {
+    isPainting = false;
+    flushPaint();
+    return;
+  }
+
   if (
+    currentTool !== "food" ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||

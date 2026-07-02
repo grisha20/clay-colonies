@@ -33,6 +33,7 @@ export type SurfaceScene = {
   shadowLayer: Graphics;
   entranceLayer: Container;
   fireGlow: Graphics;
+  zonesOverlay: Graphics;
   pheromones: Graphics;
   webs: Graphics;
   debrisGraphics: Graphics;
@@ -45,6 +46,7 @@ export type SurfaceScene = {
   antPool: SpritePool;
   staticKey: string;
   entranceKey: string;
+  zoneKey: string;
   groundSprite?: Sprite;
   trampleTexture?: RenderTexture;
   trampleSprite?: Sprite;

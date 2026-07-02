@@ -8,6 +8,7 @@ import { isDugTile, tileCenter } from "../underground";
 import type { World } from "../world";
 import { randomHeading } from "../world";
 import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, posTile } from "./utils";
+import { zoneCellCenter, zoneIndexAt } from "../zones";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -60,6 +61,39 @@ export function surfaceMoveSpeed(world: World, ant: Ant): number {
   return speed;
 }
 
+// Мягкая зона запрета: жители стараются не заходить, но несущие груз домой
+// могут срезать, а в радиусе 10 от входа запрет не действует (нельзя запереть племя).
+export function applyForbidZones(world: World, ant: Ant, desired: Vec2): Vec2 {
+  const forbid = world.zoneSets?.forbid;
+  if (!forbid || forbid.size === 0) {
+    return desired;
+  }
+  if (ant.state === "return" || ant.state === "fight" || ant.carrying > 0) {
+    return desired;
+  }
+  if (isWithinRadius(ant.pos, world.surface.entrance, 10)) {
+    return desired;
+  }
+
+  const lookAhead = 4.5;
+  const next = { x: ant.pos.x + desired.x * lookAhead, y: ant.pos.y + desired.y * lookAhead };
+  const currentIndex = zoneIndexAt(ant.pos.x, ant.pos.y);
+  const nextIndex = zoneIndexAt(next.x, next.y);
+  const inForbidNow = forbid.has(currentIndex);
+  const inForbidNext = forbid.has(nextIndex);
+  if (!inForbidNow && !inForbidNext) {
+    return desired;
+  }
+
+  const center = zoneCellCenter(inForbidNow ? currentIndex : nextIndex);
+  const away = normalize({ x: ant.pos.x - center.x, y: ant.pos.y - center.y });
+  if (inForbidNow) {
+    // Уже внутри: выталкиваемся наружу.
+    return normalize({ x: desired.x * 0.3 + away.x * 1.7, y: desired.y * 0.3 + away.y * 1.7 });
+  }
+  return normalize({ x: desired.x + away.x * 2.2, y: desired.y + away.y * 2.2 });
+}
+
 export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpiders: boolean, allowSeparation = true): void {
   const speed = surfaceMoveSpeed(world, ant);
   let desired = normalize({ x: target.x - ant.pos.x, y: target.y - ant.pos.y });
@@ -67,6 +101,8 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
   if (avoidSpiders) {
     desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
   }
+
+  desired = applyForbidZones(world, ant, desired);
 
   if (allowSeparation) {
     const dist = distance(ant.pos, target);

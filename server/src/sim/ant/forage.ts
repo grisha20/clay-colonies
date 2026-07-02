@@ -6,6 +6,7 @@ import type { World } from "../world";
 import { randomHeading } from "../world";
 import { distance, isWithinRadius, normalize, numericAntId } from "./utils";
 import {
+  applyForbidZones,
   applySpiderAvoidance,
   applySeparation,
   clampToSurface,
@@ -98,9 +99,14 @@ export function scoutDirection(world: World, ant: Ant): Vec2 {
   const outwardWeight = currentRadius < 10 ? 1.8 : 0.65;
   const lateralSign = seed % 2 === 0 ? 1 : -1;
   const lateral = { x: -radial.y * lateralSign, y: radial.x * lateralSign };
+  // Зона добычи: разведчики заметно чаще прочёсывают нарисованную игроком зону.
+  const zoneCenter = world.zoneSets?.harvest.size ? world.zoneSets.harvestCenter : null;
+  const zonePull = zoneCenter
+    ? normalize({ x: zoneCenter.x - ant.pos.x, y: zoneCenter.y - ant.pos.y })
+    : { x: 0, y: 0 };
   return normalize({
-    x: sector.x * 1.05 + radial.x * outwardWeight + lateral.x * 0.18 + wave.x * 0.7 + edge.x * 1.4,
-    y: sector.y * 1.05 + radial.y * outwardWeight + lateral.y * 0.18 + wave.y * 0.7 + edge.y * 1.4
+    x: sector.x * 1.05 + radial.x * outwardWeight + lateral.x * 0.18 + wave.x * 0.7 + edge.x * 1.4 + zonePull.x * 1.1,
+    y: sector.y * 1.05 + radial.y * outwardWeight + lateral.y * 0.18 + wave.y * 0.7 + edge.y * 1.4 + zonePull.y * 1.1
   });
 }
 
@@ -254,7 +260,8 @@ function moveSearchingLegacy(world: World, ant: Ant): void {
   const safeDesired = isColonyStarving(world)
     ? desired
     : profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
-  const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, safeDesired));
+  const zonedSafeDesired = applyForbidZones(world, ant, safeDesired);
+  const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, zonedSafeDesired));
 
   // Плавная интерполяция к желаемому вектору
   let k = 0.18;
@@ -323,7 +330,8 @@ function moveScoutSearching(world: World, ant: Ant): void {
   const safeDesired = isColonyStarving(world)
     ? desired
     : profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
-  const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, safeDesired));
+  const zonedDesired = applyForbidZones(world, ant, safeDesired);
+  const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, zonedDesired));
   const finalDirection = normalize({
     x: ant.heading.x * 0.82 + finalDesired.x * 0.18,
     y: ant.heading.y * 0.82 + finalDesired.y * 0.18
@@ -356,6 +364,7 @@ function moveAlongFoodTrail(world: World, ant: Ant, targetPos: Vec2, towardFood:
   if (!isColonyStarving(world)) {
     desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
   }
+  desired = applyForbidZones(world, ant, desired);
 
   const direction = normalize({
     x: ant.heading.x * 0.55 + desired.x * 0.45,

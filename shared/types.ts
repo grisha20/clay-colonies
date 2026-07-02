@@ -74,6 +74,10 @@ export type Debris = {
   pos: Vec2;
 };
 
+// Зоны игрока: крупные клетки 4x4 мировых единицы (сетка 120x120 для карты 480x480).
+export const ZONE_CELL_SIZE = 4;
+export type ZoneType = "harvest" | "forbid";
+
 // Новые ресурсы Clayfolk: узлы глины и дерева на поверхности.
 export type ResourceKind = "clay" | "wood";
 
@@ -164,6 +168,11 @@ export type Colony = {
   food: number;
   clay: number;
   wood: number;
+  zones?: {
+    version: number;
+    harvest: number[];
+    forbid: number[];
+  };
   population: {
     workers: number;
     scouts: number;

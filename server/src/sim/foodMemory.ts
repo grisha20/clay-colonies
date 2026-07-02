@@ -1,6 +1,7 @@
 import type { Ant, FoodSource, Vec2 } from "../../../shared/types";
 import { CONFIG } from "../config";
 import type { World } from "./world";
+import { zoneIndexAt } from "./zones";
 
 type FoodTarget = {
   source: FoodSource;
@@ -93,15 +94,26 @@ export function updateColonyFoodMemory(world: World): void {
 }
 
 function selectNearestKnownFood(world: World): void {
+  // Зона добычи: если игрок нарисовал зону и в ней есть известная еда,
+  // племя предпочитает её. Голодное племя игнорирует зону (фолбэк-защита).
+  const harvest = world.zoneSets?.harvest;
+  const starving = world.colony.food <= CONFIG.warHungerThreshold;
+  const useZone = !!harvest && harvest.size > 0 && !starving;
+  let nearestInZone: { id: string; distanceSq: number } | null = null;
   let nearest: { id: string; distanceSq: number } | null = null;
   for (const known of world.colony.knownFood) {
     const dist = distanceSq(known.pos, world.surface.entrance);
     if (!nearest || dist < nearest.distanceSq) {
       nearest = { id: known.id, distanceSq: dist };
     }
+    if (useZone && harvest.has(zoneIndexAt(known.pos.x, known.pos.y))) {
+      if (!nearestInZone || dist < nearestInZone.distanceSq) {
+        nearestInZone = { id: known.id, distanceSq: dist };
+      }
+    }
   }
 
-  world.colony.activeFoodTargetId = nearest?.id;
+  world.colony.activeFoodTargetId = (nearestInZone ?? nearest)?.id;
 }
 
 export function scoutLimitForColony(world: World): number {

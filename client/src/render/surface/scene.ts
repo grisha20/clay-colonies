@@ -1,5 +1,5 @@
 import { Container, Graphics, RenderTexture, Sprite, Renderer } from "pixi.js";
-import type { Vec2, WorldSnapshot } from "../../../../shared/types";
+import { ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
 import { createSpritePool } from "../spritePool";
 import type { Camera, SurfaceScene, ViewBounds } from "../types";
 import { SURFACE_TILE_SIZE } from "../types";
@@ -42,6 +42,7 @@ export function createSurfaceScene(): SurfaceScene {
   const shadowLayer = new Graphics();
   const entranceLayer = new Container();
   const fireGlow = new Graphics();
+  const zonesOverlay = new Graphics();
   const pheromones = new Graphics();
   const webs = new Graphics();
   const debrisGraphics = new Graphics();
@@ -53,7 +54,7 @@ export function createSurfaceScene(): SurfaceScene {
   const carriedCarrionContainer = new Container();
   const antContainer = new Container();
 
-  root.addChild(staticLayer, shadowLayer, entranceLayer, fireGlow, pheromones, webs, debrisGraphics, foodContainer, resourceContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
+  root.addChild(staticLayer, shadowLayer, zonesOverlay, entranceLayer, fireGlow, pheromones, webs, debrisGraphics, foodContainer, resourceContainer, carrionContainer, lairContainer, enemyContainer, carriedCarrionContainer, antContainer);
 
   return {
     root,
@@ -61,6 +62,7 @@ export function createSurfaceScene(): SurfaceScene {
     shadowLayer,
     entranceLayer,
     fireGlow,
+    zonesOverlay,
     pheromones,
     webs,
     debrisGraphics,
@@ -72,7 +74,8 @@ export function createSurfaceScene(): SurfaceScene {
     enemyPool: createSpritePool(enemyContainer, () => createSpiderSprite(4)),
     antPool: createSpritePool(antContainer, () => createClayfolkSprite(false, 2.85)),
     staticKey: "",
-    entranceKey: ""
+    entranceKey: "",
+    zoneKey: ""
   };
 }
 
@@ -157,6 +160,35 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
 
   drawSurfaceEntrance(scene.entranceLayer, world, cell);
   scene.entranceKey = entranceKey;
+}
+
+// Зоны игрока: полупрозрачный слой поверх земли (зелёная — добыча, красная — запрет).
+function updateZonesOverlay(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
+  const zones = world.colonies?.[0]?.colony.zones;
+  const key = zones ? `z${zones.version}` : "z0";
+  if (scene.zoneKey === key) {
+    return;
+  }
+  scene.zoneKey = key;
+
+  const overlay = scene.zonesOverlay;
+  overlay.clear();
+  if (!zones) {
+    return;
+  }
+
+  const gridWidth = Math.ceil(world.surface.width / ZONE_CELL_SIZE);
+  const size = ZONE_CELL_SIZE * cell;
+  for (const index of zones.harvest) {
+    const x = (index % gridWidth) * size;
+    const y = Math.floor(index / gridWidth) * size;
+    overlay.rect(x, y, size, size).fill({ color: 0x7ec850, alpha: 0.17 });
+  }
+  for (const index of zones.forbid) {
+    const x = (index % gridWidth) * size;
+    const y = Math.floor(index / gridWidth) * size;
+    overlay.rect(x, y, size, size).fill({ color: 0xd9534f, alpha: 0.19 });
+  }
 }
 
 // Живое мерцание костра поверх статичного лагеря: два тёплых круга с альфой от тика.
@@ -271,6 +303,7 @@ export function renderSurface(
   ].join(":");
   updateSurfaceEntrances(scene, world, cell, entranceKey);
   updateFireGlow(scene.fireGlow, world, cell);
+  updateZonesOverlay(scene, world, cell);
 
   updateSurfaceShadows(scene.shadowLayer, world, cell, bounds);
   drawSurfacePheromones(scene.pheromones, world, cell, bounds);

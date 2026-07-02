@@ -1,5 +1,5 @@
 import { WebSocket, WebSocketServer } from "ws";
-import type { NetworkViewState, NetworkWorldSnapshot } from "../../../shared/types";
+import type { NetworkViewState, NetworkWorldSnapshot, ZoneType } from "../../../shared/types";
 import { CONFIG } from "../config";
 
 export type ClientCommand =
@@ -7,6 +7,15 @@ export type ClientCommand =
       type: "dropFood";
       x: number;
       y: number;
+    }
+  | {
+      type: "paintZone";
+      zone: ZoneType;
+      cells: number[];
+    }
+  | {
+      type: "eraseZone";
+      cells: number[];
     }
   | {
       type: "setSpeed";
@@ -53,6 +62,27 @@ function parseCommand(raw: string): ClientCommand | null {
         mode,
         undergroundColonyIndex
       };
+    }
+
+    if (command.type === "paintZone" || command.type === "eraseZone") {
+      const rawCells = Array.isArray(command.cells) ? (command.cells as unknown[]) : [];
+      const cells: number[] = [];
+      for (const cell of rawCells.slice(0, 4096)) {
+        if (typeof cell === "number" && Number.isInteger(cell) && cell >= 0) {
+          cells.push(cell);
+        }
+      }
+      if (cells.length === 0) {
+        return null;
+      }
+      if (command.type === "paintZone") {
+        const zone = command.zone === "harvest" ? "harvest" : command.zone === "forbid" ? "forbid" : null;
+        if (!zone) {
+          return null;
+        }
+        return { type: "paintZone", zone, cells };
+      }
+      return { type: "eraseZone", cells };
     }
 
     if (command.type === "dropFood" && typeof command.x === "number" && typeof command.y === "number") {

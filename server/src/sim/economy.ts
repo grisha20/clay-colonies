@@ -5,6 +5,7 @@
 import type { ResourceKind, ResourceNode } from "../../../shared/types";
 import { CONFIG } from "../config";
 import type { World } from "./world";
+import { zoneIndexAt } from "./zones";
 
 export function colonyWantsResource(world: World, kind: ResourceKind): boolean {
   const target = kind === "clay" ? CONFIG.clayReserveTarget : CONFIG.woodReserveTarget;
@@ -59,9 +60,17 @@ export function assignHarvestJobs(world: World): void {
     if (!colonyWantsResource(world, kind)) {
       continue;
     }
-    const nodes = world.surface.resourceNodes.filter((node) => node.kind === kind && node.amount > 0);
+    let nodes = world.surface.resourceNodes.filter((node) => node.kind === kind && node.amount > 0);
     if (nodes.length === 0) {
       continue;
+    }
+    // Зона добычи: если внутри зоны есть узлы этого ресурса, берём только их.
+    const harvest = world.zoneSets?.harvest;
+    if (harvest && harvest.size > 0) {
+      const inZone = nodes.filter((node) => harvest.has(zoneIndexAt(node.pos.x, node.pos.y)));
+      if (inZone.length > 0) {
+        nodes = inZone;
+      }
     }
     let need = CONFIG.maxHarvestersPerResource - counts[kind];
     for (const ant of live) {

@@ -24,6 +24,7 @@ import { CONFIG } from "../config";
 import { createColony, syncColonyStats } from "./colony";
 import { createSpider, syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
+import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 
 export type ColonyRuntime = {
@@ -37,6 +38,7 @@ export type ColonyRuntime = {
   directives: ColonyDirectives;
   fitness: FitnessState;
   homePheromone: PheromoneGrid;
+  zoneSets: ZoneSets;
 };
 
 export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | "pheromones" | "colonies"> & {
@@ -50,6 +52,7 @@ export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | 
     survivalTicks: number;
     score: number;
   };
+  zoneSets: ZoneSets;
   pheromones: {
     width: number;
     height: number;
@@ -582,7 +585,8 @@ export function createColonyRuntime(
     genomeState,
     directives: makeDefaultDirectives(),
     fitness: createFitnessState(),
-    homePheromone: new PheromoneGrid(CONFIG.mapWidth, CONFIG.mapHeight)
+    homePheromone: new PheromoneGrid(CONFIG.mapWidth, CONFIG.mapHeight),
+    zoneSets: createZoneSets()
   };
   syncColonyStatsForRuntime(runtime);
   return runtime;
@@ -602,6 +606,7 @@ export function colonyWorldView(world: World, runtime: ColonyRuntime): World {
     genomeState: runtime.genomeState,
     directives: runtime.directives,
     fitness: runtime.fitness,
+    zoneSets: runtime.zoneSets,
     pheromones: {
       width: world.pheromones.width,
       height: world.pheromones.height,
@@ -646,6 +651,7 @@ export function syncWorldLegacyFields(world: World): void {
   world.surface.entrance = primary.surfaceEntrance;
   world.surface.entrances = world.colonies.map((colony) => colony.surfaceEntrance);
   world.pheromones.home = primary.homePheromone;
+  world.zoneSets = primary.zoneSets;
 }
 
 export function createWorld(
@@ -681,6 +687,7 @@ export function createWorld(
     directives: colonies[0].directives,
     fitness: colonies[0].fitness,
     spiderFitness: createSpiderFitnessState(),
+    zoneSets: colonies[0].zoneSets,
     ants: colonies.flatMap((colony) => colony.ants),
     enemies,
     pheromones: {
@@ -806,8 +813,10 @@ export function worldFromSnapshot(
       genomeState: genomeStates[index] ?? genomeState,
       directives: makeDefaultDirectives(),
       fitness: createFitnessState(),
-      homePheromone: new PheromoneGrid(snapshot.pheromones.width, snapshot.pheromones.height, index === 0 ? snapshot.pheromones.home : undefined)
+      homePheromone: new PheromoneGrid(snapshot.pheromones.width, snapshot.pheromones.height, index === 0 ? snapshot.pheromones.home : undefined),
+      zoneSets: createZoneSets()
     };
+    rebuildZoneSetsFromColony(runtime);
     syncColonyStatsForRuntime(runtime);
     return runtime;
   });
@@ -835,6 +844,7 @@ export function worldFromSnapshot(
     directives: colonies[0].directives,
     fitness: colonies[0].fitness,
     spiderFitness: createSpiderFitnessState(),
+    zoneSets: colonies[0].zoneSets,
     ants: snapshotAnts,
     pheromones: {
       width: snapshot.pheromones.width,
