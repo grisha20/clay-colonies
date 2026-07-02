@@ -536,6 +536,44 @@ export function collectUndergroundCarrion(world: World, ant: Ant): boolean {
   return true;
 }
 
+// Сборщик несёт глину/дерево домой (без пищевых следов и маршрутов еды).
+export function moveHarvestCarrying(world: World, ant: Ant): void {
+  ant.job = "harvest";
+  moveSurfaceToward(world, ant, world.surface.entrance, !isColonyStarving(world), false);
+  tryCrossLayer(world, ant);
+}
+
+// Один шаг сборщика ресурса: дойти до узла, взять кусок, отнести к лагерю.
+export function moveHarvesting(world: World, ant: Ant): boolean {
+  if (ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
+    ant.state = "carry";
+    moveHarvestCarrying(world, ant);
+    return true;
+  }
+
+  const node = world.surface.resourceNodes.find(
+    (item) => item.id === ant.harvestNodeId && item.amount > 0
+  );
+  if (!node) {
+    ant.job = "forage";
+    ant.harvestNodeId = undefined;
+    return false;
+  }
+
+  if (isWithinRadius(ant.pos, node.pos, CONFIG.resourcePickupRadius)) {
+    const amount = Math.min(node.amount, Math.max(0.5, ant.strength));
+    node.amount = Math.max(0, node.amount - amount);
+    ant.carrying = amount;
+    ant.carryKind = node.kind;
+    ant.state = "carry";
+    return true;
+  }
+
+  ant.state = "search";
+  moveSurfaceToward(world, ant, node.pos, !isColonyStarving(world));
+  return true;
+}
+
 export function moveCarryingDebris(world: World, ant: Ant): void {
   ant.job = "idle";
   const colony = world.colonies.find(c => c.id === ant.colonyId);

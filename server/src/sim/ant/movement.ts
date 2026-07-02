@@ -418,10 +418,18 @@ export function tryCrossLayer(world: World, ant: Ant): boolean {
   if (ant.layer === "surface" && isWithinRadius(ant.pos, world.surface.entrance, Math.max(CONFIG.entranceRadiusSurface + CONFIG.workerSurfaceSpeed * 3, 5.0))) {
     if (ant.carrying > 0 || ant.state === "carry" || ant.state === "return") {
       if (ant.carrying > 0) {
-        registerScoutFoodReport(world, ant);
-        world.colony.food += ant.carrying;
-        world.fitness.totalFoodDeposited += ant.carrying;
+        const kind = ant.carryKind ?? "food";
+        if (kind === "clay") {
+          world.colony.clay += ant.carrying;
+        } else if (kind === "wood") {
+          world.colony.wood += ant.carrying;
+        } else {
+          registerScoutFoodReport(world, ant);
+          world.colony.food += ant.carrying;
+          world.fitness.totalFoodDeposited += ant.carrying;
+        }
         ant.carrying = 0;
+        ant.carryKind = undefined;
       } else if (canUseCampMeal(world)) {
         world.colony.food -= CONFIG.workerMealCost;
         ant.energy = CONFIG.maxEnergy;

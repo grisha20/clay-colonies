@@ -8,6 +8,8 @@ import { canUseStorageMeal, shouldReturnFromSurface } from "./colony-state";
 import { handleEnemyColonyCombat, moveFighting } from "./combat";
 import {
   moveCarrying,
+  moveHarvestCarrying,
+  moveHarvesting,
   moveHungryHome,
   moveHungryToFood,
   moveSearching,
@@ -41,6 +43,10 @@ export function stepSurface(world: World, ant: Ant): void {
   }
 
   if (ant.state === "carry") {
+    if (ant.carryKind && ant.carryKind !== "food") {
+      moveHarvestCarrying(world, ant);
+      return;
+    }
     moveCarrying(world, ant);
     return;
   }
@@ -72,6 +78,10 @@ export function stepSurface(world: World, ant: Ant): void {
 
   if (ant.energy < refuelThreshold && canUseStorageMeal(world)) {
     moveHungryHome(world, ant);
+    return;
+  }
+
+  if (ant.job === "harvest" && moveHarvesting(world, ant)) {
     return;
   }
 

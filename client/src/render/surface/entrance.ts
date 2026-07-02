@@ -37,7 +37,15 @@ function drawClayFigure(g: Graphics, x: number, y: number, scale: number, tint: 
   }
 }
 
-export function drawSurfaceEntranceAt(root: Container, pos: Vec2, cell: number, color: "dark" | "red", foodStorage = 0): void {
+export function drawSurfaceEntranceAt(
+  root: Container,
+  pos: Vec2,
+  cell: number,
+  color: "dark" | "red",
+  foodStorage = 0,
+  clayStorage = 0,
+  woodStorage = 0
+): void {
   const x = Math.round(pos.x * cell);
   const y = Math.round(pos.y * cell);
   const camp = new Graphics();
@@ -74,6 +82,33 @@ export function drawSurfaceEntranceAt(root: Container, pos: Vec2, cell: number, 
     camp.circle(px - size * 0.25, py - size * 0.3, size * 0.35).fill({ color: 0xd98346, alpha: 0.82 });
   }
 
+  // Куча глины справа от костра.
+  if (clayStorage > 0.5) {
+    const clayPile = Math.max(2, Math.min(14, Math.ceil(clayStorage / 6)));
+    drawShadow(camp, x + 48, y + 26, 20, 7, 0.2);
+    for (let index = 0; index < clayPile; index += 1) {
+      const px = x + 36 + hash2(pos.x + index, pos.y, 61) * 26;
+      const py = y + 14 + hash2(pos.x, pos.y + index, 62) * 14;
+      const size = 2.6 + hash2(index, pos.x, 63) * 3.2;
+      camp.circle(px, py + 1.5, size).fill({ color: 0x8b3f2a, alpha: 1 });
+      camp.circle(px, py, size * 0.85).fill({ color: 0xbc6240, alpha: 1 });
+      camp.circle(px - size * 0.3, py - size * 0.3, size * 0.3).fill({ color: 0xef9a64, alpha: 0.85 });
+    }
+  }
+
+  // Поленница дерева ниже костра.
+  if (woodStorage > 0.5) {
+    const woodPile = Math.max(2, Math.min(12, Math.ceil(woodStorage / 6)));
+    drawShadow(camp, x - 2, y + 40, 18, 6, 0.2);
+    for (let index = 0; index < woodPile; index += 1) {
+      const px = x - 16 + hash2(pos.x + index, pos.y, 71) * 30;
+      const py = y + 34 + hash2(pos.x, pos.y + index, 72) * 9;
+      const len = 8 + hash2(index, pos.y, 73) * 6;
+      camp.rect(px - len / 2, py, len, 2.6).fill({ color: 0x4f2f16, alpha: 1 });
+      camp.rect(px - len / 2, py - 1.2, len, 1.6).fill({ color: 0x8a5429, alpha: 1 });
+    }
+  }
+
   root.addChild(camp);
 }
 
@@ -81,6 +116,14 @@ export function drawSurfaceEntrance(root: Container, world: WorldSnapshot, cell:
   const entrances = world.surface.entrances ?? [world.surface.entrance];
   entrances.forEach((entrance, index) => {
     const colony = world.colonies?.[index];
-    drawSurfaceEntranceAt(root, entrance, cell, index === 1 ? "red" : "dark", colony?.colony.food ?? world.colony.food);
+    drawSurfaceEntranceAt(
+      root,
+      entrance,
+      cell,
+      index === 1 ? "red" : "dark",
+      colony?.colony.food ?? world.colony.food,
+      colony?.colony.clay ?? 0,
+      colony?.colony.wood ?? 0
+    );
   });
 }

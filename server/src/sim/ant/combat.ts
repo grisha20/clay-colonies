@@ -158,8 +158,18 @@ export function nearestSuperFood(world: World, pos: Vec2): { pos: Vec2; amount: 
 
 export function dropCarriedFood(world: World, ant: Ant): void {
   if (ant.carrying > 0) {
-    addFoodSource(world, ant.pos.x, ant.pos.y, ant.carrying);
+    const kind = ant.carryKind ?? "food";
+    if (kind === "food") {
+      addFoodSource(world, ant.pos.x, ant.pos.y, ant.carrying);
+    } else {
+      // Глина/дерево возвращаются в узел, откуда взяты (или пропадают).
+      const node = world.surface.resourceNodes.find((item) => item.id === ant.harvestNodeId);
+      if (node && node.kind === kind) {
+        node.amount += ant.carrying;
+      }
+    }
     ant.carrying = 0;
+    ant.carryKind = undefined;
   }
   if (ant.carryingDebris) {
     const nextDebrisId = Math.random().toString(36).substr(2, 9);

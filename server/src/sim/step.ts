@@ -4,9 +4,11 @@ import { stepAnt, clearDeadAntPaths } from "./ant";
 import { updateTickCache, updateWorldSurfaceCache } from "./cache";
 import { profiler } from "../utils/profiler";
 import { updateEnemies } from "./enemy";
+import { assignHarvestJobs } from "./economy";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
 import {
   addAntCorpse,
+  cleanupResourceNodes,
   colonyWorldView,
   createWorkerAnt,
   growFoodSources,
@@ -107,6 +109,7 @@ export function step(world: World): void {
     respawnCarrion(world);
     growFoodSources(world);
     respawnDebris(world);
+    cleanupResourceNodes(world);
   });
   if (world.tick % 5 === 0) {
     profiler.measure("phase.scentFoodSources", () => scentFoodSources(world));
@@ -120,6 +123,7 @@ export function step(world: World): void {
       }
       colony.directives = computeDirectives(scopedWorld, colony.genomeState.current);
       assignForageRoles(scopedWorld);
+      assignHarvestJobs(scopedWorld);
       updateTickCache(scopedWorld);
       profiler.measure("stepAnt", () => {
         for (const ant of colony.ants) {

@@ -11,6 +11,7 @@ import {
   type NetworkWorldSnapshot,
   type NetworkViewState,
   type PheromoneSnapshot,
+  type ResourceNode,
   type Surface,
   type Underground,
   type Vec2,
@@ -60,6 +61,7 @@ export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | 
 let nextAntId = 1;
 let nextFoodSourceId = 0;
 let nextCarrionId = 0;
+let nextResourceNodeId = 0;
 const MAX_SURFACE_DEBRIS = 80;
 const MAX_SNAPSHOT_STORAGE_ROOMS = 15;
 const MAX_SURFACE_FOOD_SOURCES = 40;
@@ -161,6 +163,32 @@ function makeCarrionSource(): FoodSource {
 
 function makeCarrionSources(): FoodSource[] {
   return Array.from({ length: CONFIG.carrionCount }, () => makeCarrionSource());
+}
+
+// Узлы глины и дерева: статичная "геология" карты, племя знает их без разведки.
+function makeResourceNodes(): ResourceNode[] {
+  const minNestDistance = Math.min(CONFIG.mapWidth, CONFIG.mapHeight) * 0.08;
+  const nodes: ResourceNode[] = [];
+  const spawn = (kind: ResourceNode["kind"], count: number, amount: number) => {
+    for (let index = 0; index < count; index += 1) {
+      nodes.push({
+        id: `res-${nextResourceNodeId}`,
+        kind,
+        pos: randomSurfacePosAwayFromNest(minNestDistance),
+        amount: amount * (0.8 + Math.random() * 0.4)
+      });
+      nextResourceNodeId += 1;
+    }
+  };
+  spawn("clay", CONFIG.clayNodeCount, CONFIG.clayNodeAmount);
+  spawn("wood", CONFIG.woodNodeCount, CONFIG.woodNodeAmount);
+  return nodes;
+}
+
+export function cleanupResourceNodes(world: World): void {
+  if (world.surface.resourceNodes.some((node) => node.amount <= 0.01)) {
+    world.surface.resourceNodes = world.surface.resourceNodes.filter((node) => node.amount > 0.01);
+  }
 }
 
 function makeDebrisSources(entrances: Vec2[]): Debris[] {
@@ -633,7 +661,8 @@ export function createWorld(
     entrances,
     foodSources: makeFoodSources(),
     carrion: makeCarrionSources(),
-    debris: makeDebrisSources(entrances)
+    debris: makeDebrisSources(entrances),
+    resourceNodes: makeResourceNodes()
   };
   const enemies = [createSpider()];
   const colonies = [
@@ -716,6 +745,12 @@ export function worldFromSnapshot(
   }, 0);
   nextCarrionId = Math.max(nextCarrionId, maxCarrionId + 1);
   const genomeStates = [genomeState, genomeStateB];
+  const resourceNodes = (snapshot.surface.resourceNodes ?? makeResourceNodes()).filter((node) => node.amount > 0.01);
+  const maxResourceId = resourceNodes.reduce((max, node) => {
+    const numeric = Number(node.id.replace("res-", ""));
+    return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
+  }, 0);
+  nextResourceNodeId = Math.max(nextResourceNodeId, maxResourceId + 1);
   const colonies = snapshot.colonies.map((colonySnapshot, index): ColonyRuntime => {
     const surfaceEntrance = snapshot.surface.entrances?.[index] ?? (index === 0 ? CONFIG.surfaceEntrance : CONFIG.surfaceEntranceB);
     const underground = makeLegacyEmptyUnderground(surfaceEntrance);
@@ -734,6 +769,8 @@ export function worldFromSnapshot(
           larvae: 0
         },
         food: colonySnapshot.colony.food ?? colonySnapshot.underground.foodStorage ?? CONFIG.startingFoodStorage,
+        clay: colonySnapshot.colony.clay ?? 0,
+        wood: colonySnapshot.colony.wood ?? 0,
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,
@@ -786,7 +823,8 @@ export function worldFromSnapshot(
       foodSources,
       carrion,
       entrances,
-      debris
+      debris,
+      resourceNodes
     },
     colony: colonies[0].colony,
     underground: colonies[0].underground,

@@ -50,7 +50,7 @@ export function updateTickCache(world: World): void {
     if (ant.layer === "surface") {
       surfaceAnts.push(ant);
 
-      if (ant.state === "search" && ant.carrying <= 0 && ant.job !== "nurse" && ant.job !== "dig") {
+      if (ant.state === "search" && ant.carrying <= 0 && ant.job !== "nurse" && ant.job !== "dig" && ant.job !== "harvest") {
         activeForagers += 1;
         activeAndTransitioningForagers += 1;
       }

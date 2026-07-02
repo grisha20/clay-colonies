@@ -203,6 +203,18 @@ export const spriteMaps = {
     ".12.",
     "1221",
     ".11."
+  ],
+  clayLump: [
+    ".111.",
+    "12321",
+    "12221",
+    ".111."
+  ],
+  woodStick: [
+    "11....",
+    ".2211.",
+    "..1221",
+    "....11"
   ]
 } as const;
 
@@ -282,6 +294,15 @@ export const spritePalettes = {
   grain: {
     "1": 0xb27a30,
     "2": 0xe0b458
+  },
+  clayLump: {
+    "1": 0x8b3f2a,
+    "2": 0xbc6240,
+    "3": 0xef9a64
+  },
+  woodStick: {
+    "1": 0x4f2f16,
+    "2": 0x8a5429
   }
 } as const;
 
@@ -334,6 +355,17 @@ export function getCarrionTexture(): Texture {
 
 export function getGrainTexture(): Texture {
   return makeTexture("grain", [...spriteMaps.grain], spritePalettes.grain);
+}
+
+export function getResourceTexture(kind: "clay" | "wood"): Texture {
+  if (kind === "clay") {
+    return makeTexture("clayLump", [...spriteMaps.clayLump], spritePalettes.clayLump);
+  }
+  return makeTexture("woodStick", [...spriteMaps.woodStick], spritePalettes.woodStick);
+}
+
+export function createResourceSprite(scale = 2.4): Sprite {
+  return makePixelSprite(getResourceTexture("clay"), scale);
 }
 
 export function createAntSprite(carrying: boolean, scale = 2.5): Sprite {

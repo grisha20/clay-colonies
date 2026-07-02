@@ -4,7 +4,8 @@ import { acquireSprite, antRotation, beginPool, deterministicOffset, endPool, pl
 import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import {
-  getClayfolkTexture
+  getClayfolkTexture,
+  getResourceTexture
 } from "../../sprites";
 import { drawPebble, drawLeaf } from "./ground";
 
@@ -78,6 +79,30 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
       const offset = deterministicOffset(index + source.id.length, spread);
       sprite.scale.set(index === 0 ? 2.6 : 2.1);
       placeSprite(sprite, source.pos.x * cell + offset.x, source.pos.y * cell + offset.y, (index % 4) * 0.2);
+    }
+  }
+
+  endPool(pool);
+}
+
+// Узлы глины и дерева: комья/палочки кучкой, количество кусков растёт с запасом.
+export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  beginPool(pool);
+
+  for (const node of world.surface.resourceNodes ?? []) {
+    if (node.amount <= 0 || !isInBounds(node.pos, bounds, 5)) {
+      continue;
+    }
+
+    const texture = getResourceTexture(node.kind);
+    const chunks = Math.max(1, Math.min(12, Math.ceil(node.amount / 8)));
+    for (let index = 0; index < chunks; index += 1) {
+      const sprite = acquireSprite(pool);
+      sprite.texture = texture;
+      const spread = index === 0 ? 0 : 4 + Math.min(8, index * 1.5);
+      const offset = deterministicOffset(index * 3 + node.id.length, spread);
+      sprite.scale.set(index === 0 ? 2.7 : 2.2);
+      placeSprite(sprite, node.pos.x * cell + offset.x, node.pos.y * cell + offset.y, (index % 5) * 0.4);
     }
   }
 

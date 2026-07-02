@@ -237,6 +237,18 @@ export const CONFIG = {
   genomeTournamentSize: 3,
   genomeMutationRate: 0.15,
 
+  // Ресурсы Clayfolk: узлы глины и дерева на поверхности.
+  clayNodeCount: 5,
+  clayNodeAmount: 70,
+  woodNodeCount: 5,
+  woodNodeAmount: 55,
+  resourcePickupRadius: 1.6,
+  clayReserveTarget: 40,
+  woodReserveTarget: 30,
+  maxHarvestersPerResource: 3,
+  harvestMinWorkers: 10,
+  harvestMinFood: 30,
+
   genomeGeneBounds: {
     nurseFraction: { min: 0.1, max: 0.6 },
     digFraction: { min: 0.05, max: 0.45 },

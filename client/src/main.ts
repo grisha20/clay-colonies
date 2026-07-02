@@ -51,12 +51,16 @@ appRoot.innerHTML = `
           <div><span>Жители</span><strong id="colony-a-workers">0</strong></div>
           <div><span>Разведка</span><strong id="colony-a-scouts">0</strong></div>
           <div><span>Еда</span><strong id="colony-a-storage">0</strong></div>
+          <div><span>Глина</span><strong id="colony-a-clay">0</strong></div>
+          <div><span>Дерево</span><strong id="colony-a-wood">0</strong></div>
         </section>
         <section class="colonyStats colonyB">
           <h2>Племя B</h2>
           <div><span>Жители</span><strong id="colony-b-workers">0</strong></div>
           <div><span>Разведка</span><strong id="colony-b-scouts">0</strong></div>
           <div><span>Еда</span><strong id="colony-b-storage">0</strong></div>
+          <div><span>Глина</span><strong id="colony-b-clay">0</strong></div>
+          <div><span>Дерево</span><strong id="colony-b-wood">0</strong></div>
         </section>
       </div>
     </aside>
@@ -324,7 +328,9 @@ const colonyNodes = [0, 1].map((index) => {
   return {
     workers: document.querySelector<HTMLElement>(`#colony-${key}-workers`),
     scouts: document.querySelector<HTMLElement>(`#colony-${key}-scouts`),
-    storage: document.querySelector<HTMLElement>(`#colony-${key}-storage`)
+    storage: document.querySelector<HTMLElement>(`#colony-${key}-storage`),
+    clay: document.querySelector<HTMLElement>(`#colony-${key}-clay`),
+    wood: document.querySelector<HTMLElement>(`#colony-${key}-wood`)
   };
 });
 
@@ -360,7 +366,9 @@ const antsCountNode = antsCount;
 const colonyStatNodes = colonyNodes.map((nodes) => ({
   workers: nodes.workers as HTMLElement,
   scouts: nodes.scouts as HTMLElement,
-  storage: nodes.storage as HTMLElement
+  storage: nodes.storage as HTMLElement,
+  clay: nodes.clay as HTMLElement,
+  wood: nodes.wood as HTMLElement
 }));
 
 const SURFACE_TILE_SIZE = 8;
@@ -469,12 +477,16 @@ function updateHud(world: WorldSnapshot): void {
       nodes.workers.textContent = "-";
       nodes.scouts.textContent = "-";
       nodes.storage.textContent = "-";
+      nodes.clay.textContent = "-";
+      nodes.wood.textContent = "-";
       return;
     }
 
     nodes.workers.textContent = String(item.colony.population.workers);
     nodes.scouts.textContent = String(item.colony.population.scouts ?? 0);
     nodes.storage.textContent = String(Math.floor(item.colony.food ?? 0));
+    nodes.clay.textContent = String(Math.floor(item.colony.clay ?? 0));
+    nodes.wood.textContent = String(Math.floor(item.colony.wood ?? 0));
   });
 }
 

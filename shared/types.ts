@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 2;
-export const CURRENT_PROTOCOL_VERSION = 2;
+export const CURRENT_SNAPSHOT_VERSION = 3;
+export const CURRENT_PROTOCOL_VERSION = 3;
 
 export type Vec2 = {
   x: number;
@@ -74,12 +74,24 @@ export type Debris = {
   pos: Vec2;
 };
 
+// Новые ресурсы Clayfolk: узлы глины и дерева на поверхности.
+export type ResourceKind = "clay" | "wood";
+
+export type ResourceNode = {
+  id: string;
+  kind: ResourceKind;
+  pos: Vec2;
+  amount: number;
+};
+
 export type Ant = {
   id: string;
   colonyId: string;
   role: "worker";
   strength: number;
-  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle";
+  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest";
+  carryKind?: "food" | ResourceKind;
+  harvestNodeId?: string;
   forageRole?: "scout" | "forager";
   preferredTask?: "dig";
   layer: Layer;
@@ -150,6 +162,8 @@ export type Colony = {
   knownFood: { id: string; pos: Vec2; lastSeenTick: number; trail?: Vec2[] }[];
   activeFoodTargetId?: string;
   food: number;
+  clay: number;
+  wood: number;
   population: {
     workers: number;
     scouts: number;
@@ -201,6 +215,7 @@ export type Surface = {
   foodSources: FoodSource[];
   carrion: FoodSource[];
   debris: Debris[];
+  resourceNodes: ResourceNode[];
 };
 
 export type SparseGrid = {
