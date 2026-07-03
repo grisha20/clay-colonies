@@ -241,7 +241,7 @@ style.textContent = `
   .settingsMenu {
     right: 14px;
     top: 70px;
-    width: 360px;
+    width: min(430px, calc(100vw - 28px));
     padding: 12px;
     display: grid;
     gap: 10px;
@@ -252,10 +252,11 @@ style.textContent = `
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   .settingsRow > span {
-    width: 78px;
+    width: 72px;
     flex: none;
     color: #7a6647;
     font-size: 13px;
@@ -263,6 +264,16 @@ style.textContent = `
 
   .settingsRow .segmented {
     flex: 1;
+    min-width: 0;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  .settingsRow .segmented button {
+    padding: 0 6px;
+    font-size: 12.5px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .toolDock {
