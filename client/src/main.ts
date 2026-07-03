@@ -1,4 +1,4 @@
-import { Application } from "pixi.js";
+import { Application, Graphics } from "pixi.js";
 import { CURRENT_PROTOCOL_VERSION, WALL_CELL_SIZE, ZONE_CELL_SIZE, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
@@ -651,18 +651,18 @@ let trampleEnabled = true;
 type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "wall" | "erase";
 let currentTool: PlayerTool = "food";
 let isPainting = false;
-const paintPending = new Set<number>();
-const wallPending = new Set<number>();
-let paintZoneKind: "harvest" | "forbid" | "wall" | "erase" | null = null;
+let dragTool: "harvest" | "forbid" | "wall" | "erase" | null = null;
+let dragStart: { x: number; y: number } | null = null;
+let dragEnd: { x: number; y: number } | null = null;
 
 const TOOL_HINTS: Record<PlayerTool, string> = {
   food: "Клик по карте - подкинуть еду",
-  harvest: "Зажми ЛКМ и рисуй зону добычи",
-  forbid: "Зажми ЛКМ и рисуй зону запрета",
-  hut: "Клик - поставить хижину (8 глины + 5 дерева, +4 к лимиту жителей)",
-  storage: "Клик - поставить склад (6 дерева + 4 камня, точка сдачи ресурсов)",
-  wall: "Зажми ЛКМ и рисуй стену (2 глины за сегмент)",
-  erase: "Зажми ЛКМ и стирай зоны и стены"
+  harvest: "Растяни прямоугольник зоны добычи (ЛКМ)",
+  forbid: "Растяни прямоугольник зоны запрета (ЛКМ)",
+  hut: "Клик - хижина (8 глины + 5 дерева, +4 к лимиту). Shift - ставить несколько",
+  storage: "Клик - склад (6 дерева + 4 камня, точка сдачи). Shift - ставить несколько",
+  wall: "Растяни линию стены (ЛКМ), 2 глины за сегмент",
+  erase: "Растяни прямоугольник - сотрёт зоны и свои стены"
 };
 
 const colonyNodes = [0, 1].map((index) => {
@@ -921,70 +921,112 @@ for (const button of toolButtons) {
   });
 }
 
-function flushPaint(): void {
-  if (!paintZoneKind || socket.readyState !== WebSocket.OPEN) {
-    return;
-  }
-  if (paintPending.size > 0) {
-    const cells = [...paintPending];
-    paintPending.clear();
-    if (paintZoneKind === "erase") {
-      socket.send(JSON.stringify({ type: "eraseZone", cells }));
-    } else if (paintZoneKind === "harvest" || paintZoneKind === "forbid") {
-      socket.send(JSON.stringify({ type: "paintZone", zone: paintZoneKind, cells }));
-    }
-  }
-  if (wallPending.size > 0) {
-    const cells = [...wallPending];
-    wallPending.clear();
-    if (paintZoneKind === "wall") {
-      socket.send(JSON.stringify({ type: "paintWall", cells }));
-    } else if (paintZoneKind === "erase") {
-      socket.send(JSON.stringify({ type: "eraseBuild", cells }));
-    }
-  }
-}
-
-setInterval(flushPaint, 120);
-
-// Кисть: зоны красим 3x3 клетки, стену — тонкой линией (одна стенная клетка 2x2).
-function paintAtPointer(event: PointerEvent): void {
+function pointerToTile(event: PointerEvent): { x: number; y: number } | null {
   if (!latestWorld) {
-    return;
+    return null;
   }
   const rect = pixi.canvas.getBoundingClientRect();
   const globalX = (event.clientX - rect.left) * (pixi.screen.width / Math.max(1, rect.width));
   const globalY = (event.clientY - rect.top) * (pixi.screen.height / Math.max(1, rect.height));
-  const tile = surfaceTileFromGlobal(latestWorld, globalX, globalY);
-  if (!tile) {
+  return surfaceTileFromGlobal(latestWorld, globalX, globalY);
+}
+
+function sendCellsChunked(send: (cells: number[]) => void, cells: number[], chunkSize: number): void {
+  for (let index = 0; index < cells.length; index += chunkSize) {
+    send(cells.slice(index, index + chunkSize));
+  }
+}
+
+// Стена тянется линией (как в Казаках): клетки стенной сетки вдоль отрезка.
+function wallLineCells(a: { x: number; y: number }, b: { x: number; y: number }): number[] {
+  if (!latestWorld) {
+    return [];
+  }
+  const gridWidth = Math.ceil(latestWorld.surface.width / WALL_CELL_SIZE);
+  const gridHeight = Math.ceil(latestWorld.surface.height / WALL_CELL_SIZE);
+  const cells = new Set<number>();
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / (WALL_CELL_SIZE * 0.45)));
+  for (let index = 0; index <= steps; index += 1) {
+    const x = a.x + (dx * index) / steps;
+    const y = a.y + (dy * index) / steps;
+    const cx = Math.floor(x / WALL_CELL_SIZE);
+    const cy = Math.floor(y / WALL_CELL_SIZE);
+    if (cx >= 0 && cx < gridWidth && cy >= 0 && cy < gridHeight) {
+      cells.add(cy * gridWidth + cx);
+    }
+  }
+  return [...cells];
+}
+
+// Зоны и ластик выделяются прямоугольником.
+function rectCells(a: { x: number; y: number }, b: { x: number; y: number }, cellSize: number): number[] {
+  if (!latestWorld) {
+    return [];
+  }
+  const gridWidth = Math.ceil(latestWorld.surface.width / cellSize);
+  const gridHeight = Math.ceil(latestWorld.surface.height / cellSize);
+  const minX = Math.max(0, Math.floor(Math.min(a.x, b.x) / cellSize));
+  const maxX = Math.min(gridWidth - 1, Math.floor(Math.max(a.x, b.x) / cellSize));
+  const minY = Math.max(0, Math.floor(Math.min(a.y, b.y) / cellSize));
+  const maxY = Math.min(gridHeight - 1, Math.floor(Math.max(a.y, b.y) / cellSize));
+  const cells: number[] = [];
+  for (let cy = minY; cy <= maxY; cy += 1) {
+    for (let cx = minX; cx <= maxX; cx += 1) {
+      cells.push(cy * gridWidth + cx);
+    }
+  }
+  return cells;
+}
+
+function commitDrag(): void {
+  if (!dragTool || !dragStart || !dragEnd || socket.readyState !== WebSocket.OPEN) {
     return;
   }
-
-  if (paintZoneKind === "wall" || paintZoneKind === "erase") {
-    const wallGridWidth = Math.ceil(latestWorld.surface.width / WALL_CELL_SIZE);
-    const wallGridHeight = Math.ceil(latestWorld.surface.height / WALL_CELL_SIZE);
-    const wallX = Math.floor(tile.x / WALL_CELL_SIZE);
-    const wallY = Math.floor(tile.y / WALL_CELL_SIZE);
-    if (wallX >= 0 && wallX < wallGridWidth && wallY >= 0 && wallY < wallGridHeight) {
-      wallPending.add(wallY * wallGridWidth + wallX);
-    }
-    if (paintZoneKind === "wall") {
-      return;
-    }
+  if (dragTool === "wall") {
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintWall", cells })), wallLineCells(dragStart, dragEnd), 500);
+  } else if (dragTool === "harvest" || dragTool === "forbid") {
+    const zone = dragTool;
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintZone", zone, cells })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
+  } else if (dragTool === "erase") {
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "eraseZone", cells })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "eraseBuild", cells })), rectCells(dragStart, dragEnd, WALL_CELL_SIZE), 500);
   }
+}
 
-  const gridWidth = Math.ceil(latestWorld.surface.width / ZONE_CELL_SIZE);
-  const gridHeight = Math.ceil(latestWorld.surface.height / ZONE_CELL_SIZE);
-  const cellX = Math.floor(tile.x / ZONE_CELL_SIZE);
-  const cellY = Math.floor(tile.y / ZONE_CELL_SIZE);
-  for (let dy = -1; dy <= 1; dy += 1) {
-    for (let dx = -1; dx <= 1; dx += 1) {
-      const nx = cellX + dx;
-      const ny = cellY + dy;
-      if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight) {
-        paintPending.add(ny * gridWidth + nx);
-      }
-    }
+// Превью растягивания: рисуется в экранных координатах поверх мира.
+const dragPreview = new Graphics();
+
+function worldToScreen(x: number, y: number): { x: number; y: number } {
+  return {
+    x: pixi.screen.width * 0.5 + (x - camera.x) * SURFACE_TILE_SIZE * camera.zoom,
+    y: pixi.screen.height * 0.5 + (y - camera.y) * SURFACE_TILE_SIZE * camera.zoom
+  };
+}
+
+function updateDragPreview(): void {
+  dragPreview.clear();
+  if (!isPainting || !dragTool || !dragStart || !dragEnd) {
+    return;
+  }
+  if (dragPreview.parent !== pixi.stage || pixi.stage.children[pixi.stage.children.length - 1] !== dragPreview) {
+    pixi.stage.addChild(dragPreview);
+  }
+  const a = worldToScreen(dragStart.x, dragStart.y);
+  const b = worldToScreen(dragEnd.x, dragEnd.y);
+  if (dragTool === "wall") {
+    const thickness = Math.max(3, WALL_CELL_SIZE * SURFACE_TILE_SIZE * camera.zoom);
+    dragPreview.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: thickness, color: 0xbc6240, alpha: 0.55 });
+    dragPreview.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 2, color: 0x5b281c, alpha: 0.9 });
+  } else {
+    const color = dragTool === "harvest" ? 0x7ec850 : dragTool === "forbid" ? 0xd9534f : 0xf5f8ef;
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    const width = Math.abs(b.x - a.x);
+    const height = Math.abs(b.y - a.y);
+    dragPreview.rect(x, y, width, height).fill({ color, alpha: 0.16 });
+    dragPreview.rect(x, y, width, height).stroke({ width: 2, color, alpha: 0.8 });
   }
 }
 
@@ -1075,9 +1117,14 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
   pixi.canvas.setPointerCapture(event.pointerId);
 
   if (currentTool === "harvest" || currentTool === "forbid" || currentTool === "wall" || currentTool === "erase") {
-    isPainting = true;
-    paintZoneKind = currentTool;
-    paintAtPointer(event);
+    const tile = pointerToTile(event);
+    if (tile) {
+      isPainting = true;
+      dragTool = currentTool;
+      dragStart = tile;
+      dragEnd = tile;
+      updateDragPreview();
+    }
   }
 });
 
@@ -1087,7 +1134,11 @@ pixi.canvas.addEventListener("pointermove", (event) => {
   }
 
   if (isPainting) {
-    paintAtPointer(event);
+    const tile = pointerToTile(event);
+    if (tile) {
+      dragEnd = tile;
+    }
+    updateDragPreview();
     return;
   }
 
@@ -1117,7 +1168,11 @@ pixi.canvas.addEventListener("pointerup", (event) => {
 
   if (isPainting) {
     isPainting = false;
-    flushPaint();
+    commitDrag();
+    dragTool = null;
+    dragStart = null;
+    dragEnd = null;
+    updateDragPreview();
     return;
   }
 
@@ -1141,6 +1196,9 @@ pixi.canvas.addEventListener("pointerup", (event) => {
 
   if (currentTool === "hut" || currentTool === "storage") {
     socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y }));
+    if (!event.shiftKey) {
+      setTool("food"); // одиночная постройка: режим снимается, Shift — серия
+    }
     return;
   }
 
