@@ -4,10 +4,12 @@ import { acquireSprite, antRotation, beginPool, deterministicOffset, endPool, pl
 import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import {
+  getBerryTexture,
   getClayfolkTexture,
   getResourceTexture
 } from "../../sprites";
 import { drawPebble, drawLeaf } from "./ground";
+import { getEnvironmentTextures } from "./environment";
 
 // Выбранный житель (панель юнита): подсветка кольцом.
 let selectedAntId: string | null = null;
@@ -72,20 +74,35 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
 
 export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool);
+  const props = getEnvironmentTextures().props;
 
   for (const source of world.surface.foodSources) {
-    if (!isInBounds(source.pos, bounds, 5)) {
+    if (!isInBounds(source.pos, bounds, 7)) {
       continue;
     }
 
-    // Еда лежит плотной кучкой: маленький разброс, крупнее в центре.
-    const chunks = Math.max(1, Math.min(14, Math.ceil(source.amount / 7)));
-    for (let index = 0; index < chunks; index += 1) {
-      const sprite = acquireSprite(pool);
-      const spread = index === 0 ? 0 : 4 + Math.min(9, index * 1.6);
-      const offset = deterministicOffset(index + source.id.length, spread);
-      sprite.scale.set(index === 0 ? 2.6 : 2.1);
-      placeSprite(sprite, source.pos.x * cell + offset.x, source.pos.y * cell + offset.y, (index % 4) * 0.2);
+    // Food uses vegetation sprites from the summer-plains atlas; only berries vary by amount.
+    const x = source.pos.x * cell;
+    const y = source.pos.y * cell;
+    const bush = acquireSprite(pool);
+    bush.texture = props.foodBush;
+    bush.anchor.set(0.5, 1);
+    bush.scale.set(0.96);
+    bush.tint = 0xffffff;
+    bush.alpha = source.amount > 0 ? 1 : 0.72;
+    placeSprite(bush, x, y + 13, 0);
+
+    const berryCount = Math.max(0, Math.min(8, Math.ceil(source.amount / 15)));
+    const berryTexture = getBerryTexture();
+    for (let index = 0; index < berryCount; index += 1) {
+      const berry = acquireSprite(pool);
+      const offset = deterministicOffset(index + source.id.length * 2, 15);
+      berry.texture = berryTexture;
+      berry.anchor.set(0.5);
+      berry.scale.set(2.2 + (index % 3) * 0.12);
+      berry.tint = 0xffffff;
+      berry.alpha = 0.96;
+      placeSprite(berry, x + offset.x * 0.82, y - 16 + offset.y * 0.48, (index % 5 - 2) * 0.08);
     }
   }
 

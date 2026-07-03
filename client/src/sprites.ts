@@ -68,6 +68,9 @@ const clayDark = 0x8b3f2a;
 const clayMid = 0xbc6240;
 const clayLight = 0xd78358;
 const clayTop = 0xef9a64;
+const berryDark = 0x7a1f18;
+const berryMid = 0xc93426;
+const berryLight = 0xff6a3d;
 const redClayShadow = 0x692018;
 const redClayDark = 0x9c3524;
 const redClayMid = 0xd05236;
@@ -193,6 +196,11 @@ export const spriteMaps = {
     "1221",
     ".11."
   ],
+  berry: [
+    ".22.",
+    "2132",
+    ".22."
+  ],
   carrion: [
     "1.2..",
     ".223.",
@@ -292,6 +300,11 @@ export const spritePalettes = {
     "1": 0x3d8b45,
     "2": 0x7abf5a
   },
+  berry: {
+    "1": berryDark,
+    "2": berryMid,
+    "3": berryLight
+  },
   carrion: {
     "1": 0x2a1715,
     "2": 0x6f2a24,
@@ -358,6 +371,10 @@ export function getSpiderLairTexture(): Texture {
 
 export function getFoodTexture(): Texture {
   return makeTexture("food", [...spriteMaps.food], spritePalettes.food);
+}
+
+export function getBerryTexture(): Texture {
+  return makeTexture("berry", [...spriteMaps.berry], spritePalettes.berry);
 }
 
 export function getCarrionTexture(): Texture {
