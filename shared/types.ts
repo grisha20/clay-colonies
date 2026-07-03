@@ -80,7 +80,7 @@ export type ZoneType = "harvest" | "forbid";
 
 // Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
 export const WALL_CELL_SIZE = 2;
-export type BuildingType = "hut" | "wall";
+export type BuildingType = "hut" | "wall" | "storage";
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {

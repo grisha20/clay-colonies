@@ -5,7 +5,7 @@ import { createSocketHub } from "./net/socket";
 import { loadWorldSnapshot, saveWorldSnapshot } from "./state/snapshot";
 import { addFoodSource, createWorld, toNetworkSnapshot } from "./sim/world";
 import { eraseColonyZone, paintColonyZone } from "./sim/zones";
-import { eraseBuildCells, paintWallCells, placeHut } from "./sim/building";
+import { eraseBuildCells, paintWallCells, placePointBuilding } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
 
 const genomeState = await loadGenome();
@@ -27,7 +27,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
     eraseColonyZone(world, 0, command.cells);
   }
   if (command.type === "placeBuilding") {
-    placeHut(world, 0, command.x, command.y);
+    placePointBuilding(world, 0, command.building, command.x, command.y);
   }
   if (command.type === "paintWall") {
     paintWallCells(world, 0, command.cells);

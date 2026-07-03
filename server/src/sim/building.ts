@@ -39,15 +39,53 @@ export function wallCellCenter(index: number): Vec2 {
 }
 
 function buildingCost(type: BuildingType): { clay: number; wood: number; stone: number } {
-  return type === "hut" ? { ...CONFIG.hutCost } : { ...CONFIG.wallCost };
+  if (type === "hut") {
+    return { ...CONFIG.hutCost };
+  }
+  if (type === "storage") {
+    return { ...CONFIG.storageCost };
+  }
+  return { ...CONFIG.wallCost };
 }
 
 function buildingMaxHp(type: BuildingType): number {
-  return type === "hut" ? CONFIG.hutMaxHp : CONFIG.wallMaxHp;
+  if (type === "hut") {
+    return CONFIG.hutMaxHp;
+  }
+  if (type === "storage") {
+    return CONFIG.storageMaxHp;
+  }
+  return CONFIG.wallMaxHp;
 }
 
 export function buildRatePerTick(type: BuildingType): number {
-  return type === "hut" ? 1 / CONFIG.hutBuildTicks : 1 / CONFIG.wallBuildTicks;
+  if (type === "hut") {
+    return 1 / CONFIG.hutBuildTicks;
+  }
+  if (type === "storage") {
+    return 1 / CONFIG.storageBuildTicks;
+  }
+  return 1 / CONFIG.wallBuildTicks;
+}
+
+// Ближайшая точка сдачи ресурсов: вход в лагерь или ДОСТРОЕННЫЙ склад племени.
+export function nearestDropPoint(world: World, pos: Vec2): Vec2 {
+  let best = world.surface.entrance;
+  let bestDistanceSq =
+    (pos.x - best.x) * (pos.x - best.x) + (pos.y - best.y) * (pos.y - best.y);
+  for (const building of world.surface.buildings) {
+    if (building.type !== "storage" || building.stage !== "built" || building.colonyId !== world.colony.id) {
+      continue;
+    }
+    const dx = pos.x - building.pos.x;
+    const dy = pos.y - building.pos.y;
+    const distanceSq = dx * dx + dy * dy;
+    if (distanceSq < bestDistanceSq) {
+      bestDistanceSq = distanceSq;
+      best = building.pos;
+    }
+  }
+  return best;
 }
 
 function tooCloseToEntrance(world: World, pos: Vec2): boolean {
@@ -78,7 +116,13 @@ function createBuilding(colonyId: string, type: BuildingType, pos: Vec2): Buildi
   return building;
 }
 
-export function placeHut(world: World, colonyIndex: number, x: number, y: number): boolean {
+export function placePointBuilding(
+  world: World,
+  colonyIndex: number,
+  type: "hut" | "storage",
+  x: number,
+  y: number
+): boolean {
   const colony = world.colonies[colonyIndex];
   if (!colony) {
     return false;
@@ -90,13 +134,14 @@ export function placeHut(world: World, colonyIndex: number, x: number, y: number
   if (tooCloseToEntrance(world, pos)) {
     return false;
   }
-  const huts = world.surface.buildings.filter(
-    (item) => item.colonyId === colony.id && item.type === "hut"
+  const sameType = world.surface.buildings.filter(
+    (item) => item.colonyId === colony.id && item.type === type
   );
-  if (huts.length >= CONFIG.maxHutsPerColony) {
+  const limit = type === "hut" ? CONFIG.maxHutsPerColony : CONFIG.maxStoragesPerColony;
+  if (sameType.length >= limit) {
     return false;
   }
-  // Не ставить хижину вплотную к другой постройке.
+  // Не ставить точечную постройку вплотную к другой постройке.
   for (const item of world.surface.buildings) {
     const dx = item.pos.x - pos.x;
     const dy = item.pos.y - pos.y;
@@ -104,8 +149,12 @@ export function placeHut(world: World, colonyIndex: number, x: number, y: number
       return false;
     }
   }
-  world.surface.buildings.push(createBuilding(colony.id, "hut", pos));
+  world.surface.buildings.push(createBuilding(colony.id, type, pos));
   return true;
+}
+
+export function placeHut(world: World, colonyIndex: number, x: number, y: number): boolean {
+  return placePointBuilding(world, colonyIndex, "hut", x, y);
 }
 
 const MAX_WALL_CELLS_PER_COMMAND = 512;

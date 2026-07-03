@@ -39,6 +39,7 @@ appRoot.innerHTML = `
         <button data-tool="harvest" type="button">Зона добычи</button>
         <button data-tool="forbid" type="button">Зона запрета</button>
         <button data-tool="hut" type="button">Хижина</button>
+        <button data-tool="storage" type="button">Склад</button>
         <button data-tool="wall" type="button">Стена</button>
         <button data-tool="erase" type="button">Ластик</button>
       </div>
@@ -337,7 +338,7 @@ const antsCount = document.querySelector<HTMLElement>("#ants-count");
 let trampleEnabled = true;
 
 // Инструменты игрока: клик-еда, кисть зон, постройки.
-type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "wall" | "erase";
+type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "wall" | "erase";
 let currentTool: PlayerTool = "food";
 let isPainting = false;
 const paintPending = new Set<number>();
@@ -349,6 +350,7 @@ const TOOL_HINTS: Record<PlayerTool, string> = {
   harvest: "Зажми ЛКМ и рисуй зону добычи",
   forbid: "Зажми ЛКМ и рисуй зону запрета",
   hut: "Клик - поставить хижину (8 глины + 5 дерева, +4 к лимиту жителей)",
+  storage: "Клик - поставить склад (6 дерева + 4 камня, точка сдачи ресурсов)",
   wall: "Зажми ЛКМ и рисуй стену (2 глины за сегмент)",
   erase: "Зажми ЛКМ и стирай зоны и стены"
 };
@@ -758,7 +760,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  if (currentTool !== "food" && currentTool !== "hut") {
+  if (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage") {
     return;
   }
 
@@ -789,7 +791,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (
-    (currentTool !== "food" && currentTool !== "hut") ||
+    (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage") ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||
@@ -806,8 +808,8 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
-  if (currentTool === "hut") {
-    socket.send(JSON.stringify({ type: "placeBuilding", building: "hut", x: tile.x, y: tile.y }));
+  if (currentTool === "hut" || currentTool === "storage") {
+    socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y }));
     return;
   }
   socket.send(JSON.stringify({ type: "dropFood", x: tile.x, y: tile.y }));

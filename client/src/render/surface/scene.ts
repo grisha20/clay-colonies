@@ -190,6 +190,28 @@ function updateBuildings(layer: Graphics, world: WorldSnapshot, cell: number): v
       continue;
     }
 
+    if (building.type === "storage") {
+      const half = 1.7 * cell;
+      if (building.stage === "site") {
+        layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x8a5429, alpha: 0.6 });
+        const deliveredTotal = building.delivered.clay + building.delivered.wood + building.delivered.stone;
+        const costTotal = Math.max(1, building.cost.clay + building.cost.wood + building.cost.stone);
+        if (deliveredTotal > 0.5) {
+          layer.rect(x - half, y + half - (half * 2 * deliveredTotal) / costTotal, half * 2, (half * 2 * deliveredTotal) / costTotal).fill({ color: 0x8a5429, alpha: 0.3 });
+        }
+      } else if (building.stage === "inProgress") {
+        layer.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0x8a5429, alpha: 0.35 + building.progress * 0.5 });
+        layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x4f2f16, alpha: 0.8 });
+      } else {
+        layer.ellipse(x + 2, y + half * 0.8, half * 1.2, half * 0.4).fill({ color: 0x24190f, alpha: 0.22 });
+        layer.rect(x - half, y - half + 2, half * 2, half * 2).fill({ color: 0x4f2f16, alpha: 1 });
+        layer.rect(x - half, y - half, half * 2, half * 2 - 2).fill({ color: 0x8a5429, alpha: 1 });
+        layer.rect(x - half + 2, y - half + 2, half * 2 - 4, 3).fill({ color: 0xb98a52, alpha: 0.8 });
+        layer.moveTo(x, y - half).lineTo(x, y + half).stroke({ width: 1.2, color: 0x4f2f16, alpha: 0.6 });
+      }
+      continue;
+    }
+
     // Хижина.
     const radius = 2.1 * cell;
     if (building.stage === "site") {

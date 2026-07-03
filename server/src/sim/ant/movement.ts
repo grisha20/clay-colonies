@@ -446,6 +446,10 @@ export function tryCrossLayer(world: World, ant: Ant): boolean {
   if (ant.job === "build" && ant.carrying > 0) {
     return false;
   }
+  // Сборщик сдаёт глину/дерево/камень в ближайшую точку сдачи (moveHarvestCarrying).
+  if (ant.job === "harvest" && ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
+    return false;
+  }
   if (ant.layer === "underground") {
     ant.layer = "surface";
     ant.state = "search";

@@ -22,6 +22,7 @@ import {
   isColonyStarving
 } from "./colony-state";
 import { hasDugRoom } from "./brood";
+import { nearestDropPoint } from "../building";
 
 export type SurfaceFoodTarget = {
   source: { id: string; pos: Vec2; amount: number; kind?: "food" | "carrion" | "antCorpse" | "spiderCarcass" };
@@ -545,11 +546,26 @@ export function collectUndergroundCarrion(world: World, ant: Ant): boolean {
   return true;
 }
 
-// Сборщик несёт глину/дерево домой (без пищевых следов и маршрутов еды).
+// Сборщик несёт глину/дерево/камень в ближайшую точку сдачи (вход или склад).
 export function moveHarvestCarrying(world: World, ant: Ant): void {
   ant.job = "harvest";
-  moveSurfaceToward(world, ant, world.surface.entrance, !isColonyStarving(world), false);
-  tryCrossLayer(world, ant);
+  const target = nearestDropPoint(world, ant.pos);
+  if (isWithinRadius(ant.pos, target, CONFIG.dropPointRadius)) {
+    const kind = ant.carryKind;
+    if (kind === "clay") {
+      world.colony.clay += ant.carrying;
+    } else if (kind === "wood") {
+      world.colony.wood += ant.carrying;
+    } else if (kind === "stone") {
+      world.colony.stone += ant.carrying;
+    }
+    ant.carrying = 0;
+    ant.carryKind = undefined;
+    ant.state = "search";
+    return;
+  }
+  ant.state = "carry";
+  moveSurfaceToward(world, ant, target, !isColonyStarving(world), false);
 }
 
 // Один шаг сборщика ресурса: дойти до узла, взять кусок, отнести к лагерю.

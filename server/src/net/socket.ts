@@ -19,7 +19,7 @@ export type ClientCommand =
     }
   | {
       type: "placeBuilding";
-      building: "hut";
+      building: "hut" | "storage";
       x: number;
       y: number;
     }
@@ -80,7 +80,7 @@ function parseCommand(raw: string): ClientCommand | null {
 
     if (command.type === "placeBuilding") {
       if (
-        command.building !== "hut" ||
+        (command.building !== "hut" && command.building !== "storage") ||
         typeof command.x !== "number" ||
         typeof command.y !== "number" ||
         !Number.isFinite(command.x) ||
@@ -92,7 +92,7 @@ function parseCommand(raw: string): ClientCommand | null {
       ) {
         return null;
       }
-      return { type: "placeBuilding", building: "hut", x: command.x, y: command.y };
+      return { type: "placeBuilding", building: command.building, x: command.x, y: command.y };
     }
 
     if (command.type === "paintWall" || command.type === "eraseBuild") {
