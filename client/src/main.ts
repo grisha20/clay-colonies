@@ -14,50 +14,57 @@ if (!appRoot) {
 appRoot.innerHTML = `
   <main class="app">
     <div id="canvas-host" class="canvasHost"></div>
-    <section class="panel topPanel">
-      <div class="brand">
-        <span class="mark"></span>
-        <strong>Clayfolk</strong>
+    <section class="panel brandPanel">
+      <img id="brand-icon" alt="">
+      <strong>Clayfolk</strong>
+    </section>
+    <section class="panel quickPanel">
+      <button id="btn-pause" class="quickBtn" type="button" title="Пауза">II</button>
+      <button id="btn-speed" class="quickBtn" type="button" title="Скорость">1x</button>
+      <button id="btn-settings" class="quickBtn" type="button" title="Настройки">⚙</button>
+    </section>
+    <section class="panel settingsMenu" id="settings-menu" style="display: none;">
+      <div class="settingsRow"><span>Скорость</span>
+        <div class="segmented speedControls" aria-label="Скорость">
+          <button data-speed="0" type="button">II</button>
+          <button class="active" data-speed="1" type="button">1x</button>
+          <button data-speed="5" type="button">5x</button>
+          <button data-speed="20" type="button">20x</button>
+          <button data-speed="50" type="button">Max</button>
+        </div>
       </div>
-      <div class="segmented" role="tablist" aria-label="Слой">
-        <button class="active" data-view="surface" type="button">Поверхность</button>
-        <button data-view="underground" type="button">Подземелье</button>
+      <div class="settingsRow"><span>Племя</span>
+        <div class="segmented tribeControls" aria-label="Племя">
+          <button class="active" data-tribe="0" type="button">Племя A</button>
+          <button data-tribe="1" type="button">Племя B</button>
+        </div>
       </div>
-      <div class="segmented nestControls" aria-label="Гнездо">
-        <button class="active" data-nest="0" type="button">Гнездо A</button>
-        <button data-nest="1" type="button">Гнездо B</button>
+      <div class="settingsRow"><span>Камера</span>
+        <div class="segmented cameraControls" aria-label="Камера">
+          <button class="active" data-camera="follow" type="button">Слежение</button>
+          <button data-camera="free" type="button">Свободно</button>
+          <button data-camera="nest" type="button">К гнезду</button>
+        </div>
       </div>
-      <div class="segmented speedControls" aria-label="Скорость">
-        <button data-speed="0" type="button">II</button>
-        <button class="active" data-speed="1" type="button">1x</button>
-        <button data-speed="5" type="button">5x</button>
-        <button data-speed="20" type="button">20x</button>
-        <button data-speed="50" type="button">Max</button>
+      <div class="settingsRow"><span>Панели</span>
+        <div class="segmented panelControls" aria-label="Панели">
+          <button data-panel="tasks" type="button">Задачи</button>
+          <button data-panel="tribes" type="button">Племена</button>
+          <button data-panel="build" type="button">Стройка</button>
+          <button data-panel="minimap" type="button">Карта</button>
+        </div>
       </div>
-      <div class="segmented trampleControls" aria-label="Тропинки">
-        <button class="active" id="btn-trample" type="button">Тропинки: Вкл</button>
+      <div class="settingsRow"><span>Тропинки</span>
+        <div class="segmented trampleControls" aria-label="Тропинки">
+          <button class="active" id="btn-trample" type="button">Вкл</button>
+        </div>
       </div>
-      <div class="segmented tribeControls" aria-label="Племя">
-        <button class="active" data-tribe="0" type="button">Племя A</button>
-        <button data-tribe="1" type="button">Племя B</button>
-      </div>
-      <div class="segmented toolControls" aria-label="Инструмент">
-        <button class="active" data-tool="food" type="button">Еда</button>
-        <button data-tool="harvest" type="button">Зона добычи</button>
-        <button data-tool="forbid" type="button">Зона запрета</button>
-        <button data-tool="erase" type="button">Ластик</button>
-      </div>
-      <div class="segmented panelControls" aria-label="Панели">
-        <button data-panel="tasks" type="button">Задачи</button>
-        <button data-panel="tribes" type="button">Племена</button>
-        <button data-panel="build" type="button">Стройка</button>
-        <button data-panel="minimap" type="button">Карта</button>
-      </div>
-      <div class="segmented cameraControls" aria-label="Камера">
-        <button class="active" data-camera="follow" type="button">Слежение</button>
-        <button data-camera="free" type="button">Свободно</button>
-        <button data-camera="nest" type="button">К гнезду</button>
-      </div>
+    </section>
+    <section class="panel toolDock" aria-label="Инструмент">
+      <button class="active" data-tool="food" type="button">Еда</button>
+      <button data-tool="harvest" type="button">Добыча</button>
+      <button data-tool="forbid" type="button">Запрет</button>
+      <button data-tool="erase" type="button">Ластик</button>
     </section>
     <aside class="panel hud">
       <div class="hudCommon">
@@ -190,32 +197,95 @@ style.textContent = `
     box-shadow: 0 6px 18px rgb(30 18 8 / 0.35), inset 0 0 0 1px rgb(255 244 214 / 0.6);
   }
 
-  .topPanel {
+  .brandPanel {
     left: 14px;
-    right: 14px;
     top: 14px;
-    min-height: 52px;
-    padding: 8px;
+    padding: 8px 14px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    pointer-events: auto;
+    gap: 8px;
+    font-size: 17px;
   }
 
-  .brand {
+  .brandPanel img {
+    width: 26px;
+    height: 26px;
+    image-rendering: pixelated;
+  }
+
+  .quickPanel {
+    right: 14px;
+    top: 14px;
+    padding: 6px;
+    display: flex;
+    gap: 6px;
+  }
+
+  .quickBtn {
+    width: 42px;
+    height: 42px;
+    border: 1.5px solid #8a6a44;
+    border-radius: 8px;
+    background: rgb(255 244 214 / 0.7);
+    color: #4a3520;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .quickBtn.active {
+    background: #b5793f;
+    color: #fff6e0;
+  }
+
+  .settingsMenu {
+    right: 14px;
+    top: 70px;
+    width: 360px;
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    z-index: 5;
+  }
+
+  .settingsRow {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-width: 152px;
   }
 
-  .mark {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 38% 38%, #f0c14b 0 16%, #6b3f24 18% 42%, #17201b 44% 100%);
-    box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.22);
+  .settingsRow > span {
+    width: 78px;
+    flex: none;
+    color: #7a6647;
+    font-size: 13px;
+  }
+
+  .settingsRow .segmented {
+    flex: 1;
+  }
+
+  .toolDock {
+    left: 14px;
+    bottom: 58px;
+    padding: 6px;
+    display: flex;
+    gap: 6px;
+  }
+
+  .toolDock button {
+    border: 1.5px solid #8a6a44;
+    border-radius: 8px;
+    background: rgb(255 244 214 / 0.7);
+    color: #4a3520;
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .toolDock button.active {
+    background: #b5793f;
+    color: #fff6e0;
   }
 
   .segmented {
@@ -256,7 +326,7 @@ style.textContent = `
 
   .hud {
     right: 14px;
-    top: 82px;
+    top: 72px;
     width: min(560px, calc(100vw - 28px));
     padding: 12px;
     display: grid;
@@ -318,7 +388,8 @@ style.textContent = `
   .resourceBar {
     left: 50%;
     transform: translateX(-50%);
-    top: 82px;
+    top: 14px;
+    min-height: 46px;
     padding: 6px 14px;
     display: flex;
     align-items: center;
@@ -357,7 +428,7 @@ style.textContent = `
 
   .tasksPanel {
     left: 14px;
-    top: 82px;
+    top: 72px;
     width: 240px;
     padding: 10px 12px;
   }
@@ -403,7 +474,7 @@ style.textContent = `
 
   .unitPanel {
     left: 14px;
-    bottom: 58px;
+    bottom: 112px;
     width: 230px;
     padding: 10px 12px;
   }
@@ -729,7 +800,8 @@ for (const [id, name] of [
   ["icon-clay", "clay"],
   ["icon-wood", "wood"],
   ["icon-stone", "stone"],
-  ["icon-pop", "pop"]
+  ["icon-pop", "pop"],
+  ["brand-icon", "pop"]
 ] as const) {
   const img = document.querySelector<HTMLImageElement>(`#${id}`);
   if (img) {
@@ -1200,7 +1272,7 @@ function updateDragPreview(): void {
 btnTrample.addEventListener("click", () => {
   trampleEnabled = !trampleEnabled;
   btnTrample.classList.toggle("active", trampleEnabled);
-  btnTrample.textContent = `Тропинки: ${trampleEnabled ? "Вкл" : "Выкл"}`;
+  btnTrample.textContent = trampleEnabled ? "Вкл" : "Выкл";
 });
 
 for (const button of cameraButtons) {
@@ -1259,16 +1331,53 @@ function snapshotMatchesView(world: NetworkWorldSnapshot): boolean {
   );
 }
 
+const btnPause = document.querySelector<HTMLButtonElement>("#btn-pause");
+const btnSpeedCycle = document.querySelector<HTMLButtonElement>("#btn-speed");
+const btnSettings = document.querySelector<HTMLButtonElement>("#btn-settings");
+const settingsMenu = document.querySelector<HTMLElement>("#settings-menu");
+let lastRunSpeed = 1;
+const SPEED_LABELS: Record<number, string> = { 1: "1x", 5: "5x", 20: "20x", 50: "Max" };
+
+function updateQuickButtons(): void {
+  btnPause?.classList.toggle("active", currentSpeed === 0);
+  if (btnSpeedCycle) {
+    btnSpeedCycle.textContent = SPEED_LABELS[currentSpeed === 0 ? lastRunSpeed : currentSpeed] ?? "1x";
+  }
+}
+
 function setSpeed(speed: number): void {
   currentSpeed = speed;
+  if (speed > 0) {
+    lastRunSpeed = speed;
+  }
   for (const button of speedButtons) {
     button.classList.toggle("active", Number(button.dataset.speed) === speed);
   }
+  updateQuickButtons();
 
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type: "setSpeed", value: speed }));
   }
 }
+
+btnPause?.addEventListener("click", () => {
+  setSpeed(currentSpeed === 0 ? lastRunSpeed : 0);
+});
+
+btnSpeedCycle?.addEventListener("click", () => {
+  const order = [1, 5, 20, 50];
+  const base = currentSpeed === 0 ? lastRunSpeed : currentSpeed;
+  const next = order[(order.indexOf(base) + 1) % order.length];
+  setSpeed(next);
+});
+
+btnSettings?.addEventListener("click", () => {
+  if (settingsMenu) {
+    const hidden = settingsMenu.style.display === "none";
+    settingsMenu.style.display = hidden ? "grid" : "none";
+    btnSettings.classList.toggle("active", hidden);
+  }
+});
 
 for (const button of speedButtons) {
   button.addEventListener("click", () => {
