@@ -19,9 +19,12 @@ export function startLoop(world: World, onSnapshot: (includePheromones: boolean)
   function runTick() {
     const now = Date.now();
 
+    // Пауза: мир не считается, но снапшоты продолжают уходить клиентам.
+    const paused = simSpeed === 0;
+
     // Рассчитываем целевое время тика и количество шагов на основе текущей simSpeed
-    const targetTickMs = simSpeed === 1 ? CONFIG.tickMs : Math.max(20, Math.floor(CONFIG.tickMs / simSpeed));
-    const stepsPerTick = simSpeed === 1 ? 1 : Math.max(1, Math.round(simSpeed / (CONFIG.tickMs / targetTickMs)));
+    const targetTickMs = simSpeed <= 1 ? CONFIG.tickMs : Math.max(20, Math.floor(CONFIG.tickMs / simSpeed));
+    const stepsPerTick = paused ? 0 : simSpeed === 1 ? 1 : Math.max(1, Math.round(simSpeed / (CONFIG.tickMs / targetTickMs)));
 
     // Замеряем каждый симуляционный шаг отдельно, чтобы профайлер фаз считал ms/step.
     for (let i = 0; i < stepsPerTick; i += 1) {
@@ -63,7 +66,7 @@ export function startLoop(world: World, onSnapshot: (includePheromones: boolean)
   return {
     setSpeed(speed: number) {
       if (Number.isFinite(speed)) {
-        simSpeed = Math.max(1, Math.floor(speed));
+        simSpeed = Math.max(0, Math.floor(speed));
       }
     },
     getSpeed() {

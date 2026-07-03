@@ -25,6 +25,7 @@ appRoot.innerHTML = `
         <button data-nest="1" type="button">Гнездо B</button>
       </div>
       <div class="segmented speedControls" aria-label="Скорость">
+        <button data-speed="0" type="button">II</button>
         <button class="active" data-speed="1" type="button">1x</button>
         <button data-speed="5" type="button">5x</button>
         <button data-speed="20" type="button">20x</button>

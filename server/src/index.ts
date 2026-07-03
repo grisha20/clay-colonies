@@ -36,7 +36,8 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
     eraseBuildCells(world, 0, command.cells);
   }
   if (command.type === "setSpeed") {
-    loop.setSpeed(Math.max(1, Math.min(50, Math.floor(command.value))));
+    // 0 = пауза; 1..50 = скорость симуляции.
+    loop.setSpeed(Math.max(0, Math.min(50, Math.floor(command.value))));
   }
 });
 loop = startLoop(world, (includePheromones) => {
