@@ -145,7 +145,7 @@ export function placePointBuilding(
   for (const item of world.surface.buildings) {
     const dx = item.pos.x - pos.x;
     const dy = item.pos.y - pos.y;
-    if (dx * dx + dy * dy < 5.5 * 5.5) {
+    if (dx * dx + dy * dy < 8 * 8) {
       return false;
     }
   }

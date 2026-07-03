@@ -41,9 +41,6 @@ appRoot.innerHTML = `
         <button class="active" data-tool="food" type="button">Еда</button>
         <button data-tool="harvest" type="button">Зона добычи</button>
         <button data-tool="forbid" type="button">Зона запрета</button>
-        <button data-tool="hut" type="button">Хижина</button>
-        <button data-tool="storage" type="button">Склад</button>
-        <button data-tool="wall" type="button">Стена</button>
         <button data-tool="erase" type="button">Ластик</button>
       </div>
       <div class="segmented cameraControls" aria-label="Камера">
@@ -98,6 +95,23 @@ appRoot.innerHTML = `
       </div>
       <div class="unitRow"><span>Груз</span><strong id="unit-cargo">-</strong></div>
     </aside>
+    <section class="panel buildBar" aria-label="Постройки">
+      <button class="buildCard" data-tool="hut" type="button">
+        <span class="bname">Хижина</span>
+        <span class="bcost" id="cost-hut">8 глины + 5 дерева</span>
+        <span class="bnote">+4 к лимиту жителей</span>
+      </button>
+      <button class="buildCard" data-tool="storage" type="button">
+        <span class="bname">Склад</span>
+        <span class="bcost" id="cost-storage">6 дерева + 4 камня</span>
+        <span class="bnote">точка сдачи ресурсов</span>
+      </button>
+      <button class="buildCard" data-tool="wall" type="button">
+        <span class="bname">Стена</span>
+        <span class="bcost" id="cost-wall">2 глины / сегмент</span>
+        <span class="bnote">тяни линию мышью</span>
+      </button>
+    </section>
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
     </aside>
@@ -118,8 +132,8 @@ style.textContent = `
   :root {
     color-scheme: light;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #182018;
-    color: #f5f8ef;
+    background: #2a2118;
+    color: #3a2a18;
   }
 
   * { box-sizing: border-box; }
@@ -158,12 +172,12 @@ style.textContent = `
   .panel {
     position: absolute;
     z-index: 2;
-    border: 1px solid rgb(245 248 239 / 0.22);
-    border-radius: 8px;
-    background: rgb(20 27 21 / 0.78);
-    color: #f5f8ef;
+    border: 2px solid #8a6a44;
+    border-radius: 10px;
+    background: rgb(240 226 192 / 0.95);
+    color: #3a2a18;
     backdrop-filter: blur(8px);
-    box-shadow: 0 10px 30px rgb(0 0 0 / 0.22);
+    box-shadow: 0 6px 18px rgb(30 18 8 / 0.35), inset 0 0 0 1px rgb(255 244 214 / 0.6);
   }
 
   .topPanel {
@@ -198,7 +212,7 @@ style.textContent = `
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-    border: 1px solid rgb(245 248 239 / 0.24);
+    border: 1.5px solid #8a6a44;
     border-radius: 8px;
     overflow: hidden;
     min-height: 36px;
@@ -206,16 +220,16 @@ style.textContent = `
 
   .segmented button {
     border: 0;
-    background: rgb(255 255 255 / 0.08);
-    color: #dce7d2;
+    background: rgb(138 106 68 / 0.12);
+    color: #4a3520;
     padding: 0 12px;
     cursor: pointer;
     white-space: nowrap;
   }
 
   .segmented button.active {
-    background: #dfe9c7;
-    color: #1e281d;
+    background: #b5793f;
+    color: #fff6e0;
   }
 
   .cameraControls {
@@ -260,7 +274,7 @@ style.textContent = `
     align-items: baseline;
     justify-content: space-between;
     gap: 14px;
-    border-bottom: 1px solid rgb(245 248 239 / 0.12);
+    border-bottom: 1px solid rgb(138 106 68 / 0.3);
   }
 
   .colonyStats {
@@ -272,20 +286,20 @@ style.textContent = `
     font-size: 14px;
     line-height: 1.2;
     letter-spacing: 0;
-    color: #fffbea;
+    color: #5a3d22;
   }
 
   .colonyB h2 {
-    color: #ffb4aa;
+    color: #a04430;
   }
 
   .hud span {
-    color: #c4d0bb;
+    color: #7a6647;
     font-size: 13px;
   }
 
   .hud strong {
-    color: #fffbea;
+    color: #3a2a18;
     font-size: 16px;
     letter-spacing: 0;
     text-align: right;
@@ -315,7 +329,7 @@ style.textContent = `
   }
 
   .resourceBar strong {
-    color: #fffbea;
+    color: #3a2a18;
     font-size: 16px;
     font-variant-numeric: tabular-nums;
   }
@@ -323,12 +337,12 @@ style.textContent = `
   .resourceBar em {
     font-style: normal;
     font-size: 12px;
-    color: #9fd08a;
+    color: #4e8a2f;
     min-width: 30px;
   }
 
   .resourceBar em.negative {
-    color: #e59a8e;
+    color: #b33f2e;
   }
 
   .tasksPanel {
@@ -341,7 +355,7 @@ style.textContent = `
   .tasksPanel h2 {
     margin: 0 0 6px;
     font-size: 14px;
-    color: #fffbea;
+    color: #5a3d22;
   }
 
   .taskRow {
@@ -349,9 +363,9 @@ style.textContent = `
     align-items: center;
     gap: 8px;
     min-height: 26px;
-    border-bottom: 1px solid rgb(245 248 239 / 0.12);
+    border-bottom: 1px solid rgb(138 106 68 / 0.3);
     font-size: 13px;
-    color: #dce7d2;
+    color: #4a3520;
   }
 
   .taskRow .dot {
@@ -367,13 +381,13 @@ style.textContent = `
   }
 
   .taskRow.done {
-    color: #9fb58f;
+    color: #8a9464;
     text-decoration: line-through;
   }
 
   .taskRow .progress {
     margin-left: auto;
-    color: #fffbea;
+    color: #3a2a18;
     font-variant-numeric: tabular-nums;
   }
 
@@ -387,7 +401,7 @@ style.textContent = `
   .unitPanel h2 {
     margin: 0 0 6px;
     font-size: 14px;
-    color: #fffbea;
+    color: #5a3d22;
   }
 
   .unitRow {
@@ -397,18 +411,18 @@ style.textContent = `
     gap: 10px;
     min-height: 24px;
     font-size: 13px;
-    color: #c4d0bb;
+    color: #7a6647;
   }
 
   .unitRow strong {
-    color: #fffbea;
+    color: #3a2a18;
   }
 
   .energyBar {
     flex: 1;
     height: 8px;
     max-width: 130px;
-    background: rgb(255 255 255 / 0.12);
+    background: rgb(90 61 34 / 0.2);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -418,6 +432,58 @@ style.textContent = `
     width: 0%;
     background: #7ec850;
     border-radius: 4px;
+  }
+
+  .buildBar {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 14px;
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .buildCard {
+    border: 1.5px solid #8a6a44;
+    border-radius: 8px;
+    background: rgb(255 244 214 / 0.7);
+    color: #3a2a18;
+    padding: 6px 12px;
+    cursor: pointer;
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    min-width: 128px;
+  }
+
+  .buildCard .bname {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .buildCard .bcost {
+    font-size: 11.5px;
+    color: #7a5230;
+  }
+
+  .buildCard .bnote {
+    font-size: 11px;
+    color: #8a7a5c;
+  }
+
+  .buildCard.active {
+    background: #b5793f;
+    color: #fff6e0;
+  }
+
+  .buildCard.active .bcost,
+  .buildCard.active .bnote {
+    color: #ffe9c4;
+  }
+
+  .buildCard.poor {
+    opacity: 0.45;
+    filter: grayscale(0.6);
   }
 
   .minimapPanel {
@@ -443,12 +509,12 @@ style.textContent = `
     display: flex;
     gap: 14px;
     flex-wrap: wrap;
-    color: #d7e2ce;
+    color: #5a4630;
     font-size: 13px;
   }
 
   .perfStat strong {
-    color: #fffbea;
+    color: #3a2a18;
     font-variant-numeric: tabular-nums;
   }
 
@@ -606,6 +672,27 @@ function formatRate(node: HTMLElement | null, delta: number): void {
   }
   node.textContent = rounded > 0 ? `+${rounded}` : String(rounded);
   node.classList.toggle("negative", rounded < 0);
+}
+
+// Цены построек (дублируют server/src/config.ts: hutCost/storageCost/wallCost).
+const BUILD_COSTS: Record<string, { clay: number; wood: number; stone: number }> = {
+  hut: { clay: 8, wood: 5, stone: 0 },
+  storage: { clay: 0, wood: 6, stone: 4 },
+  wall: { clay: 2, wood: 0, stone: 0 }
+};
+
+function updateBuildCards(world: WorldSnapshot): void {
+  const colony = world.colonies?.[0]?.colony ?? world.colony;
+  for (const button of toolButtons) {
+    const tool = button.dataset.tool ?? "";
+    const cost = BUILD_COSTS[tool];
+    if (!cost) {
+      continue;
+    }
+    const poor =
+      (colony.clay ?? 0) < cost.clay || (colony.wood ?? 0) < cost.wood || (colony.stone ?? 0) < cost.stone;
+    button.classList.toggle("poor", poor);
+  }
 }
 
 function updateResourceBar(world: WorldSnapshot): void {
@@ -1357,6 +1444,7 @@ socket.addEventListener("message", (event) => {
   updateHud(snap);
   updateTasks(snap);
   updateResourceBar(snap);
+  updateBuildCards(snap);
   updateUnitPanel(snap);
   if (minimapCanvas) {
     drawMinimap(minimapCanvas, snap, camera, pixi.screen.width, pixi.screen.height);
