@@ -20,20 +20,19 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
     addFoodSource(world, command.x, command.y, CONFIG.playerFoodAmount);
   }
   if (command.type === "paintZone") {
-    // До Фазы 8 (playerId) команды игрока применяются к племени A.
-    paintColonyZone(world, 0, command.zone, command.cells);
+    paintColonyZone(world, command.colonyIndex, command.zone, command.cells);
   }
   if (command.type === "eraseZone") {
-    eraseColonyZone(world, 0, command.cells);
+    eraseColonyZone(world, command.colonyIndex, command.cells);
   }
   if (command.type === "placeBuilding") {
-    placePointBuilding(world, 0, command.building, command.x, command.y);
+    placePointBuilding(world, command.colonyIndex, command.building, command.x, command.y);
   }
   if (command.type === "paintWall") {
-    paintWallCells(world, 0, command.cells);
+    paintWallCells(world, command.colonyIndex, command.cells);
   }
   if (command.type === "eraseBuild") {
-    eraseBuildCells(world, 0, command.cells);
+    eraseBuildCells(world, command.colonyIndex, command.cells);
   }
   if (command.type === "setSpeed") {
     // 0 = пауза; 1..50 = скорость симуляции.

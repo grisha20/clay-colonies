@@ -37,6 +37,10 @@ appRoot.innerHTML = `
       <div class="segmented trampleControls" aria-label="Тропинки">
         <button class="active" id="btn-trample" type="button">Тропинки: Вкл</button>
       </div>
+      <div class="segmented tribeControls" aria-label="Племя">
+        <button class="active" data-tribe="0" type="button">Племя A</button>
+        <button data-tribe="1" type="button">Племя B</button>
+      </div>
       <div class="segmented toolControls" aria-label="Инструмент">
         <button class="active" data-tool="food" type="button">Еда</button>
         <button data-tool="harvest" type="button">Зона добычи</button>
@@ -567,6 +571,23 @@ const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[
 const btnTrample = document.querySelector<HTMLButtonElement>("#btn-trample");
 const toolButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tool]"));
 const panelButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-panel]"));
+const tribeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tribe]"));
+
+// Каким племенем управляем (горячая смена для одного клиента; настоящий мультиплеер — Фаза 8).
+let currentColonyIndex = 0;
+
+for (const button of tribeButtons) {
+  button.addEventListener("click", () => {
+    currentColonyIndex = Number(button.dataset.tribe) === 1 ? 1 : 0;
+    for (const item of tribeButtons) {
+      item.classList.toggle("active", Number(item.dataset.tribe) === currentColonyIndex);
+    }
+    if (latestWorld) {
+      updateResourceBar(latestWorld);
+      updateBuildCards(latestWorld);
+    }
+  });
+}
 
 // Скрываемые панели: чтобы экран не был загромождён. Выбор запоминается в браузере.
 const PANEL_TARGETS: Record<string, string> = {
@@ -740,7 +761,7 @@ const BUILD_COSTS: Record<string, { clay: number; wood: number; stone: number }>
 };
 
 function updateBuildCards(world: WorldSnapshot): void {
-  const colony = world.colonies?.[0]?.colony ?? world.colony;
+  const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
   for (const button of toolButtons) {
     const tool = button.dataset.tool ?? "";
     const cost = BUILD_COSTS[tool];
@@ -754,7 +775,7 @@ function updateBuildCards(world: WorldSnapshot): void {
 }
 
 function updateResourceBar(world: WorldSnapshot): void {
-  const colony = world.colonies?.[0]?.colony ?? world.colony;
+  const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
   const now = performance.now();
   stockSamples.push({
     at: now,
@@ -1129,14 +1150,15 @@ function commitDrag(): void {
   if (!dragTool || !dragStart || !dragEnd || socket.readyState !== WebSocket.OPEN) {
     return;
   }
+  const colony = currentColonyIndex;
   if (dragTool === "wall") {
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintWall", cells })), wallLineCells(dragStart, dragEnd), 500);
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintWall", cells, colony })), wallLineCells(dragStart, dragEnd), 500);
   } else if (dragTool === "harvest" || dragTool === "forbid") {
     const zone = dragTool;
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintZone", zone, cells })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintZone", zone, cells, colony })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
   } else if (dragTool === "erase") {
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "eraseZone", cells })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "eraseBuild", cells })), rectCells(dragStart, dragEnd, WALL_CELL_SIZE), 500);
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "eraseZone", cells, colony })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "eraseBuild", cells, colony })), rectCells(dragStart, dragEnd, WALL_CELL_SIZE), 500);
   }
 }
 
@@ -1340,7 +1362,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (currentTool === "hut" || currentTool === "storage") {
-    socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y }));
+    socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y, colony: currentColonyIndex }));
     if (!event.shiftKey) {
       setTool("food"); // одиночная постройка: режим снимается, Shift — серия
     }

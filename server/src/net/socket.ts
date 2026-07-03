@@ -12,24 +12,29 @@ export type ClientCommand =
       type: "paintZone";
       zone: ZoneType;
       cells: number[];
+      colonyIndex: number;
     }
   | {
       type: "eraseZone";
       cells: number[];
+      colonyIndex: number;
     }
   | {
       type: "placeBuilding";
       building: "hut" | "storage";
       x: number;
       y: number;
+      colonyIndex: number;
     }
   | {
       type: "paintWall";
       cells: number[];
+      colonyIndex: number;
     }
   | {
       type: "eraseBuild";
       cells: number[];
+      colonyIndex: number;
     }
   | {
       type: "setSpeed";
@@ -56,6 +61,11 @@ function parseCommand(raw: string): ClientCommand | null {
     }
 
     const command = value as Record<string, unknown>;
+    // Каким племенем управляет клиент (горячая смена A/B до настоящего playerId).
+    const colonyIndex =
+      typeof command.colony === "number" && Number.isFinite(command.colony)
+        ? Math.max(0, Math.min(1, Math.floor(command.colony)))
+        : 0;
     if (command.type === "setSpeed" && typeof command.value === "number" && Number.isFinite(command.value)) {
       return {
         type: "setSpeed",
@@ -92,7 +102,7 @@ function parseCommand(raw: string): ClientCommand | null {
       ) {
         return null;
       }
-      return { type: "placeBuilding", building: command.building, x: command.x, y: command.y };
+      return { type: "placeBuilding", building: command.building, x: command.x, y: command.y, colonyIndex };
     }
 
     if (command.type === "paintWall" || command.type === "eraseBuild") {
@@ -106,7 +116,7 @@ function parseCommand(raw: string): ClientCommand | null {
       if (cells.length === 0) {
         return null;
       }
-      return command.type === "paintWall" ? { type: "paintWall", cells } : { type: "eraseBuild", cells };
+      return command.type === "paintWall" ? { type: "paintWall", cells, colonyIndex } : { type: "eraseBuild", cells, colonyIndex };
     }
 
     if (command.type === "paintZone" || command.type === "eraseZone") {
@@ -125,9 +135,9 @@ function parseCommand(raw: string): ClientCommand | null {
         if (!zone) {
           return null;
         }
-        return { type: "paintZone", zone, cells };
+        return { type: "paintZone", zone, cells, colonyIndex };
       }
-      return { type: "eraseZone", cells };
+      return { type: "eraseZone", cells, colonyIndex };
     }
 
     if (command.type === "dropFood" && typeof command.x === "number" && typeof command.y === "number") {
