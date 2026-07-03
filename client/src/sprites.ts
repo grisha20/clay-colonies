@@ -385,20 +385,6 @@ export function getGrainTexture(): Texture {
   return makeTexture("grain", [...spriteMaps.grain], spritePalettes.grain);
 }
 
-export function getResourceTexture(kind: "clay" | "wood" | "stone"): Texture {
-  if (kind === "clay") {
-    return makeTexture("clayLump", [...spriteMaps.clayLump], spritePalettes.clayLump);
-  }
-  if (kind === "stone") {
-    return makeTexture("stoneChunk", [...spriteMaps.stoneChunk], spritePalettes.stoneChunk);
-  }
-  return makeTexture("woodStick", [...spriteMaps.woodStick], spritePalettes.woodStick);
-}
-
-export function createResourceSprite(scale = 2.4): Sprite {
-  return makePixelSprite(getResourceTexture("clay"), scale);
-}
-
 // Пиксельные иконки для DOM-панелей (ресурс-бар): PNG data-URL с масштабом.
 const iconCache = new Map<string, string>();
 

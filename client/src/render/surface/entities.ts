@@ -120,10 +120,14 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
 
     const x = node.pos.x * cell;
     const y = node.pos.y * cell;
-    const chunks = Math.max(1, Math.min(5, Math.ceil(node.amount / 22)));
+    const chunks =
+      node.kind === "clay"
+        ? Math.max(3, Math.min(7, Math.ceil(node.amount / 14)))
+        : Math.max(1, Math.min(5, Math.ceil(node.amount / 22)));
     for (let index = 0; index < chunks; index += 1) {
       const sprite = acquireSprite(pool);
-      const offset = deterministicOffset(index * 3 + node.id.length, index === 0 ? 0 : 12 + index * 2);
+      const spread = index === 0 ? 0 : node.kind === "clay" ? 8 + index * 1.5 : 12 + index * 2;
+      const offset = deterministicOffset(index * 3 + node.id.length, spread);
 
       if (node.kind === "wood") {
         sprite.texture = props.log;
@@ -139,10 +143,11 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
       const large = index === 0 || index % 3 !== 2;
       sprite.texture = rockTextures[index % rockTextures.length];
       sprite.anchor.set(0.5, 1);
-      sprite.scale.set(large ? 1.15 : 1.28);
+      sprite.scale.set(node.kind === "clay" ? (large ? 1.42 : 1.55) : large ? 1.15 : 1.28);
       sprite.alpha = 1;
       if (node.kind === "clay") {
-        sprite.tint = index % 2 === 0 ? 0xdf6f37 : 0xc85a2d;
+        const clayTints = [0xe76f34, 0xc84f2a, 0xf08a4f];
+        sprite.tint = clayTints[index % clayTints.length];
       } else {
         sprite.tint = index % 2 === 0 ? 0xd8d5c8 : 0xb7b3a9;
       }
@@ -331,31 +336,7 @@ export function updateSurfaceAnts(
 
 export function updateSurfaceDebris(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   graphics.clear();
-
-  if (!world.surface.debris) {
-    return;
-  }
-
-  for (const item of world.surface.debris) {
-    if (!isInBounds(item.pos, bounds, 3)) {
-      continue;
-    }
-
-    const x = item.pos.x * cell;
-    const y = item.pos.y * cell;
-
-    if (item.type === "pebble") {
-      const sizeSeed = Math.sin(item.pos.x * 12.9898 + item.pos.y * 78.233) * 43758.5453;
-      const sizeRoll = sizeSeed - Math.floor(sizeSeed);
-      const size = cell * (0.6 + sizeRoll * 0.5);
-      const shade = sizeRoll > 0.45 ? 0x9c9a91 : 0xb8b5aa;
-      drawPebble(graphics, x, y, size, shade);
-    } else {
-      const rotSeed = Math.sin(item.pos.x * 31.7 + item.pos.y * 127.1) * 43758.5453;
-      const rotRoll = rotSeed - Math.floor(rotSeed);
-      const rotation = rotRoll * Math.PI * 2;
-      const scale = cell * (0.3 + rotRoll * 0.2);
-      drawLeaf(graphics, x, y, scale, rotation);
-    }
-  }
+  void world;
+  void cell;
+  void bounds;
 }

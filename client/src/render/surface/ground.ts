@@ -1,5 +1,5 @@
-import { Graphics, Sprite } from "pixi.js";
-import type { Container, Texture } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
+import type { Texture } from "pixi.js";
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import type { ViewBounds } from "../types";
 import { getEnvironmentTextures } from "./environment";
@@ -76,11 +76,6 @@ function isWaterPatch(x: number, y: number, world: WorldSnapshot): boolean {
   return (localX * localX) / (radiusX * radiusX) + (localY * localY) / (radiusY * radiusY) < wobble;
 }
 
-function drawSoftBlob(root: Graphics, x: number, y: number, rx: number, ry: number, color: number, alpha: number): void {
-  root.ellipse(x, y, rx, ry).fill({ color, alpha });
-  root.ellipse(x - rx * 0.16, y - ry * 0.08, rx * 0.72, ry * 0.7).fill({ color: 0xf0d28d, alpha: alpha * 0.18 });
-}
-
 function drawPixelFleck(root: Graphics, x: number, y: number, size: number, color: number, alpha: number): void {
   const px = Math.round(x);
   const py = Math.round(y);
@@ -97,66 +92,6 @@ function drawPond(root: Graphics, x: number, y: number, rx: number, ry: number, 
     const px = x + (hash2(seed, i, 171) - 0.5) * rx * 1.25;
     const py = y + (hash2(seed, i, 172) - 0.5) * ry * 1.1;
     root.ellipse(px, py, 5 + hash2(seed, i, 173) * 7, 1.1).fill({ color: 0xb6e2df, alpha: 0.32 });
-  }
-}
-
-function drawTinyPlants(root: Graphics, x: number, y: number, scale: number): void {
-  const color = hash2(x, y, 41) > 0.5 ? 0x6d8d39 : 0x8aa64e;
-  root.circle(x, y, scale * 0.42).fill({ color, alpha: 0.72 });
-  root.circle(x + scale * 1.1, y - scale * 0.3, scale * 0.34).fill({ color: 0x9eb35c, alpha: 0.58 });
-  root.circle(x - scale * 0.8, y + scale * 0.45, scale * 0.3).fill({ color: 0x4f762e, alpha: 0.55 });
-}
-
-function drawBush(root: Graphics, x: number, y: number, scale: number, berries = false): void {
-  root.ellipse(x + scale * 2, y + scale * 5.5, scale * 13, scale * 4).fill({ color: 0x24190f, alpha: 0.2 });
-  const greens = [0x3f792d, 0x4f8f33, 0x6fa13d, 0x2f6429];
-  for (let i = 0; i < 9; i += 1) {
-    const px = x + (hash2(x, y, 200 + i) - 0.5) * scale * 16;
-    const py = y + (hash2(x, y, 220 + i) - 0.5) * scale * 10;
-    const r = scale * (3.8 + hash2(x, y, 240 + i) * 2.8);
-    root.circle(px, py, r).fill(greens[i % greens.length]);
-    root.circle(px - r * 0.25, py - r * 0.3, r * 0.34).fill({ color: 0x8fba55, alpha: 0.28 });
-  }
-  if (berries) {
-    for (let i = 0; i < 6; i += 1) {
-      root.circle(
-        x + (hash2(x, y, 260 + i) - 0.5) * scale * 14,
-        y + (hash2(x, y, 280 + i) - 0.5) * scale * 8,
-        scale * 1.15
-      ).fill(0xc84a2d);
-    }
-  }
-}
-
-function drawRockCluster(root: Graphics, x: number, y: number, scale: number): void {
-  root.ellipse(x + scale * 2, y + scale * 7, scale * 15, scale * 4.5).fill({ color: 0x24190f, alpha: 0.2 });
-  for (let i = 0; i < 5; i += 1) {
-    const px = x + (hash2(x, y, 300 + i) - 0.5) * scale * 18;
-    const py = y + (hash2(x, y, 320 + i) - 0.25) * scale * 9;
-    const rx = scale * (3.5 + hash2(x, y, 340 + i) * 4.8);
-    const ry = scale * (2.8 + hash2(x, y, 360 + i) * 3.2);
-    const shade = hash2(x, y, 380 + i) > 0.5 ? 0x8d8b82 : 0xa9a69b;
-    root.ellipse(px, py, rx, ry).fill(0x5d5a54);
-    root.ellipse(px - rx * 0.15, py - ry * 0.18, rx * 0.88, ry * 0.82).fill(shade);
-    root.ellipse(px - rx * 0.32, py - ry * 0.36, rx * 0.26, ry * 0.18).fill({ color: 0xd8d2bf, alpha: 0.42 });
-  }
-}
-
-function drawTree(root: Graphics, x: number, y: number, scale: number): void {
-  root.ellipse(x + scale * 2, y + scale * 18, scale * 22, scale * 6).fill({ color: 0x24190f, alpha: 0.2 });
-  root.rect(x - scale * 3, y - scale * 1, scale * 7, scale * 21).fill(0x6b3e20);
-  root.rect(x - scale * 1.8, y - scale * 4, scale * 5, scale * 20).fill(0x8a5429);
-  const crowns: Array<[number, number, number, number]> = [
-    [-8, -18, 13, 0x4f8f34],
-    [8, -18, 13, 0x5fa23b],
-    [0, -28, 14, 0x6eaa42],
-    [-15, -8, 11, 0x3f7a2d],
-    [15, -7, 11, 0x4f8f34],
-    [0, -9, 15, 0x578f34]
-  ];
-  for (const [dx, dy, radius, color] of crowns) {
-    root.circle(x + dx * scale, y + dy * scale, radius * scale).fill(color);
-    root.circle(x + (dx - radius * 0.28) * scale, y + (dy - radius * 0.28) * scale, radius * scale * 0.32).fill({ color: 0x9abf57, alpha: 0.26 });
   }
 }
 
@@ -179,6 +114,28 @@ function addAssetTree(root: Container, tree: ForestTree): void {
   sprite.position.set(tree.x, tree.y);
   sprite.scale.set(tree.scale);
   sprite.tint = tree.tint;
+  root.addChild(sprite);
+}
+
+function addAssetProp(
+  root: Container,
+  texture: Texture,
+  x: number,
+  y: number,
+  scale: number,
+  rotation = 0,
+  tint = 0xffffff
+): void {
+  const shadow = new Graphics();
+  shadow.ellipse(x + scale * 4, y - scale * 2, scale * 18, scale * 5).fill({ color: 0x1d160d, alpha: 0.18 });
+  root.addChild(shadow);
+
+  const sprite = new Sprite(texture);
+  sprite.anchor.set(0.5, 1);
+  sprite.position.set(x, y);
+  sprite.scale.set(scale);
+  sprite.rotation = rotation;
+  sprite.tint = tint;
   root.addChild(sprite);
 }
 
@@ -287,22 +244,6 @@ function drawForestBorder(root: Container, world: WorldSnapshot, cell: number): 
   }
 }
 
-function drawLog(root: Graphics, x: number, y: number, scale: number, rotation = 0): void {
-  const c = Math.cos(rotation);
-  const s = Math.sin(rotation);
-  const pts = [
-    [-12, -3],
-    [13, -3],
-    [13, 4],
-    [-12, 4]
-  ].map(([px, py]) => [x + (px * c - py * s) * scale, y + (px * s + py * c) * scale]);
-  root.ellipse(x + scale * 2, y + scale * 5, scale * 15, scale * 3.5).fill({ color: 0x24190f, alpha: 0.18 });
-  root.poly(pts.flat()).fill(0x6e421f);
-  root.poly(pts.map(([px, py]) => [px, py - scale * 1.6]).flat()).fill({ color: 0x9b642e, alpha: 0.72 });
-  root.circle(x - 12 * c * scale, y - 12 * s * scale, scale * 4).fill(0x5a321a);
-  root.circle(x - 12 * c * scale, y - 12 * s * scale, scale * 2.2).fill(0xb37a3c);
-}
-
 export function drawLeaf(root: Graphics, x: number, y: number, scale: number, rotation: number): void {
   const dx = Math.cos(rotation);
   const dy = Math.sin(rotation);
@@ -314,21 +255,6 @@ export function drawLeaf(root: Graphics, x: number, y: number, scale: number, ro
   root.stroke();
 }
 
-function drawCrack(root: Graphics, x: number, y: number, scale: number): void {
-  root.setStrokeStyle({ width: 1, color: 0x3b2816, alpha: 0.62 });
-  root.moveTo(x, y);
-  let cx = x;
-  let cy = y;
-  for (let step = 0; step < 4; step += 1) {
-    cx += (hash2(x + step, y, 8) - 0.45) * scale * 4;
-    cy += scale * (1.2 + hash2(x, y + step, 9) * 2);
-    root.lineTo(cx, cy);
-  }
-  root.moveTo(x + scale * 1.2, y + scale * 2.2);
-  root.lineTo(x + scale * (3 + hash2(x, y, 10) * 3), y + scale * (1.5 + hash2(x, y, 11) * 2));
-  root.stroke();
-}
-
 export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   const width = world.surface.width;
   const height = world.surface.height;
@@ -337,7 +263,9 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
   const top = Math.max(0, Math.floor(bounds.top));
   const bottom = Math.min(height, Math.ceil(bounds.bottom));
 
-  const textures = getEnvironmentTextures().terrain;
+  const environment = getEnvironmentTextures();
+  const textures = environment.terrain;
+  const props = environment.props;
   const grassTexture = textures.grass;
   const dirtTexture = textures.dirt;
   const tileSize = 32;
@@ -468,34 +396,7 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
   }
   root.addChild(ground);
 
-  const decor = new Graphics();
-  const chunkLeft = Math.floor(left / 8) * 8;
-  const chunkRight = Math.ceil(right / 8) * 8;
-  const chunkTop = Math.floor(top / 8) * 8;
-  const chunkBottom = Math.ceil(bottom / 8) * 8;
-  for (let gy = chunkTop; gy <= chunkBottom; gy += 8) {
-    for (let gx = chunkLeft; gx <= chunkRight; gx += 8) {
-      const roll = hash2(gx, gy, 20);
-      const x = (gx + 1 + hash2(gx, gy, 21) * 6) * cell;
-      const y = (gy + 1 + hash2(gx, gy, 22) * 6) * cell;
-      if (x < left * cell - 24 || x > right * cell + 24 || y < top * cell - 24 || y > bottom * cell + 24) {
-        continue;
-      }
-      if (isCampOrFoodClearing(gx + 4, gy + 4, world) > 0.25 || isWaterPatch(gx + 4, gy + 4, world)) {
-        continue;
-      }
-      if (roll > 0.82 && roll <= 0.92) {
-        drawTinyPlants(decor, x, y, cell * (0.42 + hash2(gx, gy, 25) * 0.28));
-      } else if (roll < 0.014) {
-        drawCrack(decor, x, y, cell * (0.45 + hash2(gx, gy, 29) * 0.55));
-      } else if (roll > 0.965 && roll < 0.978) {
-        drawSoftBlob(decor, x, y, cell * 1.9, cell * 0.68, 0xd0ae6a, 0.32);
-      }
-    }
-  }
-
-  root.addChild(decor);
-
+  const propLayer = new Container();
   const propChunk = 16;
   for (let gy = Math.floor(top / propChunk) * propChunk; gy <= bottom; gy += propChunk) {
     for (let gx = Math.floor(left / propChunk) * propChunk; gx <= right; gx += propChunk) {
@@ -516,13 +417,17 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
       const px = worldX * cell;
       const py = worldY * cell;
       if (roll > 0.972) {
-        drawTree(decor, px, py, 1.05 + hash2(gx, gy, 64) * 0.18);
+        const treeTextures = [props.treeTall, props.treeRound, props.treeWide];
+        const texture = treeTextures[Math.floor(hash2(gx, gy, 64) * treeTextures.length) % treeTextures.length];
+        addAssetProp(propLayer, texture, px, py, 0.28 + hash2(gx, gy, 65) * 0.08, 0, 0xd9f5a6);
       } else if (roll > 0.918) {
-        drawBush(decor, px, py, 1.05 + hash2(gx, gy, 67) * 0.22, hash2(gx, gy, 68) > 0.55);
+        addAssetProp(propLayer, props.bushRound, px, py, 0.58 + hash2(gx, gy, 67) * 0.16, 0, 0xf4ffd8);
       } else if (roll > 0.868) {
-        drawRockCluster(decor, px, py, 1 + hash2(gx, gy, 69) * 0.22);
+        const rockTextures = [props.rockLarge, props.rockRound, props.rockSmall];
+        const texture = rockTextures[Math.floor(hash2(gx, gy, 69) * rockTextures.length) % rockTextures.length];
+        addAssetProp(propLayer, texture, px, py, 0.9 + hash2(gx, gy, 70) * 0.24, 0, 0xd8d5c8);
       } else if (roll > 0.824) {
-        drawLog(decor, px, py, 1 + hash2(gx, gy, 71) * 0.15, (hash2(gx, gy, 72) - 0.5) * 0.6);
+        addAssetProp(propLayer, props.log, px, py, 0.36 + hash2(gx, gy, 71) * 0.08, (hash2(gx, gy, 72) - 0.5) * 0.7);
       }
     }
   }
@@ -530,18 +435,17 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
   for (const entrance of entrances) {
     const x = entrance.x * cell;
     const y = entrance.y * cell;
-    drawLog(decor, x - 82, y + 72, 1.18, -0.28);
-    drawLog(decor, x + 85, y + 66, 1.12, 0.22);
-    drawRockCluster(decor, x - 62, y + 52, 0.72);
-    drawRockCluster(decor, x + 58, y + 50, 0.62);
-    drawBush(decor, x - 154, y + 96, 0.72, true);
-    drawBush(decor, x + 154, y + 92, 0.68, false);
-    drawRockCluster(decor, x - 126, y - 88, 0.58);
-    drawTree(decor, x - 202, y + 132, 0.82);
-    drawTree(decor, x + 204, y + 128, 0.78);
-    drawTinyPlants(decor, x - 112, y + 28, cell * 0.52);
-    drawTinyPlants(decor, x + 116, y + 30, cell * 0.5);
+    addAssetProp(propLayer, props.log, x - 82, y + 72, 0.4, -0.28);
+    addAssetProp(propLayer, props.log, x + 85, y + 66, 0.38, 0.22);
+    addAssetProp(propLayer, props.rockRound, x - 62, y + 52, 0.78, 0, 0xd8d5c8);
+    addAssetProp(propLayer, props.rockSmall, x + 58, y + 50, 0.88, 0, 0xd8d5c8);
+    addAssetProp(propLayer, props.bushRound, x - 154, y + 96, 0.52, 0, 0xf4ffd8);
+    addAssetProp(propLayer, props.bushRound, x + 154, y + 92, 0.5, 0, 0xf4ffd8);
+    addAssetProp(propLayer, props.rockLarge, x - 126, y - 88, 0.66, 0, 0xd8d5c8);
+    addAssetProp(propLayer, props.treeRound, x - 202, y + 132, 0.26, 0, 0xd9f5a6);
+    addAssetProp(propLayer, props.treeWide, x + 204, y + 128, 0.25, 0, 0xd9f5a6);
   }
 
+  root.addChild(propLayer);
   drawForestBorder(root, world, cell);
 }

@@ -7,7 +7,6 @@ import {
   createClayfolkSprite,
   createCarrionSprite,
   createFoodSprite,
-  createResourceSprite,
   createSpiderLairSprite,
   createSpiderSprite
 } from "../../sprites";
@@ -69,7 +68,11 @@ export function createSurfaceScene(): SurfaceScene {
     webs,
     debrisGraphics,
     foodPool: createSpritePool(foodContainer, () => createFoodSprite(2.2)),
-    resourcePool: createSpritePool(resourceContainer, () => createResourceSprite(2.4)),
+    resourcePool: createSpritePool(resourceContainer, () => {
+      const sprite = new Sprite();
+      sprite.anchor.set(0.5, 1);
+      return sprite;
+    }),
     carrionPool: createSpritePool(carrionContainer, () => createCarrionSprite(2.6)),
     lairPool: createSpritePool(lairContainer, () => createSpiderLairSprite(3.4)),
     carriedCarrionPool: createSpritePool(carriedCarrionContainer, () => createCarrionSprite(1.7)),
