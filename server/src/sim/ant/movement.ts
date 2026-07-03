@@ -26,6 +26,49 @@ export function clearDeadAntPaths(activeIds: Set<string>): void {
       antPaths.delete(antId);
     }
   }
+  for (const antId of stuckTracker.keys()) {
+    if (!activeIds.has(antId)) {
+      stuckTracker.delete(antId);
+    }
+  }
+}
+
+// Анти-застревание: житель, который долго топчется на месте (карман забора,
+// угол, давка у лагеря), получает "порыв блуждания" и на время забывает цель.
+const stuckTracker = new Map<string, { x: number; y: number; since: number; burstUntil: number }>();
+
+export function updateStuckTracking(world: World, ant: Ant): void {
+  if (ant.layer !== "surface" || ant.state === "dead" || ant.state === "idle" || ant.state === "fight") {
+    stuckTracker.delete(ant.id);
+    return;
+  }
+  const info = stuckTracker.get(ant.id);
+  if (!info) {
+    stuckTracker.set(ant.id, { x: ant.pos.x, y: ant.pos.y, since: world.tick, burstUntil: 0 });
+    return;
+  }
+  if (world.tick < info.burstUntil) {
+    return;
+  }
+  if (world.tick - info.since >= 70) {
+    const dx = ant.pos.x - info.x;
+    const dy = ant.pos.y - info.y;
+    if (dx * dx + dy * dy < 2.5 * 2.5) {
+      info.burstUntil = world.tick + 90;
+    }
+    info.x = ant.pos.x;
+    info.y = ant.pos.y;
+    info.since = world.tick;
+  }
+}
+
+function wanderBurstDirection(world: World, ant: Ant): Vec2 | null {
+  const info = stuckTracker.get(ant.id);
+  if (!info || world.tick >= info.burstUntil) {
+    return null;
+  }
+  const angle = (numericAntId(ant.id) * 2.399963 + world.tick * 0.045) % (Math.PI * 2);
+  return { x: Math.cos(angle), y: Math.sin(angle) };
 }
 
 export function surfaceMoveSpeed(world: World, ant: Ant): number {
@@ -98,6 +141,14 @@ export function applyForbidZones(world: World, ant: Ant, desired: Vec2): Vec2 {
 // Обход стен без поиска пути: если впереди стена, идём вдоль неё
 // (сторона выбирается по чётности id — толпа расходится в обе стороны к проходам).
 export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 {
+  // Порыв блуждания перекрывает цель (работает и без стен: давка, углы).
+  const burst = wanderBurstDirection(world, ant);
+  if (burst) {
+    if (world.wallBlocked.size === 0 || !isWallBlockedAt(world, ant.pos.x + burst.x * 2.4, ant.pos.y + burst.y * 2.4)) {
+      return burst;
+    }
+    return normalize({ x: -burst.x, y: -burst.y });
+  }
   if (world.wallBlocked.size === 0) {
     return desired;
   }
@@ -127,7 +178,11 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
   }
 
   desired = applyForbidZones(world, ant, desired);
+  const beforeAvoidX = desired.x;
+  const beforeAvoidY = desired.y;
   desired = applyWallAvoidance(world, ant, desired);
+  // Обход стены/порыв должен поворачивать резко, иначе житель прижимается к стене.
+  const avoidanceTurn = beforeAvoidX * desired.x + beforeAvoidY * desired.y < 0.9;
 
   if (allowSeparation) {
     const dist = distance(ant.pos, target);
@@ -139,7 +194,10 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
 
   const dist = distance(ant.pos, target);
   // Базовая маневренность k = 0.18. Чем ближе к цели (до 4 единиц), тем точнее маневрируем (до 1.0)
-  const k = dist < 4.0 ? 0.18 + (1.0 - 0.18) * (1.0 - dist / 4.0) : 0.18;
+  let k = dist < 4.0 ? 0.18 + (1.0 - 0.18) * (1.0 - dist / 4.0) : 0.18;
+  if (avoidanceTurn) {
+    k = Math.max(k, 0.65);
+  }
 
   const direction = normalize({
     x: ant.heading.x * (1 - k) + desired.x * k,

@@ -192,6 +192,24 @@ function isFreeForAssignment(ant: Ant): boolean {
   );
 }
 
+// Ресурс достижим, если он есть на складе или остались узлы на карте.
+function resourceObtainable(world: World, kind: ResourceKind): boolean {
+  if (colonyStock(world, kind) >= 0.5) {
+    return true;
+  }
+  return world.surface.resourceNodes.some((node) => node.kind === kind && node.amount > 0);
+}
+
+// Первый недостающий ресурс площадки (дублирует ant/build.neededResource, чтобы не плодить импорт-циклы).
+function siteNeededKind(building: Building): ResourceKind | null {
+  for (const kind of ["clay", "wood", "stone"] as const) {
+    if (building.cost[kind] - building.delivered[kind] > 0.01) {
+      return kind;
+    }
+  }
+  return null;
+}
+
 // Назначение строителей: до maxBuildersPerSite на площадку, maxActiveBuilders всего.
 export function assignBuildJobs(world: World): void {
   const live = world.ants.filter((ant) => ant.state !== "dead");
@@ -199,6 +217,11 @@ export function assignBuildJobs(world: World): void {
   // Приоритет: точечные постройки (хижина/склад) раньше стен; ближние раньше дальних.
   const sites = world.surface.buildings
     .filter((building) => building.colonyId === world.colony.id && building.stage !== "built")
+    .filter((building) => {
+      // Не гоняем строителей к площадке, чей ресурс сейчас недостижим.
+      const kind = siteNeededKind(building);
+      return kind === null || resourceObtainable(world, kind);
+    })
     .sort((a, b) => {
       const priorityA = a.type === "wall" ? 1 : 0;
       const priorityB = b.type === "wall" ? 1 : 0;

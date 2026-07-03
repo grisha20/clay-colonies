@@ -6,7 +6,7 @@ import type { World } from "../world";
 import { isWithinRadius } from "./utils";
 import { moveBuilding } from "./build";
 import { moveGuarding } from "./guard";
-import { tryCrossLayer } from "./movement";
+import { tryCrossLayer, updateStuckTracking } from "./movement";
 import { canUseStorageMeal, shouldReturnFromSurface } from "./colony-state";
 import { handleEnemyColonyCombat, moveFighting } from "./combat";
 import {
@@ -140,4 +140,5 @@ export function stepAnt(world: World, ant: Ant): void {
   stepSurface(world, ant);
   // Достроенные стены непроходимы: скольжение вдоль стены или откат.
   resolveWallCollision(world, ant.pos, prevX, prevY);
+  updateStuckTracking(world, ant);
 }

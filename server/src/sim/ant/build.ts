@@ -9,9 +9,12 @@ import { isColonyStarving } from "./colony-state";
 import { moveSurfaceToward } from "./movement";
 import { isWithinRadius } from "./utils";
 
+const builderWaitTicks = new Map<string, number>();
+
 export function releaseBuilder(ant: Ant): void {
   ant.job = "forage";
   ant.buildTargetId = undefined;
+  builderWaitTicks.delete(ant.id);
   if (ant.carrying <= 0) {
     ant.carryKind = undefined;
   }
@@ -94,7 +97,13 @@ export function moveBuilding(world: World, ant: Ant): boolean {
         ant.state = "carry";
         return true;
       }
-      // Склад пуст: ждём у лагеря, спрос на ресурс уже поднят (economy).
+      // Склад пуст: недолго ждём у лагеря (спрос уже поднят), потом идём работать.
+      const waited = (builderWaitTicks.get(ant.id) ?? 0) + 1;
+      if (waited > 600) {
+        releaseBuilder(ant);
+        return false;
+      }
+      builderWaitTicks.set(ant.id, waited);
       ant.state = "idle";
       return true;
     }
@@ -102,6 +111,8 @@ export function moveBuilding(world: World, ant: Ant): boolean {
     moveSurfaceToward(world, ant, world.surface.entrance, true, false);
     return true;
   }
+
+  builderWaitTicks.delete(ant.id);
 
   // Всё доставлено: строим.
   if (isWithinRadius(ant.pos, building.pos, CONFIG.buildRadius)) {

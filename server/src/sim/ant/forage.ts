@@ -494,6 +494,26 @@ export function moveCarrying(world: World, ant: Ant): void {
   ant.job = "forage";
   world.pheromones.food.add(ant.pos.x, ant.pos.y, CONFIG.foodPheromoneDeposit);
 
+  // Фуражир без отчёта разведчика может сдать еду в ближайший склад.
+  // Разведчик и носитель отчёта всегда идут к входу: там регистрируется знание о еде.
+  if (ant.forageRole !== "scout" && !ant.foundFoodSourceId && (ant.carryKind ?? "food") === "food") {
+    const drop = nearestDropPoint(world, ant.pos);
+    const dropIsEntrance = drop.x === world.surface.entrance.x && drop.y === world.surface.entrance.y;
+    if (!dropIsEntrance) {
+      if (isWithinRadius(ant.pos, drop, CONFIG.dropPointRadius)) {
+        world.colony.food += ant.carrying;
+        world.fitness.totalFoodDeposited += ant.carrying;
+        ant.carrying = 0;
+        ant.carryKind = undefined;
+        ant.state = "search";
+        return;
+      }
+      ant.state = "carry";
+      moveSurfaceToward(world, ant, drop, !isColonyStarving(world), false);
+      return;
+    }
+  }
+
   const target = ant.forageRole === "forager" ? activeFoodTarget(world) : null;
   if (target) {
     moveAlongFoodTrail(world, ant, target.source.pos, false);
