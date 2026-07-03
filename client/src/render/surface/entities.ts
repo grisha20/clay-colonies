@@ -9,6 +9,13 @@ import {
 } from "../../sprites";
 import { drawPebble, drawLeaf } from "./ground";
 
+// Выбранный житель (панель юнита): подсветка кольцом.
+let selectedAntId: string | null = null;
+
+export function setSelectedAntId(id: string | null): void {
+  selectedAntId = id;
+}
+
 function drawSoftShadow(graphics: Graphics, x: number, y: number, rx: number, ry: number, alpha: number): void {
   graphics.ellipse(x + rx * 0.08, y + ry * 0.18, rx, ry).fill({ color: 0x1e130c, alpha });
   graphics.ellipse(x, y, rx * 0.62, ry * 0.58).fill({ color: 0x1e130c, alpha: alpha * 0.34 });
@@ -251,6 +258,13 @@ export function updateSurfaceAnts(
     const headingAngle = antRotation(ant);
     const rot = Math.max(-0.14, Math.min(0.14, ant.heading.x * 0.12));
     placeSprite(sprite, ant.pos.x * cell, ant.pos.y * cell, rot);
+
+    if (ant.id === selectedAntId) {
+      const sx = ant.pos.x * cell;
+      const sy = ant.pos.y * cell;
+      debrisGraphics.circle(sx, sy + 4, 11).stroke({ width: 1.8, color: 0xfff3c4, alpha: 0.9 });
+      debrisGraphics.circle(sx, sy + 4, 13.5).stroke({ width: 1, color: 0xfff3c4, alpha: 0.35 });
+    }
 
     if (ant.job === "guard") {
       // Временная метка стражи: копьё-черта (спрайты — задача Codex).

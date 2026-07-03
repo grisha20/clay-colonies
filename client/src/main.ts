@@ -2,6 +2,9 @@ import { Application } from "pixi.js";
 import { CURRENT_PROTOCOL_VERSION, WALL_CELL_SIZE, ZONE_CELL_SIZE, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
+import { spriteIconDataUrl } from "./sprites";
+import { drawMinimap, minimapClickToWorld } from "./render/minimap";
+import { setSelectedAntId } from "./render/surface/entities";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) {
@@ -76,9 +79,27 @@ appRoot.innerHTML = `
         </section>
       </div>
     </aside>
+    <section class="panel resourceBar" id="resource-bar">
+      <span class="res"><img id="icon-food" alt="еда"><strong id="res-food">0</strong><em id="rate-food"></em></span>
+      <span class="res"><img id="icon-clay" alt="глина"><strong id="res-clay">0</strong><em id="rate-clay"></em></span>
+      <span class="res"><img id="icon-wood" alt="дерево"><strong id="res-wood">0</strong><em id="rate-wood"></em></span>
+      <span class="res"><img id="icon-stone" alt="камень"><strong id="res-stone">0</strong><em id="rate-stone"></em></span>
+      <span class="res"><img id="icon-pop" alt="жители"><strong id="res-pop">0/0</strong></span>
+    </section>
     <aside class="panel tasksPanel">
       <h2>Задачи</h2>
       <div id="tasks-list"></div>
+    </aside>
+    <aside class="panel unitPanel" id="unit-panel" style="display: none;">
+      <h2 id="unit-title">Житель</h2>
+      <div class="unitRow"><span>Занятие</span><strong id="unit-job">-</strong></div>
+      <div class="unitRow"><span>Силы</span>
+        <div class="energyBar"><div id="unit-energy"></div></div>
+      </div>
+      <div class="unitRow"><span>Груз</span><strong id="unit-cargo">-</strong></div>
+    </aside>
+    <aside class="panel minimapPanel">
+      <canvas id="minimap" width="168" height="168"></canvas>
     </aside>
     <footer class="panel status">
       <span id="status">Подключение к ws://localhost:8787</span>
@@ -270,6 +291,46 @@ style.textContent = `
     text-align: right;
   }
 
+  .resourceBar {
+    left: 50%;
+    transform: translateX(-50%);
+    top: 82px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    white-space: nowrap;
+  }
+
+  .resourceBar .res {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .resourceBar img {
+    width: 20px;
+    height: 20px;
+    image-rendering: pixelated;
+  }
+
+  .resourceBar strong {
+    color: #fffbea;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .resourceBar em {
+    font-style: normal;
+    font-size: 12px;
+    color: #9fd08a;
+    min-width: 30px;
+  }
+
+  .resourceBar em.negative {
+    color: #e59a8e;
+  }
+
   .tasksPanel {
     left: 14px;
     top: 82px;
@@ -314,6 +375,64 @@ style.textContent = `
     margin-left: auto;
     color: #fffbea;
     font-variant-numeric: tabular-nums;
+  }
+
+  .unitPanel {
+    left: 14px;
+    bottom: 58px;
+    width: 230px;
+    padding: 10px 12px;
+  }
+
+  .unitPanel h2 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #fffbea;
+  }
+
+  .unitRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 24px;
+    font-size: 13px;
+    color: #c4d0bb;
+  }
+
+  .unitRow strong {
+    color: #fffbea;
+  }
+
+  .energyBar {
+    flex: 1;
+    height: 8px;
+    max-width: 130px;
+    background: rgb(255 255 255 / 0.12);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .energyBar div {
+    height: 100%;
+    width: 0%;
+    background: #7ec850;
+    border-radius: 4px;
+  }
+
+  .minimapPanel {
+    right: 14px;
+    bottom: 14px;
+    padding: 6px;
+    line-height: 0;
+  }
+
+  .minimapPanel canvas {
+    width: 168px;
+    height: 168px;
+    cursor: pointer;
+    image-rendering: pixelated;
+    border-radius: 4px;
   }
 
   .status {
@@ -377,6 +496,146 @@ const btnTrample = document.querySelector<HTMLButtonElement>("#btn-trample");
 const toolButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tool]"));
 const toolHint = document.querySelector<HTMLElement>("#tool-hint");
 const tasksList = document.querySelector<HTMLElement>("#tasks-list");
+const minimapCanvas = document.querySelector<HTMLCanvasElement>("#minimap");
+const unitPanel = document.querySelector<HTMLElement>("#unit-panel");
+const unitTitle = document.querySelector<HTMLElement>("#unit-title");
+const unitJob = document.querySelector<HTMLElement>("#unit-job");
+const unitEnergy = document.querySelector<HTMLElement>("#unit-energy");
+const unitCargo = document.querySelector<HTMLElement>("#unit-cargo");
+let selectedAnt: string | null = null;
+
+const CARGO_NAMES: Record<string, string> = { food: "еда", clay: "глина", wood: "дерево", stone: "камень" };
+
+function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): string {
+  if (ant.state === "fight") {
+    return "Дерётся!";
+  }
+  if (ant.job === "guard") {
+    return "Охраняет лагерь";
+  }
+  if (ant.job === "build") {
+    return ant.carrying > 0 ? "Несёт материал на стройку" : "Строит";
+  }
+  if (ant.job === "harvest") {
+    if (ant.carrying > 0 && ant.carryKind) {
+      return `Несёт: ${CARGO_NAMES[ant.carryKind] ?? ant.carryKind}`;
+    }
+    const node = world.surface.resourceNodes?.find((item) => item.id === ant.harvestNodeId);
+    return node ? `Добывает: ${CARGO_NAMES[node.kind] ?? node.kind}` : "Добывает ресурс";
+  }
+  if (ant.carryingDebris) {
+    return "Прибирается";
+  }
+  if (ant.carrying > 0) {
+    return "Несёт еду";
+  }
+  if (ant.forageRole === "scout") {
+    return "Разведка";
+  }
+  if (ant.state === "return") {
+    return "Возвращается в лагерь";
+  }
+  return "Ищет еду";
+}
+
+function updateUnitPanel(world: WorldSnapshot): void {
+  if (!unitPanel || !unitTitle || !unitJob || !unitEnergy || !unitCargo) {
+    return;
+  }
+  if (!selectedAnt) {
+    unitPanel.style.display = "none";
+    return;
+  }
+  const ant = world.ants.find((item) => item.id === selectedAnt);
+  if (!ant || ant.state === "dead") {
+    selectedAnt = null;
+    setSelectedAntId(null);
+    unitPanel.style.display = "none";
+    return;
+  }
+  unitPanel.style.display = "block";
+  unitTitle.textContent = `Житель ${ant.id.replace("ant-", "№")} (${ant.colonyId === "colony-2" ? "племя B" : "племя A"})`;
+  unitJob.textContent = antJobLabel(world, ant);
+  const energyFraction = Math.max(0, Math.min(1, ant.energy / 900));
+  unitEnergy.style.width = `${Math.round(energyFraction * 100)}%`;
+  unitEnergy.style.background = energyFraction > 0.4 ? "#7ec850" : energyFraction > 0.2 ? "#d8b74a" : "#d9534f";
+  unitCargo.textContent =
+    ant.carrying > 0
+      ? `${CARGO_NAMES[ant.carryKind ?? "food"] ?? "еда"} (${ant.carrying.toFixed(1)})`
+      : ant.carryingDebris
+        ? "хлам"
+        : "-";
+}
+
+// Ресурс-бар племени A: иконки + значения + прирост за минуту.
+const resourceBarNodes = {
+  food: document.querySelector<HTMLElement>("#res-food"),
+  clay: document.querySelector<HTMLElement>("#res-clay"),
+  wood: document.querySelector<HTMLElement>("#res-wood"),
+  stone: document.querySelector<HTMLElement>("#res-stone"),
+  pop: document.querySelector<HTMLElement>("#res-pop"),
+  rateFood: document.querySelector<HTMLElement>("#rate-food"),
+  rateClay: document.querySelector<HTMLElement>("#rate-clay"),
+  rateWood: document.querySelector<HTMLElement>("#rate-wood"),
+  rateStone: document.querySelector<HTMLElement>("#rate-stone")
+};
+for (const [id, name] of [
+  ["icon-food", "food"],
+  ["icon-clay", "clay"],
+  ["icon-wood", "wood"],
+  ["icon-stone", "stone"],
+  ["icon-pop", "pop"]
+] as const) {
+  const img = document.querySelector<HTMLImageElement>(`#${id}`);
+  if (img) {
+    img.src = spriteIconDataUrl(name);
+  }
+}
+
+type StockSample = { at: number; food: number; clay: number; wood: number; stone: number };
+const stockSamples: StockSample[] = [];
+
+function formatRate(node: HTMLElement | null, delta: number): void {
+  if (!node) {
+    return;
+  }
+  const rounded = Math.round(delta);
+  if (rounded === 0) {
+    node.textContent = "";
+    return;
+  }
+  node.textContent = rounded > 0 ? `+${rounded}` : String(rounded);
+  node.classList.toggle("negative", rounded < 0);
+}
+
+function updateResourceBar(world: WorldSnapshot): void {
+  const colony = world.colonies?.[0]?.colony ?? world.colony;
+  const now = performance.now();
+  stockSamples.push({
+    at: now,
+    food: colony.food ?? 0,
+    clay: colony.clay ?? 0,
+    wood: colony.wood ?? 0,
+    stone: colony.stone ?? 0
+  });
+  while (stockSamples.length > 2 && now - stockSamples[0].at > 60000) {
+    stockSamples.shift();
+  }
+  const first = stockSamples[0];
+  const minutes = Math.max(0.25, (now - first.at) / 60000);
+
+  if (resourceBarNodes.food) resourceBarNodes.food.textContent = String(Math.floor(colony.food ?? 0));
+  if (resourceBarNodes.clay) resourceBarNodes.clay.textContent = String(Math.floor(colony.clay ?? 0));
+  if (resourceBarNodes.wood) resourceBarNodes.wood.textContent = String(Math.floor(colony.wood ?? 0));
+  if (resourceBarNodes.stone) resourceBarNodes.stone.textContent = String(Math.floor(colony.stone ?? 0));
+  if (resourceBarNodes.pop) {
+    resourceBarNodes.pop.textContent = `${colony.population.workers}/${colony.nestCapacity ?? "-"}`;
+  }
+  formatRate(resourceBarNodes.rateFood, ((colony.food ?? 0) - first.food) / minutes);
+  formatRate(resourceBarNodes.rateClay, ((colony.clay ?? 0) - first.clay) / minutes);
+  formatRate(resourceBarNodes.rateWood, ((colony.wood ?? 0) - first.wood) / minutes);
+  formatRate(resourceBarNodes.rateStone, ((colony.stone ?? 0) - first.stone) / minutes);
+}
 const tick = document.querySelector<HTMLElement>("#tick");
 const population = document.querySelector<HTMLElement>("#population");
 const spiderStatus = document.querySelector<HTMLElement>("#spider-status");
@@ -884,6 +1143,31 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y }));
     return;
   }
+
+  // Клик по жителю — выбор; клик по пустому месту — еда (и сброс выбора).
+  let nearest: { id: string; distanceSq: number } | null = null;
+  for (const ant of latestWorld.ants) {
+    const dx = ant.pos.x - tile.x;
+    const dy = ant.pos.y - tile.y;
+    const distanceSq = dx * dx + dy * dy;
+    if (distanceSq < 2.5 * 2.5 && (!nearest || distanceSq < nearest.distanceSq)) {
+      nearest = { id: ant.id, distanceSq };
+    }
+  }
+  if (nearest) {
+    selectedAnt = nearest.id;
+    setSelectedAntId(nearest.id);
+    if (latestWorld) {
+      updateUnitPanel(latestWorld);
+    }
+    return;
+  }
+  if (selectedAnt) {
+    selectedAnt = null;
+    setSelectedAntId(null);
+    updateUnitPanel(latestWorld);
+    return;
+  }
   socket.send(JSON.stringify({ type: "dropFood", x: tile.x, y: tile.y }));
 });
 
@@ -909,6 +1193,17 @@ pixi.canvas.addEventListener("wheel", (event) => {
   }
   clampCamera(latestWorld);
 }, { passive: false });
+
+minimapCanvas?.addEventListener("pointerdown", (event) => {
+  if (!latestWorld) {
+    return;
+  }
+  const target = minimapClickToWorld(minimapCanvas, latestWorld, event.clientX, event.clientY);
+  setCameraMode("free");
+  camera.x = target.x;
+  camera.y = target.y;
+  clampCamera(latestWorld);
+});
 
 socket.addEventListener("open", () => {
   statusNode.textContent = "Подключено";
@@ -1003,6 +1298,11 @@ socket.addEventListener("message", (event) => {
   latestWorld = snap;
   updateHud(snap);
   updateTasks(snap);
+  updateResourceBar(snap);
+  updateUnitPanel(snap);
+  if (minimapCanvas) {
+    drawMinimap(minimapCanvas, snap, camera, pixi.screen.width, pixi.screen.height);
+  }
   updatePerfHud(snap);
   if (camera.x === 50 && camera.y === 50) {
     centerOnNest(snap);

@@ -382,6 +382,60 @@ export function createResourceSprite(scale = 2.4): Sprite {
   return makePixelSprite(getResourceTexture("clay"), scale);
 }
 
+// Пиксельные иконки для DOM-панелей (ресурс-бар): PNG data-URL с масштабом.
+const iconCache = new Map<string, string>();
+
+export function spriteIconDataUrl(
+  name: "food" | "clay" | "wood" | "stone" | "pop",
+  scale = 4
+): string {
+  const key = `${name}_${scale}`;
+  const cached = iconCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const source: { rows: readonly string[]; palette: Palette } =
+    name === "food"
+      ? { rows: spriteMaps.food, palette: spritePalettes.food }
+      : name === "clay"
+        ? { rows: spriteMaps.clayLump, palette: spritePalettes.clayLump }
+        : name === "wood"
+          ? { rows: spriteMaps.woodStick, palette: spritePalettes.woodStick }
+          : name === "stone"
+            ? { rows: spriteMaps.stoneChunk, palette: spritePalettes.stoneChunk }
+            : { rows: spriteMaps.clayfolk, palette: spritePalettes.clayfolk };
+
+  const width = Math.max(...source.rows.map((row) => row.length));
+  const height = source.rows.length;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return "";
+  }
+  context.imageSmoothingEnabled = false;
+  for (let y = 0; y < height; y += 1) {
+    const row = source.rows[y] ?? "";
+    for (let x = 0; x < row.length; x += 1) {
+      const colorKey = row[x] ?? ".";
+      if (colorKey === ".") {
+        continue;
+      }
+      const color = source.palette[colorKey];
+      if (color === undefined) {
+        continue;
+      }
+      context.fillStyle = colorToCss(color);
+      context.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+  const url = canvas.toDataURL();
+  iconCache.set(key, url);
+  return url;
+}
+
 export function createAntSprite(carrying: boolean, scale = 2.5): Sprite {
   return makePixelSprite(getAntTexture(carrying), scale);
 }
