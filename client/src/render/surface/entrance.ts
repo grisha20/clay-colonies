@@ -44,7 +44,8 @@ export function drawSurfaceEntranceAt(
   color: "dark" | "red",
   foodStorage = 0,
   clayStorage = 0,
-  woodStorage = 0
+  woodStorage = 0,
+  stoneStorage = 0
 ): void {
   const x = Math.round(pos.x * cell);
   const y = Math.round(pos.y * cell);
@@ -96,6 +97,20 @@ export function drawSurfaceEntranceAt(
     }
   }
 
+  // Куча камня левее и выше костра.
+  if (stoneStorage > 0.5) {
+    const stonePile = Math.max(2, Math.min(12, Math.ceil(stoneStorage / 5)));
+    drawShadow(camp, x - 46, y - 18, 16, 6, 0.2);
+    for (let index = 0; index < stonePile; index += 1) {
+      const px = x - 58 + hash2(pos.x + index, pos.y, 81) * 24;
+      const py = y - 26 + hash2(pos.x, pos.y + index, 82) * 12;
+      const size = 2.4 + hash2(index, pos.x, 83) * 3;
+      camp.ellipse(px, py + 1.2, size, size * 0.8).fill({ color: 0x5d5a54, alpha: 1 });
+      camp.ellipse(px, py, size * 0.85, size * 0.7).fill({ color: 0x8d8b82, alpha: 1 });
+      camp.ellipse(px - size * 0.25, py - size * 0.25, size * 0.3, size * 0.22).fill({ color: 0xc9c4b4, alpha: 0.8 });
+    }
+  }
+
   // Поленница дерева ниже костра.
   if (woodStorage > 0.5) {
     const woodPile = Math.max(2, Math.min(12, Math.ceil(woodStorage / 6)));
@@ -123,7 +138,8 @@ export function drawSurfaceEntrance(root: Container, world: WorldSnapshot, cell:
       index === 1 ? "red" : "dark",
       colony?.colony.food ?? world.colony.food,
       colony?.colony.clay ?? 0,
-      colony?.colony.wood ?? 0
+      colony?.colony.wood ?? 0,
+      colony?.colony.stone ?? 0
     );
   });
 }

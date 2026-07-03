@@ -26,14 +26,12 @@ function findBuildTarget(world: World, ant: Ant): Building | undefined {
   );
 }
 
-export function neededResource(building: Building): { kind: "clay" | "wood"; amount: number } | null {
-  const clayLeft = building.cost.clay - building.delivered.clay;
-  if (clayLeft > 0.01) {
-    return { kind: "clay", amount: clayLeft };
-  }
-  const woodLeft = building.cost.wood - building.delivered.wood;
-  if (woodLeft > 0.01) {
-    return { kind: "wood", amount: woodLeft };
+export function neededResource(building: Building): { kind: "clay" | "wood" | "stone"; amount: number } | null {
+  for (const kind of ["clay", "wood", "stone"] as const) {
+    const left = building.cost[kind] - building.delivered[kind];
+    if (left > 0.01) {
+      return { kind, amount: left };
+    }
   }
   return null;
 }
@@ -63,7 +61,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
   }
 
   // Несём материал на площадку.
-  if (ant.carrying > 0 && (ant.carryKind === "clay" || ant.carryKind === "wood")) {
+  if (ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
     if (isWithinRadius(ant.pos, building.pos, CONFIG.buildingDeliverRadius)) {
       const kind = ant.carryKind;
       building.delivered[kind] = Math.min(building.cost[kind], building.delivered[kind] + ant.carrying);
@@ -80,13 +78,16 @@ export function moveBuilding(world: World, ant: Ant): boolean {
   if (needed) {
     // Забираем ресурс со склада лагеря.
     if (isWithinRadius(ant.pos, world.surface.entrance, 5)) {
-      const stock = needed.kind === "clay" ? world.colony.clay : world.colony.wood;
+      const stock =
+        needed.kind === "clay" ? world.colony.clay : needed.kind === "wood" ? world.colony.wood : world.colony.stone;
       const amount = Math.min(stock, Math.max(0.5, ant.strength * 2), needed.amount);
       if (amount >= 0.5) {
         if (needed.kind === "clay") {
           world.colony.clay -= amount;
-        } else {
+        } else if (needed.kind === "wood") {
           world.colony.wood -= amount;
+        } else {
+          world.colony.stone -= amount;
         }
         ant.carrying = amount;
         ant.carryKind = needed.kind;

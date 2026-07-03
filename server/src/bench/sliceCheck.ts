@@ -40,6 +40,7 @@ for (let i = 0; i < 6000; i += 1) {
 }
 check("Фаза 2: глина добывается", colonyA.colony.clay > 10, `clay=${colonyA.colony.clay.toFixed(1)}`);
 check("Фаза 2: дерево добывается", colonyA.colony.wood > 5, `wood=${colonyA.colony.wood.toFixed(1)}`);
+check("Фаза 4: камень добывается", colonyA.colony.stone > 5, `stone=${colonyA.colony.stone.toFixed(1)}`);
 check("Фаза 2: еда не пострадала", colonyA.colony.food > 100, `food=${colonyA.colony.food.toFixed(0)}`);
 
 // --- Фаза 3: зона добычи переключает цель ---

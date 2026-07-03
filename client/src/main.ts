@@ -62,6 +62,7 @@ appRoot.innerHTML = `
           <div><span>Еда</span><strong id="colony-a-storage">0</strong></div>
           <div><span>Глина</span><strong id="colony-a-clay">0</strong></div>
           <div><span>Дерево</span><strong id="colony-a-wood">0</strong></div>
+          <div><span>Камень</span><strong id="colony-a-stone">0</strong></div>
         </section>
         <section class="colonyStats colonyB">
           <h2>Племя B</h2>
@@ -70,6 +71,7 @@ appRoot.innerHTML = `
           <div><span>Еда</span><strong id="colony-b-storage">0</strong></div>
           <div><span>Глина</span><strong id="colony-b-clay">0</strong></div>
           <div><span>Дерево</span><strong id="colony-b-wood">0</strong></div>
+          <div><span>Камень</span><strong id="colony-b-stone">0</strong></div>
         </section>
       </div>
     </aside>
@@ -358,7 +360,8 @@ const colonyNodes = [0, 1].map((index) => {
     scouts: document.querySelector<HTMLElement>(`#colony-${key}-scouts`),
     storage: document.querySelector<HTMLElement>(`#colony-${key}-storage`),
     clay: document.querySelector<HTMLElement>(`#colony-${key}-clay`),
-    wood: document.querySelector<HTMLElement>(`#colony-${key}-wood`)
+    wood: document.querySelector<HTMLElement>(`#colony-${key}-wood`),
+    stone: document.querySelector<HTMLElement>(`#colony-${key}-stone`)
   };
 });
 
@@ -396,7 +399,8 @@ const colonyStatNodes = colonyNodes.map((nodes) => ({
   scouts: nodes.scouts as HTMLElement,
   storage: nodes.storage as HTMLElement,
   clay: nodes.clay as HTMLElement,
-  wood: nodes.wood as HTMLElement
+  wood: nodes.wood as HTMLElement,
+  stone: nodes.stone as HTMLElement
 }));
 
 const SURFACE_TILE_SIZE = 8;
@@ -507,6 +511,7 @@ function updateHud(world: WorldSnapshot): void {
       nodes.storage.textContent = "-";
       nodes.clay.textContent = "-";
       nodes.wood.textContent = "-";
+      nodes.stone.textContent = "-";
       return;
     }
 
@@ -515,6 +520,7 @@ function updateHud(world: WorldSnapshot): void {
     nodes.storage.textContent = String(Math.floor(item.colony.food ?? 0));
     nodes.clay.textContent = String(Math.floor(item.colony.clay ?? 0));
     nodes.wood.textContent = String(Math.floor(item.colony.wood ?? 0));
+    nodes.stone.textContent = String(Math.floor(item.colony.stone ?? 0));
   });
 }
 

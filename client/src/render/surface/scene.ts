@@ -194,8 +194,8 @@ function updateBuildings(layer: Graphics, world: WorldSnapshot, cell: number): v
     const radius = 2.1 * cell;
     if (building.stage === "site") {
       layer.circle(x, y, radius).stroke({ width: 1.6, color: clayColor, alpha: 0.6 });
-      const deliveredTotal = building.delivered.clay + building.delivered.wood;
-      const costTotal = Math.max(1, building.cost.clay + building.cost.wood);
+      const deliveredTotal = building.delivered.clay + building.delivered.wood + building.delivered.stone;
+      const costTotal = Math.max(1, building.cost.clay + building.cost.wood + building.cost.stone);
       const fillRadius = radius * Math.min(1, deliveredTotal / costTotal);
       if (fillRadius > 1) {
         layer.circle(x, y, fillRadius).fill({ color: clayColor, alpha: 0.3 });
@@ -346,7 +346,12 @@ export function renderSurface(
   }
 
   const storageLevels = world.colonies?.map((c) =>
-    [Math.floor((c.colony.food ?? 0) / 10), Math.floor((c.colony.clay ?? 0) / 8), Math.floor((c.colony.wood ?? 0) / 8)].join("-")
+    [
+      Math.floor((c.colony.food ?? 0) / 10),
+      Math.floor((c.colony.clay ?? 0) / 8),
+      Math.floor((c.colony.wood ?? 0) / 8),
+      Math.floor((c.colony.stone ?? 0) / 8)
+    ].join("-")
   ) ?? [Math.floor((world.colony.food ?? 0) / 10)];
   const entranceKey = [
     ...(world.surface.entrances ?? [world.surface.entrance]).flatMap((entrance) => [entrance.x, entrance.y]),

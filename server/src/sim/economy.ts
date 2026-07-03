@@ -7,10 +7,28 @@ import { CONFIG } from "../config";
 import type { World } from "./world";
 import { zoneIndexAt } from "./zones";
 
+function reserveTarget(kind: ResourceKind): number {
+  if (kind === "clay") {
+    return CONFIG.clayReserveTarget;
+  }
+  if (kind === "wood") {
+    return CONFIG.woodReserveTarget;
+  }
+  return CONFIG.stoneReserveTarget;
+}
+
+export function colonyStock(world: World, kind: ResourceKind): number {
+  if (kind === "clay") {
+    return world.colony.clay;
+  }
+  if (kind === "wood") {
+    return world.colony.wood;
+  }
+  return world.colony.stone;
+}
+
 export function colonyWantsResource(world: World, kind: ResourceKind): boolean {
-  const target = kind === "clay" ? CONFIG.clayReserveTarget : CONFIG.woodReserveTarget;
-  const stock = kind === "clay" ? world.colony.clay : world.colony.wood;
-  return stock < target + demandFromBuildings(world, kind);
+  return colonyStock(world, kind) < reserveTarget(kind) + demandFromBuildings(world, kind);
 }
 
 // Недостроенные здания повышают спрос племени на свои ресурсы.
@@ -38,14 +56,14 @@ export function assignHarvestJobs(world: World): void {
     live.length >= CONFIG.harvestMinWorkers && world.colony.food >= CONFIG.harvestMinFood;
 
   // Учёт текущих сборщиков и освобождение лишних.
-  const counts: Record<ResourceKind, number> = { clay: 0, wood: 0 };
+  const counts: Record<ResourceKind, number> = { clay: 0, wood: 0, stone: 0 };
   for (const ant of live) {
     if (ant.job !== "harvest") {
       continue;
     }
     const node = nodeById(world, ant.harvestNodeId);
     const kind: ResourceKind | undefined =
-      node?.kind ?? (ant.carryKind === "clay" || ant.carryKind === "wood" ? ant.carryKind : undefined);
+      node?.kind ?? (ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined);
     const stillWanted = kind ? colonyWantsResource(world, kind) : false;
 
     if ((!economyReady || !stillWanted || (!node && ant.carrying <= 0)) && ant.carrying <= 0) {
@@ -63,7 +81,7 @@ export function assignHarvestJobs(world: World): void {
     return;
   }
 
-  for (const kind of ["clay", "wood"] as const) {
+  for (const kind of ["clay", "wood", "stone"] as const) {
     if (!colonyWantsResource(world, kind)) {
       continue;
     }

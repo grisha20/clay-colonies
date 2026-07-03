@@ -188,6 +188,7 @@ function makeResourceNodes(): ResourceNode[] {
   };
   spawn("clay", CONFIG.clayNodeCount, CONFIG.clayNodeAmount);
   spawn("wood", CONFIG.woodNodeCount, CONFIG.woodNodeAmount);
+  spawn("stone", CONFIG.stoneNodeCount, CONFIG.stoneNodeAmount);
   return nodes;
 }
 
@@ -785,6 +786,7 @@ export function worldFromSnapshot(
         food: colonySnapshot.colony.food ?? colonySnapshot.underground.foodStorage ?? CONFIG.startingFoodStorage,
         clay: colonySnapshot.colony.clay ?? 0,
         wood: colonySnapshot.colony.wood ?? 0,
+        stone: colonySnapshot.colony.stone ?? 0,
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,

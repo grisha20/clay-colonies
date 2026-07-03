@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 4;
-export const CURRENT_PROTOCOL_VERSION = 4;
+export const CURRENT_SNAPSHOT_VERSION = 5;
+export const CURRENT_PROTOCOL_VERSION = 5;
 
 export type Vec2 = {
   x: number;
@@ -89,15 +89,15 @@ export type Building = {
   type: BuildingType;
   stage: BuildingStage;
   pos: Vec2;
-  cost: { clay: number; wood: number };
-  delivered: { clay: number; wood: number };
+  cost: { clay: number; wood: number; stone: number };
+  delivered: { clay: number; wood: number; stone: number };
   progress: number;
   hp: number;
   maxHp: number;
 };
 
 // Новые ресурсы Clayfolk: узлы глины и дерева на поверхности.
-export type ResourceKind = "clay" | "wood";
+export type ResourceKind = "clay" | "wood" | "stone";
 
 export type ResourceNode = {
   id: string;
@@ -187,6 +187,7 @@ export type Colony = {
   food: number;
   clay: number;
   wood: number;
+  stone: number;
   zones?: {
     version: number;
     harvest: number[];

@@ -215,6 +215,12 @@ export const spriteMaps = {
     ".2211.",
     "..1221",
     "....11"
+  ],
+  stoneChunk: [
+    ".111.",
+    "12321",
+    "12221",
+    ".111."
   ]
 } as const;
 
@@ -303,6 +309,11 @@ export const spritePalettes = {
   woodStick: {
     "1": 0x4f2f16,
     "2": 0x8a5429
+  },
+  stoneChunk: {
+    "1": 0x5d5a54,
+    "2": 0x8d8b82,
+    "3": 0xc9c4b4
   }
 } as const;
 
@@ -357,9 +368,12 @@ export function getGrainTexture(): Texture {
   return makeTexture("grain", [...spriteMaps.grain], spritePalettes.grain);
 }
 
-export function getResourceTexture(kind: "clay" | "wood"): Texture {
+export function getResourceTexture(kind: "clay" | "wood" | "stone"): Texture {
   if (kind === "clay") {
     return makeTexture("clayLump", [...spriteMaps.clayLump], spritePalettes.clayLump);
+  }
+  if (kind === "stone") {
+    return makeTexture("stoneChunk", [...spriteMaps.stoneChunk], spritePalettes.stoneChunk);
   }
   return makeTexture("woodStick", [...spriteMaps.woodStick], spritePalettes.woodStick);
 }

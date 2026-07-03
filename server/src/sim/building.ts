@@ -38,7 +38,7 @@ export function wallCellCenter(index: number): Vec2 {
   };
 }
 
-function buildingCost(type: BuildingType): { clay: number; wood: number } {
+function buildingCost(type: BuildingType): { clay: number; wood: number; stone: number } {
   return type === "hut" ? { ...CONFIG.hutCost } : { ...CONFIG.wallCost };
 }
 
@@ -69,7 +69,7 @@ function createBuilding(colonyId: string, type: BuildingType, pos: Vec2): Buildi
     stage: "site",
     pos,
     cost: buildingCost(type),
-    delivered: { clay: 0, wood: 0 },
+    delivered: { clay: 0, wood: 0, stone: 0 },
     progress: 0,
     hp: 0,
     maxHp: buildingMaxHp(type)

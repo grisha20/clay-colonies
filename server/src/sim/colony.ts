@@ -18,6 +18,7 @@ export function createColony(
     food: CONFIG.startingFoodStorage,
     clay: 0,
     wood: 0,
+    stone: 0,
     population: {
       workers: CONFIG.startingWorkers,
       scouts: CONFIG.startingScouts,

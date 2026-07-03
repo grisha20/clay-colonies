@@ -463,6 +463,8 @@ export function tryCrossLayer(world: World, ant: Ant): boolean {
           world.colony.clay += ant.carrying;
         } else if (kind === "wood") {
           world.colony.wood += ant.carrying;
+        } else if (kind === "stone") {
+          world.colony.stone += ant.carrying;
         } else {
           registerScoutFoodReport(world, ant);
           world.colony.food += ant.carrying;
