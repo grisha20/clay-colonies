@@ -186,15 +186,21 @@ function updateBuildings(layer: Graphics, world: WorldSnapshot, cell: number): v
         layer.rect(x - half, y - half, half * 2, half * 2).fill({ color: clayColor, alpha: 0.28 + building.progress * 0.4 });
         layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.4, color: darkColor, alpha: 0.7 });
       } else {
-        layer.rect(x - half, y - half + 2, half * 2, half * 2).fill({ color: darkColor, alpha: 0.9 });
-        layer.rect(x - half, y - half, half * 2, half * 2 - 2).fill({ color: clayColor, alpha: 1 });
-        layer.rect(x - half + 1.5, y - half + 1.5, half * 2 - 3, 2.5).fill({ color: 0xef9a64, alpha: 0.7 });
+        // Объёмная стена выше жителей: тень, лицевая грань, светлый верх.
+        // Рисуем на 1px шире клетки, чтобы соседние сегменты сливались без швов.
+        const wallRise = 2.6 * cell;
+        const topDepth = 4;
+        layer.rect(x - half - 1, y + half - 2, half * 2 + 4, 4).fill({ color: 0x24190f, alpha: 0.25 });
+        layer.rect(x - half - 1, y - half - wallRise, half * 2 + 2, wallRise + half * 2).fill({ color: clayColor, alpha: 1 });
+        layer.rect(x - half - 1, y + half - 3, half * 2 + 2, 3).fill({ color: darkColor, alpha: 0.9 });
+        layer.rect(x - half - 1, y - half - wallRise - topDepth, half * 2 + 2, topDepth + 2).fill({ color: 0xef9a64, alpha: 1 });
+        layer.rect(x - half - 1, y - half - wallRise + 2, half * 2 + 2, 1.6).fill({ color: darkColor, alpha: 0.35 });
       }
       continue;
     }
 
     if (building.type === "storage") {
-      const half = 1.7 * cell;
+      const half = 2.9 * cell;
       if (building.stage === "site") {
         layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x8a5429, alpha: 0.6 });
         const deliveredTotal = building.delivered.clay + building.delivered.wood + building.delivered.stone;
@@ -206,17 +212,28 @@ function updateBuildings(layer: Graphics, world: WorldSnapshot, cell: number): v
         layer.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0x8a5429, alpha: 0.35 + building.progress * 0.5 });
         layer.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x4f2f16, alpha: 0.8 });
       } else {
-        layer.ellipse(x + 2, y + half * 0.8, half * 1.2, half * 0.4).fill({ color: 0x24190f, alpha: 0.22 });
-        layer.rect(x - half, y - half + 2, half * 2, half * 2).fill({ color: 0x4f2f16, alpha: 1 });
-        layer.rect(x - half, y - half, half * 2, half * 2 - 2).fill({ color: 0x8a5429, alpha: 1 });
-        layer.rect(x - half + 2, y - half + 2, half * 2 - 4, 3).fill({ color: 0xb98a52, alpha: 0.8 });
-        layer.moveTo(x, y - half).lineTo(x, y + half).stroke({ width: 1.2, color: 0x4f2f16, alpha: 0.6 });
+        // Сарай с двускатной крышей, по росту жителей.
+        const roofRise = 1.6 * cell;
+        layer.ellipse(x + 2, y + half * 0.9, half * 1.25, half * 0.42).fill({ color: 0x24190f, alpha: 0.22 });
+        layer.rect(x - half, y - half * 0.2, half * 2, half * 1.2).fill({ color: 0x4f2f16, alpha: 1 });
+        layer.rect(x - half, y - half * 0.3, half * 2, half * 1.2).fill({ color: 0x8a5429, alpha: 1 });
+        layer.poly([
+          x - half - 2, y - half * 0.3,
+          x, y - half * 0.3 - roofRise,
+          x + half + 2, y - half * 0.3
+        ]).fill({ color: 0xb98a52, alpha: 1 });
+        layer.poly([
+          x - half - 2, y - half * 0.3,
+          x, y - half * 0.3 - roofRise,
+          x, y - half * 0.3
+        ]).fill({ color: 0x9a733f, alpha: 0.6 });
+        layer.rect(x - half * 0.28, y + half * 0.2, half * 0.56, half * 0.7).fill({ color: 0x2f1812, alpha: 0.9 });
       }
       continue;
     }
 
     // Хижина.
-    const radius = 2.1 * cell;
+    const radius = 4.0 * cell;
     if (building.stage === "site") {
       layer.circle(x, y, radius).stroke({ width: 1.6, color: clayColor, alpha: 0.6 });
       const deliveredTotal = building.delivered.clay + building.delivered.wood + building.delivered.stone;
@@ -238,10 +255,11 @@ function updateBuildings(layer: Graphics, world: WorldSnapshot, cell: number): v
   }
 }
 
-// Зоны игрока: полупрозрачный слой поверх земли (зелёная — добыча, красная — запрет).
+// Зоны игроков: полупрозрачный слой поверх земли (зелёная — добыча, красная — запрет).
+// Рисуются зоны ОБОИХ племён; у племени B — свои оттенки, чтобы не путать.
 function updateZonesOverlay(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
-  const zones = world.colonies?.[0]?.colony.zones;
-  const key = zones ? `z${zones.version}` : "z0";
+  const colonies = world.colonies ?? [];
+  const key = colonies.map((item, index) => `${index}:${item.colony.zones?.version ?? 0}`).join("|");
   if (scene.zoneKey === key) {
     return;
   }
@@ -249,22 +267,27 @@ function updateZonesOverlay(scene: SurfaceScene, world: WorldSnapshot, cell: num
 
   const overlay = scene.zonesOverlay;
   overlay.clear();
-  if (!zones) {
-    return;
-  }
 
   const gridWidth = Math.ceil(world.surface.width / ZONE_CELL_SIZE);
   const size = ZONE_CELL_SIZE * cell;
-  for (const index of zones.harvest) {
-    const x = (index % gridWidth) * size;
-    const y = Math.floor(index / gridWidth) * size;
-    overlay.rect(x, y, size, size).fill({ color: 0x7ec850, alpha: 0.17 });
-  }
-  for (const index of zones.forbid) {
-    const x = (index % gridWidth) * size;
-    const y = Math.floor(index / gridWidth) * size;
-    overlay.rect(x, y, size, size).fill({ color: 0xd9534f, alpha: 0.19 });
-  }
+  colonies.forEach((item, index) => {
+    const zones = item.colony.zones;
+    if (!zones) {
+      return;
+    }
+    const harvestColor = index === 1 ? 0x4fb8a8 : 0x7ec850;
+    const forbidColor = index === 1 ? 0xc03a8a : 0xd9534f;
+    for (const cellIndex of zones.harvest) {
+      const x = (cellIndex % gridWidth) * size;
+      const y = Math.floor(cellIndex / gridWidth) * size;
+      overlay.rect(x, y, size, size).fill({ color: harvestColor, alpha: 0.17 });
+    }
+    for (const cellIndex of zones.forbid) {
+      const x = (cellIndex % gridWidth) * size;
+      const y = Math.floor(cellIndex / gridWidth) * size;
+      overlay.rect(x, y, size, size).fill({ color: forbidColor, alpha: 0.19 });
+    }
+  });
 }
 
 // Живое мерцание костра поверх статичного лагеря: два тёплых круга с альфой от тика.
