@@ -5,6 +5,7 @@ import { resolveWallCollision } from "../building";
 import type { World } from "../world";
 import { isWithinRadius } from "./utils";
 import { moveBuilding } from "./build";
+import { moveGuarding } from "./guard";
 import { tryCrossLayer } from "./movement";
 import { canUseStorageMeal, shouldReturnFromSurface } from "./colony-state";
 import { handleEnemyColonyCombat, moveFighting } from "./combat";
@@ -84,6 +85,10 @@ export function stepSurface(world: World, ant: Ant): void {
 
   if (ant.energy < refuelThreshold && canUseStorageMeal(world)) {
     moveHungryHome(world, ant);
+    return;
+  }
+
+  if (ant.job === "guard" && ant.carrying <= 0 && moveGuarding(world, ant)) {
     return;
   }
 

@@ -274,6 +274,12 @@ export const CONFIG = {
   maxHutsPerColony: 8,
   maxWallSegmentsPerColony: 160,
 
+  // Стража: пара жителей держится у лагеря, пока жив паук.
+  guardCount: 2,
+  guardMinWorkers: 12,
+  guardPatrolRadius: 11,
+  guardEngageRadius: 26,
+
   genomeGeneBounds: {
     nurseFraction: { min: 0.1, max: 0.6 },
     digFraction: { min: 0.05, max: 0.45 },

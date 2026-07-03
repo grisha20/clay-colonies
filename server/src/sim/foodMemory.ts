@@ -127,7 +127,7 @@ export function assignForageRoles(world: World): void {
   const hasActiveTarget = !!world.colony.activeFoodTargetId;
   const activeTargetId = world.colony.activeFoodTargetId;
   const availableWorkers = world.ants.filter(
-    (ant) => ant.state !== "dead" && !ant.carryingDebris && !ant.carryingDirt && ant.job !== "harvest" && ant.job !== "build"
+    (ant) => ant.state !== "dead" && !ant.carryingDebris && !ant.carryingDirt && ant.job !== "harvest" && ant.job !== "build" && ant.job !== "guard"
   ).length;
   const reserveTarget = hasActiveTarget && availableWorkers >= 16 ? Math.max(1, Math.ceil(availableWorkers * 0.1)) : 0;
   const foragerLimit = hasActiveTarget
@@ -139,7 +139,8 @@ export function assignForageRoles(world: World): void {
       !ant.carryingDebris &&
       !ant.carryingDirt &&
       ant.job !== "harvest" &&
-      ant.job !== "build"
+      ant.job !== "build" &&
+      ant.job !== "guard"
     );
   const scoutCandidates = world.ants
     .filter((ant) =>
@@ -148,6 +149,7 @@ export function assignForageRoles(world: World): void {
       !ant.carryingDirt &&
       ant.job !== "harvest" &&
       ant.job !== "build" &&
+      ant.job !== "guard" &&
       (ant.carrying <= 0 || ant.forageRole === "scout")
     )
     .sort((a, b) => {
@@ -187,8 +189,8 @@ export function assignForageRoles(world: World): void {
   }
   for (const ant of world.ants) {
     ant.layer = "surface";
-    if ((ant.job === "harvest" || ant.job === "build") && ant.state !== "dead") {
-      // Сборщики и строители живут своим циклом (sim/economy.ts) и не ротируются здесь.
+    if ((ant.job === "harvest" || ant.job === "build" || ant.job === "guard") && ant.state !== "dead") {
+      // Сборщики, строители и стража живут своим циклом (sim/economy.ts) и не ротируются здесь.
       continue;
     }
     ant.job = "forage";

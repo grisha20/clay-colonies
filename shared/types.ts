@@ -111,7 +111,7 @@ export type Ant = {
   colonyId: string;
   role: "worker";
   strength: number;
-  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build";
+  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard";
   carryKind?: "food" | ResourceKind;
   harvestNodeId?: string;
   buildTargetId?: string;

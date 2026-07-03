@@ -136,6 +136,47 @@ export function assignHarvestJobs(world: World): void {
   }
 }
 
+// Стража: пока жив паук и племя достаточно большое, двое дежурят у лагеря.
+export function assignGuardJobs(world: World): void {
+  const live = world.ants.filter((ant) => ant.state !== "dead");
+  const spiderAlive = world.enemies.some((enemy) => enemy.type === "spider" && enemy.hp > 0);
+  const wantGuards = spiderAlive && live.length >= CONFIG.guardMinWorkers ? CONFIG.guardCount : 0;
+
+  let guards = 0;
+  for (const ant of live) {
+    if (ant.job !== "guard") {
+      continue;
+    }
+    if (guards >= wantGuards) {
+      ant.job = "forage";
+      continue;
+    }
+    guards += 1;
+  }
+
+  if (guards >= wantGuards) {
+    return;
+  }
+
+  // Новобранцы: свободные фуражиры, ближайшие к лагерю.
+  const entrance = world.surface.entrance;
+  const candidates = live
+    .filter((ant) => isFreeForAssignment(ant))
+    .sort((a, b) => {
+      const da = (a.pos.x - entrance.x) ** 2 + (a.pos.y - entrance.y) ** 2;
+      const db = (b.pos.x - entrance.x) ** 2 + (b.pos.y - entrance.y) ** 2;
+      return da - db;
+    });
+  for (const ant of candidates) {
+    if (guards >= wantGuards) {
+      break;
+    }
+    ant.job = "guard";
+    ant.forageRole = undefined;
+    guards += 1;
+  }
+}
+
 function isFreeForAssignment(ant: Ant): boolean {
   return (
     ant.job === "forage" &&

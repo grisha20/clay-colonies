@@ -252,6 +252,14 @@ export function updateSurfaceAnts(
     const rot = Math.max(-0.14, Math.min(0.14, ant.heading.x * 0.12));
     placeSprite(sprite, ant.pos.x * cell, ant.pos.y * cell, rot);
 
+    if (ant.job === "guard") {
+      // Временная метка стражи: копьё-черта (спрайты — задача Codex).
+      const gx = ant.pos.x * cell;
+      const gy = ant.pos.y * cell;
+      debrisGraphics.moveTo(gx + 5, gy + 7).lineTo(gx + 11, gy - 11).stroke({ width: 1.6, color: 0x6b4a24, alpha: 0.95 });
+      debrisGraphics.rect(gx + 10, gy - 13, 2.4, 4).fill({ color: 0xc9c4b4, alpha: 1 });
+    }
+
     if (ant.carryingDebris) {
       const hX = Math.cos(headingAngle);
       const hY = Math.sin(headingAngle);

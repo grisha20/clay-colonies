@@ -4,7 +4,7 @@ import { stepAnt, clearDeadAntPaths } from "./ant";
 import { updateTickCache, updateWorldSurfaceCache } from "./cache";
 import { profiler } from "../utils/profiler";
 import { updateEnemies } from "./enemy";
-import { assignBuildJobs, assignHarvestJobs } from "./economy";
+import { assignBuildJobs, assignGuardJobs, assignHarvestJobs } from "./economy";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
 import {
   addAntCorpse,
@@ -132,6 +132,7 @@ export function step(world: World): void {
       assignForageRoles(scopedWorld);
       assignHarvestJobs(scopedWorld);
       assignBuildJobs(scopedWorld);
+      assignGuardJobs(scopedWorld);
       updateTickCache(scopedWorld);
       profiler.measure("stepAnt", () => {
         for (const ant of colony.ants) {
