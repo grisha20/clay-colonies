@@ -260,6 +260,15 @@ export type PheromoneSnapshot = {
   home: any;
 };
 
+// Задачи партии (панель Tasks): прогресс считает сервер, done защёлкивается.
+export type Objective = {
+  id: string;
+  text: string;
+  target: number;
+  progress: number;
+  done: boolean;
+};
+
 export type WorldSnapshot = {
   snapshotVersion: number;
   protocolVersion: number;
@@ -277,6 +286,7 @@ export type WorldSnapshot = {
   ants: Ant[];
   enemies: Enemy[];
   pheromones: PheromoneSnapshot;
+  objectives: Objective[];
 };
 
 export type DurableWorldSnapshot = WorldSnapshot;

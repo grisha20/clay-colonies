@@ -76,6 +76,10 @@ appRoot.innerHTML = `
         </section>
       </div>
     </aside>
+    <aside class="panel tasksPanel">
+      <h2>Задачи</h2>
+      <div id="tasks-list"></div>
+    </aside>
     <footer class="panel status">
       <span id="status">Подключение к ws://localhost:8787</span>
       <span id="tool-hint">Клик по карте - подкинуть еду</span>
@@ -266,6 +270,52 @@ style.textContent = `
     text-align: right;
   }
 
+  .tasksPanel {
+    left: 14px;
+    top: 82px;
+    width: 240px;
+    padding: 10px 12px;
+  }
+
+  .tasksPanel h2 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #fffbea;
+  }
+
+  .taskRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 26px;
+    border-bottom: 1px solid rgb(245 248 239 / 0.12);
+    font-size: 13px;
+    color: #dce7d2;
+  }
+
+  .taskRow .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: none;
+    background: #c9b458;
+  }
+
+  .taskRow.done .dot {
+    background: #6fbf4f;
+  }
+
+  .taskRow.done {
+    color: #9fb58f;
+    text-decoration: line-through;
+  }
+
+  .taskRow .progress {
+    margin-left: auto;
+    color: #fffbea;
+    font-variant-numeric: tabular-nums;
+  }
+
   .status {
     left: 14px;
     bottom: 14px;
@@ -326,6 +376,7 @@ const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[
 const btnTrample = document.querySelector<HTMLButtonElement>("#btn-trample");
 const toolButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tool]"));
 const toolHint = document.querySelector<HTMLElement>("#tool-hint");
+const tasksList = document.querySelector<HTMLElement>("#tasks-list");
 const tick = document.querySelector<HTMLElement>("#tick");
 const population = document.querySelector<HTMLElement>("#population");
 const spiderStatus = document.querySelector<HTMLElement>("#spider-status");
@@ -494,6 +545,27 @@ await pixi.init({
 });
 await preloadEnvironmentAssets();
 canvasHost.appendChild(pixi.canvas);
+
+let lastTasksKey = "";
+
+function updateTasks(world: WorldSnapshot): void {
+  if (!tasksList) {
+    return;
+  }
+  const objectives = world.objectives ?? [];
+  const key = objectives.map((o) => `${o.id}:${Math.floor(o.progress)}:${o.done}`).join("|");
+  if (key === lastTasksKey) {
+    return;
+  }
+  lastTasksKey = key;
+  tasksList.innerHTML = objectives
+    .map(
+      (o) =>
+        `<div class="taskRow${o.done ? " done" : ""}"><span class="dot"></span>` +
+        `<span>${o.text}</span><span class="progress">${Math.floor(o.progress)}/${o.target}</span></div>`
+    )
+    .join("");
+}
 
 function updateHud(world: WorldSnapshot): void {
   tickNode.textContent = String(world.tick);
@@ -930,6 +1002,7 @@ socket.addEventListener("message", (event) => {
 
   latestWorld = snap;
   updateHud(snap);
+  updateTasks(snap);
   updatePerfHud(snap);
   if (camera.x === 50 && camera.y === 50) {
     centerOnNest(snap);

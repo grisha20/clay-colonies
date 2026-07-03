@@ -26,6 +26,7 @@ import { createSpider, syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
 import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
 import { rebuildWallBlocked, syncBuildingIdCounter } from "./building";
+import { createObjectives, restoreObjectives } from "./objectives";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 
 export type ColonyRuntime = {
@@ -42,7 +43,8 @@ export type ColonyRuntime = {
   zoneSets: ZoneSets;
 };
 
-export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | "pheromones" | "colonies"> & {
+export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | "pheromones" | "colonies" | "objectives"> & {
+  objectives: import("../../../shared/types").Objective[];
   colonies: ColonyRuntime[];
   genomeState: GenomeState;
   spiderGenomeState: SpiderGenomeState;
@@ -694,6 +696,7 @@ export function createWorld(
     spiderFitness: createSpiderFitnessState(),
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
+    objectives: createObjectives(),
     ants: colonies.flatMap((colony) => colony.ants),
     enemies,
     pheromones: {
@@ -856,6 +859,7 @@ export function worldFromSnapshot(
     spiderFitness: createSpiderFitnessState(),
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
+    objectives: restoreObjectives(snapshot.objectives),
     ants: snapshotAnts,
     pheromones: {
       width: snapshot.pheromones.width,
@@ -978,7 +982,8 @@ export function toSnapshot(world: World, includePheromones = true): WorldSnapsho
     })),
     ants: world.ants,
     enemies: world.enemies,
-    pheromones
+    pheromones,
+    objectives: world.objectives
   };
 }
 

@@ -5,6 +5,7 @@ import { updateTickCache, updateWorldSurfaceCache } from "./cache";
 import { profiler } from "../utils/profiler";
 import { updateEnemies } from "./enemy";
 import { assignBuildJobs, assignGuardJobs, assignHarvestJobs } from "./economy";
+import { updateObjectives } from "./objectives";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
 import {
   addAntCorpse,
@@ -167,6 +168,10 @@ export function step(world: World): void {
     profiler.measure("pheromone.diffuse", () => {
       world.pheromones.food.evaporateAndDiffuse(evap4, diff4);
     });
+  }
+
+  if (world.tick % 10 === 0) {
+    updateObjectives(world);
   }
 
   if (world.tick % 500 === 0) {
