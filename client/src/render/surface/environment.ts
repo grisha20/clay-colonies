@@ -34,6 +34,7 @@ type EnvironmentTextures = {
     berryBush: Texture;
     foodBush: Texture;
     rockLarge: Texture;
+    rockRound: Texture;
     rockSmall: Texture;
     grassTuft: Texture;
     flowers: Texture;
@@ -97,8 +98,9 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       bushRound: crop(assetsUrl, 0, 482, 66, 62),
       berryBush: crop(assetsUrl, 145, 300, 44, 56),
       foodBush: crop(assetsUrl, 121, 498, 46, 46),
-      rockLarge: crop(assetsUrl, 264, 482, 66, 48),
-      rockSmall: crop(assetsUrl, 352, 493, 38, 32),
+      rockLarge: crop(assetsUrl, 250, 496, 36, 35),
+      rockRound: crop(assetsUrl, 293, 496, 37, 35),
+      rockSmall: crop(assetsUrl, 343, 499, 24, 21),
       grassTuft: crop(assetsUrl, 412, 336, 34, 30),
       flowers: crop(assetsUrl, 392, 438, 48, 42),
       campfire: crop(assetsUrl, 333, 710, 72, 58),

@@ -5,8 +5,7 @@ import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import {
   getBerryTexture,
-  getClayfolkTexture,
-  getResourceTexture
+  getClayfolkTexture
 } from "../../sprites";
 import { drawPebble, drawLeaf } from "./ground";
 import { getEnvironmentTextures } from "./environment";
@@ -112,21 +111,42 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
 // Узлы глины и дерева: комья/палочки кучкой, количество кусков растёт с запасом.
 export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool);
+  const props = getEnvironmentTextures().props;
 
   for (const node of world.surface.resourceNodes ?? []) {
-    if (node.amount <= 0 || !isInBounds(node.pos, bounds, 5)) {
+    if (node.amount <= 0 || !isInBounds(node.pos, bounds, 8)) {
       continue;
     }
 
-    const texture = getResourceTexture(node.kind);
-    const chunks = Math.max(1, Math.min(12, Math.ceil(node.amount / 8)));
+    const x = node.pos.x * cell;
+    const y = node.pos.y * cell;
+    const chunks = Math.max(1, Math.min(5, Math.ceil(node.amount / 22)));
     for (let index = 0; index < chunks; index += 1) {
       const sprite = acquireSprite(pool);
-      sprite.texture = texture;
-      const spread = index === 0 ? 0 : 4 + Math.min(8, index * 1.5);
-      const offset = deterministicOffset(index * 3 + node.id.length, spread);
-      sprite.scale.set(index === 0 ? 2.7 : 2.2);
-      placeSprite(sprite, node.pos.x * cell + offset.x, node.pos.y * cell + offset.y, (index % 5) * 0.4);
+      const offset = deterministicOffset(index * 3 + node.id.length, index === 0 ? 0 : 12 + index * 2);
+
+      if (node.kind === "wood") {
+        sprite.texture = props.log;
+        sprite.anchor.set(0.5, 1);
+        sprite.scale.set(index === 0 ? 0.54 : 0.44);
+        sprite.tint = index % 2 === 0 ? 0xffffff : 0xe8c18a;
+        sprite.alpha = 1;
+        placeSprite(sprite, x + offset.x, y + offset.y + 8, (index % 2 === 0 ? -0.32 : 0.24) + index * 0.04);
+        continue;
+      }
+
+      const rockTextures = [props.rockLarge, props.rockRound, props.rockSmall];
+      const large = index === 0 || index % 3 !== 2;
+      sprite.texture = rockTextures[index % rockTextures.length];
+      sprite.anchor.set(0.5, 1);
+      sprite.scale.set(large ? 1.15 : 1.28);
+      sprite.alpha = 1;
+      if (node.kind === "clay") {
+        sprite.tint = index % 2 === 0 ? 0xdf6f37 : 0xc85a2d;
+      } else {
+        sprite.tint = index % 2 === 0 ? 0xd8d5c8 : 0xb7b3a9;
+      }
+      placeSprite(sprite, x + offset.x, y + offset.y + 10, (index % 5 - 2) * 0.08);
     }
   }
 
