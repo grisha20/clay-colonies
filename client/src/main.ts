@@ -43,6 +43,12 @@ appRoot.innerHTML = `
         <button data-tool="forbid" type="button">Зона запрета</button>
         <button data-tool="erase" type="button">Ластик</button>
       </div>
+      <div class="segmented panelControls" aria-label="Панели">
+        <button data-panel="tasks" type="button">Задачи</button>
+        <button data-panel="tribes" type="button">Племена</button>
+        <button data-panel="build" type="button">Стройка</button>
+        <button data-panel="minimap" type="button">Карта</button>
+      </div>
       <div class="segmented cameraControls" aria-label="Камера">
         <button class="active" data-camera="follow" type="button">Слежение</button>
         <button data-camera="free" type="button">Свободно</button>
@@ -560,6 +566,58 @@ const speedButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[d
 const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-camera]"));
 const btnTrample = document.querySelector<HTMLButtonElement>("#btn-trample");
 const toolButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tool]"));
+const panelButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-panel]"));
+
+// Скрываемые панели: чтобы экран не был загромождён. Выбор запоминается в браузере.
+const PANEL_TARGETS: Record<string, string> = {
+  tasks: ".tasksPanel",
+  tribes: ".hud",
+  build: ".buildBar",
+  minimap: ".minimapPanel"
+};
+const panelVisibility: Record<string, boolean> = {
+  tasks: true,
+  tribes: false, // подробности племён по умолчанию скрыты: главное дублирует ресурс-бар
+  build: true,
+  minimap: true
+};
+try {
+  const saved = JSON.parse(window.localStorage.getItem("clayfolk.panels") ?? "{}") as Record<string, boolean>;
+  for (const key of Object.keys(PANEL_TARGETS)) {
+    if (typeof saved[key] === "boolean") {
+      panelVisibility[key] = saved[key];
+    }
+  }
+} catch {
+  // localStorage недоступен — работаем с настройками по умолчанию
+}
+
+function applyPanelVisibility(): void {
+  for (const [key, selector] of Object.entries(PANEL_TARGETS)) {
+    const node = document.querySelector<HTMLElement>(selector);
+    if (node) {
+      node.style.display = panelVisibility[key] ? "" : "none";
+    }
+  }
+  for (const button of panelButtons) {
+    button.classList.toggle("active", !!panelVisibility[button.dataset.panel ?? ""]);
+  }
+}
+
+for (const button of panelButtons) {
+  button.addEventListener("click", () => {
+    const key = button.dataset.panel ?? "";
+    panelVisibility[key] = !panelVisibility[key];
+    try {
+      window.localStorage.setItem("clayfolk.panels", JSON.stringify(panelVisibility));
+    } catch {
+      // ок, просто не запомним
+    }
+    applyPanelVisibility();
+  });
+}
+
+applyPanelVisibility();
 const toolHint = document.querySelector<HTMLElement>("#tool-hint");
 const tasksList = document.querySelector<HTMLElement>("#tasks-list");
 const minimapCanvas = document.querySelector<HTMLCanvasElement>("#minimap");
