@@ -97,7 +97,11 @@ export function assignHarvestJobs(world: World): void {
         nodes = inZone;
       }
     }
-    let need = CONFIG.maxHarvestersPerResource - counts[kind];
+    // Большая стройка ускоряет добычу: до +2 сборщиков при высоком спросе строек.
+    const buildingDemand = demandFromBuildings(world, kind);
+    const harvesterCap =
+      CONFIG.maxHarvestersPerResource + (buildingDemand > 10 ? 1 : 0) + (buildingDemand > 30 ? 1 : 0);
+    let need = harvesterCap - counts[kind];
     for (const ant of live) {
       if (need <= 0) {
         break;
@@ -191,9 +195,20 @@ function isFreeForAssignment(ant: Ant): boolean {
 // Назначение строителей: до maxBuildersPerSite на площадку, maxActiveBuilders всего.
 export function assignBuildJobs(world: World): void {
   const live = world.ants.filter((ant) => ant.state !== "dead");
-  const sites = world.surface.buildings.filter(
-    (building) => building.colonyId === world.colony.id && building.stage !== "built"
-  );
+  const entrance = world.surface.entrance;
+  // Приоритет: точечные постройки (хижина/склад) раньше стен; ближние раньше дальних.
+  const sites = world.surface.buildings
+    .filter((building) => building.colonyId === world.colony.id && building.stage !== "built")
+    .sort((a, b) => {
+      const priorityA = a.type === "wall" ? 1 : 0;
+      const priorityB = b.type === "wall" ? 1 : 0;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      const distanceA = (a.pos.x - entrance.x) ** 2 + (a.pos.y - entrance.y) ** 2;
+      const distanceB = (b.pos.x - entrance.x) ** 2 + (b.pos.y - entrance.y) ** 2;
+      return distanceA - distanceB;
+    });
   const buildReady = world.colony.food >= CONFIG.buildMinFood;
 
   const perSite = new Map<string, number>();
@@ -221,12 +236,23 @@ export function assignBuildJobs(world: World): void {
     return;
   }
 
-  for (const site of sites) {
-    if (totalBuilders >= CONFIG.maxActiveBuilders) {
-      break;
-    }
-    let assigned = perSite.get(site.id) ?? 0;
-    while (assigned < CONFIG.maxBuildersPerSite && totalBuilders < CONFIG.maxActiveBuilders) {
+  // Ёмкость: при большом фронте работ строителей больше (до 6).
+  const capacity = Math.min(
+    sites.length * CONFIG.maxBuildersPerSite,
+    sites.length >= 4 ? 6 : CONFIG.maxActiveBuilders
+  );
+
+  // Раздача по кругу: каждый проход даёт по одному строителю на площадку,
+  // чтобы куча стен не морила хижину и склад голодом.
+  for (let pass = 0; pass < CONFIG.maxBuildersPerSite; pass += 1) {
+    for (const site of sites) {
+      if (totalBuilders >= capacity) {
+        return;
+      }
+      const assigned = perSite.get(site.id) ?? 0;
+      if (assigned > pass) {
+        continue;
+      }
       let best: Ant | null = null;
       let bestDistanceSq = Number.POSITIVE_INFINITY;
       for (const ant of live) {
@@ -247,7 +273,7 @@ export function assignBuildJobs(world: World): void {
       best.job = "build";
       best.buildTargetId = site.id;
       best.forageRole = undefined;
-      assigned += 1;
+      perSite.set(site.id, assigned + 1);
       totalBuilders += 1;
     }
   }

@@ -25,7 +25,7 @@ import { createColony, syncColonyStats } from "./colony";
 import { createSpider, syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
 import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
-import { rebuildWallBlocked, syncBuildingIdCounter } from "./building";
+import { completeBuilding, placePointBuilding, rebuildWallBlocked, syncBuildingIdCounter } from "./building";
 import { createObjectives, restoreObjectives } from "./objectives";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 
@@ -708,6 +708,23 @@ export function createWorld(
   };
   for (const colony of colonies) {
     colony.directives = computeDirectives(colonyWorldView(world, colony), colony.genomeState.current);
+  }
+  // Стартовое поселение: у каждого лагеря уже стоят 2 хижины и склад
+  // (просьба Гриши, 03.07.2026) — люди "уже живут", лимит выше с первого тика.
+  for (let index = 0; index < world.colonies.length; index += 1) {
+    const entrance = world.colonies[index].surfaceEntrance;
+    const starters: Array<{ x: number; y: number; type: "hut" | "storage" }> = [
+      { x: entrance.x - 11, y: entrance.y - 8, type: "hut" },
+      { x: entrance.x + 11, y: entrance.y - 8, type: "hut" },
+      { x: entrance.x, y: entrance.y + 12, type: "storage" }
+    ];
+    for (const starter of starters) {
+      if (placePointBuilding(world, index, starter.type, starter.x, starter.y)) {
+        const building = world.surface.buildings[world.surface.buildings.length - 1];
+        building.delivered = { ...building.cost };
+        completeBuilding(world, building);
+      }
+    }
   }
   syncWorldLegacyFields(world);
   return world;

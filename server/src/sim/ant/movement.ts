@@ -7,8 +7,9 @@ import type { UndergroundNode } from "../nav";
 import { isDugTile, tileCenter } from "../underground";
 import type { World } from "../world";
 import { randomHeading } from "../world";
-import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, posTile } from "./utils";
+import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, numericAntId, posTile } from "./utils";
 import { zoneCellCenter, zoneIndexAt } from "../zones";
+import { isWallBlockedAt } from "../building";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -94,6 +95,29 @@ export function applyForbidZones(world: World, ant: Ant, desired: Vec2): Vec2 {
   return normalize({ x: desired.x + away.x * 2.2, y: desired.y + away.y * 2.2 });
 }
 
+// Обход стен без поиска пути: если впереди стена, идём вдоль неё
+// (сторона выбирается по чётности id — толпа расходится в обе стороны к проходам).
+export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 {
+  if (world.wallBlocked.size === 0) {
+    return desired;
+  }
+  const lookAhead = 2.4;
+  if (!isWallBlockedAt(world, ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead)) {
+    return desired;
+  }
+  const sign = numericAntId(ant.id) % 2 === 0 ? 1 : -1;
+  const along = { x: -desired.y * sign, y: desired.x * sign };
+  if (!isWallBlockedAt(world, ant.pos.x + along.x * lookAhead, ant.pos.y + along.y * lookAhead)) {
+    return normalize({ x: along.x + desired.x * 0.12, y: along.y + desired.y * 0.12 });
+  }
+  const back = { x: desired.y * sign, y: -desired.x * sign };
+  if (!isWallBlockedAt(world, ant.pos.x + back.x * lookAhead, ant.pos.y + back.y * lookAhead)) {
+    return normalize({ x: back.x + desired.x * 0.12, y: back.y + desired.y * 0.12 });
+  }
+  // Тупик с трёх сторон: разворачиваемся.
+  return { x: -desired.x, y: -desired.y };
+}
+
 export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpiders: boolean, allowSeparation = true): void {
   const speed = surfaceMoveSpeed(world, ant);
   let desired = normalize({ x: target.x - ant.pos.x, y: target.y - ant.pos.y });
@@ -103,6 +127,7 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
   }
 
   desired = applyForbidZones(world, ant, desired);
+  desired = applyWallAvoidance(world, ant, desired);
 
   if (allowSeparation) {
     const dist = distance(ant.pos, target);

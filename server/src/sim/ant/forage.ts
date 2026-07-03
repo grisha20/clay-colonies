@@ -9,6 +9,7 @@ import {
   applyForbidZones,
   applySpiderAvoidance,
   applySeparation,
+  applyWallAvoidance,
   clampToSurface,
   isDugPos,
   moveSurfaceToward,
@@ -261,7 +262,7 @@ function moveSearchingLegacy(world: World, ant: Ant): void {
   const safeDesired = isColonyStarving(world)
     ? desired
     : profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
-  const zonedSafeDesired = applyForbidZones(world, ant, safeDesired);
+  const zonedSafeDesired = applyWallAvoidance(world, ant, applyForbidZones(world, ant, safeDesired));
   const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, zonedSafeDesired));
 
   // Плавная интерполяция к желаемому вектору
@@ -331,7 +332,7 @@ function moveScoutSearching(world: World, ant: Ant): void {
   const safeDesired = isColonyStarving(world)
     ? desired
     : profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
-  const zonedDesired = applyForbidZones(world, ant, safeDesired);
+  const zonedDesired = applyWallAvoidance(world, ant, applyForbidZones(world, ant, safeDesired));
   const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, zonedDesired));
   const finalDirection = normalize({
     x: ant.heading.x * 0.82 + finalDesired.x * 0.18,
@@ -366,6 +367,7 @@ function moveAlongFoodTrail(world: World, ant: Ant, targetPos: Vec2, towardFood:
     desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
   }
   desired = applyForbidZones(world, ant, desired);
+  desired = applyWallAvoidance(world, ant, desired);
 
   const direction = normalize({
     x: ant.heading.x * 0.55 + desired.x * 0.45,
