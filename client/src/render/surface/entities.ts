@@ -4,11 +4,16 @@ import { acquireSprite, antRotation, beginPool, deterministicOffset, endPool, pl
 import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import {
-  getBerryTexture,
-  getClayfolkTexture
+  getClayfolkTexture,
+  getClayTexture,
+  getWoodTexture,
+  getStoneTexture,
+  getSpearTexture,
+  getFoodTexture
 } from "../../sprites";
 import { drawPebble, drawLeaf } from "./ground";
 import { getEnvironmentTextures } from "./environment";
+import { offsetSettings } from "./editor";
 
 // Выбранный житель (панель юнита): подсветка кольцом.
 let selectedAntId: string | null = null;
@@ -75,12 +80,24 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
   beginPool(pool);
   const props = getEnvironmentTextures().props;
 
+  // Фиксированные координаты томатов, равномерно распределенные по всей площади куста
+  // (включая нижние боковые ветки листвы), во избежание наслаивания.
+  const tomatoOffsets = [
+    { x: 0, y: -13 },   // Центр кроны
+    { x: -12, y: -2 },  // Низ-лево (боковая ветка)
+    { x: 12, y: -2 },   // Низ-право (боковая ветка)
+    { x: -17, y: -12 }, // Середина-лево
+    { x: 17, y: -12 },  // Середина-право
+    { x: -10, y: -22 }, // Верх-лево
+    { x: 10, y: -22 },  // Верх-право
+    { x: 0, y: -29 }    // Верхушка куста
+  ];
+
   for (const source of world.surface.foodSources) {
     if (!isInBounds(source.pos, bounds, 7)) {
       continue;
     }
 
-    // Food uses vegetation sprites from the summer-plains atlas; only berries vary by amount.
     const x = source.pos.x * cell;
     const y = source.pos.y * cell;
     const bush = acquireSprite(pool);
@@ -90,18 +107,40 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
     bush.tint = 0xffffff;
     bush.alpha = source.amount > 0 ? 1 : 0.72;
     placeSprite(bush, x, y + 13, 0);
+    bush.zIndex = y + 13;
 
     const berryCount = Math.max(0, Math.min(8, Math.ceil(source.amount / 15)));
-    const berryTexture = getBerryTexture();
+    const tomatoTexture = props.tomato;
+    
+    // Детерминированное зеркалирование и хэш на основе ID куста
+    const hash = source.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const mirrorX = hash % 2 === 0 ? 1 : -1;
+
     for (let index = 0; index < berryCount; index += 1) {
+      const offset = tomatoOffsets[index % tomatoOffsets.length];
+      if (!offset) {
+        continue;
+      }
+
       const berry = acquireSprite(pool);
-      const offset = deterministicOffset(index + source.id.length * 2, 15);
-      berry.texture = berryTexture;
+      berry.texture = tomatoTexture;
       berry.anchor.set(0.5);
-      berry.scale.set(2.2 + (index % 3) * 0.12);
+      // Масштаб ~1.0 для идеального 11x11 пиксельного размера
+      berry.scale.set(0.95 + (index % 3) * 0.05);
       berry.tint = 0xffffff;
       berry.alpha = 0.96;
-      placeSprite(berry, x + offset.x * 0.82, y - 16 + offset.y * 0.48, (index % 5 - 2) * 0.08);
+
+      // Минимальное детерминированное дрожание в пределах [-1, 1]
+      const jitterX = ((index * 7 + hash) % 3) - 1;
+      const jitterY = ((index * 13 + hash) % 3) - 1;
+
+      placeSprite(
+        berry,
+        x + offset.x * mirrorX + jitterX,
+        y + offset.y + jitterY,
+        (index % 5 - 2) * 0.04
+      );
+      berry.zIndex = y + 13.01;
     }
   }
 
@@ -135,7 +174,9 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
         sprite.scale.set(index === 0 ? 0.54 : 0.44);
         sprite.tint = index % 2 === 0 ? 0xffffff : 0xe8c18a;
         sprite.alpha = 1;
-        placeSprite(sprite, x + offset.x, y + offset.y + 8, (index % 2 === 0 ? -0.32 : 0.24) + index * 0.04);
+        const feetY = y + offset.y + 8;
+        placeSprite(sprite, x + offset.x, feetY, (index % 2 === 0 ? -0.32 : 0.24) + index * 0.04);
+        sprite.zIndex = feetY;
         continue;
       }
 
@@ -151,7 +192,9 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
       } else {
         sprite.tint = index % 2 === 0 ? 0xd8d5c8 : 0xb7b3a9;
       }
-      placeSprite(sprite, x + offset.x, y + offset.y + 10, (index % 5 - 2) * 0.08);
+      const feetY = y + offset.y + 10;
+      placeSprite(sprite, x + offset.x, feetY, (index % 5 - 2) * 0.08);
+      sprite.zIndex = feetY;
     }
   }
 
@@ -171,7 +214,9 @@ export function updateSurfaceCarrion(pool: SpritePool, world: WorldSnapshot, cel
       const sprite = acquireSprite(pool);
       const offset = deterministicOffset(index + source.id.length * 3, 11);
       sprite.scale.set(2.6);
-      placeSprite(sprite, source.pos.x * cell + offset.x, source.pos.y * cell + offset.y, (index % 5) * 0.27);
+      const feetY = source.pos.y * cell + offset.y;
+      placeSprite(sprite, source.pos.x * cell + offset.x, feetY, (index % 5) * 0.27);
+      sprite.zIndex = feetY;
     }
   }
 
@@ -189,7 +234,9 @@ export function updateSurfaceLairs(pool: SpritePool, world: WorldSnapshot, cell:
     const sprite = acquireSprite(pool);
     sprite.scale.set(3.4 + Math.min(1.2, enemy.hoard / 120));
     sprite.alpha = 0.74 + Math.min(0.2, enemy.hoard / Math.max(1, 900));
-    placeSprite(sprite, enemy.lair.x * cell, enemy.lair.y * cell, 0);
+    const feetY = enemy.lair.y * cell;
+    placeSprite(sprite, enemy.lair.x * cell, feetY, 0);
+    sprite.zIndex = feetY;
   }
 
   endPool(pool);
@@ -256,12 +303,15 @@ export function updateSurfaceEnemies(
     const hpRatio = enemy.maxHp > 0 ? Math.max(0.2, Math.min(1, enemy.hp / enemy.maxHp)) : 1;
     sprite.scale.set(4.2);
     sprite.alpha = 0.45 + hpRatio * 0.55;
+    const feetY = enemy.pos.y * cell + 22; // Низ лапок паука при масштабе 4.2
     placeSprite(sprite, enemy.pos.x * cell, enemy.pos.y * cell, 0);
+    sprite.zIndex = feetY;
 
     if (enemy.carrying > 0) {
       const cargo = acquireSprite(carriedCarrionPool);
       cargo.scale.set(1.9);
       placeSprite(cargo, enemy.pos.x * cell + 11, enemy.pos.y * cell - 11, 0.25);
+      cargo.zIndex = feetY + 0.01;
     }
   }
 
@@ -274,12 +324,15 @@ export function updateSurfaceEnemies(
 
 export function updateSurfaceAnts(
   pool: SpritePool,
+  carriedItemsPool: SpritePool,
   debrisGraphics: Graphics,
   world: WorldSnapshot,
   cell: number,
   bounds: ViewBounds
 ): void {
   beginPool(pool);
+  beginPool(carriedItemsPool);
+  const props = getEnvironmentTextures().props;
 
   for (const ant of world.ants) {
     if (ant.layer !== "surface") {
@@ -293,13 +346,63 @@ export function updateSurfaceAnts(
     const color = ant.colonyId === "colony-2" ? "red" : "dark";
     const sprite = acquireSprite(pool);
     sprite.texture = getClayfolkTexture(carrying, color);
-    const spriteScale = ant.state === "carry" ? 3.05 : 2.85;
+    sprite.anchor.set(0.5); // Всегда сбрасываем якорь тела человечка в центр
+    const spriteScale = 2.85;
     const facing = ant.heading.x < -0.05 ? -1 : 1;
     sprite.scale.set(spriteScale * facing, spriteScale);
     sprite.tint = 0xffffff;
     const headingAngle = antRotation(ant);
     const rot = Math.max(-0.14, Math.min(0.14, ant.heading.x * 0.12));
-    placeSprite(sprite, ant.pos.x * cell, ant.pos.y * cell, rot);
+    const cx = ant.pos.x * cell;
+    const cy = ant.pos.y * cell;
+    const feetY = cy + 9.5 * spriteScale; // Точка контакта ног человечка с землей
+    placeSprite(sprite, cx, cy, rot);
+    sprite.zIndex = feetY;
+
+    // Если переносится стандартный ресурс (глина, дерево, камень, еда)
+    if (carrying && ant.carrying > 0) {
+      const itemSprite = acquireSprite(carriedItemsPool);
+      let itemTexture = props.tomato;
+      const kind = ant.carryKind ?? "food";
+      const settings = offsetSettings[kind] ?? offsetSettings.food;
+
+      if (kind === "clay") {
+        itemTexture = getClayTexture();
+      } else if (kind === "wood") {
+        itemTexture = getWoodTexture();
+      } else if (kind === "stone") {
+        itemTexture = getStoneTexture();
+      } else if (kind === "food") {
+        itemTexture = props.tomato;
+      }
+
+      itemSprite.texture = itemTexture;
+      itemSprite.anchor.set(0.5);
+      itemSprite.scale.set(settings.scale * facing, settings.scale);
+      itemSprite.tint = 0xffffff;
+      itemSprite.alpha = 0.95;
+
+      // Рассчитываем покачивание при движении
+      const swingSpeed = offsetSettings.swing.swingSpeed;
+      const swingAmpY = offsetSettings.swing.swingAmpY;
+      const swingAmpRot = offsetSettings.swing.swingAmpRot;
+
+      const swingY = Math.sin(world.tick * swingSpeed) * swingAmpY * spriteScale;
+      const swingRot = Math.cos(world.tick * swingSpeed) * swingAmpRot;
+
+      // Локальные координаты рук относительно центра человечка с учетом покачивания
+      const itemLocalX = settings.offsetX * facing * spriteScale;
+      const itemLocalY = (settings.offsetY * spriteScale) + swingY;
+
+      // Применяем вращение корпуса человечка к координатам предмета в руках
+      const cosR = Math.cos(rot + swingRot);
+      const sinR = Math.sin(rot + swingRot);
+      const rotatedX = itemLocalX * cosR - itemLocalY * sinR;
+      const rotatedY = itemLocalX * sinR + itemLocalY * cosR;
+
+      placeSprite(itemSprite, cx + rotatedX, cy + rotatedY, rot + swingRot);
+      itemSprite.zIndex = feetY + 0.01;
+    }
 
     if (ant.id === selectedAntId) {
       const sx = ant.pos.x * cell;
@@ -309,29 +412,38 @@ export function updateSurfaceAnts(
     }
 
     if (ant.job === "guard") {
-      // Временная метка стражи: копьё-черта (спрайты — задача Codex).
-      const gx = ant.pos.x * cell;
-      const gy = ant.pos.y * cell;
-      debrisGraphics.moveTo(gx + 5, gy + 7).lineTo(gx + 11, gy - 11).stroke({ width: 1.6, color: 0x6b4a24, alpha: 0.95 });
-      debrisGraphics.rect(gx + 10, gy - 13, 2.4, 4).fill({ color: 0xc9c4b4, alpha: 1 });
+      const spearSprite = acquireSprite(carriedItemsPool);
+      spearSprite.texture = getSpearTexture();
+      const settings = offsetSettings.spear;
+      spearSprite.anchor.set(settings.anchorX, settings.anchorY);
+      spearSprite.scale.set(settings.scale * facing, settings.scale);
+      spearSprite.tint = 0xffffff;
+      spearSprite.alpha = 0.96;
+      // Позиционируем копьё справа от человечка, наклоненным вверх/вправо
+      placeSprite(spearSprite, cx + settings.offsetX * facing, cy + settings.offsetY, rot + (facing > 0 ? settings.rotation : -settings.rotation));
+      spearSprite.zIndex = feetY + 0.01;
     }
 
     if (ant.carryingDebris) {
+      const debrisSprite = acquireSprite(carriedItemsPool);
+      const isPebble = ant.carryingDebris === "pebble";
+      const settings = isPebble ? offsetSettings.pebble : offsetSettings.leaf;
+      debrisSprite.texture = isPebble ? getStoneTexture() : getFoodTexture();
+      debrisSprite.anchor.set(0.5);
+      debrisSprite.scale.set(settings.scale, settings.scale);
+      debrisSprite.tint = 0xffffff;
+      debrisSprite.alpha = 0.95;
+
       const hX = Math.cos(headingAngle);
       const hY = Math.sin(headingAngle);
-      const offsetDist = cell * 0.7;
-      const debrisX = ant.pos.x * cell + hX * offsetDist;
-      const debrisY = ant.pos.y * cell + hY * offsetDist;
-
-      if (ant.carryingDebris === "pebble") {
-        drawPebble(debrisGraphics, debrisX, debrisY, cell * 0.45, 0xb4b0a6);
-      } else {
-        drawLeaf(debrisGraphics, debrisX, debrisY, cell * 0.22, rot + Math.PI / 2);
-      }
+      const offsetDist = cell * (settings.offsetDist / 8);
+      placeSprite(debrisSprite, cx + hX * offsetDist, cy + hY * offsetDist, rot + Math.PI / 2);
+      debrisSprite.zIndex = feetY + 0.01;
     }
   }
 
   endPool(pool);
+  endPool(carriedItemsPool);
 }
 
 export function updateSurfaceDebris(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {

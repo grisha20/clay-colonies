@@ -100,9 +100,9 @@ export const spriteMaps = {
     "..1..1......",
     "...1..1.1.1.",
     ".1111.11.1..",
-    "1111.222233.",
-    "111112222333",
-    "1111.222233.",
+    "1111.2222...",
+    "111112222...",
+    "1111.2222...",
     ".1111.11.1..",
     "...1..1.1.1.",
     "..1..1......"
@@ -129,9 +129,6 @@ export const spriteMaps = {
     "....11....11...."
   ],
   clayfolkCarry: [
-    "......5555......",
-    ".....566665.....",
-    "......5555......",
     ".....111111.....",
     "....12233221....",
     "...1224433221...",
@@ -158,39 +155,44 @@ export const spriteMaps = {
     ".1222222221....",
     "122222222221...",
     ".1222222221.11.",
-    "..11222211.1221",
-    "....1111...111.",
-    "..1......1....."
+    "..122222221.121",
+    "...12222221..11",
+    "....1222221....",
+    ".....11111....."
   ],
   egg: [
     "..11..",
     ".1221.",
+    "122221",
+    "122221",
     ".1221.",
     "..11.."
   ],
   larva: [
-    ".111..",
-    "12221.",
-    ".12221",
-    "..111."
+    "..11..",
+    ".1221.",
+    "122221",
+    ".1221.",
+    "..11.."
   ],
   spider: [
-    "1..1..1..1",
-    ".1.1111.1.",
-    "..122221..",
-    "1112222111",
-    "..122221..",
-    ".1.1111.1.",
-    "1..1..1..1"
+    "1....11....1",
+    ".1..1221..1.",
+    "..11222211..",
+    "..12222221..",
+    "..11222211..",
+    ".1..1221..1.",
+    "1....11....1"
   ],
   spiderLair: [
-    "..1.1..",
-    ".1...1.",
-    "1.222.1",
-    "..232..",
-    "1.222.1",
-    ".1...1.",
-    "..1.1.."
+    "....1111....",
+    "..11222211..",
+    ".1222332221.",
+    "122233332221",
+    "122233332221",
+    ".1222332221.",
+    "..11222211..",
+    "....1111...."
   ],
   food: [
     ".12.",
@@ -230,6 +232,26 @@ export const spriteMaps = {
     "12321",
     "12221",
     ".111."
+  ],
+  spear: [
+    "....33....",
+    "...3333...",
+    "...3333...",
+    "....22....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11....",
+    "....11...."
   ]
 } as const;
 
@@ -247,20 +269,20 @@ export const spritePalettes = {
   antCarry: {
     "1": darkAnt,
     "2": midAnt,
-    "3": foodYellow
+    "3": berryMid
   },
   antCarryRed: {
     "1": redAntDark,
     "2": redAntMid,
-    "3": foodYellow
+    "3": berryMid
   },
   clayfolk: {
     "1": 0x7c3a20,
     "2": 0xc65a30,
     "3": 0xe07a45,
     "4": 0xf5a06b,
-    "5": foodYellow,
-    "6": 0xffe08a,
+    "5": berryMid,
+    "6": berryLight,
     "7": clayTop,
     "E": 0x2f1810
   },
@@ -269,8 +291,8 @@ export const spritePalettes = {
     "2": 0xc93a24,
     "3": 0xe25b3c,
     "4": 0xf4835e,
-    "5": foodYellow,
-    "6": 0xffe08a,
+    "5": berryMid,
+    "6": berryLight,
     "7": redClayTop,
     "E": 0x24100a
   },
@@ -330,6 +352,11 @@ export const spritePalettes = {
     "1": 0x5d5a54,
     "2": 0x8d8b82,
     "3": 0xc9c4b4
+  },
+  spear: {
+    "1": 0x6b4a24,
+    "2": 0x4a3b32,
+    "3": 0xc9c4b4
   }
 } as const;
 
@@ -386,6 +413,22 @@ export function getCarrionTexture(): Texture {
 
 export function getGrainTexture(): Texture {
   return makeTexture("grain", [...spriteMaps.grain], spritePalettes.grain);
+}
+
+export function getClayTexture(): Texture {
+  return makeTexture("clayLump", [...spriteMaps.clayLump], spritePalettes.clayLump);
+}
+
+export function getWoodTexture(): Texture {
+  return makeTexture("woodStick", [...spriteMaps.woodStick], spritePalettes.woodStick);
+}
+
+export function getStoneTexture(): Texture {
+  return makeTexture("stoneChunk", [...spriteMaps.stoneChunk], spritePalettes.stoneChunk);
+}
+
+export function getSpearTexture(): Texture {
+  return makeTexture("spear", [...spriteMaps.spear], spritePalettes.spear);
 }
 
 // Пиксельные иконки для DOM-панелей (ресурс-бар): PNG data-URL с масштабом.

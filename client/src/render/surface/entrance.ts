@@ -2,6 +2,7 @@ import { Graphics } from "pixi.js";
 import type { Container } from "pixi.js";
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import { hash2 } from "./ground";
+import { offsetSettings } from "./editor";
 
 function drawShadow(g: Graphics, x: number, y: number, rx: number, ry: number, alpha = 0.24): void {
   g.ellipse(x + rx * 0.08, y + ry * 0.2, rx, ry).fill({ color: 0x1d120b, alpha });
@@ -38,7 +39,7 @@ function drawClayFigure(g: Graphics, x: number, y: number, scale: number, tint: 
 }
 
 export function drawSurfaceEntranceAt(
-  root: Container,
+  camp: Graphics,
   pos: Vec2,
   cell: number,
   color: "dark" | "red",
@@ -49,7 +50,6 @@ export function drawSurfaceEntranceAt(
 ): void {
   const x = Math.round(pos.x * cell);
   const y = Math.round(pos.y * cell);
-  const camp = new Graphics();
   const clay = color === "red" ? 0xd65b31 : 0xbe6b35;
   const clayDark = color === "red" ? 0xa9442c : 0x9b5528;
   const accent = color === "red" ? 0x6f3325 : 0x6f4a25;
@@ -68,16 +68,13 @@ export function drawSurfaceEntranceAt(
   camp.circle(x + 2, y + 1, 3.5).fill(0xffe07a);
   camp.circle(x + 1, y + 9, 5).fill({ color: 0xff8b34, alpha: 0.75 });
 
-  drawClayFigure(camp, x - 30, y - 8, 2.15, clay, accent, true);
-  drawClayFigure(camp, x + 33, y - 7, 2.05, clayDark, 0xd7b25e, true);
-
   const pile = Math.max(4, Math.min(18, Math.ceil(foodStorage / 12)));
   drawShadow(camp, x - 48, y + 26, 23, 8, 0.22);
   camp.ellipse(x - 48, y + 21, 20, 9).fill({ color: 0x6e351e, alpha: 0.8 });
   for (let index = 0; index < pile; index += 1) {
     const px = x - 62 + hash2(pos.x + index, pos.y, 51) * 30;
     const py = y + 10 + hash2(pos.x, pos.y + index, 52) * 17;
-    const size = 3 + hash2(index, pos.x, 53) * 3.6;
+    const size = (3 + hash2(index, pos.x, 53) * 3.6) * offsetSettings.campPiles.foodScale;
     camp.circle(px, py + 2, size).fill({ color: 0x7f3e22, alpha: 1 });
     camp.circle(px, py, size * 0.88).fill({ color: 0xa9552c, alpha: 1 });
     camp.circle(px - size * 0.25, py - size * 0.3, size * 0.35).fill({ color: 0xd98346, alpha: 0.82 });
@@ -90,7 +87,7 @@ export function drawSurfaceEntranceAt(
     for (let index = 0; index < clayPile; index += 1) {
       const px = x + 36 + hash2(pos.x + index, pos.y, 61) * 26;
       const py = y + 14 + hash2(pos.x, pos.y + index, 62) * 14;
-      const size = 2.6 + hash2(index, pos.x, 63) * 3.2;
+      const size = (2.6 + hash2(index, pos.x, 63) * 3.2) * offsetSettings.campPiles.clayScale;
       camp.circle(px, py + 1.5, size).fill({ color: 0x8b3f2a, alpha: 1 });
       camp.circle(px, py, size * 0.85).fill({ color: 0xbc6240, alpha: 1 });
       camp.circle(px - size * 0.3, py - size * 0.3, size * 0.3).fill({ color: 0xef9a64, alpha: 0.85 });
@@ -104,7 +101,7 @@ export function drawSurfaceEntranceAt(
     for (let index = 0; index < stonePile; index += 1) {
       const px = x - 58 + hash2(pos.x + index, pos.y, 81) * 24;
       const py = y - 26 + hash2(pos.x, pos.y + index, 82) * 12;
-      const size = 2.4 + hash2(index, pos.x, 83) * 3;
+      const size = (2.4 + hash2(index, pos.x, 83) * 3) * offsetSettings.campPiles.stoneScale;
       camp.ellipse(px, py + 1.2, size, size * 0.8).fill({ color: 0x5d5a54, alpha: 1 });
       camp.ellipse(px, py, size * 0.85, size * 0.7).fill({ color: 0x8d8b82, alpha: 1 });
       camp.ellipse(px - size * 0.25, py - size * 0.25, size * 0.3, size * 0.22).fill({ color: 0xc9c4b4, alpha: 0.8 });
@@ -118,28 +115,15 @@ export function drawSurfaceEntranceAt(
     for (let index = 0; index < woodPile; index += 1) {
       const px = x - 16 + hash2(pos.x + index, pos.y, 71) * 30;
       const py = y + 34 + hash2(pos.x, pos.y + index, 72) * 9;
-      const len = 8 + hash2(index, pos.y, 73) * 6;
-      camp.rect(px - len / 2, py, len, 2.6).fill({ color: 0x4f2f16, alpha: 1 });
-      camp.rect(px - len / 2, py - 1.2, len, 1.6).fill({ color: 0x8a5429, alpha: 1 });
+      const len = (8 + hash2(index, pos.y, 73) * 6) * offsetSettings.campPiles.woodScale;
+      const thickness = 2.6 * offsetSettings.campPiles.woodScale;
+      camp.rect(px - len / 2, py, len, thickness).fill({ color: 0x4f2f16, alpha: 1 });
+      camp.rect(px - len / 2, py - thickness * 0.46, len, thickness * 0.6).fill({ color: 0x8a5429, alpha: 1 });
     }
   }
 
-  root.addChild(camp);
-}
-
-export function drawSurfaceEntrance(root: Container, world: WorldSnapshot, cell: number): void {
-  const entrances = world.surface.entrances ?? [world.surface.entrance];
-  entrances.forEach((entrance, index) => {
-    const colony = world.colonies?.[index];
-    drawSurfaceEntranceAt(
-      root,
-      entrance,
-      cell,
-      index === 1 ? "red" : "dark",
-      colony?.colony.food ?? world.colony.food,
-      colony?.colony.clay ?? 0,
-      colony?.colony.wood ?? 0,
-      colony?.colony.stone ?? 0
-    );
-  });
+  // Отрисовываем вождей поверх всех куч ресурсов, костра и их теней
+  const ch = offsetSettings.chiefs;
+  drawClayFigure(camp, x + ch.leftX, y + ch.leftY, ch.leftScale, clay, accent, true);
+  drawClayFigure(camp, x + ch.rightX, y + ch.rightY, ch.rightScale, clayDark, 0xd7b25e, true);
 }

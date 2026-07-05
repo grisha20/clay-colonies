@@ -8,7 +8,8 @@ export const environmentAssetUrls = [
   "/assets/environment/grassy-topdown-cc0/topdown grassy tileset.png",
   "/assets/environment/summer-plains-water-animation-demo/water_animation_demo/water_animation_demo.png",
   "/assets/environment/forest-tent-tileset/tileset-and-sprites.png",
-  "/assets/environment/forest-tent-tileset/animated-campfire.png"
+  "/assets/environment/forest-tent-tileset/animated-campfire.png",
+  "/assets/environment/veggies/tomato-pixel.png"
 ] as const;
 
 const textureCache = new Map<string, Texture>();
@@ -33,6 +34,7 @@ type EnvironmentTextures = {
     bushRound: Texture;
     berryBush: Texture;
     foodBush: Texture;
+    tomato: Texture;
     rockLarge: Texture;
     rockRound: Texture;
     rockSmall: Texture;
@@ -98,6 +100,7 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       bushRound: crop(assetsUrl, 0, 482, 66, 62),
       berryBush: crop(assetsUrl, 145, 300, 44, 56),
       foodBush: crop(assetsUrl, 121, 498, 46, 46),
+      tomato: crop("/assets/environment/veggies/tomato-pixel.png", 0, 0, 11, 11),
       rockLarge: crop(assetsUrl, 250, 496, 36, 35),
       rockRound: crop(assetsUrl, 293, 496, 37, 35),
       rockSmall: crop(assetsUrl, 343, 499, 24, 21),

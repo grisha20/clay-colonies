@@ -31,13 +31,14 @@ export type SurfaceScene = {
   root: Container;
   staticLayer: Container;
   shadowLayer: Graphics;
-  entranceLayer: Container;
+  dynamicLayer: Container;
   fireGlow: Graphics;
   zonesOverlay: Graphics;
-  buildingsLayer: Graphics;
   pheromones: Graphics;
   webs: Graphics;
   debrisGraphics: Graphics;
+  buildingGraphics?: Graphics[];
+  entranceGraphics?: Graphics[];
   foodPool: SpritePool;
   resourcePool: SpritePool;
   carrionPool: SpritePool;
@@ -45,6 +46,7 @@ export type SurfaceScene = {
   carriedCarrionPool: SpritePool;
   enemyPool: SpritePool;
   antPool: SpritePool;
+  carriedItemsPool: SpritePool;
   staticKey: string;
   entranceKey: string;
   zoneKey: string;

@@ -1180,6 +1180,37 @@ function pointerToTile(event: PointerEvent): { x: number; y: number } | null {
   return surfaceTileFromGlobal(latestWorld, globalX, globalY);
 }
 
+let lastRawTile: { x: number; y: number } | null = null;
+
+function snapToAngles(a: { x: number; y: number }, b: { x: number; y: number }): { x: number; y: number } {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  if (absY < 0.414 * absX) {
+    return { x: b.x, y: a.y };
+  } else if (absX < 0.414 * absY) {
+    return { x: a.x, y: b.y };
+  } else {
+    const dist = Math.max(absX, absY);
+    const signX = dx >= 0 ? 1 : -1;
+    const signY = dy >= 0 ? 1 : -1;
+    return { x: a.x + dist * signX, y: a.y + dist * signY };
+  }
+}
+
+function updateDragEnd(shiftPressed: boolean): void {
+  if (!dragStart || !lastRawTile) {
+    return;
+  }
+  if (shiftPressed && dragTool === "wall") {
+    dragEnd = snapToAngles(dragStart, lastRawTile);
+  } else {
+    dragEnd = lastRawTile;
+  }
+}
+
 function sendCellsChunked(send: (cells: number[]) => void, cells: number[], chunkSize: number): void {
   for (let index = 0; index < cells.length; index += chunkSize) {
     send(cells.slice(index, index + chunkSize));
@@ -1322,6 +1353,7 @@ pixi.ticker.add(() => {
 
 const wsHost = window.location.hostname || "localhost";
 const socket = new WebSocket(`ws://${wsHost}:8787`);
+(window as any).socket = socket;
 
 function requestNetworkView(): void {
   if (socket.readyState !== WebSocket.OPEN) {
@@ -1409,7 +1441,8 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
       isPainting = true;
       dragTool = currentTool;
       dragStart = tile;
-      dragEnd = tile;
+      lastRawTile = tile;
+      updateDragEnd(event.shiftKey);
       updateDragPreview();
     }
   }
@@ -1423,7 +1456,8 @@ pixi.canvas.addEventListener("pointermove", (event) => {
   if (isPainting) {
     const tile = pointerToTile(event);
     if (tile) {
-      dragEnd = tile;
+      lastRawTile = tile;
+      updateDragEnd(event.shiftKey);
     }
     updateDragPreview();
     return;
@@ -1459,6 +1493,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     dragTool = null;
     dragStart = null;
     dragEnd = null;
+    lastRawTile = null;
     updateDragPreview();
     return;
   }
@@ -1652,5 +1687,19 @@ socket.addEventListener("message", (event) => {
   updatePerfHud(snap);
   if (camera.x === 50 && camera.y === 50) {
     centerOnNest(snap);
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Shift" && isPainting && dragTool === "wall") {
+    updateDragEnd(true);
+    updateDragPreview();
+  }
+});
+
+window.addEventListener("keyup", (event) => {
+  if (event.key === "Shift" && isPainting && dragTool === "wall") {
+    updateDragEnd(false);
+    updateDragPreview();
   }
 });

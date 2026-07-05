@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { CONFIG } from "./config";
 import { loadGenome } from "./ai/genome";
 import { loadSpiderGenome } from "./ai/spiderGenome";
@@ -37,6 +39,23 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
   if (command.type === "setSpeed") {
     // 0 = пауза; 1..50 = скорость симуляции.
     loop.setSpeed(Math.max(0, Math.min(50, Math.floor(command.value))));
+  }
+  if (command.type === "saveOffsetSettings") {
+    try {
+      let baseDir = process.cwd();
+      if (baseDir.endsWith("server") || baseDir.endsWith("server\\") || baseDir.endsWith("server/") || !fs.existsSync(path.join(baseDir, "client"))) {
+        baseDir = path.join(baseDir, "..");
+      }
+      const filePath = path.join(baseDir, "client/src/render/surface/editor.ts");
+      const currentContent = fs.readFileSync(filePath, "utf-8");
+      const newSettingsStr = `export const offsetSettings = ${JSON.stringify(command.settings, null, 2)};`;
+      const regex = /export const offsetSettings = \{[\s\S]*?\};/;
+      const updatedContent = currentContent.replace(regex, newSettingsStr);
+      fs.writeFileSync(filePath, updatedContent, "utf-8");
+      console.log("[EDITOR] Graphics offsets configuration updated successfully!");
+    } catch (e: any) {
+      console.error("[EDITOR] Failed to save offsets config:", e.message);
+    }
   }
 });
 loop = startLoop(world, (includePheromones) => {

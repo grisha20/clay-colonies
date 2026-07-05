@@ -103,22 +103,25 @@ type ForestTree = {
   tint: number;
 };
 
-function addAssetTree(root: Container, tree: ForestTree): void {
+function addAssetTree(shadowRoot: Container, spriteRoot: Container, tree: ForestTree): void {
   const shadow = new Graphics();
   shadow.ellipse(tree.x + tree.scale * 8, tree.y - tree.scale * 2, tree.scale * 54, tree.scale * 14).fill({ color: 0x1d160d, alpha: 0.24 });
   shadow.ellipse(tree.x - tree.scale * 3, tree.y - tree.scale * 5, tree.scale * 35, tree.scale * 8).fill({ color: 0x1d160d, alpha: 0.1 });
-  root.addChild(shadow);
+  shadowRoot.addChild(shadow);
 
   const sprite = new Sprite(tree.texture);
   sprite.anchor.set(0.5, 1);
   sprite.position.set(tree.x, tree.y);
   sprite.scale.set(tree.scale);
   sprite.tint = tree.tint;
-  root.addChild(sprite);
+  sprite.zIndex = tree.y; // Устанавливаем zIndex по Y основания дерева!
+  sprite.label = "static_prop"; // Помечаем как статический проп для очистки
+  spriteRoot.addChild(sprite);
 }
 
 function addAssetProp(
-  root: Container,
+  shadowRoot: Container,
+  spriteRoot: Container,
   texture: Texture,
   x: number,
   y: number,
@@ -128,7 +131,7 @@ function addAssetProp(
 ): void {
   const shadow = new Graphics();
   shadow.ellipse(x + scale * 4, y - scale * 2, scale * 18, scale * 5).fill({ color: 0x1d160d, alpha: 0.18 });
-  root.addChild(shadow);
+  shadowRoot.addChild(shadow);
 
   const sprite = new Sprite(texture);
   sprite.anchor.set(0.5, 1);
@@ -136,10 +139,12 @@ function addAssetProp(
   sprite.scale.set(scale);
   sprite.rotation = rotation;
   sprite.tint = tint;
-  root.addChild(sprite);
+  sprite.zIndex = y; // Устанавливаем zIndex по Y основания пропа!
+  sprite.label = "static_prop"; // Помечаем как статический проп для очистки
+  spriteRoot.addChild(sprite);
 }
 
-function drawForestBorder(root: Container, world: WorldSnapshot, cell: number): void {
+function drawForestBorder(shadowRoot: Container, spriteRoot: Container, world: WorldSnapshot, cell: number): void {
   const props = getEnvironmentTextures().props;
   const textures = [props.treeTall, props.treeRound, props.treeWide];
   const trees: ForestTree[] = [];
@@ -240,7 +245,7 @@ function drawForestBorder(root: Container, world: WorldSnapshot, cell: number): 
     if (tree.x < -96 || tree.x > widthPx + 96 || tree.y < -140 || tree.y > heightPx + 140) {
       continue;
     }
-    addAssetTree(root, tree);
+    addAssetTree(shadowRoot, spriteRoot, tree);
   }
 }
 
@@ -255,7 +260,13 @@ export function drawLeaf(root: Graphics, x: number, y: number, scale: number, ro
   root.stroke();
 }
 
-export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+export function drawSurfaceGround(
+  shadowRoot: Container,
+  spriteRoot: Container,
+  world: WorldSnapshot,
+  cell: number,
+  bounds: ViewBounds
+): void {
   const width = world.surface.width;
   const height = world.surface.height;
   const left = Math.max(0, Math.floor(bounds.left));
@@ -278,7 +289,7 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
       const tile = new Sprite(grassTexture);
       tile.position.set(x, y);
       tile.tint = 0xa0b85c;
-      root.addChild(tile);
+      shadowRoot.addChild(tile);
     }
   }
 
@@ -323,7 +334,7 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
       if (shapeValue > 0.84) {
         tile.alpha = 0.7 + fringe * 0.3;
       }
-      root.addChild(tile);
+      shadowRoot.addChild(tile);
       if (shapeValue > 0.64 && edgeBand > 0 && hash2(Math.floor(worldX * 4), Math.floor(worldY * 4), 508) > 0.28 + edgeBand * 0.18) {
         const px = x + hash2(worldX, worldY, 509) * dirtStep;
         const py = y + hash2(worldX, worldY, 510) * dirtStep;
@@ -351,7 +362,7 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
       }
     }
   }
-  root.addChild(dirtEdge);
+  shadowRoot.addChild(dirtEdge);
 
   const ground = new Graphics();
   for (let y = top; y < bottom; y += 1) {
@@ -394,9 +405,8 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
       drawPond(ground, cx * cell, cy * cell, cell * (8 + hash2(gx, gy, 133) * 6), cell * (5 + hash2(gx, gy, 134) * 4), gx * 811 + gy);
     }
   }
-  root.addChild(ground);
+  shadowRoot.addChild(ground);
 
-  const propLayer = new Container();
   const propChunk = 16;
   for (let gy = Math.floor(top / propChunk) * propChunk; gy <= bottom; gy += propChunk) {
     for (let gx = Math.floor(left / propChunk) * propChunk; gx <= right; gx += propChunk) {
@@ -419,15 +429,15 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
       if (roll > 0.972) {
         const treeTextures = [props.treeTall, props.treeRound, props.treeWide];
         const texture = treeTextures[Math.floor(hash2(gx, gy, 64) * treeTextures.length) % treeTextures.length];
-        addAssetProp(propLayer, texture, px, py, 0.28 + hash2(gx, gy, 65) * 0.08, 0, 0xd9f5a6);
+        addAssetProp(shadowRoot, spriteRoot, texture, px, py, 0.28 + hash2(gx, gy, 65) * 0.08, 0, 0xd9f5a6);
       } else if (roll > 0.918) {
-        addAssetProp(propLayer, props.bushRound, px, py, 0.58 + hash2(gx, gy, 67) * 0.16, 0, 0xf4ffd8);
+        addAssetProp(shadowRoot, spriteRoot, props.bushRound, px, py, 0.58 + hash2(gx, gy, 67) * 0.16, 0, 0xf4ffd8);
       } else if (roll > 0.868) {
         const rockTextures = [props.rockLarge, props.rockRound, props.rockSmall];
         const texture = rockTextures[Math.floor(hash2(gx, gy, 69) * rockTextures.length) % rockTextures.length];
-        addAssetProp(propLayer, texture, px, py, 0.9 + hash2(gx, gy, 70) * 0.24, 0, 0xd8d5c8);
+        addAssetProp(shadowRoot, spriteRoot, texture, px, py, 0.9 + hash2(gx, gy, 70) * 0.24, 0, 0xd8d5c8);
       } else if (roll > 0.824) {
-        addAssetProp(propLayer, props.log, px, py, 0.36 + hash2(gx, gy, 71) * 0.08, (hash2(gx, gy, 72) - 0.5) * 0.7);
+        addAssetProp(shadowRoot, spriteRoot, props.log, px, py, 0.36 + hash2(gx, gy, 71) * 0.08, (hash2(gx, gy, 72) - 0.5) * 0.7);
       }
     }
   }
@@ -435,17 +445,16 @@ export function drawSurfaceGround(root: Container, world: WorldSnapshot, cell: n
   for (const entrance of entrances) {
     const x = entrance.x * cell;
     const y = entrance.y * cell;
-    addAssetProp(propLayer, props.log, x - 82, y + 72, 0.4, -0.28);
-    addAssetProp(propLayer, props.log, x + 85, y + 66, 0.38, 0.22);
-    addAssetProp(propLayer, props.rockRound, x - 62, y + 52, 0.78, 0, 0xd8d5c8);
-    addAssetProp(propLayer, props.rockSmall, x + 58, y + 50, 0.88, 0, 0xd8d5c8);
-    addAssetProp(propLayer, props.bushRound, x - 154, y + 96, 0.52, 0, 0xf4ffd8);
-    addAssetProp(propLayer, props.bushRound, x + 154, y + 92, 0.5, 0, 0xf4ffd8);
-    addAssetProp(propLayer, props.rockLarge, x - 126, y - 88, 0.66, 0, 0xd8d5c8);
-    addAssetProp(propLayer, props.treeRound, x - 202, y + 132, 0.26, 0, 0xd9f5a6);
-    addAssetProp(propLayer, props.treeWide, x + 204, y + 128, 0.25, 0, 0xd9f5a6);
+    addAssetProp(shadowRoot, spriteRoot, props.log, x - 82, y + 72, 0.4, -0.28);
+    addAssetProp(shadowRoot, spriteRoot, props.log, x + 85, y + 66, 0.38, 0.22);
+    addAssetProp(shadowRoot, spriteRoot, props.rockRound, x - 62, y + 52, 0.78, 0, 0xd8d5c8);
+    addAssetProp(shadowRoot, spriteRoot, props.rockSmall, x + 58, y + 50, 0.88, 0, 0xd8d5c8);
+    addAssetProp(shadowRoot, spriteRoot, props.bushRound, x - 154, y + 96, 0.52, 0, 0xf4ffd8);
+    addAssetProp(shadowRoot, spriteRoot, props.bushRound, x + 154, y + 92, 0.5, 0, 0xf4ffd8);
+    addAssetProp(shadowRoot, spriteRoot, props.rockLarge, x - 126, y - 88, 0.66, 0, 0xd8d5c8);
+    addAssetProp(shadowRoot, spriteRoot, props.treeRound, x - 202, y + 132, 0.26, 0, 0xd9f5a6);
+    addAssetProp(shadowRoot, spriteRoot, props.treeWide, x + 204, y + 128, 0.25, 0, 0xd9f5a6);
   }
 
-  root.addChild(propLayer);
-  drawForestBorder(root, world, cell);
+  drawForestBorder(shadowRoot, spriteRoot, world, cell);
 }

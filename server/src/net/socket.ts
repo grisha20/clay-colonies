@@ -44,6 +44,10 @@ export type ClientCommand =
       type: "setView";
       mode: NetworkViewState["mode"];
       undergroundColonyIndex: number;
+    }
+  | {
+      type: "saveOffsetSettings";
+      settings: any;
     };
 
 export type SocketHub = {
@@ -156,6 +160,13 @@ function parseCommand(raw: string): ClientCommand | null {
         type: "dropFood",
         x: command.x,
         y: command.y
+      };
+    }
+
+    if (command.type === "saveOffsetSettings" && command.settings && typeof command.settings === "object") {
+      return {
+        type: "saveOffsetSettings",
+        settings: command.settings
       };
     }
 
