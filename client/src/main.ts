@@ -138,6 +138,7 @@ appRoot.innerHTML = `
     </section>
     <aside class="panel prioPanel" id="prio-panel">
       <h2>Приоритеты</h2>
+      <div class="prioSummary" id="prio-summary"></div>
       <div id="prio-rows"></div>
       <div class="prioFood">На еде сейчас: <strong id="prio-food-count">0</strong></div>
     </aside>
@@ -683,6 +684,17 @@ style.textContent = `
     color: #7a6647;
   }
 
+  .prioSummary {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: #7a6647;
+    line-height: 1.35;
+  }
+
+  .prioSummary strong {
+    color: #3a2a18;
+  }
+
   .minimapPanel {
     right: 14px;
     bottom: 14px;
@@ -854,6 +866,7 @@ const PRIO_LABELS: Record<PrioKey, string> = {
 };
 const prioRows = document.querySelector<HTMLElement>("#prio-rows");
 const prioFoodCount = document.querySelector<HTMLElement>("#prio-food-count");
+const prioSummary = document.querySelector<HTMLElement>("#prio-summary");
 let lastPrioKey = "";
 
 function sendPriorities(priorities: Record<PrioKey, number>): void {
@@ -912,7 +925,7 @@ function updatePriorityPanel(world: WorldSnapshot): void {
 
   const key =
     currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}:${nodesAlive[k] ? 1 : 0}`).join("|") +
-    `|${freeForPlus}|${counts.food}`;
+    `|${freeForPlus}|${counts.food}|${population}`;
   if (key === lastPrioKey) {
     return;
   }
@@ -932,12 +945,18 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   }).join("");
   // Факт: сколько реально таскают еду (назначенные без источника — тоже здесь).
   prioFoodCount.textContent = String(counts.food);
+  if (prioSummary) {
+    prioSummary.innerHTML =
+      `Жителей: <strong>${population}</strong> · разведка: ${scouts} · ` +
+      `назначено: ${Math.min(assignedTotal, Math.max(0, population - scouts))} · ` +
+      `можно назначить: <strong>${freeForPlus}</strong>`;
+  }
 
   for (const button of prioRows.querySelectorAll<HTMLButtonElement>("[data-prio]")) {
     button.addEventListener("click", () => {
       const k = button.dataset.prio as PrioKey;
       const delta = Number(button.dataset.delta) || 0;
-      if (delta > 0 && free <= 0) {
+      if (delta > 0 && freeForPlus <= 0) {
         return; // нет свободных — сначала освободи кого-то минусом
       }
       const next = { ...priorities, [k]: Math.max(0, (priorities[k] ?? 0) + delta) };
