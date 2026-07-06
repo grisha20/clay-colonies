@@ -6,12 +6,16 @@ import type { World } from "./world";
 
 export function createObjectives(): Objective[] {
   return [
+    // Пути победы: достаточно одного, у каждого своё «послевкусие».
+    { id: "win-spider", text: "Одолеть паука (военная)", target: 1, progress: 0, done: false, victory: true },
+    { id: "win-bigrain", text: "Пережить Большой дождь с костром", target: 1, progress: 0, done: false, victory: true },
+    { id: "win-idol", text: "Слепить Идола (хитрая)", target: 1, progress: 0, done: false, victory: true },
+    // Обучение: ведёт новичка по петле.
     { id: "clay-40", text: "Запасти 40 глины", target: 40, progress: 0, done: false },
     { id: "stone-25", text: "Запасти 25 камня", target: 25, progress: 0, done: false },
-    { id: "hut-2", text: "Построить 2 хижины", target: 2, progress: 0, done: false },
+    { id: "hut-2", text: "Построить 2 новые хижины", target: 2, progress: 0, done: false },
     { id: "wall-12", text: "Построить 12 сегментов стены", target: 12, progress: 0, done: false },
-    { id: "pop-20", text: "Вырастить племя до 20 жителей", target: 20, progress: 0, done: false },
-    { id: "spider-1", text: "Одолеть паука", target: 1, progress: 0, done: false }
+    { id: "pop-20", text: "Вырастить племя до 20 жителей", target: 20, progress: 0, done: false }
   ];
 }
 
@@ -42,17 +46,27 @@ function currentValue(world: World, id: string): number {
     case "stone-25":
       return colony.colony.stone;
     case "hut-2":
-      return world.surface.buildings.filter(
-        (building) => building.colonyId === colony.id && building.type === "hut" && building.stage === "built"
-      ).length;
+      // Стартовые 2 хижины не считаются: нужно построить НОВЫЕ.
+      return Math.max(
+        0,
+        world.surface.buildings.filter(
+          (building) => building.colonyId === colony.id && building.type === "hut" && building.stage === "built"
+        ).length - 2
+      );
     case "wall-12":
       return world.surface.buildings.filter(
         (building) => building.colonyId === colony.id && building.type === "wall" && building.stage === "built"
       ).length;
     case "pop-20":
       return colony.ants.length;
-    case "spider-1":
+    case "win-spider":
       return colony.fitness.spidersKilled;
+    case "win-idol":
+      return world.surface.buildings.filter(
+        (building) => building.colonyId === colony.id && building.type === "idol" && building.stage === "built"
+      ).length;
+    case "win-bigrain":
+      return world.weather.bigRainDone && world.weather.bigRainSurvived ? 1 : 0;
     default:
       return 0;
   }

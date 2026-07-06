@@ -129,6 +129,11 @@ appRoot.innerHTML = `
         <span class="bcost" id="cost-wall">2 глины / сегмент</span>
         <span class="bnote">тяни линию мышью</span>
       </button>
+      <button class="buildCard" data-tool="idol" type="button">
+        <span class="bname">Идол</span>
+        <span class="bcost" id="cost-idol">25 глины + 5 камня</span>
+        <span class="bnote">хитрая победа</span>
+      </button>
     </section>
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
@@ -483,6 +488,32 @@ style.textContent = `
     margin-left: auto;
     color: #3a2a18;
     font-variant-numeric: tabular-nums;
+  }
+
+  .taskSection {
+    margin-top: 6px;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #8a7a5c;
+  }
+
+  .taskRow.victory .dot {
+    background: #b5793f;
+  }
+
+  .taskRow.victory.done .dot {
+    background: #4e8a2f;
+  }
+
+  .victoryBanner {
+    margin: 4px 0 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: #4e8a2f;
+    color: #fff6e0;
+    font-weight: 600;
+    font-size: 13px;
   }
 
   .unitPanel {
@@ -844,6 +875,7 @@ function formatRate(node: HTMLElement | null, delta: number): void {
 const BUILD_COSTS: Record<string, { clay: number; wood: number; stone: number }> = {
   hut: { clay: 8, wood: 5, stone: 0 },
   storage: { clay: 0, wood: 6, stone: 4 },
+  idol: { clay: 25, wood: 0, stone: 5 },
   wall: { clay: 2, wood: 0, stone: 0 }
 };
 
@@ -906,7 +938,7 @@ const antsCount = document.querySelector<HTMLElement>("#ants-count");
 let trampleEnabled = true;
 
 // Инструменты игрока: клик-еда, кисть зон, постройки.
-type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "wall" | "erase";
+type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "idol" | "wall" | "erase";
 let currentTool: PlayerTool = "food";
 let isPainting = false;
 let dragTool: "harvest" | "forbid" | "wall" | "erase" | null = null;
@@ -919,6 +951,7 @@ const TOOL_HINTS: Record<PlayerTool, string> = {
   forbid: "Растяни прямоугольник зоны запрета (ЛКМ)",
   hut: "Клик - хижина (8 глины + 5 дерева, +4 к лимиту). Shift - ставить несколько",
   storage: "Клик - склад (6 дерева + 4 камня, точка сдачи). Shift - ставить несколько",
+  idol: "Клик - Идол (25 глины + 5 камня). Достроишь - хитрая победа партии",
   wall: "Растяни линию стены (ЛКМ), 2 глины за сегмент",
   erase: "Растяни прямоугольник - сотрёт зоны и свои стены"
 };
@@ -1065,6 +1098,13 @@ canvasHost.appendChild(pixi.canvas);
 
 let lastTasksKey = "";
 
+function taskRowHtml(o: WorldSnapshot["objectives"][number]): string {
+  return (
+    `<div class="taskRow${o.done ? " done" : ""}${o.victory ? " victory" : ""}"><span class="dot"></span>` +
+    `<span>${o.text}</span><span class="progress">${Math.floor(o.progress)}/${o.target}</span></div>`
+  );
+}
+
 function updateTasks(world: WorldSnapshot): void {
   if (!tasksList) {
     return;
@@ -1075,13 +1115,16 @@ function updateTasks(world: WorldSnapshot): void {
     return;
   }
   lastTasksKey = key;
-  tasksList.innerHTML = objectives
-    .map(
-      (o) =>
-        `<div class="taskRow${o.done ? " done" : ""}"><span class="dot"></span>` +
-        `<span>${o.text}</span><span class="progress">${Math.floor(o.progress)}/${o.target}</span></div>`
-    )
-    .join("");
+
+  const victories = objectives.filter((o) => o.victory);
+  const tutorial = objectives.filter((o) => !o.victory);
+  const won = victories.some((o) => o.done);
+  tasksList.innerHTML =
+    (won ? `<div class="victoryBanner">ПОБЕДА! Партия сыграна — можно начать заново (Сброс)</div>` : "") +
+    `<div class="taskSection">Пути победы (достаточно одного)</div>` +
+    victories.map(taskRowHtml).join("") +
+    `<div class="taskSection">Обучение</div>` +
+    tutorial.map(taskRowHtml).join("");
 }
 
 function updateHud(world: WorldSnapshot): void {
@@ -1521,7 +1564,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  if (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage") {
+  if (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "idol") {
     return;
   }
 
@@ -1557,7 +1600,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (
-    (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage") ||
+    (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "idol") ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||
@@ -1574,7 +1617,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
-  if (currentTool === "hut" || currentTool === "storage") {
+  if (currentTool === "hut" || currentTool === "storage" || currentTool === "idol") {
     socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y, colony: currentColonyIndex }));
     if (!event.shiftKey) {
       setTool("food"); // одиночная постройка: режим снимается, Shift — серия

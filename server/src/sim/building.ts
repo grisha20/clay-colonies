@@ -45,6 +45,9 @@ function buildingCost(type: BuildingType): { clay: number; wood: number; stone: 
   if (type === "storage") {
     return { ...CONFIG.storageCost };
   }
+  if (type === "idol") {
+    return { ...CONFIG.idolCost };
+  }
   return { ...CONFIG.wallCost };
 }
 
@@ -55,6 +58,9 @@ function buildingMaxHp(type: BuildingType): number {
   if (type === "storage") {
     return CONFIG.storageMaxHp;
   }
+  if (type === "idol") {
+    return CONFIG.idolMaxHp;
+  }
   return CONFIG.wallMaxHp;
 }
 
@@ -64,6 +70,9 @@ export function buildRatePerTick(type: BuildingType): number {
   }
   if (type === "storage") {
     return 1 / CONFIG.storageBuildTicks;
+  }
+  if (type === "idol") {
+    return 1 / CONFIG.idolBuildTicks;
   }
   return 1 / CONFIG.wallBuildTicks;
 }
@@ -119,7 +128,7 @@ function createBuilding(colonyId: string, type: BuildingType, pos: Vec2): Buildi
 export function placePointBuilding(
   world: World,
   colonyIndex: number,
-  type: "hut" | "storage",
+  type: "hut" | "storage" | "idol",
   x: number,
   y: number
 ): boolean {
@@ -137,7 +146,8 @@ export function placePointBuilding(
   const sameType = world.surface.buildings.filter(
     (item) => item.colonyId === colony.id && item.type === type
   );
-  const limit = type === "hut" ? CONFIG.maxHutsPerColony : CONFIG.maxStoragesPerColony;
+  const limit =
+    type === "hut" ? CONFIG.maxHutsPerColony : type === "idol" ? CONFIG.maxIdolsPerColony : CONFIG.maxStoragesPerColony;
   if (sameType.length >= limit) {
     return false;
   }

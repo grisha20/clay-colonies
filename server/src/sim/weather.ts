@@ -12,11 +12,21 @@ function clearDuration(): number {
 }
 
 export function createWeather(): Weather {
-  return { state: "clear", until: clearDuration() };
+  return { state: "clear", until: clearDuration(), bigRainAt: CONFIG.bigRainAtTicks };
 }
 
 export function updateWeather(world: World): void {
   const weather = world.weather;
+
+  // Большой дождь: объявленное испытание партии — втрое длиннее обычного.
+  const bigRainAt = weather.bigRainAt ?? CONFIG.bigRainAtTicks;
+  if (!weather.bigRainDone && !weather.bigRainActive && weather.state === "clear" && world.tick >= bigRainAt) {
+    weather.bigRainActive = true;
+    weather.state = "warning";
+    weather.until = world.tick + CONFIG.weatherWarningTicks;
+    return;
+  }
+
   if (world.tick < weather.until) {
     applyRain(world);
     return;
@@ -27,8 +37,14 @@ export function updateWeather(world: World): void {
     weather.until = world.tick + CONFIG.weatherWarningTicks;
   } else if (weather.state === "warning") {
     weather.state = "rain";
-    weather.until = world.tick + CONFIG.weatherRainTicks;
+    weather.until = world.tick + (weather.bigRainActive ? CONFIG.bigRainTicks : CONFIG.weatherRainTicks);
   } else {
+    if (weather.bigRainActive) {
+      // Большой дождь закончился: пережили ли с живым костром?
+      weather.bigRainActive = false;
+      weather.bigRainDone = true;
+      weather.bigRainSurvived = (world.colonies[0]?.colony.fire ?? 0) >= CONFIG.bigRainFireGoal;
+    }
     weather.state = "clear";
     weather.until = world.tick + clearDuration();
   }

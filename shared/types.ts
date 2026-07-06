@@ -80,7 +80,7 @@ export type ZoneType = "harvest" | "forbid";
 
 // Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
 export const WALL_CELL_SIZE = 2;
-export type BuildingType = "hut" | "wall" | "storage";
+export type BuildingType = "hut" | "wall" | "storage" | "idol";
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {
@@ -269,6 +269,8 @@ export type Objective = {
   target: number;
   progress: number;
   done: boolean;
+  // Победная цель (один из путей завершить партию) или обучающая.
+  victory?: boolean;
 };
 
 // Погода: ясно -> предупреждение -> дождь -> ясно. Дождь размывает стены,
@@ -278,6 +280,11 @@ export type WeatherState = "clear" | "warning" | "rain";
 export type Weather = {
   state: WeatherState;
   until: number;
+  // Большой дождь — заранее объявленное испытание партии.
+  bigRainAt?: number;
+  bigRainActive?: boolean;
+  bigRainDone?: boolean;
+  bigRainSurvived?: boolean;
 };
 
 export type WorldSnapshot = {
