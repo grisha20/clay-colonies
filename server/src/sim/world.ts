@@ -27,6 +27,7 @@ import { PheromoneGrid } from "./pheromone";
 import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
 import { completeBuilding, placePointBuilding, rebuildWallBlocked, syncBuildingIdCounter } from "./building";
 import { createObjectives, restoreObjectives } from "./objectives";
+import { createWeather } from "./weather";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 
 export type ColonyRuntime = {
@@ -720,6 +721,7 @@ export function createWorld(
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
     objectives: createObjectives(),
+    weather: createWeather(),
     ants: colonies.flatMap((colony) => colony.ants),
     enemies,
     pheromones: {
@@ -901,6 +903,7 @@ export function worldFromSnapshot(
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
     objectives: restoreObjectives(snapshot.objectives),
+    weather: snapshot.weather ?? createWeather(),
     ants: snapshotAnts,
     pheromones: {
       width: snapshot.pheromones.width,
@@ -1024,7 +1027,8 @@ export function toSnapshot(world: World, includePheromones = true): WorldSnapsho
     ants: world.ants,
     enemies: world.enemies,
     pheromones,
-    objectives: world.objectives
+    objectives: world.objectives,
+    weather: world.weather
   };
 }
 

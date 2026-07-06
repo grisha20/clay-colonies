@@ -10,6 +10,7 @@ import { randomHeading } from "../world";
 import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, numericAntId, posTile } from "./utils";
 import { zoneCellCenter, zoneIndexAt } from "../zones";
 import { isWallBlockedAt } from "../building";
+import { isSheltered } from "../weather";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -95,6 +96,11 @@ export function surfaceMoveSpeed(world: World, ant: Ant): number {
   // Слабый костёр: племя вялое (огонь — сердце поселения).
   if ((world.colony.fire ?? 1) < CONFIG.fireLowThreshold) {
     speed *= CONFIG.fireLowSpeedFactor;
+  }
+
+  // Дождь: мокрые жители вне укрытий (костёр/хижины) заметно медленнее.
+  if (world.weather.state === "rain" && !isSheltered(world, ant.pos)) {
+    speed *= CONFIG.rainWetSpeedFactor;
   }
 
   // Замедление муравьев на паутине вокруг гнезда паука

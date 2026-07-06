@@ -29,7 +29,19 @@ function findBuildTarget(world: World, ant: Ant): Building | undefined {
   );
 }
 
+// Сколько глины нужно на починку размытой дождём постройки.
+export function repairClayNeeded(building: Building): number {
+  if (building.stage !== "built" || building.hp >= building.maxHp - 0.01) {
+    return 0;
+  }
+  return (building.maxHp - building.hp) / CONFIG.wallRepairHpPerClay;
+}
+
 export function neededResource(building: Building): { kind: "clay" | "wood" | "stone"; amount: number } | null {
+  if (building.stage === "built") {
+    const repair = repairClayNeeded(building);
+    return repair > 0.05 ? { kind: "clay", amount: repair } : null;
+  }
   for (const kind of ["clay", "wood", "stone"] as const) {
     const left = building.cost[kind] - building.delivered[kind];
     if (left > 0.01) {
@@ -41,7 +53,7 @@ export function neededResource(building: Building): { kind: "clay" | "wood" | "s
 
 export function moveBuilding(world: World, ant: Ant): boolean {
   const building = findBuildTarget(world, ant);
-  if (!building || building.stage === "built") {
+  if (!building || (building.stage === "built" && repairClayNeeded(building) <= 0.05 && ant.carrying <= 0)) {
     releaseBuilder(ant);
     return false;
   }
@@ -63,10 +75,19 @@ export function moveBuilding(world: World, ant: Ant): boolean {
     }
   }
 
-  // Несём материал на площадку.
+  // Несём материал на площадку (или глину на починку размытой стены).
   if (ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
     if (isWithinRadius(ant.pos, building.pos, CONFIG.buildingDeliverRadius)) {
       const kind = ant.carryKind;
+      if (building.stage === "built") {
+        // Починка: глина размазывается по стене сразу.
+        if (kind === "clay") {
+          building.hp = Math.min(building.maxHp, building.hp + ant.carrying * CONFIG.wallRepairHpPerClay);
+        }
+        ant.carrying = 0;
+        ant.carryKind = undefined;
+        return true;
+      }
       building.delivered[kind] = Math.min(building.cost[kind], building.delivered[kind] + ant.carrying);
       ant.carrying = 0;
       ant.carryKind = undefined;
@@ -113,6 +134,12 @@ export function moveBuilding(world: World, ant: Ant): boolean {
   }
 
   builderWaitTicks.delete(ant.id);
+
+  if (building.stage === "built") {
+    // Починка закончена (или нечего нести) — свободен.
+    releaseBuilder(ant);
+    return false;
+  }
 
   // Всё доставлено: строим.
   if (isWithinRadius(ant.pos, building.pos, CONFIG.buildRadius)) {

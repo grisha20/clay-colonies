@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 6;
-export const CURRENT_PROTOCOL_VERSION = 6;
+export const CURRENT_SNAPSHOT_VERSION = 7;
+export const CURRENT_PROTOCOL_VERSION = 7;
 
 export type Vec2 = {
   x: number;
@@ -271,6 +271,15 @@ export type Objective = {
   done: boolean;
 };
 
+// Погода: ясно -> предупреждение -> дождь -> ясно. Дождь размывает стены,
+// мочит жителей вне укрытий и притушает костры.
+export type WeatherState = "clear" | "warning" | "rain";
+
+export type Weather = {
+  state: WeatherState;
+  until: number;
+};
+
 export type WorldSnapshot = {
   snapshotVersion: number;
   protocolVersion: number;
@@ -289,6 +298,7 @@ export type WorldSnapshot = {
   enemies: Enemy[];
   pheromones: PheromoneSnapshot;
   objectives: Objective[];
+  weather: Weather;
 };
 
 export type DurableWorldSnapshot = WorldSnapshot;

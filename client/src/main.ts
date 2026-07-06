@@ -136,6 +136,7 @@ appRoot.innerHTML = `
     <footer class="panel status">
       <span id="status">Подключение к ws://localhost:8787</span>
       <span id="tool-hint">Клик по карте - подкинуть еду</span>
+      <span id="weather-label"></span>
       <span class="perfStat">FPS <strong id="fps">0</strong></span>
       <span class="perfStat">Packet <strong id="packet-ms">0</strong> ms</span>
       <span class="perfStat">Payload <strong id="payload-kb">0</strong> KB</span>
@@ -724,6 +725,7 @@ for (const button of panelButtons) {
 applyPanelVisibility();
 const toolHint = document.querySelector<HTMLElement>("#tool-hint");
 const tasksList = document.querySelector<HTMLElement>("#tasks-list");
+const weatherLabel = document.querySelector<HTMLElement>("#weather-label");
 const minimapCanvas = document.querySelector<HTMLCanvasElement>("#minimap");
 const unitPanel = document.querySelector<HTMLElement>("#unit-panel");
 const unitTitle = document.querySelector<HTMLElement>("#unit-title");
@@ -1286,6 +1288,54 @@ function commitDrag(): void {
 // Превью растягивания: рисуется в экранных координатах поверх мира.
 const dragPreview = new Graphics();
 
+// Дождь: затемнение + косые штрихи в экранных координатах.
+const rainOverlay = new Graphics();
+
+function updateRainOverlay(): void {
+  rainOverlay.clear();
+  const state = latestWorld?.weather?.state ?? "clear";
+  if (state === "clear") {
+    return;
+  }
+  if (rainOverlay.parent !== pixi.stage) {
+    pixi.stage.addChild(rainOverlay);
+  }
+  const width = pixi.screen.width;
+  const height = pixi.screen.height;
+  if (state === "warning") {
+    rainOverlay.rect(0, 0, width, height).fill({ color: 0x2b3a4a, alpha: 0.08 });
+    return;
+  }
+  rainOverlay.rect(0, 0, width, height).fill({ color: 0x24384a, alpha: 0.16 });
+  const t = performance.now() * 0.4;
+  const drops = 70;
+  for (let index = 0; index < drops; index += 1) {
+    const seed = index * 97.13;
+    const x = ((seed * 13.7 + t * (1.5 + (index % 3) * 0.4)) % (width + 200)) - 100;
+    const y = ((seed * 7.3 + t * (6 + (index % 5))) % (height + 80)) - 40;
+    rainOverlay
+      .moveTo(x, y)
+      .lineTo(x - 5, y + 14)
+      .stroke({ width: 1.2, color: 0xbfd8e8, alpha: 0.35 });
+  }
+}
+
+function updateWeatherLabel(): void {
+  if (!weatherLabel) {
+    return;
+  }
+  const state = latestWorld?.weather?.state ?? "clear";
+  if (state === "warning") {
+    weatherLabel.textContent = "Собирается дождь...";
+    weatherLabel.style.color = "#b5793f";
+  } else if (state === "rain") {
+    weatherLabel.textContent = "ДОЖДЬ! Стены плывут, жители мокнут";
+    weatherLabel.style.color = "#b33f2e";
+  } else {
+    weatherLabel.textContent = "";
+  }
+}
+
 function worldToScreen(x: number, y: number): { x: number; y: number } {
   return {
     x: pixi.screen.width * 0.5 + (x - camera.x) * SURFACE_TILE_SIZE * camera.zoom,
@@ -1348,6 +1398,7 @@ pixi.ticker.add(() => {
 
   const interpT = lastPacketTime > 0 ? Math.min((now - lastPacketTime) / packetInterval, 1) : 1;
   draw(interpT);
+  updateRainOverlay();
   framesSinceFpsUpdate += 1;
   if (now - lastFpsUpdateAt >= 1000) {
     currentFps = Math.round((framesSinceFpsUpdate * 1000) / Math.max(1, now - lastFpsUpdateAt));
@@ -1688,6 +1739,7 @@ socket.addEventListener("message", (event) => {
   updateResourceBar(snap);
   updateBuildCards(snap);
   updateUnitPanel(snap);
+  updateWeatherLabel();
   if (minimapCanvas) {
     drawMinimap(minimapCanvas, snap, camera, pixi.screen.width, pixi.screen.height);
   }

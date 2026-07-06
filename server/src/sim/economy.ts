@@ -31,11 +31,18 @@ export function colonyWantsResource(world: World, kind: ResourceKind): boolean {
   return colonyStock(world, kind) < reserveTarget(kind) + demandFromBuildings(world, kind);
 }
 
-// Недостроенные здания повышают спрос племени на свои ресурсы.
+// Недостроенные здания повышают спрос племени на свои ресурсы;
+// размытые дождём постройки требуют глину на починку.
 function demandFromBuildings(world: World, kind: ResourceKind): number {
   let demand = 0;
   for (const building of world.surface.buildings) {
-    if (building.colonyId !== world.colony.id || building.stage === "built") {
+    if (building.colonyId !== world.colony.id) {
+      continue;
+    }
+    if (building.stage === "built") {
+      if (kind === "clay" && building.hp < building.maxHp - 0.01) {
+        demand += (building.maxHp - building.hp) / CONFIG.wallRepairHpPerClay;
+      }
       continue;
     }
     demand += Math.max(0, building.cost[kind] - building.delivered[kind]);
@@ -202,6 +209,9 @@ function resourceObtainable(world: World, kind: ResourceKind): boolean {
 
 // Первый недостающий ресурс площадки (дублирует ant/build.neededResource, чтобы не плодить импорт-циклы).
 function siteNeededKind(building: Building): ResourceKind | null {
+  if (building.stage === "built") {
+    return building.hp < building.maxHp - 0.01 ? "clay" : null;
+  }
   for (const kind of ["clay", "wood", "stone"] as const) {
     if (building.cost[kind] - building.delivered[kind] > 0.01) {
       return kind;
@@ -216,7 +226,11 @@ export function assignBuildJobs(world: World): void {
   const entrance = world.surface.entrance;
   // Приоритет: точечные постройки (хижина/склад) раньше стен; ближние раньше дальних.
   const sites = world.surface.buildings
-    .filter((building) => building.colonyId === world.colony.id && building.stage !== "built")
+    .filter(
+      (building) =>
+        building.colonyId === world.colony.id &&
+        (building.stage !== "built" || building.hp < building.maxHp * 0.75)
+    )
     .filter((building) => {
       // Не гоняем строителей к площадке, чей ресурс сейчас недостижим.
       const kind = siteNeededKind(building);

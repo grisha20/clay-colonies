@@ -6,6 +6,7 @@ import { profiler } from "../utils/profiler";
 import { updateEnemies } from "./enemy";
 import { assignBuildJobs, assignGuardJobs, assignHarvestJobs } from "./economy";
 import { updateObjectives } from "./objectives";
+import { updateWeather } from "./weather";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
 import {
   addAntCorpse,
@@ -80,11 +81,13 @@ function updateCampfire(world: World, colony: ColonyRuntime): void {
   if (world.tick % CONFIG.fireWoodEveryTicks !== 0) {
     return;
   }
+  const rainMult = world.weather.state === "rain" ? CONFIG.rainFireDecayMult : 1;
   if (colony.colony.wood >= CONFIG.fireWoodCost) {
     colony.colony.wood -= CONFIG.fireWoodCost;
-    colony.colony.fire = Math.min(1, colony.colony.fire + CONFIG.fireRecover);
+    // В дождь дрова греют хуже.
+    colony.colony.fire = Math.min(1, colony.colony.fire + CONFIG.fireRecover / rainMult);
   } else {
-    colony.colony.fire = Math.max(0, colony.colony.fire - CONFIG.fireDecay);
+    colony.colony.fire = Math.max(0, colony.colony.fire - CONFIG.fireDecay * rainMult);
   }
 }
 
@@ -134,6 +137,7 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
 export function step(world: World): void {
   world.tick += 1;
 
+  profiler.measure("phase.weather", () => updateWeather(world));
   profiler.measure("phase.resources", () => {
     respawnCarrion(world);
     growFoodSources(world);
