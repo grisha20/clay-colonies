@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 7;
-export const CURRENT_PROTOCOL_VERSION = 7;
+export const CURRENT_SNAPSHOT_VERSION = 8;
+export const CURRENT_PROTOCOL_VERSION = 8;
 
 export type Vec2 = {
   x: number;
@@ -190,6 +190,15 @@ export type Colony = {
   stone: number;
   // Уровень костра 0..1: костёр ест дрова, при слабом огне жители медленнее.
   fire: number;
+  // Приоритеты работ (0..5): распределяют ограниченных жителей по занятиям.
+  // Еда — все, кто не занят другим (residual).
+  priorities: {
+    clay: number;
+    wood: number;
+    stone: number;
+    build: number;
+    guard: number;
+  };
   zones?: {
     version: number;
     harvest: number[];

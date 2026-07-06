@@ -52,6 +52,7 @@ appRoot.innerHTML = `
           <button data-panel="tribes" type="button">Племена</button>
           <button data-panel="build" type="button">Стройка</button>
           <button data-panel="minimap" type="button">Карта</button>
+          <button data-panel="prio" type="button">Приоритеты</button>
         </div>
       </div>
       <div class="settingsRow"><span>Тропинки</span>
@@ -135,6 +136,11 @@ appRoot.innerHTML = `
         <span class="bnote">хитрая победа</span>
       </button>
     </section>
+    <aside class="panel prioPanel" id="prio-panel">
+      <h2>Приоритеты</h2>
+      <div id="prio-rows"></div>
+      <div class="prioFood">Еда — остальные: <strong id="prio-food-count">0</strong></div>
+    </aside>
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
     </aside>
@@ -611,6 +617,63 @@ style.textContent = `
     filter: grayscale(0.6);
   }
 
+  .prioPanel {
+    right: 14px;
+    bottom: 200px;
+    width: 220px;
+    padding: 10px 12px;
+  }
+
+  .prioPanel h2 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #5a3d22;
+  }
+
+  .prioRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    font-size: 13px;
+    color: #4a3520;
+  }
+
+  .prioRow .plabel {
+    width: 64px;
+    flex: none;
+  }
+
+  .prioRow button {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid #8a6a44;
+    border-radius: 5px;
+    background: rgb(255 244 214 / 0.7);
+    color: #4a3520;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .prioRow .pval {
+    width: 14px;
+    text-align: center;
+    font-weight: 600;
+    color: #3a2a18;
+  }
+
+  .prioRow .pcount {
+    margin-left: auto;
+    color: #8a7a5c;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prioFood {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: #7a6647;
+  }
+
   .minimapPanel {
     right: 14px;
     bottom: 14px;
@@ -709,13 +772,15 @@ const PANEL_TARGETS: Record<string, string> = {
   tasks: ".tasksPanel",
   tribes: ".hud",
   build: ".buildBar",
-  minimap: ".minimapPanel"
+  minimap: ".minimapPanel",
+  prio: ".prioPanel"
 };
 const panelVisibility: Record<string, boolean> = {
   tasks: true,
   tribes: false, // подробности племён по умолчанию скрыты: главное дублирует ресурс-бар
   build: true,
-  minimap: true
+  minimap: true,
+  prio: true
 };
 try {
   const saved = JSON.parse(window.localStorage.getItem("clayfolk.panels") ?? "{}") as Record<string, boolean>;
@@ -766,6 +831,84 @@ const unitCargo = document.querySelector<HTMLElement>("#unit-cargo");
 let selectedAnt: string | null = null;
 
 const CARGO_NAMES: Record<string, string> = { food: "еда", clay: "глина", wood: "дерево", stone: "камень" };
+
+// Панель приоритетов: веса 0..5 распределяют ограниченных жителей по занятиям.
+// Еда — все остальные. Авторитет — сервер (colony.priorities из снапшота).
+const PRIO_KEYS = ["clay", "wood", "stone", "build", "guard"] as const;
+type PrioKey = (typeof PRIO_KEYS)[number];
+const PRIO_LABELS: Record<PrioKey, string> = {
+  clay: "Глина",
+  wood: "Дерево",
+  stone: "Камень",
+  build: "Стройка",
+  guard: "Стража"
+};
+const prioRows = document.querySelector<HTMLElement>("#prio-rows");
+const prioFoodCount = document.querySelector<HTMLElement>("#prio-food-count");
+let lastPrioKey = "";
+
+function sendPriorities(priorities: Record<PrioKey, number>): void {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "setPriorities", colony: currentColonyIndex, priorities }));
+  }
+}
+
+function countJobs(world: WorldSnapshot): Record<PrioKey, number> & { food: number } {
+  const counts = { clay: 0, wood: 0, stone: 0, build: 0, guard: 0, food: 0 };
+  const colonyId = currentColonyIndex === 1 ? "colony-2" : "colony-1";
+  for (const ant of world.ants) {
+    if (ant.colonyId !== colonyId) {
+      continue;
+    }
+    if (ant.job === "build") {
+      counts.build += 1;
+    } else if (ant.job === "guard") {
+      counts.guard += 1;
+    } else if (ant.job === "harvest") {
+      const kind =
+        (ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined) ??
+        world.surface.resourceNodes?.find((node) => node.id === ant.harvestNodeId)?.kind;
+      if (kind === "clay" || kind === "wood" || kind === "stone") {
+        counts[kind] += 1;
+      }
+    } else {
+      counts.food += 1;
+    }
+  }
+  return counts;
+}
+
+function updatePriorityPanel(world: WorldSnapshot): void {
+  if (!prioRows || !prioFoodCount) {
+    return;
+  }
+  const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
+  const priorities = colony.priorities ?? { clay: 1, wood: 1, stone: 1, build: 2, guard: 1 };
+  const counts = countJobs(world);
+  const key = currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}`).join("|") + "|" + counts.food;
+  if (key === lastPrioKey) {
+    return;
+  }
+  lastPrioKey = key;
+  prioRows.innerHTML = PRIO_KEYS.map(
+    (k) =>
+      `<div class="prioRow"><span class="plabel">${PRIO_LABELS[k]}</span>` +
+      `<button data-prio="${k}" data-delta="-1" type="button">−</button>` +
+      `<span class="pval">${priorities[k]}</span>` +
+      `<button data-prio="${k}" data-delta="1" type="button">+</button>` +
+      `<span class="pcount">${counts[k]} чел.</span></div>`
+  ).join("");
+  prioFoodCount.textContent = String(counts.food);
+
+  for (const button of prioRows.querySelectorAll<HTMLButtonElement>("[data-prio]")) {
+    button.addEventListener("click", () => {
+      const k = button.dataset.prio as PrioKey;
+      const delta = Number(button.dataset.delta) || 0;
+      const next = { ...priorities, [k]: Math.max(0, Math.min(5, (priorities[k] ?? 1) + delta)) };
+      sendPriorities(next);
+    });
+  }
+}
 
 // Именные жители: имя и черта детерминированы id — партию запоминают по «Храброму Малому».
 const FIRST_NAMES = ["Комок", "Малой", "Глинко", "Круглый", "Шмяк", "Лепень", "Тюха", "Крепыш", "Юркий", "Пузырь"];
@@ -1793,6 +1936,7 @@ socket.addEventListener("message", (event) => {
   updateResourceBar(snap);
   updateBuildCards(snap);
   updateUnitPanel(snap);
+  updatePriorityPanel(snap);
   updateWeatherLabel();
   if (minimapCanvas) {
     drawMinimap(minimapCanvas, snap, camera, pixi.screen.width, pixi.screen.height);

@@ -27,7 +27,24 @@ export function colonyStock(world: World, kind: ResourceKind): number {
   return world.colony.stone;
 }
 
+// Потолок сборщиков по весу приоритета (0..5). Вес 4-5 — «запасать всегда».
+const HARVESTER_CAP_BY_WEIGHT = [0, 1, 2, 3, 5, 7] as const;
+const BUILDER_CAP_BY_WEIGHT = [0, 2, 4, 6, 8, 10] as const;
+const GUARD_CAP_BY_WEIGHT = [0, 2, 3, 4, 5, 6] as const;
+
+function priorityWeight(world: World, key: "clay" | "wood" | "stone" | "build" | "guard"): number {
+  const value = world.colony.priorities?.[key] ?? 1;
+  return Math.max(0, Math.min(5, Math.floor(value)));
+}
+
 export function colonyWantsResource(world: World, kind: ResourceKind): boolean {
+  const weight = priorityWeight(world, kind);
+  if (weight <= 0) {
+    return false; // игрок запретил эту добычу
+  }
+  if (weight >= 4) {
+    return true; // игрок велел запасать без потолка
+  }
   return colonyStock(world, kind) < reserveTarget(kind) + demandFromBuildings(world, kind);
 }
 
@@ -104,10 +121,12 @@ export function assignHarvestJobs(world: World): void {
         nodes = inZone;
       }
     }
-    // Большая стройка ускоряет добычу: до +2 сборщиков при высоком спросе строек.
+    // Потолок сборщиков задаёт приоритет игрока; большая стройка добавляет до +2.
     const buildingDemand = demandFromBuildings(world, kind);
     const harvesterCap =
-      CONFIG.maxHarvestersPerResource + (buildingDemand > 10 ? 1 : 0) + (buildingDemand > 30 ? 1 : 0);
+      HARVESTER_CAP_BY_WEIGHT[priorityWeight(world, kind)] +
+      (buildingDemand > 10 ? 1 : 0) +
+      (buildingDemand > 30 ? 1 : 0);
     let need = harvesterCap - counts[kind];
     for (const ant of live) {
       if (need <= 0) {
@@ -150,8 +169,8 @@ export function assignHarvestJobs(world: World): void {
 // Стража: пока жив паук и племя достаточно большое, двое дежурят у лагеря.
 export function assignGuardJobs(world: World): void {
   const live = world.ants.filter((ant) => ant.state !== "dead");
-  const spiderAlive = world.enemies.some((enemy) => enemy.type === "spider" && enemy.hp > 0);
-  const wantGuards = spiderAlive && live.length >= CONFIG.guardMinWorkers ? CONFIG.guardCount : 0;
+  // Стража — воля игрока (0..5 -> 0..6); при крошечном племени не отвлекаем.
+  const wantGuards = live.length >= CONFIG.guardMinWorkers ? GUARD_CAP_BY_WEIGHT[priorityWeight(world, "guard")] : 0;
 
   let guards = 0;
   for (const ant of live) {
@@ -273,10 +292,10 @@ export function assignBuildJobs(world: World): void {
     return;
   }
 
-  // Ёмкость: при большом фронте работ строителей больше (до 6).
+  // Ёмкость строителей задаёт приоритет игрока (0..5 -> 0..10), но не больше фронта работ.
   const capacity = Math.min(
     sites.length * CONFIG.maxBuildersPerSite,
-    sites.length >= 4 ? 6 : CONFIG.maxActiveBuilders
+    BUILDER_CAP_BY_WEIGHT[priorityWeight(world, "build")]
   );
 
   // Раздача по кругу: каждый проход даёт по одному строителю на площадку,

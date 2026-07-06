@@ -37,6 +37,11 @@ export type ClientCommand =
       colonyIndex: number;
     }
   | {
+      type: "setPriorities";
+      colonyIndex: number;
+      priorities: { clay: number; wood: number; stone: number; build: number; guard: number };
+    }
+  | {
       type: "setSpeed";
       value: number;
     }
@@ -89,6 +94,23 @@ function parseCommand(raw: string): ClientCommand | null {
         type: "setView",
         mode,
         undergroundColonyIndex
+      };
+    }
+
+    if (command.type === "setPriorities") {
+      const raw = (command.priorities ?? {}) as Record<string, unknown>;
+      const clampWeight = (value: unknown): number =>
+        typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(5, Math.floor(value))) : 1;
+      return {
+        type: "setPriorities",
+        colonyIndex,
+        priorities: {
+          clay: clampWeight(raw.clay),
+          wood: clampWeight(raw.wood),
+          stone: clampWeight(raw.stone),
+          build: clampWeight(raw.build),
+          guard: clampWeight(raw.guard)
+        }
       };
     }
 
