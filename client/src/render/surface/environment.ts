@@ -1,6 +1,10 @@
 import { Assets, Rectangle, Sprite, Texture } from "pixi.js";
 
 const summerBase = "/assets/environment/summer-plains/summer_plains_v1.0_standard";
+const customBase = "/assets/environment/custom";
+const campfireFrameUrls = Array.from({ length: 6 }, (_, index) =>
+  `${customBase}/campfire/campfire_${String(index).padStart(2, "0")}.png`
+);
 
 export const environmentAssetUrls = [
   `${summerBase}/tiles.png`,
@@ -9,7 +13,10 @@ export const environmentAssetUrls = [
   "/assets/environment/summer-plains-water-animation-demo/water_animation_demo/water_animation_demo.png",
   "/assets/environment/forest-tent-tileset/tileset-and-sprites.png",
   "/assets/environment/forest-tent-tileset/animated-campfire.png",
-  "/assets/environment/veggies/tomato-pixel.png"
+  "/assets/environment/veggies/tomato-pixel.png",
+  `${customBase}/hut.png`,
+  `${customBase}/storage.png`,
+  ...campfireFrameUrls
 ] as const;
 
 const textureCache = new Map<string, Texture>();
@@ -41,6 +48,9 @@ type EnvironmentTextures = {
     grassTuft: Texture;
     flowers: Texture;
     campfire: Texture;
+    campfireFrames: Texture[];
+    hut: Texture;
+    storage: Texture;
     tent: Texture;
     bridge: Texture;
     fence: Texture;
@@ -66,6 +76,19 @@ function crop(url: string, x: number, y: number, width: number, height: number):
     source: base.source,
     frame: new Rectangle(x, y, width, height)
   });
+  texture.source.scaleMode = "nearest";
+  textureCache.set(key, texture);
+  return texture;
+}
+
+function image(url: string): Texture {
+  const key = `${url}:image`;
+  const cached = textureCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const texture = Texture.from(url);
   texture.source.scaleMode = "nearest";
   textureCache.set(key, texture);
   return texture;
@@ -107,6 +130,9 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       grassTuft: crop(assetsUrl, 412, 336, 34, 30),
       flowers: crop(assetsUrl, 392, 438, 48, 42),
       campfire: crop(assetsUrl, 333, 710, 72, 58),
+      campfireFrames: campfireFrameUrls.map((url) => image(url)),
+      hut: image(`${customBase}/hut.png`),
+      storage: image(`${customBase}/storage.png`),
       tent: crop(assetsUrl, 344, 780, 140, 75),
       bridge: crop(assetsUrl, 0, 742, 86, 92),
       fence: crop(assetsUrl, 108, 754, 170, 62)

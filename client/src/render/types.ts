@@ -38,7 +38,9 @@ export type SurfaceScene = {
   webs: Graphics;
   debrisGraphics: Graphics;
   buildingGraphics?: Graphics[];
+  buildingSprites?: Sprite[];
   entranceGraphics?: Graphics[];
+  entranceSprites?: Sprite[];
   foodPool: SpritePool;
   resourcePool: SpritePool;
   carrionPool: SpritePool;

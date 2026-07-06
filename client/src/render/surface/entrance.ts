@@ -60,13 +60,6 @@ export function drawSurfaceEntranceAt(
   camp.ellipse(x, y + 9, 44, 25).fill({ color: ground, alpha: 0.18 });
 
   drawShadow(camp, x, y + 18, 18, 7, 0.26);
-  camp.ellipse(x, y + 15, 14, 7).fill(0x3e2818);
-  camp.rect(x - 13, y + 10, 26, 5).fill(0x5b341b);
-  camp.rect(x - 12, y + 8, 24, 4).fill(0x7a4a24);
-  camp.circle(x, y + 6, 9).fill(0xf1b23c);
-  camp.circle(x - 2, y + 3, 5).fill(0xff6f2e);
-  camp.circle(x + 2, y + 1, 3.5).fill(0xffe07a);
-  camp.circle(x + 1, y + 9, 5).fill({ color: 0xff8b34, alpha: 0.75 });
 
   const pile = Math.max(4, Math.min(18, Math.ceil(foodStorage / 12)));
   drawShadow(camp, x - 48, y + 26, 23, 8, 0.22);

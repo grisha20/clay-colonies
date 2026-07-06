@@ -13,6 +13,7 @@ import {
 import { drawSurfaceGround } from "./ground";
 import { drawSurfacePheromones } from "./pheromones";
 import { drawSurfaceEntranceAt } from "./entrance";
+import { getEnvironmentTextures } from "./environment";
 import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceDebris, updateSurfaceShadows } from "./entities";
 import { offsetSettings } from "./editor";
 
@@ -79,7 +80,9 @@ export function createSurfaceScene(): SurfaceScene {
     webs,
     debrisGraphics,
     buildingGraphics: [],
+    buildingSprites: [],
     entranceGraphics: [],
+    entranceSprites: [],
     foodPool: createSpritePool(dynamicLayer, () => createFoodSprite(2.2)),
     resourcePool: createSpritePool(dynamicLayer, () => {
       const sprite = new Sprite();
@@ -180,7 +183,13 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
     g.destroy();
   }
   scene.entranceGraphics = [];
+  for (const sprite of scene.entranceSprites ?? []) {
+    sprite.destroy();
+  }
+  scene.entranceSprites = [];
 
+  const campfireFrames = getEnvironmentTextures().props.campfireFrames;
+  const campfireFrame = campfireFrames[Math.floor(world.tick / 8) % campfireFrames.length];
   const entrances = world.surface.entrances ?? [world.surface.entrance];
   entrances.forEach((entrance, index) => {
     const colony = world.colonies?.[index];
@@ -205,6 +214,15 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
 
     scene.dynamicLayer.addChild(g);
     scene.entranceGraphics?.push(g);
+
+    const campfire = new Sprite(campfireFrame);
+    campfire.anchor.set(0.5, 1);
+    campfire.position.set(x, y + 29);
+    campfire.scale.set(0.46);
+    campfire.zIndex = y + 18;
+    campfire.label = `campfire_${index}`;
+    scene.dynamicLayer.addChild(campfire);
+    scene.entranceSprites?.push(campfire);
   });
 }
 
@@ -215,6 +233,10 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
     g.destroy();
   }
   scene.buildingGraphics = [];
+  for (const sprite of scene.buildingSprites ?? []) {
+    sprite.destroy();
+  }
+  scene.buildingSprites = [];
 
   const buildings = world.surface.buildings ?? [];
 
@@ -304,21 +326,43 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x4f2f16, alpha: 0.8 });
       } else {
         // Сарай с двускатной крышей, по росту жителей.
-        const roofRise = offsetSettings.buildingGeometry.roofRise * cell;
-        g.ellipse(x + 2, y + half * 0.9, half * 1.25, half * 0.42).fill({ color: 0x24190f, alpha: 0.22 });
-        g.rect(x - half, y - half * 0.2, half * 2, half * 1.2).fill({ color: 0x4f2f16, alpha: 1 });
-        g.rect(x - half, y - half * 0.3, half * 2, half * 1.2).fill({ color: 0x8a5429, alpha: 1 });
-        g.poly([
-          x - half - 2, y - half * 0.3,
-          x, y - half * 0.3 - roofRise,
-          x + half + 2, y - half * 0.3
-        ]).fill({ color: 0xb98a52, alpha: 1 });
-        g.poly([
-          x - half - 2, y - half * 0.3,
-          x, y - half * 0.3 - roofRise,
-          x, y - half * 0.3
-        ]).fill({ color: 0x9a733f, alpha: 0.6 });
-        g.rect(x - half * 0.28, y + half * 0.2, half * 0.56, half * 0.7).fill({ color: 0x2f1812, alpha: 0.9 });
+        g.ellipse(x + 3, y + half * 0.82, half * 1.25, half * 0.34).fill({ color: 0x24190f, alpha: 0.24 });
+
+        const storage = new Sprite(getEnvironmentTextures().props.storage);
+        storage.anchor.set(0.5, 1);
+        storage.position.set(Math.round(x), Math.round(y + half * 0.92));
+        storage.scale.set((half * 2.65) / Math.max(1, storage.texture.width));
+        storage.zIndex = g.zIndex + 0.1;
+        storage.label = `storage_${building.id}`;
+        scene.dynamicLayer.addChild(storage);
+        scene.buildingSprites?.push(storage);
+      }
+    } else if (building.type === "idol") {
+      // Идол-тотем: столб с маской. Хитрая победа партии.
+      const poleH = 5.5 * cell;
+      const maskR = 1.6 * cell;
+      g.zIndex = y + 4;
+
+      if (building.stage === "site") {
+        g.circle(x, y, 2.2 * cell).stroke({ width: 1.6, color: darkColor, alpha: 0.6 });
+        const deliveredTotal = building.delivered.clay + building.delivered.wood + building.delivered.stone;
+        const costTotal = Math.max(1, building.cost.clay + building.cost.wood + building.cost.stone);
+        if (deliveredTotal > 0.5) {
+          g.circle(x, y, 2.2 * cell * Math.min(1, deliveredTotal / costTotal)).fill({ color: clayColor, alpha: 0.3 });
+        }
+      } else if (building.stage === "inProgress") {
+        g.rect(x - 3, y - poleH * building.progress, 6, poleH * building.progress).fill({ color: clayColor, alpha: 0.7 });
+        g.circle(x, y, 2.2 * cell).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
+      } else {
+        g.ellipse(x + 2, y + 4, 2.4 * cell, 0.8 * cell).fill({ color: 0x24190f, alpha: 0.25 });
+        g.rect(x - 3, y - poleH, 6, poleH + 2).fill({ color: 0x8a5429, alpha: 1 });
+        g.rect(x - 8, y - poleH * 0.55, 16, 3).fill({ color: 0x8a5429, alpha: 1 });
+        g.circle(x, y - poleH, maskR).fill({ color: clayColor, alpha: 1 });
+        g.circle(x, y - poleH, maskR).stroke({ width: 1.5, color: darkColor, alpha: 1 });
+        g.circle(x - maskR * 0.4, y - poleH - maskR * 0.15, 1.6).fill({ color: 0x2f1812, alpha: 1 });
+        g.circle(x + maskR * 0.4, y - poleH - maskR * 0.15, 1.6).fill({ color: 0x2f1812, alpha: 1 });
+        g.rect(x - maskR * 0.35, y - poleH + maskR * 0.35, maskR * 0.7, 1.6).fill({ color: 0x2f1812, alpha: 0.9 });
+        g.circle(x, y - poleH - maskR - 2, 1.4).fill({ color: 0xef9a64, alpha: 0.9 });
       }
     } else {
       // Хижина
@@ -338,11 +382,16 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.circle(x, y, radius).fill({ color: clayColor, alpha: 0.35 + building.progress * 0.5 });
         g.circle(x, y, radius).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        g.ellipse(x + 2, y + radius * 0.55, radius * 1.15, radius * 0.4).fill({ color: 0x24190f, alpha: 0.22 });
-        g.circle(x, y, radius).fill({ color: darkColor, alpha: 1 });
-        g.circle(x, y - radius * 0.15, radius * 0.88).fill({ color: clayColor, alpha: 1 });
-        g.circle(x - radius * 0.3, y - radius * 0.42, radius * 0.3).fill({ color: 0xef9a64, alpha: 0.75 });
-        g.rect(x - radius * 0.28, y + radius * 0.25, radius * 0.56, radius * 0.6).fill({ color: 0x2f1812, alpha: 0.85 });
+        g.ellipse(x + 3, y + radius * 0.62, radius * 1.18, radius * 0.34).fill({ color: 0x24190f, alpha: 0.24 });
+
+        const hut = new Sprite(getEnvironmentTextures().props.hut);
+        hut.anchor.set(0.5, 1);
+        hut.position.set(Math.round(x), Math.round(y + radius * 0.72));
+        hut.scale.set((radius * 2.45) / Math.max(1, hut.texture.width));
+        hut.zIndex = g.zIndex + 0.1;
+        hut.label = `hut_${building.id}`;
+        scene.dynamicLayer.addChild(hut);
+        scene.buildingSprites?.push(hut);
       }
     }
 
@@ -394,21 +443,33 @@ function updateFireGlow(glow: Graphics, world: WorldSnapshot, cell: number): voi
 
   for (let index = 0; index < entrances.length; index += 1) {
     const entrance = entrances[index];
+    // Уровень огня (colony.fire 0..1): без дров костёр гаснет — пламя меньше и тусклее.
+    const fire = world.colonies?.[index]?.colony.fire ?? 1;
     const x = Math.round(entrance.x * cell);
     const y = Math.round(entrance.y * cell) + 6;
+
+    if (fire <= 0.05) {
+      // Потух: угольки и струйка дыма.
+      glow.circle(x, y, 4).fill({ color: 0x5a3a28, alpha: 0.5 });
+      glow.circle(x + Math.sin(t * 0.3 + index) * 2, y - 8 - (t % 24) * 0.4, 2.5).fill({ color: 0x9a9a94, alpha: 0.18 });
+      continue;
+    }
+
+    const fireScale = 0.35 + fire * 0.65;
+    const fireBright = 0.5 + fire * 0.5;
     const flicker = 0.5 + 0.5 * Math.sin(t * config.pulseSpeed * 8.18 + index * 2.1) * Math.sin(t * config.pulseSpeed * 3.36 + index);
-    const pulseOffset = flicker * config.pulseAmp * cell;
+    const pulseOffset = flicker * config.pulseAmp * cell * fireScale;
 
     // Внешний круг мягкого рассеивания
-    glow.circle(x, y, config.outerRadius * cell * 0.5 + pulseOffset).fill({
+    glow.circle(x, y, config.outerRadius * cell * 0.5 * fireScale + pulseOffset).fill({
       color: 0xff7a00,
-      alpha: config.outerAlpha + flicker * config.pulseAmp * 0.5
+      alpha: (config.outerAlpha + flicker * config.pulseAmp * 0.5) * fireBright
     });
 
     // Внутренний круг яркого центра
-    glow.circle(x + Math.sin(t * 0.7 + index) * 1.5, y - 2, config.innerRadius * cell * 0.5 + pulseOffset * 0.6).fill({
+    glow.circle(x + Math.sin(t * 0.7 + index) * 1.5, y - 2, config.innerRadius * cell * 0.5 * fireScale + pulseOffset * 0.6).fill({
       color: 0xffe07a,
-      alpha: config.innerAlpha + flicker * config.pulseAmp
+      alpha: (config.innerAlpha + flicker * config.pulseAmp) * fireBright
     });
   }
 }
