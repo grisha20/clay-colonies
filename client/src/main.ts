@@ -139,7 +139,7 @@ appRoot.innerHTML = `
     <aside class="panel prioPanel" id="prio-panel">
       <h2>Приоритеты</h2>
       <div id="prio-rows"></div>
-      <div class="prioFood">Еда — остальные: <strong id="prio-food-count">0</strong></div>
+      <div class="prioFood">Свободные (на еде): <strong id="prio-food-count">0</strong></div>
     </aside>
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
@@ -655,6 +655,11 @@ style.textContent = `
     line-height: 1;
   }
 
+  .prioRow button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
   .prioRow .pval {
     width: 14px;
     text-align: center;
@@ -882,29 +887,42 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   if (!prioRows || !prioFoodCount) {
     return;
   }
+  const colonyId = currentColonyIndex === 1 ? "colony-2" : "colony-1";
   const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
-  const priorities = colony.priorities ?? { clay: 1, wood: 1, stone: 1, build: 2, guard: 1 };
+  const priorities = colony.priorities ?? { clay: 0, wood: 0, stone: 0, build: 0, guard: 0 };
   const counts = countJobs(world);
-  const key = currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}`).join("|") + "|" + counts.food;
+
+  // Свободные = живые жители минус разведка минус розданные цели (минимум еды всегда за племенем).
+  const population = world.ants.filter((ant) => ant.colonyId === colonyId).length;
+  const scouts = world.ants.filter((ant) => ant.colonyId === colonyId && ant.forageRole === "scout").length;
+  const assignedTotal = PRIO_KEYS.reduce((sum, k) => sum + (priorities[k] ?? 0), 0);
+  const free = Math.max(0, population - scouts - assignedTotal);
+
+  const key =
+    currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}`).join("|") + `|${free}|${counts.food}`;
   if (key === lastPrioKey) {
     return;
   }
   lastPrioKey = key;
+
   prioRows.innerHTML = PRIO_KEYS.map(
     (k) =>
       `<div class="prioRow"><span class="plabel">${PRIO_LABELS[k]}</span>` +
-      `<button data-prio="${k}" data-delta="-1" type="button">−</button>` +
-      `<span class="pval">${priorities[k]}</span>` +
-      `<button data-prio="${k}" data-delta="1" type="button">+</button>` +
+      `<button data-prio="${k}" data-delta="-1" type="button"${(priorities[k] ?? 0) <= 0 ? " disabled" : ""}>−</button>` +
+      `<span class="pval">${priorities[k] ?? 0}</span>` +
+      `<button data-prio="${k}" data-delta="1" type="button"${free <= 0 ? " disabled" : ""}>+</button>` +
       `<span class="pcount">${counts[k]} чел.</span></div>`
   ).join("");
-  prioFoodCount.textContent = String(counts.food);
+  prioFoodCount.textContent = String(free);
 
   for (const button of prioRows.querySelectorAll<HTMLButtonElement>("[data-prio]")) {
     button.addEventListener("click", () => {
       const k = button.dataset.prio as PrioKey;
       const delta = Number(button.dataset.delta) || 0;
-      const next = { ...priorities, [k]: Math.max(0, Math.min(5, (priorities[k] ?? 1) + delta)) };
+      if (delta > 0 && free <= 0) {
+        return; // нет свободных — сначала освободи кого-то минусом
+      }
+      const next = { ...priorities, [k]: Math.max(0, (priorities[k] ?? 0) + delta) };
       sendPriorities(next);
     });
   }

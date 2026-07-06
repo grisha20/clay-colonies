@@ -100,7 +100,7 @@ function parseCommand(raw: string): ClientCommand | null {
     if (command.type === "setPriorities") {
       const raw = (command.priorities ?? {}) as Record<string, unknown>;
       const clampWeight = (value: unknown): number =>
-        typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(5, Math.floor(value))) : 1;
+        typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(40, Math.floor(value))) : 0;
       return {
         type: "setPriorities",
         colonyIndex,

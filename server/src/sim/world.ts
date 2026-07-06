@@ -833,7 +833,7 @@ export function worldFromSnapshot(
         wood: colonySnapshot.colony.wood ?? 0,
         stone: colonySnapshot.colony.stone ?? 0,
         fire: colonySnapshot.colony.fire ?? 1,
-        priorities: colonySnapshot.colony.priorities ?? { clay: 1, wood: 1, stone: 1, build: 2, guard: 1 },
+        priorities: colonySnapshot.colony.priorities ?? { clay: 1, wood: 1, stone: 0, build: 1, guard: 1 },
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,

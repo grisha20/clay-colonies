@@ -27,25 +27,27 @@ export function colonyStock(world: World, kind: ResourceKind): number {
   return world.colony.stone;
 }
 
-// Потолок сборщиков по весу приоритета (0..5). Вес 4-5 — «запасать всегда».
-const HARVESTER_CAP_BY_WEIGHT = [0, 1, 2, 3, 5, 7] as const;
-const BUILDER_CAP_BY_WEIGHT = [0, 2, 4, 6, 8, 10] as const;
-const GUARD_CAP_BY_WEIGHT = [0, 2, 3, 4, 5, 6] as const;
+// Приоритет = целевое ЧИСЛО ЛЮДЕЙ на занятии. Игрок распределяет руками,
+// сервер лишь заполняет цели ближайшими свободными жителями.
+function priorityCount(world: World, key: "clay" | "wood" | "stone" | "build" | "guard"): number {
+  const value = world.colony.priorities?.[key] ?? 0;
+  return Math.max(0, Math.min(40, Math.floor(value)));
+}
 
-function priorityWeight(world: World, key: "clay" | "wood" | "stone" | "build" | "guard"): number {
-  const value = world.colony.priorities?.[key] ?? 1;
-  return Math.max(0, Math.min(5, Math.floor(value)));
+// Защита от голода: нельзя раздать людей так, чтобы на еде осталось меньше минимума.
+function foragersLeft(world: World): number {
+  let count = 0;
+  for (const ant of world.ants) {
+    if (ant.state !== "dead" && ant.job === "forage" && ant.forageRole !== "scout") {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 export function colonyWantsResource(world: World, kind: ResourceKind): boolean {
-  const weight = priorityWeight(world, kind);
-  if (weight <= 0) {
-    return false; // игрок запретил эту добычу
-  }
-  if (weight >= 4) {
-    return true; // игрок велел запасать без потолка
-  }
-  return colonyStock(world, kind) < reserveTarget(kind) + demandFromBuildings(world, kind);
+  // Пока назначена хоть одна цель — добываем постоянно (запас решает игрок).
+  return priorityCount(world, kind) > 0;
 }
 
 // Недостроенные здания повышают спрос племени на свои ресурсы;
@@ -121,15 +123,11 @@ export function assignHarvestJobs(world: World): void {
         nodes = inZone;
       }
     }
-    // Потолок сборщиков задаёт приоритет игрока; большая стройка добавляет до +2.
-    const buildingDemand = demandFromBuildings(world, kind);
-    const harvesterCap =
-      HARVESTER_CAP_BY_WEIGHT[priorityWeight(world, kind)] +
-      (buildingDemand > 10 ? 1 : 0) +
-      (buildingDemand > 30 ? 1 : 0);
+    // Ровно столько сборщиков, сколько назначил игрок.
+    const harvesterCap = priorityCount(world, kind);
     let need = harvesterCap - counts[kind];
     for (const ant of live) {
-      if (need <= 0) {
+      if (need <= 0 || foragersLeft(world) <= CONFIG.minForagers) {
         break;
       }
       if (
@@ -169,8 +167,8 @@ export function assignHarvestJobs(world: World): void {
 // Стража: пока жив паук и племя достаточно большое, двое дежурят у лагеря.
 export function assignGuardJobs(world: World): void {
   const live = world.ants.filter((ant) => ant.state !== "dead");
-  // Стража — воля игрока (0..5 -> 0..6); при крошечном племени не отвлекаем.
-  const wantGuards = live.length >= CONFIG.guardMinWorkers ? GUARD_CAP_BY_WEIGHT[priorityWeight(world, "guard")] : 0;
+  // Стражи ровно столько, сколько назначил игрок.
+  const wantGuards = priorityCount(world, "guard");
 
   let guards = 0;
   for (const ant of live) {
@@ -198,7 +196,7 @@ export function assignGuardJobs(world: World): void {
       return da - db;
     });
   for (const ant of candidates) {
-    if (guards >= wantGuards) {
+    if (guards >= wantGuards || foragersLeft(world) <= CONFIG.minForagers) {
       break;
     }
     ant.job = "guard";
@@ -292,17 +290,14 @@ export function assignBuildJobs(world: World): void {
     return;
   }
 
-  // Ёмкость строителей задаёт приоритет игрока (0..5 -> 0..10), но не больше фронта работ.
-  const capacity = Math.min(
-    sites.length * CONFIG.maxBuildersPerSite,
-    BUILDER_CAP_BY_WEIGHT[priorityWeight(world, "build")]
-  );
+  // Строителей ровно столько, сколько назначил игрок (но не больше фронта работ).
+  const capacity = Math.min(sites.length * CONFIG.maxBuildersPerSite, priorityCount(world, "build"));
 
   // Раздача по кругу: каждый проход даёт по одному строителю на площадку,
   // чтобы куча стен не морила хижину и склад голодом.
   for (let pass = 0; pass < CONFIG.maxBuildersPerSite; pass += 1) {
     for (const site of sites) {
-      if (totalBuilders >= capacity) {
+      if (totalBuilders >= capacity || foragersLeft(world) <= CONFIG.minForagers) {
         return;
       }
       const assigned = perSite.get(site.id) ?? 0;
