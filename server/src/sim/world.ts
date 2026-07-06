@@ -428,6 +428,29 @@ export function respawnCarrion(world: World): void {
   }
 }
 
+// «Глина — это всё»: павший оставляет ком глины (перелепить или пустить на стену).
+export function addClayRemains(world: World, ant: Ant): void {
+  // Сливаем с ближайшим комом, чтобы поле боя не превращалось в сотню крошек.
+  for (const node of world.surface.resourceNodes) {
+    if (node.kind !== "clay") {
+      continue;
+    }
+    const dx = node.pos.x - ant.pos.x;
+    const dy = node.pos.y - ant.pos.y;
+    if (dx * dx + dy * dy <= 4 * 4) {
+      node.amount += CONFIG.deadClayAmount;
+      return;
+    }
+  }
+  world.surface.resourceNodes.push({
+    id: `res-${nextResourceNodeId}`,
+    kind: "clay",
+    pos: { x: ant.pos.x, y: ant.pos.y },
+    amount: CONFIG.deadClayAmount
+  });
+  nextResourceNodeId += 1;
+}
+
 export function addAntCorpse(world: World, ant: Ant): FoodSource {
   const source: FoodSource = {
     id: `carrion-${nextCarrionId}`,
@@ -807,6 +830,7 @@ export function worldFromSnapshot(
         clay: colonySnapshot.colony.clay ?? 0,
         wood: colonySnapshot.colony.wood ?? 0,
         stone: colonySnapshot.colony.stone ?? 0,
+        fire: colonySnapshot.colony.fire ?? 1,
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,

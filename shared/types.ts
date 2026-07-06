@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 5;
-export const CURRENT_PROTOCOL_VERSION = 5;
+export const CURRENT_SNAPSHOT_VERSION = 6;
+export const CURRENT_PROTOCOL_VERSION = 6;
 
 export type Vec2 = {
   x: number;
@@ -188,6 +188,8 @@ export type Colony = {
   clay: number;
   wood: number;
   stone: number;
+  // Уровень костра 0..1: костёр ест дрова, при слабом огне жители медленнее.
+  fire: number;
   zones?: {
     version: number;
     harvest: number[];

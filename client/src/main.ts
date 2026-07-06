@@ -99,6 +99,7 @@ appRoot.innerHTML = `
       <span class="res"><img id="icon-wood" alt="дерево"><strong id="res-wood">0</strong><em id="rate-wood"></em></span>
       <span class="res"><img id="icon-stone" alt="камень"><strong id="res-stone">0</strong><em id="rate-stone"></em></span>
       <span class="res"><img id="icon-pop" alt="жители"><strong id="res-pop">0/0</strong></span>
+      <span class="res" title="Костёр"><strong id="res-fire">100%</strong></span>
     </section>
     <aside class="panel tasksPanel">
       <h2>Задачи</h2>
@@ -804,7 +805,8 @@ const resourceBarNodes = {
   rateFood: document.querySelector<HTMLElement>("#rate-food"),
   rateClay: document.querySelector<HTMLElement>("#rate-clay"),
   rateWood: document.querySelector<HTMLElement>("#rate-wood"),
-  rateStone: document.querySelector<HTMLElement>("#rate-stone")
+  rateStone: document.querySelector<HTMLElement>("#rate-stone"),
+  fire: document.querySelector<HTMLElement>("#res-fire")
 };
 for (const [id, name] of [
   ["icon-food", "food"],
@@ -879,6 +881,11 @@ function updateResourceBar(world: WorldSnapshot): void {
   if (resourceBarNodes.stone) resourceBarNodes.stone.textContent = String(Math.floor(colony.stone ?? 0));
   if (resourceBarNodes.pop) {
     resourceBarNodes.pop.textContent = `${colony.population.workers}/${colony.nestCapacity ?? "-"}`;
+  }
+  if (resourceBarNodes.fire) {
+    const fire = Math.round(((colony.fire ?? 1) as number) * 100);
+    resourceBarNodes.fire.textContent = `Огонь ${fire}%`;
+    resourceBarNodes.fire.style.color = fire < 35 ? "#b33f2e" : fire < 70 ? "#b5793f" : "#4e8a2f";
   }
   formatRate(resourceBarNodes.rateFood, ((colony.food ?? 0) - first.food) / minutes);
   formatRate(resourceBarNodes.rateClay, ((colony.clay ?? 0) - first.clay) / minutes);

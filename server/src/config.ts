@@ -68,6 +68,17 @@ export const CONFIG = {
   roomExpandMaxTiles: 18,
 
   startingWorkers: 8,
+  // «Глина — это всё»: новый житель лепится из глины.
+  newResidentClayCost: 3,
+  startingClay: 10,
+  deadClayAmount: 2.5,
+  // Живой костёр: ест дрова, гаснет без них, слабый огонь замедляет жителей.
+  fireWoodEveryTicks: 300,
+  fireWoodCost: 1,
+  fireDecay: 0.06,
+  fireRecover: 0.1,
+  fireLowThreshold: 0.35,
+  fireLowSpeedFactor: 0.85,
   startingMiners: 5,
   startingEggs: 2,
   startingLarvae: 0,

@@ -92,6 +92,11 @@ export function surfaceMoveSpeed(world: World, ant: Ant): number {
     ? CONFIG.workerSurfaceSpeed + CONFIG.antMobSpeedBonus
     : CONFIG.workerSurfaceSpeed;
 
+  // Слабый костёр: племя вялое (огонь — сердце поселения).
+  if ((world.colony.fire ?? 1) < CONFIG.fireLowThreshold) {
+    speed *= CONFIG.fireLowSpeedFactor;
+  }
+
   // Замедление муравьев на паутине вокруг гнезда паука
   for (const enemy of world.enemies) {
     if (enemy.type === "spider" && enemy.hp > 0) {

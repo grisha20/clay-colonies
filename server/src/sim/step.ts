@@ -9,6 +9,7 @@ import { updateObjectives } from "./objectives";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
 import {
   addAntCorpse,
+  addClayRemains,
   cleanupResourceNodes,
   colonyWorldView,
   createWorkerAnt,
@@ -65,11 +66,26 @@ function scentFoodSources(world: World): void {
 function removeDeadAndSyncSurface(world: World, colony: ColonyRuntime): void {
   for (const ant of colony.ants) {
     if (ant.state === "dead") {
-      addAntCorpse(colonyWorldView(world, colony), ant);
+      const scoped = colonyWorldView(world, colony);
+      addAntCorpse(scoped, ant);
+      addClayRemains(scoped, ant);
     }
   }
   colony.ants = colony.ants.filter((ant) => ant.state !== "dead");
   colony.underground.ants = [];
+}
+
+// Живой костёр: ест дрова; без дров гаснет; с дровами разгорается обратно.
+function updateCampfire(world: World, colony: ColonyRuntime): void {
+  if (world.tick % CONFIG.fireWoodEveryTicks !== 0) {
+    return;
+  }
+  if (colony.colony.wood >= CONFIG.fireWoodCost) {
+    colony.colony.wood -= CONFIG.fireWoodCost;
+    colony.colony.fire = Math.min(1, colony.colony.fire + CONFIG.fireRecover);
+  } else {
+    colony.colony.fire = Math.max(0, colony.colony.fire - CONFIG.fireDecay);
+  }
 }
 
 function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
@@ -96,7 +112,12 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
   if (colony.colony.reproductionCooldown > 0 || colony.colony.food < CONFIG.queenMinFoodReserve + CONFIG.eggCost) {
     return;
   }
+  // «Глина — это всё»: нового жителя лепят из глины.
+  if (colony.colony.clay < CONFIG.newResidentClayCost) {
+    return;
+  }
 
+  colony.colony.clay -= CONFIG.newResidentClayCost;
   colony.colony.food -= CONFIG.eggCost;
   colony.colony.reproductionCooldown = CONFIG.broodLayCooldownTicks;
   const ant = createWorkerAnt(colony.surfaceEntrance, "surface", colony.id);
@@ -152,6 +173,7 @@ export function step(world: World): void {
       const scopedWorld = colonyWorldView(world, colony);
       removeDeadAndSyncSurface(world, colony);
       updateFitness(scopedWorld);
+      updateCampfire(world, colony);
       updateSurfaceRoyalPair(world, colony);
       syncColonyStatsForRuntime(colony);
     }
