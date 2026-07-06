@@ -1,5 +1,13 @@
 import { Application, Graphics } from "pixi.js";
-import { CURRENT_PROTOCOL_VERSION, WALL_CELL_SIZE, ZONE_CELL_SIZE, type NetworkWorldSnapshot, type WorldSnapshot } from "../../shared/types";
+import {
+  CURRENT_PROTOCOL_VERSION,
+  WALL_CELL_SIZE,
+  ZONE_CELL_SIZE,
+  resourceNodeTool,
+  resourceNodeYield,
+  type NetworkWorldSnapshot,
+  type WorldSnapshot
+} from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
 import { spriteIconDataUrl } from "./sprites";
@@ -100,6 +108,7 @@ appRoot.innerHTML = `
       <span class="res"><img id="icon-wood" alt="дерево"><strong id="res-wood">0</strong><em id="rate-wood"></em></span>
       <span class="res"><img id="icon-stone" alt="камень"><strong id="res-stone">0</strong><em id="rate-stone"></em></span>
       <span class="res"><img id="icon-pop" alt="жители"><strong id="res-pop">0/0</strong></span>
+      <span class="res" title="Инструменты"><strong id="res-tools">Т0 К0</strong></span>
       <span class="res" title="Костёр"><strong id="res-fire">100%</strong></span>
     </section>
     <aside class="panel tasksPanel">
@@ -124,6 +133,11 @@ appRoot.innerHTML = `
         <span class="bname">Склад</span>
         <span class="bcost" id="cost-storage">6 дерева + 4 камня</span>
         <span class="bnote">точка сдачи ресурсов</span>
+      </button>
+      <button class="buildCard" data-tool="workshop" type="button">
+        <span class="bname">Мастерская</span>
+        <span class="bcost" id="cost-workshop">8 глины + 4 дерева</span>
+        <span class="bnote">топоры и кирки</span>
       </button>
       <button class="buildCard" data-tool="wall" type="button">
         <span class="bname">Стена</span>
@@ -889,7 +903,10 @@ function countJobs(world: WorldSnapshot): Record<PrioKey, number> & { food: numb
     } else if (ant.job === "harvest") {
       const kind =
         (ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined) ??
-        world.surface.resourceNodes?.find((node) => node.id === ant.harvestNodeId)?.kind;
+        (() => {
+          const node = world.surface.resourceNodes?.find((item) => item.id === ant.harvestNodeId);
+          return node ? resourceNodeYield(node.kind) : undefined;
+        })();
       if (kind === "clay" || kind === "wood" || kind === "stone") {
         counts[kind] += 1;
       }
@@ -919,13 +936,13 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   const nodesAlive: Record<string, boolean> = { clay: false, wood: false, stone: false };
   for (const node of world.surface.resourceNodes ?? []) {
     if (node.amount > 0) {
-      nodesAlive[node.kind] = true;
+      nodesAlive[resourceNodeYield(node.kind)] = true;
     }
   }
 
   const key =
     currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}:${nodesAlive[k] ? 1 : 0}`).join("|") +
-    `|${freeForPlus}|${counts.food}|${population}`;
+    `|${freeForPlus}|${counts.food}|${population}|${colony.axes ?? 0}|${colony.picks ?? 0}`;
   if (key === lastPrioKey) {
     return;
   }
@@ -940,7 +957,8 @@ function updatePriorityPanel(world: WorldSnapshot): void {
       `<button data-prio="${k}" data-delta="-1" type="button"${target <= 0 ? " disabled" : ""}>−</button>` +
       `<span class="pval">${target}</span>` +
       `<button data-prio="${k}" data-delta="1" type="button"${freeForPlus <= 0 ? " disabled" : ""}>+</button>` +
-      `<span class="pcount${short ? " short" : ""}" ${short ? 'title="Источник иссяк — люди пока на еде"' : ""}>${counts[k]} чел.${short ? " (нет источника)" : ""}</span></div>`
+      `<span class="pcount${short ? " short" : ""}" ${short ? 'title="Источник иссяк — люди пока на еде"' : ""}>${counts[k]} чел.${short ? " (нет источника)" : ""}</span>` +
+      `${k === "wood" ? `<small>топоры: ${colony.axes ?? 0}</small>` : k === "stone" ? `<small>кирки: ${colony.picks ?? 0}</small>` : ""}</div>`
     );
   }).join("");
   // Факт: сколько реально таскают еду (назначенные без источника — тоже здесь).
@@ -949,7 +967,7 @@ function updatePriorityPanel(world: WorldSnapshot): void {
     prioSummary.innerHTML =
       `Жителей: <strong>${population}</strong> · разведка: ${scouts} · ` +
       `назначено: ${Math.min(assignedTotal, Math.max(0, population - scouts))} · ` +
-      `можно назначить: <strong>${freeForPlus}</strong>`;
+      `можно назначить: <strong>${freeForPlus}</strong> · топоры: ${colony.axes ?? 0} · кирки: ${colony.picks ?? 0}`;
   }
 
   for (const button of prioRows.querySelectorAll<HTMLButtonElement>("[data-prio]")) {
@@ -991,7 +1009,7 @@ function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): 
       return `Несёт: ${CARGO_NAMES[ant.carryKind] ?? ant.carryKind}`;
     }
     const node = world.surface.resourceNodes?.find((item) => item.id === ant.harvestNodeId);
-    return node ? `Добывает: ${CARGO_NAMES[node.kind] ?? node.kind}` : "Добывает ресурс";
+    return node ? `Добывает: ${CARGO_NAMES[resourceNodeYield(node.kind)] ?? node.kind}` : "Добывает ресурс";
   }
   if (ant.carryingDebris) {
     return "Прибирается";
@@ -1048,6 +1066,7 @@ const resourceBarNodes = {
   rateClay: document.querySelector<HTMLElement>("#rate-clay"),
   rateWood: document.querySelector<HTMLElement>("#rate-wood"),
   rateStone: document.querySelector<HTMLElement>("#rate-stone"),
+  tools: document.querySelector<HTMLElement>("#res-tools"),
   fire: document.querySelector<HTMLElement>("#res-fire")
 };
 for (const [id, name] of [
@@ -1084,6 +1103,7 @@ function formatRate(node: HTMLElement | null, delta: number): void {
 const BUILD_COSTS: Record<string, { clay: number; wood: number; stone: number }> = {
   hut: { clay: 8, wood: 5, stone: 0 },
   storage: { clay: 0, wood: 6, stone: 4 },
+  workshop: { clay: 8, wood: 4, stone: 0 },
   idol: { clay: 25, wood: 0, stone: 5 },
   wall: { clay: 2, wood: 0, stone: 0 }
 };
@@ -1125,6 +1145,9 @@ function updateResourceBar(world: WorldSnapshot): void {
   if (resourceBarNodes.pop) {
     resourceBarNodes.pop.textContent = `${colony.population.workers}/${colony.nestCapacity ?? "-"}`;
   }
+  if (resourceBarNodes.tools) {
+    resourceBarNodes.tools.textContent = `Т${colony.axes ?? 0} К${colony.picks ?? 0}`;
+  }
   if (resourceBarNodes.fire) {
     const fire = Math.round(((colony.fire ?? 1) as number) * 100);
     resourceBarNodes.fire.textContent = `Огонь ${fire}%`;
@@ -1147,7 +1170,7 @@ const antsCount = document.querySelector<HTMLElement>("#ants-count");
 let trampleEnabled = true;
 
 // Инструменты игрока: клик-еда, кисть зон, постройки.
-type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "idol" | "wall" | "erase";
+type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "workshop" | "idol" | "wall" | "erase";
 let currentTool: PlayerTool = "food";
 let isPainting = false;
 let dragTool: "harvest" | "forbid" | "wall" | "erase" | null = null;
@@ -1160,6 +1183,7 @@ const TOOL_HINTS: Record<PlayerTool, string> = {
   forbid: "Растяни прямоугольник зоны запрета (ЛКМ)",
   hut: "Клик - хижина (8 глины + 5 дерева, +4 к лимиту). Shift - ставить несколько",
   storage: "Клик - склад (6 дерева + 4 камня, точка сдачи). Shift - ставить несколько",
+  workshop: "Клик - мастерская (8 глины + 4 дерева, делает топоры и кирки). Shift - ставить несколько",
   idol: "Клик - Идол (25 глины + 5 камня). Достроишь - хитрая победа партии",
   wall: "Растяни линию стены (ЛКМ), 2 глины за сегмент",
   erase: "Растяни прямоугольник - сотрёт зоны и свои стены"
@@ -1439,6 +1463,53 @@ function pointerToTile(event: PointerEvent): { x: number; y: number } | null {
   const globalX = (event.clientX - rect.left) * (pixi.screen.width / Math.max(1, rect.width));
   const globalY = (event.clientY - rect.top) * (pixi.screen.height / Math.max(1, rect.height));
   return surfaceTileFromGlobal(latestWorld, globalX, globalY);
+}
+
+function resourceNodeLabel(world: WorldSnapshot, x: number, y: number): string | null {
+  const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
+  let nearest: WorldSnapshot["surface"]["resourceNodes"][number] | null = null;
+  let bestDistanceSq = 3.2 * 3.2;
+  for (const node of world.surface.resourceNodes ?? []) {
+    if (node.amount <= 0) {
+      continue;
+    }
+    const dx = node.pos.x - x;
+    const dy = node.pos.y - y;
+    const distanceSq = dx * dx + dy * dy;
+    if (distanceSq < bestDistanceSq) {
+      bestDistanceSq = distanceSq;
+      nearest = node;
+    }
+  }
+  if (!nearest) {
+    return null;
+  }
+  const yieldKind = resourceNodeYield(nearest.kind);
+  const names: Record<string, string> = {
+    clay: "Глина",
+    tree: nearest.growth === "sapling" ? "Росток" : nearest.growth === "young" ? "Молодое дерево" : "Дерево",
+    stone: "Скала",
+    "loose-stone": "Камешки",
+    stick: "Ветки"
+  };
+  const tool = resourceNodeTool(nearest.kind);
+  const toolText =
+    tool === "axe"
+      ? ` Нужен топор (есть ${colony.axes ?? 0})`
+      : tool === "pick"
+        ? ` Нужна кирка (есть ${colony.picks ?? 0})`
+        : "";
+  const stageText = nearest.kind === "tree" && nearest.growth === "sapling" ? " Ещё растёт." : "";
+  return `${names[nearest.kind] ?? CARGO_NAMES[yieldKind]}: ${Math.ceil(nearest.amount)} ед.${toolText}.${stageText}`;
+}
+
+function updateHoverHint(event: PointerEvent): void {
+  if (!toolHint || currentView !== "surface" || !latestWorld) {
+    return;
+  }
+  const tile = pointerToTile(event);
+  const label = tile ? resourceNodeLabel(latestWorld, tile.x, tile.y) : null;
+  toolHint.textContent = label ?? TOOL_HINTS[currentTool];
 }
 
 let lastRawTile: { x: number; y: number } | null = null;
@@ -1759,6 +1830,7 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
 });
 
 pixi.canvas.addEventListener("pointermove", (event) => {
+  updateHoverHint(event);
   if (!pointerDown || currentView !== "surface" || !latestWorld) {
     return;
   }
@@ -1773,7 +1845,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  if (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "idol") {
+  if (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") {
     return;
   }
 
@@ -1809,7 +1881,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (
-    (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "idol") ||
+    (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||
@@ -1826,7 +1898,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
-  if (currentTool === "hut" || currentTool === "storage" || currentTool === "idol") {
+  if (currentTool === "hut" || currentTool === "storage" || currentTool === "workshop" || currentTool === "idol") {
     socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y, colony: currentColonyIndex }));
     if (!event.shiftKey) {
       setTool("food"); // одиночная постройка: режим снимается, Shift — серия

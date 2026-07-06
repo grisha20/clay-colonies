@@ -147,7 +147,7 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
   endPool(pool);
 }
 
-// Узлы глины и дерева: комья/палочки кучкой, количество кусков растёт с запасом.
+// Узлы ресурсов: всё, что похоже на ресурс, приходит из серверного snapshot.
 export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool);
   const props = getEnvironmentTextures().props;
@@ -159,38 +159,61 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
 
     const x = node.pos.x * cell;
     const y = node.pos.y * cell;
+    const ratio = Math.max(0.12, Math.min(1, node.amount / Math.max(0.1, node.maxAmount ?? node.amount)));
+    if (node.kind === "tree") {
+      const sprite = acquireSprite(pool);
+      const textures = [props.treeTall, props.treeRound, props.treeWide];
+      const textureIndex = node.growth === "sapling" ? 1 : node.growth === "young" ? 2 : node.id.length % textures.length;
+      sprite.texture = textures[textureIndex] ?? props.treeRound;
+      sprite.anchor.set(0.5, 1);
+      const growthScale = node.growth === "sapling" ? 0.24 : node.growth === "young" ? 0.36 : 0.52;
+      sprite.scale.set(growthScale * (0.75 + ratio * 0.25));
+      sprite.tint = node.growth === "sapling" ? 0xd8f5a3 : ratio < 0.45 ? 0xb8c97b : 0xffffff;
+      sprite.alpha = 0.72 + ratio * 0.28;
+      placeSprite(sprite, x, y + 10, 0);
+      sprite.zIndex = y + 10;
+      continue;
+    }
+
+    if (node.kind === "stick") {
+      const chunks = Math.max(1, Math.min(3, Math.ceil(node.amount)));
+      for (let index = 0; index < chunks; index += 1) {
+        const sprite = acquireSprite(pool);
+        const offset = deterministicOffset(index * 5 + node.id.length, 9);
+        sprite.texture = props.log;
+        sprite.anchor.set(0.5, 1);
+        sprite.scale.set(0.28 + ratio * 0.08);
+        sprite.tint = index % 2 === 0 ? 0xffffff : 0xe8c18a;
+        sprite.alpha = 0.9;
+        const feetY = y + offset.y + 7;
+        placeSprite(sprite, x + offset.x, feetY, (index % 2 === 0 ? -0.42 : 0.34) + index * 0.08);
+        sprite.zIndex = feetY;
+      }
+      continue;
+    }
+
     const chunks =
       node.kind === "clay"
-        ? Math.max(3, Math.min(7, Math.ceil(node.amount / 14)))
-        : Math.max(1, Math.min(5, Math.ceil(node.amount / 22)));
+        ? Math.max(2, Math.min(7, Math.ceil(node.amount / 14)))
+        : node.kind === "loose-stone"
+          ? Math.max(1, Math.min(3, Math.ceil(node.amount)))
+          : Math.max(1, Math.min(5, Math.ceil(node.amount / 16)));
     for (let index = 0; index < chunks; index += 1) {
       const sprite = acquireSprite(pool);
       const spread = index === 0 ? 0 : node.kind === "clay" ? 8 + index * 1.5 : 12 + index * 2;
       const offset = deterministicOffset(index * 3 + node.id.length, spread);
 
-      if (node.kind === "wood") {
-        sprite.texture = props.log;
-        sprite.anchor.set(0.5, 1);
-        sprite.scale.set(index === 0 ? 0.54 : 0.44);
-        sprite.tint = index % 2 === 0 ? 0xffffff : 0xe8c18a;
-        sprite.alpha = 1;
-        const feetY = y + offset.y + 8;
-        placeSprite(sprite, x + offset.x, feetY, (index % 2 === 0 ? -0.32 : 0.24) + index * 0.04);
-        sprite.zIndex = feetY;
-        continue;
-      }
-
       const rockTextures = [props.rockLarge, props.rockRound, props.rockSmall];
       const large = index === 0 || index % 3 !== 2;
       sprite.texture = rockTextures[index % rockTextures.length];
       sprite.anchor.set(0.5, 1);
-      sprite.scale.set(node.kind === "clay" ? (large ? 1.42 : 1.55) : large ? 1.15 : 1.28);
-      sprite.alpha = 1;
+      sprite.scale.set(node.kind === "clay" ? (large ? 1.42 : 1.55) : node.kind === "loose-stone" ? 0.72 : large ? 1.15 : 1.28);
+      sprite.alpha = 0.58 + ratio * 0.42;
       if (node.kind === "clay") {
         const clayTints = [0xe76f34, 0xc84f2a, 0xf08a4f];
-        sprite.tint = clayTints[index % clayTints.length];
+        sprite.tint = ratio < 0.35 ? 0xd59b78 : clayTints[index % clayTints.length];
       } else {
-        sprite.tint = index % 2 === 0 ? 0xd8d5c8 : 0xb7b3a9;
+        sprite.tint = node.kind === "loose-stone" ? 0xc8c4b8 : index % 2 === 0 ? 0xd8d5c8 : 0xb7b3a9;
       }
       const feetY = y + offset.y + 10;
       placeSprite(sprite, x + offset.x, feetY, (index % 5 - 2) * 0.08);
@@ -352,7 +375,8 @@ export function updateSurfaceAnts(
     sprite.scale.set(spriteScale * facing, spriteScale);
     sprite.tint = 0xffffff;
     const headingAngle = antRotation(ant);
-    const rot = Math.max(-0.14, Math.min(0.14, ant.heading.x * 0.12));
+    const harvestSwing = ant.job === "harvest" && ant.carrying <= 0 ? Math.sin(world.tick * 0.45 + (ant.harvestHits ?? 0) * 0.8) * 0.16 : 0;
+    const rot = Math.max(-0.24, Math.min(0.24, ant.heading.x * 0.12 + harvestSwing));
     const cx = ant.pos.x * cell;
     const cy = ant.pos.y * cell;
     const feetY = cy + 9.5 * spriteScale; // Точка контакта ног человечка с землей

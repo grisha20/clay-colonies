@@ -16,6 +16,7 @@ export const environmentAssetUrls = [
   "/assets/environment/veggies/tomato-pixel.png",
   `${customBase}/hut.png`,
   `${customBase}/storage.png`,
+  `${customBase}/workshop-cutout.png`,
   ...campfireFrameUrls
 ] as const;
 
@@ -51,6 +52,7 @@ type EnvironmentTextures = {
     campfireFrames: Texture[];
     hut: Texture;
     storage: Texture;
+    workshop: Texture;
     tent: Texture;
     bridge: Texture;
     fence: Texture;
@@ -133,6 +135,7 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       campfireFrames: campfireFrameUrls.map((url) => image(url)),
       hut: image(`${customBase}/hut.png`),
       storage: image(`${customBase}/storage.png`),
+      workshop: image(`${customBase}/workshop-cutout.png`),
       tent: crop(assetsUrl, 344, 780, 140, 75),
       bridge: crop(assetsUrl, 0, 742, 86, 92),
       fence: crop(assetsUrl, 108, 754, 170, 62)

@@ -13,6 +13,7 @@ export function createObjectives(): Objective[] {
     // Обучение: ведёт новичка по петле.
     { id: "clay-40", text: "Запасти 40 глины", target: 40, progress: 0, done: false },
     { id: "stone-25", text: "Запасти 25 камня", target: 25, progress: 0, done: false },
+    { id: "workshop-1", text: "Построить мастерскую", target: 1, progress: 0, done: false },
     { id: "hut-2", text: "Построить 2 новые хижины", target: 2, progress: 0, done: false },
     { id: "wall-12", text: "Построить 12 сегментов стены", target: 12, progress: 0, done: false },
     { id: "pop-20", text: "Вырастить племя до 20 жителей", target: 20, progress: 0, done: false }
@@ -45,6 +46,10 @@ function currentValue(world: World, id: string): number {
       return colony.colony.clay;
     case "stone-25":
       return colony.colony.stone;
+    case "workshop-1":
+      return world.surface.buildings.filter(
+        (building) => building.colonyId === colony.id && building.type === "workshop" && building.stage === "built"
+      ).length;
     case "hut-2":
       // Стартовые 2 хижины не считаются: нужно построить НОВЫЕ.
       return Math.max(

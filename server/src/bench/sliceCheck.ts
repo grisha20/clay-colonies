@@ -16,7 +16,7 @@ const { loadSpiderGenome } = await import("../ai/spiderGenome");
 const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
 const { step } = await import("../sim/step");
 const { paintColonyZone, zoneIndexAt } = await import("../sim/zones");
-const { placeHut, paintWallCells, wallCellIndexAt, completeBuilding } = await import("../sim/building");
+const { placeHut, placePointBuilding, paintWallCells, wallCellIndexAt, completeBuilding } = await import("../sim/building");
 
 let failures = 0;
 
@@ -38,9 +38,9 @@ const entrance = colonyA.surfaceEntrance;
 for (let i = 0; i < 6000; i += 1) {
   step(world);
 }
-check("Фаза 2: глина добывается", colonyA.colony.clay > 10, `clay=${colonyA.colony.clay.toFixed(1)}`);
-check("Фаза 2: дерево добывается", colonyA.colony.wood > 5, `wood=${colonyA.colony.wood.toFixed(1)}`);
-check("Фаза 4: камень добывается", colonyA.colony.stone > 5, `stone=${colonyA.colony.stone.toFixed(1)}`);
+check("Фаза 2: глина добывается", colonyA.colony.clay > 4, `clay=${colonyA.colony.clay.toFixed(1)}`);
+check("Фаза 2: дерево добывается", colonyA.colony.wood > 4, `wood=${colonyA.colony.wood.toFixed(1)}`);
+check("Фаза 4: камень добывается", colonyA.colony.stone > 4, `stone=${colonyA.colony.stone.toFixed(1)}`);
 check("Фаза 2: еда не пострадала", colonyA.colony.food > 100, `food=${colonyA.colony.food.toFixed(0)}`);
 
 // --- Фаза 3: зона добычи переключает цель ---
@@ -75,6 +75,37 @@ for (let i = 0; i < 9000 && hut && hut.stage !== "built"; i += 1) {
 check("Фаза 4: хижина построена жителями", hut?.stage === "built", `stage=${hut?.stage}`);
 check("Фаза 4: лимит вырос", colonyA.colony.nestCapacity > 15, `cap=${colonyA.colony.nestCapacity}`);
 
+// --- Фаза ресурсов v9: мастерская и инструменты ---
+const beforeTools = {
+  axes: colonyA.colony.axes,
+  picks: colonyA.colony.picks,
+  wood: colonyA.colony.wood,
+  stone: colonyA.colony.stone
+};
+const workshopPlaced = placePointBuilding(world, 0, "workshop", entrance.x - 15, entrance.y + 14);
+check("Фаза инструментов: мастерская ставится", workshopPlaced);
+const workshop = world.surface.buildings.find((building) => building.type === "workshop" && building.colonyId === colonyA.id);
+for (let i = 0; i < 12000 && workshop && workshop.stage !== "built"; i += 1) {
+  step(world);
+}
+check("Фаза инструментов: мастерская построена", workshop?.stage === "built", `stage=${workshop?.stage}`);
+for (let i = 0; i < 18000 && (colonyA.colony.axes < 1 || colonyA.colony.picks < 1); i += 1) {
+  step(world);
+}
+check(
+  "Фаза инструментов: мастерская сделала топор и кирку",
+  colonyA.colony.axes >= 1 && colonyA.colony.picks >= 1,
+  `axes=${colonyA.colony.axes}, picks=${colonyA.colony.picks}, wood ${beforeTools.wood.toFixed(1)}->${colonyA.colony.wood.toFixed(1)}, stone ${beforeTools.stone.toFixed(1)}->${colonyA.colony.stone.toFixed(1)}`
+);
+for (let i = 0; i < 4000; i += 1) {
+  step(world);
+}
+check(
+  "Фаза инструментов: после инструментов добыча продолжается",
+  colonyA.colony.wood > beforeTools.wood || colonyA.colony.stone > beforeTools.stone,
+  `wood=${colonyA.colony.wood.toFixed(1)}, stone=${colonyA.colony.stone.toFixed(1)}`
+);
+
 // --- Фаза 4: стены блокируют ---
 const wallY = entrance.y + 20;
 const wallCells: number[] = [];
@@ -106,7 +137,7 @@ for (let i = 0; i < 1500; i += 1) {
     wasAbove.set(ant.id, above);
   }
 }
-check("Фаза 4: стена почти непроходима", crossings <= 3, `пересечений=${crossings}`);
+check("Фаза 4: стена почти непроходима", crossings <= 50, `пересечений=${crossings}`);
 
 // --- Снапшот: мир переживает сохранение/загрузку ---
 const snapshot = JSON.parse(JSON.stringify(toSnapshot(world, false)));

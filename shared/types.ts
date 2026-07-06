@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 8;
-export const CURRENT_PROTOCOL_VERSION = 8;
+export const CURRENT_SNAPSHOT_VERSION = 9;
+export const CURRENT_PROTOCOL_VERSION = 9;
 
 export type Vec2 = {
   x: number;
@@ -80,7 +80,7 @@ export type ZoneType = "harvest" | "forbid";
 
 // Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
 export const WALL_CELL_SIZE = 2;
-export type BuildingType = "hut" | "wall" | "storage" | "idol";
+export type BuildingType = "hut" | "wall" | "storage" | "idol" | "workshop";
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {
@@ -96,15 +96,52 @@ export type Building = {
   maxHp: number;
 };
 
-// Новые ресурсы Clayfolk: узлы глины и дерева на поверхности.
+// Ресурсы склада племени (что лежит в запасах и что несут жители).
 export type ResourceKind = "clay" | "wood" | "stone";
+
+// Узлы на карте: «что видишь — то можно добыть».
+// tree/stick дают дерево, stone/loose-stone дают камень, clay даёт глину.
+// tree и stone требуют инструмент (топор/кирку), остальное собирается руками.
+export type ResourceNodeKind = "clay" | "tree" | "stone" | "loose-stone" | "stick";
+
+// Стадии роста дерева: росток нельзя рубить, молодое и взрослое — можно.
+export type TreeGrowthStage = "sapling" | "young" | "mature";
 
 export type ResourceNode = {
   id: string;
-  kind: ResourceKind;
+  kind: ResourceNodeKind;
   pos: Vec2;
   amount: number;
+  // Полный запас узла: клиент показывает деградацию (дерево редеет, скала мельчает).
+  maxAmount: number;
+  // Сколько «ударов» нужно на одну единицу ресурса (руками = 1).
+  hitsPerUnit: number;
+  growth?: TreeGrowthStage;
+  // Тик последнего шага роста/сева (только деревья).
+  grownAt?: number;
 };
+
+// Какой ресурс склада даёт узел данного вида.
+export function resourceNodeYield(kind: ResourceNodeKind): ResourceKind {
+  if (kind === "tree" || kind === "stick") {
+    return "wood";
+  }
+  if (kind === "stone" || kind === "loose-stone") {
+    return "stone";
+  }
+  return "clay";
+}
+
+// Узлы, требующие инструмент: дерево — топор, скала — кирка.
+export function resourceNodeTool(kind: ResourceNodeKind): "axe" | "pick" | null {
+  if (kind === "tree") {
+    return "axe";
+  }
+  if (kind === "stone") {
+    return "pick";
+  }
+  return null;
+}
 
 export type Ant = {
   id: string;
@@ -114,6 +151,8 @@ export type Ant = {
   job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard";
   carryKind?: "food" | ResourceKind;
   harvestNodeId?: string;
+  // Прогресс многоударной добычи у текущего узла (в тиках «долбления»).
+  harvestHits?: number;
   buildTargetId?: string;
   forageRole?: "scout" | "forager";
   preferredTask?: "dig";
@@ -190,6 +229,9 @@ export type Colony = {
   stone: number;
   // Уровень костра 0..1: костёр ест дрова, при слабом огне жители медленнее.
   fire: number;
+  // Общий запас инструментов племени: лимитируют число дровосеков и каменотёсов.
+  axes: number;
+  picks: number;
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).
   // «+» берёт человека из свободных, «−» возвращает. Свободные — на еде.
   priorities: {

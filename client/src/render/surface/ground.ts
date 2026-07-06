@@ -407,53 +407,11 @@ export function drawSurfaceGround(
   }
   shadowRoot.addChild(ground);
 
-  const propChunk = 16;
-  for (let gy = Math.floor(top / propChunk) * propChunk; gy <= bottom; gy += propChunk) {
-    for (let gx = Math.floor(left / propChunk) * propChunk; gx <= right; gx += propChunk) {
-      const worldX = gx + 4 + hash2(gx, gy, 61) * 8;
-      const worldY = gy + 5 + hash2(gx, gy, 62) * 8;
-      if (
-        worldX < left - 12 ||
-        worldX > right + 12 ||
-        worldY < top - 20 ||
-        worldY > bottom + 20 ||
-        isCampOrFoodClearing(worldX, worldY, world) > 0.12 ||
-        isWaterPatch(worldX, worldY, world)
-      ) {
-        continue;
-      }
-
-      const roll = hash2(gx, gy, 60);
-      const px = worldX * cell;
-      const py = worldY * cell;
-      if (roll > 0.972) {
-        const treeTextures = [props.treeTall, props.treeRound, props.treeWide];
-        const texture = treeTextures[Math.floor(hash2(gx, gy, 64) * treeTextures.length) % treeTextures.length];
-        addAssetProp(shadowRoot, spriteRoot, texture, px, py, 0.28 + hash2(gx, gy, 65) * 0.08, 0, 0xd9f5a6);
-      } else if (roll > 0.918) {
-        addAssetProp(shadowRoot, spriteRoot, props.bushRound, px, py, 0.58 + hash2(gx, gy, 67) * 0.16, 0, 0xf4ffd8);
-      } else if (roll > 0.868) {
-        const rockTextures = [props.rockLarge, props.rockRound, props.rockSmall];
-        const texture = rockTextures[Math.floor(hash2(gx, gy, 69) * rockTextures.length) % rockTextures.length];
-        addAssetProp(shadowRoot, spriteRoot, texture, px, py, 0.9 + hash2(gx, gy, 70) * 0.24, 0, 0xd8d5c8);
-      } else if (roll > 0.824) {
-        addAssetProp(shadowRoot, spriteRoot, props.log, px, py, 0.36 + hash2(gx, gy, 71) * 0.08, (hash2(gx, gy, 72) - 0.5) * 0.7);
-      }
-    }
-  }
-
   for (const entrance of entrances) {
     const x = entrance.x * cell;
     const y = entrance.y * cell;
-    addAssetProp(shadowRoot, spriteRoot, props.log, x - 82, y + 72, 0.4, -0.28);
-    addAssetProp(shadowRoot, spriteRoot, props.log, x + 85, y + 66, 0.38, 0.22);
-    addAssetProp(shadowRoot, spriteRoot, props.rockRound, x - 62, y + 52, 0.78, 0, 0xd8d5c8);
-    addAssetProp(shadowRoot, spriteRoot, props.rockSmall, x + 58, y + 50, 0.88, 0, 0xd8d5c8);
     addAssetProp(shadowRoot, spriteRoot, props.bushRound, x - 154, y + 96, 0.52, 0, 0xf4ffd8);
     addAssetProp(shadowRoot, spriteRoot, props.bushRound, x + 154, y + 92, 0.5, 0, 0xf4ffd8);
-    addAssetProp(shadowRoot, spriteRoot, props.rockLarge, x - 126, y - 88, 0.66, 0, 0xd8d5c8);
-    addAssetProp(shadowRoot, spriteRoot, props.treeRound, x - 202, y + 132, 0.26, 0, 0xd9f5a6);
-    addAssetProp(shadowRoot, spriteRoot, props.treeWide, x + 204, y + 128, 0.25, 0, 0xd9f5a6);
   }
 
   drawForestBorder(shadowRoot, spriteRoot, world, cell);

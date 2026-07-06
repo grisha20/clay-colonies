@@ -12,7 +12,9 @@ import {
   type NetworkViewState,
   type PheromoneSnapshot,
   type ResourceNode,
+  type ResourceNodeKind,
   type Surface,
+  type TreeGrowthStage,
   type Underground,
   type Vec2,
   type WorldSnapshot
@@ -137,6 +139,56 @@ function randomSurfacePosAwayFromNest(minNestDistance: number): { x: number; y: 
   return { x: CONFIG.mapWidth - 8, y: 8 };
 }
 
+function randomSurfacePosNear(center: Vec2, minRadius: number, maxRadius: number): Vec2 {
+  const angle = Math.random() * Math.PI * 2;
+  const radius = minRadius + Math.random() * Math.max(0.01, maxRadius - minRadius);
+  return {
+    x: Math.max(2, Math.min(CONFIG.mapWidth - 2, center.x + Math.cos(angle) * radius)),
+    y: Math.max(2, Math.min(CONFIG.mapHeight - 2, center.y + Math.sin(angle) * radius))
+  };
+}
+
+function hitsPerUnitForNode(kind: ResourceNodeKind): number {
+  if (kind === "tree") {
+    return CONFIG.treeHitsPerUnit;
+  }
+  if (kind === "stone") {
+    return CONFIG.stoneHitsPerUnit;
+  }
+  if (kind === "clay") {
+    return CONFIG.clayHitsPerUnit;
+  }
+  return CONFIG.handHitsPerUnit;
+}
+
+function amountForTreeGrowth(growth: TreeGrowthStage): number {
+  if (growth === "sapling") {
+    return Math.max(1, Math.round(CONFIG.treeAmount * 0.35));
+  }
+  if (growth === "young") {
+    return Math.max(2, Math.round(CONFIG.treeAmount * 0.65));
+  }
+  return CONFIG.treeAmount;
+}
+
+function createResourceNode(kind: ResourceNodeKind, pos: Vec2, amount: number, growth?: TreeGrowthStage, tick = 0): ResourceNode {
+  const maxAmount = growth ? amountForTreeGrowth(growth) : amount;
+  const node: ResourceNode = {
+    id: `res-${nextResourceNodeId}`,
+    kind,
+    pos,
+    amount: Math.max(0.5, amount),
+    maxAmount: Math.max(0.5, maxAmount),
+    hitsPerUnit: hitsPerUnitForNode(kind)
+  };
+  if (growth) {
+    node.growth = growth;
+    node.grownAt = tick;
+  }
+  nextResourceNodeId += 1;
+  return node;
+}
+
 function makeFoodSources(): FoodSource[] {
   const area = CONFIG.mapWidth * CONFIG.mapHeight;
   const sourceCount = Math.max(6, Math.round(area / 3600));
@@ -174,24 +226,58 @@ function makeCarrionSources(): FoodSource[] {
   return Array.from({ length: CONFIG.carrionCount }, () => makeCarrionSource());
 }
 
-// Узлы глины и дерева: статичная "геология" карты, племя знает их без разведки.
+function randomClusterCenter(minNestDistance: number): Vec2 {
+  return randomSurfacePosAwayFromNest(minNestDistance);
+}
+
+function pushClusteredNodes(
+  nodes: ResourceNode[],
+  kind: ResourceNodeKind,
+  center: Vec2,
+  count: number,
+  radius: number,
+  amount: number,
+  growth?: TreeGrowthStage
+): void {
+  for (let index = 0; index < count; index += 1) {
+    const pos = randomSurfacePosNear(center, 0, radius);
+    const jitteredAmount = amount * (0.8 + Math.random() * 0.4);
+    nodes.push(createResourceNode(kind, pos, jitteredAmount, growth));
+  }
+}
+
+// Узлы ресурсов: всё видимое дерево/камень/глина является настоящим добываемым узлом.
 function makeResourceNodes(): ResourceNode[] {
   const minNestDistance = Math.min(CONFIG.mapWidth, CONFIG.mapHeight) * 0.08;
   const nodes: ResourceNode[] = [];
-  const spawn = (kind: ResourceNode["kind"], count: number, amount: number) => {
-    for (let index = 0; index < count; index += 1) {
-      nodes.push({
-        id: `res-${nextResourceNodeId}`,
-        kind,
-        pos: randomSurfacePosAwayFromNest(minNestDistance),
-        amount: amount * (0.8 + Math.random() * 0.4)
-      });
-      nextResourceNodeId += 1;
+  for (let index = 0; index < CONFIG.clayNodeCount; index += 1) {
+    nodes.push(createResourceNode("clay", randomSurfacePosAwayFromNest(minNestDistance), CONFIG.clayNodeAmount * (0.8 + Math.random() * 0.4)));
+  }
+  for (let cluster = 0; cluster < CONFIG.forestClusterCount; cluster += 1) {
+    const count = CONFIG.forestClusterMinTrees + Math.floor(Math.random() * (CONFIG.forestClusterMaxTrees - CONFIG.forestClusterMinTrees + 1));
+    pushClusteredNodes(nodes, "tree", randomClusterCenter(minNestDistance), count, CONFIG.forestClusterRadius, CONFIG.treeAmount, "mature");
+  }
+  for (let cluster = 0; cluster < CONFIG.stoneClusterCount; cluster += 1) {
+    const count = CONFIG.stoneClusterMinRocks + Math.floor(Math.random() * (CONFIG.stoneClusterMaxRocks - CONFIG.stoneClusterMinRocks + 1));
+    pushClusteredNodes(nodes, "stone", randomClusterCenter(minNestDistance), count, CONFIG.stoneClusterRadius, CONFIG.stoneNodeAmount);
+  }
+  for (let index = 0; index < CONFIG.stickCount; index += 1) {
+    nodes.push(createResourceNode("stick", randomSurfacePosAwayFromNest(8), CONFIG.stickAmount * (0.8 + Math.random() * 0.4)));
+  }
+  for (let index = 0; index < CONFIG.looseStoneCount; index += 1) {
+    nodes.push(createResourceNode("loose-stone", randomSurfacePosAwayFromNest(8), CONFIG.looseStoneAmount * (0.8 + Math.random() * 0.4)));
+  }
+  for (const entrance of [CONFIG.surfaceEntrance, CONFIG.surfaceEntranceB]) {
+    for (let index = 0; index < CONFIG.campBootstrapSticks; index += 1) {
+      nodes.push(createResourceNode("stick", randomSurfacePosNear(entrance, CONFIG.campBootstrapMinRadius, CONFIG.campBootstrapMaxRadius), CONFIG.stickAmount));
     }
-  };
-  spawn("clay", CONFIG.clayNodeCount, CONFIG.clayNodeAmount);
-  spawn("wood", CONFIG.woodNodeCount, CONFIG.woodNodeAmount);
-  spawn("stone", CONFIG.stoneNodeCount, CONFIG.stoneNodeAmount);
+    for (let index = 0; index < CONFIG.campBootstrapLooseStones; index += 1) {
+      nodes.push(createResourceNode("loose-stone", randomSurfacePosNear(entrance, CONFIG.campBootstrapMinRadius, CONFIG.campBootstrapMaxRadius), CONFIG.looseStoneAmount));
+    }
+    for (let index = 0; index < CONFIG.campBootstrapClayNodes; index += 1) {
+      nodes.push(createResourceNode("clay", randomSurfacePosNear(entrance, CONFIG.campBootstrapMinRadius, CONFIG.campBootstrapMaxRadius), CONFIG.clayNodeAmount * 0.5));
+    }
+  }
   return nodes;
 }
 
@@ -204,10 +290,10 @@ export function respawnResourceNodes(world: World): void {
   if (Math.random() > CONFIG.resourceRespawnChance) {
     return;
   }
-  const targets: Array<{ kind: ResourceNode["kind"]; count: number; amount: number }> = [
+  const targets: Array<{ kind: ResourceNodeKind; count: number; amount: number }> = [
     { kind: "clay", count: CONFIG.clayNodeCount, amount: CONFIG.clayNodeAmount },
-    { kind: "wood", count: CONFIG.woodNodeCount, amount: CONFIG.woodNodeAmount },
-    { kind: "stone", count: CONFIG.stoneNodeCount, amount: CONFIG.stoneNodeAmount }
+    { kind: "stick", count: CONFIG.stickCount, amount: CONFIG.stickAmount },
+    { kind: "loose-stone", count: CONFIG.looseStoneCount, amount: CONFIG.looseStoneAmount }
   ];
   for (const target of targets) {
     const alive = world.surface.resourceNodes.filter(
@@ -217,15 +303,41 @@ export function respawnResourceNodes(world: World): void {
       continue;
     }
     const minNestDistance = Math.min(CONFIG.mapWidth, CONFIG.mapHeight) * 0.08;
-    world.surface.resourceNodes.push({
-      id: `res-${nextResourceNodeId}`,
-      kind: target.kind,
-      pos: randomSurfacePosAwayFromNest(minNestDistance),
-      amount: target.amount * (0.5 + Math.random() * 0.5)
-    });
-    nextResourceNodeId += 1;
+    world.surface.resourceNodes.push(createResourceNode(target.kind, randomSurfacePosAwayFromNest(minNestDistance), target.amount * (0.5 + Math.random() * 0.5)));
     return; // не больше одного узла за раз
   }
+}
+
+export function updateResourceNodeGrowth(world: World): void {
+  if (CONFIG.treeGrowStageTicks > 0) {
+    for (const node of world.surface.resourceNodes) {
+      if (node.kind !== "tree" || !node.growth || node.growth === "mature") {
+        continue;
+      }
+      if ((node.grownAt ?? 0) + CONFIG.treeGrowStageTicks > world.tick) {
+        continue;
+      }
+      node.growth = node.growth === "sapling" ? "young" : "mature";
+      node.grownAt = world.tick;
+      node.maxAmount = amountForTreeGrowth(node.growth);
+      node.amount = Math.max(node.amount, node.maxAmount);
+    }
+  }
+  if (CONFIG.treeSeedEveryTicks <= 0 || world.tick % CONFIG.treeSeedEveryTicks !== 0 || Math.random() > CONFIG.treeSeedChance) {
+    return;
+  }
+  const trees = world.surface.resourceNodes.filter((node) => node.kind === "tree");
+  const mature = trees.filter((node) => node.growth === "mature" && node.amount > 0);
+  if (trees.length >= CONFIG.maxTrees || mature.length === 0) {
+    return;
+  }
+  const parent = mature[Math.floor(Math.random() * mature.length)];
+  const pos = randomSurfacePosNear(parent.pos, CONFIG.treeSeedMinRadius, CONFIG.treeSeedMaxRadius);
+  const nearby = trees.filter((node) => distanceSq(node.pos, pos) <= CONFIG.treeDensityRadius * CONFIG.treeDensityRadius).length;
+  if (nearby >= CONFIG.treeDensityLimit) {
+    return;
+  }
+  world.surface.resourceNodes.push(createResourceNode("tree", pos, amountForTreeGrowth("sapling"), "sapling", world.tick));
 }
 
 export function cleanupResourceNodes(world: World): void {
@@ -477,12 +589,8 @@ export function addClayRemains(world: World, ant: Ant): void {
     }
   }
   world.surface.resourceNodes.push({
-    id: `res-${nextResourceNodeId}`,
-    kind: "clay",
-    pos: { x: ant.pos.x, y: ant.pos.y },
-    amount: CONFIG.deadClayAmount
+    ...createResourceNode("clay", { x: ant.pos.x, y: ant.pos.y }, CONFIG.deadClayAmount)
   });
-  nextResourceNodeId += 1;
 }
 
 export function addAntCorpse(world: World, ant: Ant): FoodSource {
@@ -836,7 +944,15 @@ export function worldFromSnapshot(
   }, 0);
   nextCarrionId = Math.max(nextCarrionId, maxCarrionId + 1);
   const genomeStates = [genomeState, genomeStateB];
-  const resourceNodes = (snapshot.surface.resourceNodes ?? makeResourceNodes()).filter((node) => node.amount > 0.01);
+  const resourceNodes = (snapshot.surface.resourceNodes ?? makeResourceNodes())
+    .filter((node) => node.amount > 0.01)
+    .map((node) => ({
+      ...node,
+      maxAmount: node.maxAmount ?? node.amount,
+      hitsPerUnit: node.hitsPerUnit ?? hitsPerUnitForNode(node.kind),
+      growth: node.kind === "tree" ? node.growth ?? "mature" : node.growth,
+      grownAt: node.kind === "tree" ? node.grownAt ?? snapshot.tick : node.grownAt
+    }));
   const maxResourceId = resourceNodes.reduce((max, node) => {
     const numeric = Number(node.id.replace("res-", ""));
     return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
@@ -866,7 +982,9 @@ export function worldFromSnapshot(
         wood: colonySnapshot.colony.wood ?? 0,
         stone: colonySnapshot.colony.stone ?? 0,
         fire: colonySnapshot.colony.fire ?? 1,
-        priorities: colonySnapshot.colony.priorities ?? { clay: 1, wood: 1, stone: 0, build: 1, guard: 1 },
+        axes: colonySnapshot.colony.axes ?? 0,
+        picks: colonySnapshot.colony.picks ?? 0,
+        priorities: colonySnapshot.colony.priorities ?? { clay: 1, wood: 1, stone: 1, build: 1, guard: 1 },
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,

@@ -2,7 +2,7 @@
 // Ум на уровне племени: пока запас ниже цели, несколько свободных рабочих
 // назначаются сборщиками (job = "harvest") на ближайшие узлы ресурсов.
 // Никакого генома: цели заданы константами конфига (позже их заменят приоритеты игрока).
-import type { Ant, Building, ResourceKind, ResourceNode } from "../../../shared/types";
+import { resourceNodeTool, resourceNodeYield, type Ant, type Building, type ResourceKind, type ResourceNode } from "../../../shared/types";
 import { CONFIG } from "../config";
 import type { World } from "./world";
 import { zoneIndexAt } from "./zones";
@@ -25,6 +25,35 @@ export function colonyStock(world: World, kind: ResourceKind): number {
     return world.colony.wood;
   }
   return world.colony.stone;
+}
+
+function availableTools(world: World, tool: "axe" | "pick"): number {
+  return tool === "axe" ? world.colony.axes : world.colony.picks;
+}
+
+function activeToolUsers(world: World, tool: "axe" | "pick"): number {
+  let count = 0;
+  for (const ant of world.ants) {
+    if (ant.state === "dead" || ant.job !== "harvest") {
+      continue;
+    }
+    const node = nodeById(world, ant.harvestNodeId);
+    if (node && resourceNodeTool(node.kind) === tool) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function canAssignNode(world: World, node: ResourceNode, toolUsers: { axe: number; pick: number }): boolean {
+  if (node.kind === "tree" && node.growth === "sapling") {
+    return false;
+  }
+  const tool = resourceNodeTool(node.kind);
+  if (!tool) {
+    return true;
+  }
+  return toolUsers[tool] < availableTools(world, tool);
 }
 
 // Приоритет = целевое ЧИСЛО ЛЮДЕЙ на занятии. Игрок распределяет руками,
@@ -89,7 +118,7 @@ export function assignHarvestJobs(world: World): void {
     }
     const node = nodeById(world, ant.harvestNodeId);
     const kind: ResourceKind | undefined =
-      node?.kind ?? (ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined);
+      node ? resourceNodeYield(node.kind) : ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined;
     const stillWanted = kind ? colonyWantsResource(world, kind) : false;
 
     if ((!economyReady || !stillWanted || (!node && ant.carrying <= 0)) && ant.carrying <= 0) {
@@ -111,7 +140,13 @@ export function assignHarvestJobs(world: World): void {
     if (!colonyWantsResource(world, kind)) {
       continue;
     }
-    let nodes = world.surface.resourceNodes.filter((node) => node.kind === kind && node.amount > 0);
+    const toolUsers = {
+      axe: activeToolUsers(world, "axe"),
+      pick: activeToolUsers(world, "pick")
+    };
+    let nodes = world.surface.resourceNodes.filter(
+      (node) => resourceNodeYield(node.kind) === kind && node.amount > 0 && canAssignNode(world, node, toolUsers)
+    );
     if (nodes.length === 0) {
       continue;
     }
@@ -158,7 +193,12 @@ export function assignHarvestJobs(world: World): void {
 
       ant.job = "harvest";
       ant.harvestNodeId = best.id;
+      ant.harvestHits = 0;
       ant.forageRole = undefined;
+      const tool = resourceNodeTool(best.kind);
+      if (tool) {
+        toolUsers[tool] += 1;
+      }
       need -= 1;
     }
   }
@@ -221,7 +261,7 @@ function resourceObtainable(world: World, kind: ResourceKind): boolean {
   if (colonyStock(world, kind) >= 0.5) {
     return true;
   }
-  return world.surface.resourceNodes.some((node) => node.kind === kind && node.amount > 0);
+  return world.surface.resourceNodes.some((node) => resourceNodeYield(node.kind) === kind && node.amount > 0);
 }
 
 // Первый недостающий ресурс площадки (дублирует ant/build.neededResource, чтобы не плодить импорт-циклы).

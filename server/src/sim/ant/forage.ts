@@ -1,4 +1,4 @@
-import type { Ant, Debris, Vec2 } from "../../../../shared/types";
+import { resourceNodeTool, resourceNodeYield, type Ant, type Debris, type Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
 import { activeFoodTarget } from "../foodMemory";
@@ -604,19 +604,39 @@ export function moveHarvesting(world: World, ant: Ant): boolean {
   if (!node) {
     ant.job = "forage";
     ant.harvestNodeId = undefined;
+    ant.harvestHits = 0;
+    return false;
+  }
+
+  const requiredTool = resourceNodeTool(node.kind);
+  if (
+    (node.kind === "tree" && node.growth === "sapling") ||
+    (requiredTool === "axe" && world.colony.axes <= 0) ||
+    (requiredTool === "pick" && world.colony.picks <= 0)
+  ) {
+    ant.job = "forage";
+    ant.harvestNodeId = undefined;
+    ant.harvestHits = 0;
     return false;
   }
 
   if (isWithinRadius(ant.pos, node.pos, CONFIG.resourcePickupRadius)) {
-    const amount = Math.min(node.amount, Math.max(0.5, ant.strength));
+    ant.harvestHits = (ant.harvestHits ?? 0) + 1;
+    ant.state = "idle";
+    if (ant.harvestHits < CONFIG.harvestHitTicks * node.hitsPerUnit) {
+      return true;
+    }
+    ant.harvestHits = 0;
+    const amount = Math.min(node.amount, Math.max(0.5, Math.min(1, ant.strength)));
     node.amount = Math.max(0, node.amount - amount);
     ant.carrying = amount;
-    ant.carryKind = node.kind;
+    ant.carryKind = resourceNodeYield(node.kind);
     ant.state = "carry";
     return true;
   }
 
   ant.state = "search";
+  ant.harvestHits = 0;
   moveSurfaceToward(world, ant, node.pos, !isColonyStarving(world));
   return true;
 }

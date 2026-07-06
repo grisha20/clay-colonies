@@ -1,4 +1,4 @@
-import type { Ant, Debris, Vec2 } from "../../../../shared/types";
+import { resourceNodeYield, type Ant, type Debris, type Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { tickCache } from "../cache";
 import { addFoodSource } from "../world";
@@ -200,14 +200,15 @@ export function dropCarriedFood(world: World, ant: Ant): void {
     if (kind === "food") {
       addFoodSource(world, ant.pos.x, ant.pos.y, ant.carrying);
     } else {
-      // Глина/дерево возвращаются в узел, откуда взяты (или пропадают).
+      // Глина/дерево/камень возвращаются в узел, откуда взяты (или пропадают).
       const node = world.surface.resourceNodes.find((item) => item.id === ant.harvestNodeId);
-      if (node && node.kind === kind) {
+      if (node && resourceNodeYield(node.kind) === kind) {
         node.amount += ant.carrying;
       }
     }
     ant.carrying = 0;
     ant.carryKind = undefined;
+    ant.harvestHits = 0;
   }
   if (ant.carryingDebris) {
     const nextDebrisId = Math.random().toString(36).substr(2, 9);

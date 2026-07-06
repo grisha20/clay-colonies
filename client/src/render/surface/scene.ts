@@ -337,6 +337,32 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         scene.dynamicLayer.addChild(storage);
         scene.buildingSprites?.push(storage);
       }
+    } else if (building.type === "workshop") {
+      const half = 3.2 * cell;
+      g.zIndex = y + half;
+
+      if (building.stage === "site") {
+        g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x6b4a2b, alpha: 0.65 });
+        const deliveredTotal = building.delivered.clay + building.delivered.wood + building.delivered.stone;
+        const costTotal = Math.max(1, building.cost.clay + building.cost.wood + building.cost.stone);
+        if (deliveredTotal > 0.5) {
+          g.rect(x - half, y + half - (half * 2 * deliveredTotal) / costTotal, half * 2, (half * 2 * deliveredTotal) / costTotal).fill({ color: 0xbc6240, alpha: 0.28 });
+        }
+      } else if (building.stage === "inProgress") {
+        g.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0xbc6240, alpha: 0.3 + building.progress * 0.42 });
+        g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
+      } else {
+        g.ellipse(x + 4, y + half * 0.95, half * 1.6, half * 0.42).fill({ color: 0x24190f, alpha: 0.24 });
+
+        const workshop = new Sprite(getEnvironmentTextures().props.workshop);
+        workshop.anchor.set(0.5, 1);
+        workshop.position.set(Math.round(x), Math.round(y + half * 1.08));
+        workshop.scale.set((half * 4.0) / Math.max(1, workshop.texture.width));
+        workshop.zIndex = g.zIndex + 0.1;
+        workshop.label = `workshop_${building.id}`;
+        scene.dynamicLayer.addChild(workshop);
+        scene.buildingSprites?.push(workshop);
+      }
     } else if (building.type === "idol") {
       // Идол-тотем: столб с маской. Хитрая победа партии.
       const poleH = 5.5 * cell;

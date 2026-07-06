@@ -21,7 +21,7 @@ export type ClientCommand =
     }
   | {
       type: "placeBuilding";
-      building: "hut" | "storage" | "idol";
+      building: "hut" | "storage" | "idol" | "workshop";
       x: number;
       y: number;
       colonyIndex: number;
@@ -116,7 +116,7 @@ function parseCommand(raw: string): ClientCommand | null {
 
     if (command.type === "placeBuilding") {
       if (
-        (command.building !== "hut" && command.building !== "storage" && command.building !== "idol") ||
+        (command.building !== "hut" && command.building !== "storage" && command.building !== "idol" && command.building !== "workshop") ||
         typeof command.x !== "number" ||
         typeof command.y !== "number" ||
         !Number.isFinite(command.x) ||

@@ -20,6 +20,7 @@ import {
   randomHeading,
   respawnCarrion,
   respawnDebris,
+  updateResourceNodeGrowth,
   syncColonyStatsForRuntime,
   syncWorldLegacyFields,
   type ColonyRuntime,
@@ -27,6 +28,7 @@ import {
 } from "./world";
 
 let scentOffsets: { dx: number; dy: number; falloff: number }[] | null = null;
+const toolCraftProgress = new Map<string, { ticks: number; next: "axe" | "pick" }>();
 
 function getScentOffsets(radius: number): { dx: number; dy: number; falloff: number }[] {
   if (scentOffsets) {
@@ -94,6 +96,52 @@ function updateCampfire(world: World, colony: ColonyRuntime): void {
   }
 }
 
+function updateWorkshops(world: World, colony: ColonyRuntime): void {
+  const workshopCount = world.surface.buildings.filter(
+    (building) => building.colonyId === colony.id && building.type === "workshop" && building.stage === "built"
+  ).length;
+  if (workshopCount <= 0) {
+    toolCraftProgress.delete(colony.id);
+    return;
+  }
+  const progress = toolCraftProgress.get(colony.id) ?? { ticks: 0, next: colony.colony.axes <= 0 ? "axe" : "pick" };
+  const wantsAxe = colony.colony.axes < CONFIG.maxAxes;
+  const wantsPick = colony.colony.picks < CONFIG.maxPicks;
+  if (!wantsAxe && !wantsPick) {
+    progress.ticks = 0;
+    toolCraftProgress.set(colony.id, progress);
+    return;
+  }
+  let next = progress.next;
+  if (next === "axe" && !wantsAxe) {
+    next = "pick";
+  } else if (next === "pick" && !wantsPick) {
+    next = "axe";
+  }
+  const cost = next === "axe" ? CONFIG.axeCost : CONFIG.pickCost;
+  if (colony.colony.wood < cost.wood || colony.colony.stone < cost.stone) {
+    progress.next = next;
+    progress.ticks = 0;
+    toolCraftProgress.set(colony.id, progress);
+    return;
+  }
+  progress.ticks += workshopCount;
+  progress.next = next;
+  if (progress.ticks >= CONFIG.toolCraftTicks) {
+    colony.colony.wood -= cost.wood;
+    colony.colony.stone -= cost.stone;
+    if (next === "axe") {
+      colony.colony.axes = Math.min(CONFIG.maxAxes, colony.colony.axes + 1);
+      progress.next = "pick";
+    } else {
+      colony.colony.picks = Math.min(CONFIG.maxPicks, colony.colony.picks + 1);
+      progress.next = "axe";
+    }
+    progress.ticks = 0;
+  }
+  toolCraftProgress.set(colony.id, progress);
+}
+
 function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
   colony.colony.queenAge += 1;
   colony.colony.queenStress = 0;
@@ -147,6 +195,7 @@ export function step(world: World): void {
     respawnDebris(world);
     cleanupResourceNodes(world);
     respawnResourceNodes(world);
+    updateResourceNodeGrowth(world);
   });
   if (world.tick % 5 === 0) {
     profiler.measure("phase.scentFoodSources", () => scentFoodSources(world));
@@ -182,6 +231,7 @@ export function step(world: World): void {
       removeDeadAndSyncSurface(world, colony);
       updateFitness(scopedWorld);
       updateCampfire(world, colony);
+      updateWorkshops(world, colony);
       updateSurfaceRoyalPair(world, colony);
       syncColonyStatsForRuntime(colony);
     }

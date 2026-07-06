@@ -34,7 +34,12 @@ export function drawMinimap(
     if (node.amount <= 0) {
       continue;
     }
-    context.fillStyle = node.kind === "clay" ? "#bc6240" : node.kind === "wood" ? "#8a5429" : "#8d8b82";
+    context.fillStyle =
+      node.kind === "clay"
+        ? "#bc6240"
+        : node.kind === "tree" || node.kind === "stick"
+          ? "#3f7a2d"
+          : "#8d8b82";
     context.fillRect(toX(node.pos.x) - 1.5, toY(node.pos.y) - 1.5, 3, 3);
   }
 

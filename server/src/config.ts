@@ -73,7 +73,7 @@ export const CONFIG = {
   startingClay: 10,
   deadClayAmount: 2.5,
   // Живой костёр: ест дрова, гаснет без них, слабый огонь замедляет жителей.
-  fireWoodEveryTicks: 300,
+  fireWoodEveryTicks: 600,
   fireWoodCost: 1,
   fireDecay: 0.06,
   fireRecover: 0.1,
@@ -268,14 +268,49 @@ export const CONFIG = {
   genomeTournamentSize: 3,
   genomeMutationRate: 0.15,
 
-  // Ресурсы Clayfolk: узлы глины и дерева на поверхности.
+  // Ресурсы Clayfolk: «что видишь — то можно добыть».
+  // Глиняные пятна (руками).
   clayNodeCount: 5,
   clayNodeAmount: 70,
-  woodNodeCount: 5,
-  woodNodeAmount: 55,
-  stoneNodeCount: 4,
+  // Леса: рощи из отдельных деревьев (рубка топором).
+  forestClusterCount: 7,
+  forestClusterMinTrees: 10,
+  forestClusterMaxTrees: 16,
+  forestClusterRadius: 14,
+  treeAmount: 6,
+  maxTrees: 170,
+  // Скалы: гряды валунов (кирка), не восстанавливаются.
+  stoneClusterCount: 3,
+  stoneClusterMinRocks: 3,
+  stoneClusterMaxRocks: 5,
+  stoneClusterRadius: 7,
   stoneNodeAmount: 60,
-  // Узлы ресурсов медленно восстанавливаются, чтобы профессии не вымирали.
+  // Ручной сбор: ветки (дерево) и россыпи камешков (камень).
+  stickCount: 14,
+  stickAmount: 3,
+  looseStoneCount: 12,
+  looseStoneAmount: 3,
+  // Бутстрап у лагеря: чтобы партия всегда могла дойти до мастерской.
+  campBootstrapMinRadius: 18,
+  campBootstrapMaxRadius: 38,
+  campBootstrapSticks: 3,
+  campBootstrapLooseStones: 3,
+  campBootstrapClayNodes: 1,
+  // Многоударная добыча: удар раз в harvestHitTicks тиков, единица за hitsPerUnit ударов.
+  harvestHitTicks: 12,
+  treeHitsPerUnit: 4,
+  stoneHitsPerUnit: 6,
+  clayHitsPerUnit: 2,
+  handHitsPerUnit: 1,
+  // Рост лесов: росток -> молодое -> взрослое; взрослые сеют ростки рядом.
+  treeGrowStageTicks: 3600,
+  treeSeedEveryTicks: 1500,
+  treeSeedChance: 0.06,
+  treeSeedMinRadius: 5,
+  treeSeedMaxRadius: 13,
+  treeDensityRadius: 9,
+  treeDensityLimit: 7,
+  // Ветки/камешки/глина медленно восстанавливаются, чтобы ручной сбор не вымирал.
   resourceRespawnEveryTicks: 2500,
   resourceRespawnChance: 0.35,
   resourcePickupRadius: 1.6,
@@ -283,7 +318,7 @@ export const CONFIG = {
   woodReserveTarget: 30,
   stoneReserveTarget: 25,
   maxHarvestersPerResource: 3,
-  harvestMinWorkers: 10,
+  harvestMinWorkers: 8,
   harvestMinFood: 30,
 
   // Постройки: хижина (точкой) и стена (кистью).
@@ -298,6 +333,16 @@ export const CONFIG = {
   storageMaxHp: 100,
   storageBuildTicks: 200,
   maxStoragesPerColony: 6,
+  // Мастерская: производит инструменты из ресурсов склада.
+  workshopCost: { clay: 8, wood: 4, stone: 0 },
+  workshopMaxHp: 100,
+  workshopBuildTicks: 220,
+  maxWorkshopsPerColony: 2,
+  axeCost: { wood: 2, stone: 1 },
+  pickCost: { wood: 2, stone: 2 },
+  toolCraftTicks: 200,
+  maxAxes: 3,
+  maxPicks: 3,
   dropPointRadius: 3,
   maxBuildersPerSite: 2,
   maxActiveBuilders: 4,
