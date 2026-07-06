@@ -1,6 +1,7 @@
 import { computeDirectives, updateFitness } from "../ai/controller";
 import { CONFIG } from "../config";
 import { stepAnt, clearDeadAntPaths } from "./ant";
+import { clearDeadPanic, triggerPanicAround } from "./ant/combat";
 import { updateTickCache, updateWorldSurfaceCache } from "./cache";
 import { profiler } from "../utils/profiler";
 import { updateEnemies } from "./enemy";
@@ -70,6 +71,7 @@ function removeDeadAndSyncSurface(world: World, colony: ColonyRuntime): void {
       const scoped = colonyWorldView(world, colony);
       addAntCorpse(scoped, ant);
       addClayRemains(scoped, ant);
+      triggerPanicAround(scoped, ant.pos);
     }
   }
   colony.ants = colony.ants.filter((ant) => ant.state !== "dead");
@@ -201,7 +203,9 @@ export function step(world: World): void {
   }
 
   if (world.tick % 500 === 0) {
-    clearDeadAntPaths(new Set(world.ants.map((ant) => ant.id)));
+    const activeIds = new Set(world.ants.map((ant) => ant.id));
+    clearDeadAntPaths(activeIds);
+    clearDeadPanic(activeIds);
   }
 
   syncWorldLegacyFields(world);

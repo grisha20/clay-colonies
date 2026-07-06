@@ -8,7 +8,7 @@ import { moveBuilding } from "./build";
 import { moveGuarding } from "./guard";
 import { tryCrossLayer, updateStuckTracking } from "./movement";
 import { canUseStorageMeal, shouldReturnFromSurface } from "./colony-state";
-import { handleEnemyColonyCombat, moveFighting } from "./combat";
+import { handleEnemyColonyCombat, moveFighting, movePanicking } from "./combat";
 import {
   moveCarrying,
   moveHarvestCarrying,
@@ -42,6 +42,10 @@ export function stepSurface(world: World, ant: Ant): void {
   }
 
   if (profiler.measure("stepAnt.surface.combat", () => handleEnemyColonyCombat(world, ant))) {
+    return;
+  }
+
+  if (movePanicking(world, ant)) {
     return;
   }
 

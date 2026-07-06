@@ -767,6 +767,17 @@ let selectedAnt: string | null = null;
 
 const CARGO_NAMES: Record<string, string> = { food: "еда", clay: "глина", wood: "дерево", stone: "камень" };
 
+// Именные жители: имя и черта детерминированы id — партию запоминают по «Храброму Малому».
+const FIRST_NAMES = ["Комок", "Малой", "Глинко", "Круглый", "Шмяк", "Лепень", "Тюха", "Крепыш", "Юркий", "Пузырь"];
+const TRAITS = ["Храбрый", "Кривой", "Сонный", "Шустрый", "Упрямый", "Тихий", "Весёлый", "Ворчливый"];
+
+function antName(id: string): string {
+  const numeric = Number(id.replace("ant-", "")) || 0;
+  const first = FIRST_NAMES[numeric % FIRST_NAMES.length];
+  const trait = TRAITS[Math.floor(numeric / FIRST_NAMES.length) % TRAITS.length];
+  return `${trait} ${first}`;
+}
+
 function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): string {
   if (ant.state === "fight") {
     return "Дерётся!";
@@ -815,7 +826,7 @@ function updateUnitPanel(world: WorldSnapshot): void {
     return;
   }
   unitPanel.style.display = "block";
-  unitTitle.textContent = `Житель ${ant.id.replace("ant-", "№")} (${ant.colonyId === "colony-2" ? "племя B" : "племя A"})`;
+  unitTitle.textContent = `${antName(ant.id)} (${ant.colonyId === "colony-2" ? "племя B" : "племя A"})`;
   unitJob.textContent = antJobLabel(world, ant);
   const energyFraction = Math.max(0, Math.min(1, ant.energy / 900));
   unitEnergy.style.width = `${Math.round(energyFraction * 100)}%`;

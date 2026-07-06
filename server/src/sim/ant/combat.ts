@@ -17,6 +17,44 @@ import { isColonyStarving, isColonyWarHungry } from "./colony-state";
 
 const combatQueryScratch: Ant[] = [];
 
+// Паника: гибель жителя рядом заставляет соседей бросить груз и бежать к костру.
+// Стража и уже дерущиеся держатся. Это «суетятся, тупят и смешно проваливаются».
+const panicUntil = new Map<string, number>();
+
+export function triggerPanicAround(world: World, pos: Vec2): void {
+  for (const ant of world.ants) {
+    if (ant.state === "dead" || ant.state === "fight" || ant.job === "guard") {
+      continue;
+    }
+    if (isWithinRadius(ant.pos, pos, CONFIG.panicRadius)) {
+      panicUntil.set(ant.id, world.tick + CONFIG.panicTicks);
+    }
+  }
+}
+
+export function movePanicking(world: World, ant: Ant): boolean {
+  const until = panicUntil.get(ant.id);
+  if (until === undefined) {
+    return false;
+  }
+  if (world.tick >= until || ant.job === "guard") {
+    panicUntil.delete(ant.id);
+    return false;
+  }
+  dropCarriedFood(world, ant);
+  ant.state = "search";
+  moveSurfaceToward(world, ant, world.surface.entrance, false, true);
+  return true;
+}
+
+export function clearDeadPanic(activeIds: Set<string>): void {
+  for (const antId of panicUntil.keys()) {
+    if (!activeIds.has(antId)) {
+      panicUntil.delete(antId);
+    }
+  }
+}
+
 function isColonyInGrace(world: World, colonyId: string): boolean {
   const colony = world.colonies.find((item) => item.id === colonyId);
   if (!colony) {

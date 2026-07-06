@@ -307,6 +307,11 @@ export const CONFIG = {
 
   // Стража: пара жителей держится у лагеря, пока жив паук.
   guardCount: 2,
+  // Паника: смерть жителя пугает соседей.
+  panicRadius: 8,
+  panicTicks: 100,
+  // Логово-экспедиция: запас паука можно разграбить, пока хозяин далеко.
+  hoardLootSpiderDistance: 40,
   guardMinWorkers: 12,
   guardPatrolRadius: 11,
   guardEngageRadius: 26,

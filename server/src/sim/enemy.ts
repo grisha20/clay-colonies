@@ -339,6 +339,51 @@ function creditSpiderKill(world: World, enemy: Enemy): void {
   }
 }
 
+// Логово-экспедиция (идея 9): пока паук дальше hoardLootSpiderDistance от логова,
+// его запас (hoard) выложен у логова как падаль — жители могут «забрать своё».
+// Вернулся хозяин — остаток прячется обратно. Зона добычи на логове = приказ идти.
+function syncHoardLoot(world: World, enemy: Enemy): void {
+  const lootId = `hoard-${enemy.id}`;
+  const index = world.surface.carrion.findIndex((source) => source.id === lootId);
+  const spiderAway = !isWithinRadius(enemy.pos, enemy.lair, CONFIG.hoardLootSpiderDistance);
+
+  if (index >= 0) {
+    // Пока выложено — жители могли поесть/унести: истинный остаток в источнике.
+    enemy.hoard = world.surface.carrion[index].amount;
+  }
+
+  if (spiderAway && enemy.hoard > 0.5) {
+    if (index < 0) {
+      world.surface.carrion.push({
+        id: lootId,
+        pos: { x: enemy.lair.x, y: enemy.lair.y },
+        amount: enemy.hoard,
+        kind: "carrion",
+        createdAt: world.tick
+      });
+    } else {
+      world.surface.carrion[index].amount = enemy.hoard;
+    }
+  } else if (index >= 0) {
+    // Хозяин рядом (или запас кончился): прячем остаток обратно.
+    world.surface.carrion.splice(index, 1);
+  }
+}
+
+function removeHoardLoot(world: World, enemy: Enemy, dropAtLair: boolean): void {
+  const lootId = `hoard-${enemy.id}`;
+  const index = world.surface.carrion.findIndex((source) => source.id === lootId);
+  if (index >= 0) {
+    enemy.hoard = world.surface.carrion[index].amount;
+    world.surface.carrion.splice(index, 1);
+  }
+  if (dropAtLair && enemy.hoard > 0.5) {
+    // Паук погиб — запас остаётся у логова насовсем.
+    addFoodSource(world, enemy.lair.x, enemy.lair.y, enemy.hoard, "carrion");
+    enemy.hoard = 0;
+  }
+}
+
 export function updateEnemies(world: World): void {
   if (world.enemies.length === 0) {
     if (spiderRespawnTick === null) {
@@ -396,19 +441,24 @@ export function updateEnemies(world: World): void {
     const starved = updateSpiderStarvation(enemy);
     if (enemy.hp <= 0) {
       deadEnemies.add(enemy.id);
+      removeHoardLoot(world, enemy, true);
       addFoodSource(world, enemy.pos.x, enemy.pos.y, CONFIG.spiderCarcassFood, "spiderCarcass");
       creditSpiderKill(world, enemy);
       evolveSpiderGeneration(world);
       spiderRespawnTick = world.tick + CONFIG.spiderRespawnTicks;
     } else if (starved) {
       deadEnemies.add(enemy.id);
+      removeHoardLoot(world, enemy, true);
       evolveSpiderGeneration(world);
       spiderRespawnTick = world.tick + CONFIG.spiderRespawnTicks;
     } else if (world.spiderFitness.survivalTicks >= CONFIG.spiderLifeMaxTicks) {
       deadEnemies.add(enemy.id);
+      removeHoardLoot(world, enemy, false);
       evolveSpiderGeneration(world);
       world.enemies.push(createSpider());
       spiderRespawnTick = null;
+    } else {
+      syncHoardLoot(world, enemy);
     }
   }
 
