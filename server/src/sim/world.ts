@@ -195,6 +195,39 @@ function makeResourceNodes(): ResourceNode[] {
   return nodes;
 }
 
+// Геология оживает: если узлов какого-то ресурса меньше стартового числа,
+// изредка появляется новый на окраине — иначе цель «3 на камень» умирает навсегда.
+export function respawnResourceNodes(world: World): void {
+  if (CONFIG.resourceRespawnEveryTicks <= 0 || world.tick % CONFIG.resourceRespawnEveryTicks !== 0) {
+    return;
+  }
+  if (Math.random() > CONFIG.resourceRespawnChance) {
+    return;
+  }
+  const targets: Array<{ kind: ResourceNode["kind"]; count: number; amount: number }> = [
+    { kind: "clay", count: CONFIG.clayNodeCount, amount: CONFIG.clayNodeAmount },
+    { kind: "wood", count: CONFIG.woodNodeCount, amount: CONFIG.woodNodeAmount },
+    { kind: "stone", count: CONFIG.stoneNodeCount, amount: CONFIG.stoneNodeAmount }
+  ];
+  for (const target of targets) {
+    const alive = world.surface.resourceNodes.filter(
+      (node) => node.kind === target.kind && node.amount > 0
+    ).length;
+    if (alive >= target.count) {
+      continue;
+    }
+    const minNestDistance = Math.min(CONFIG.mapWidth, CONFIG.mapHeight) * 0.08;
+    world.surface.resourceNodes.push({
+      id: `res-${nextResourceNodeId}`,
+      kind: target.kind,
+      pos: randomSurfacePosAwayFromNest(minNestDistance),
+      amount: target.amount * (0.5 + Math.random() * 0.5)
+    });
+    nextResourceNodeId += 1;
+    return; // не больше одного узла за раз
+  }
+}
+
 export function cleanupResourceNodes(world: World): void {
   if (world.surface.resourceNodes.some((node) => node.amount <= 0.01)) {
     world.surface.resourceNodes = world.surface.resourceNodes.filter((node) => node.amount > 0.01);

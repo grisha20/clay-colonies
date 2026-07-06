@@ -275,6 +275,9 @@ export const CONFIG = {
   woodNodeAmount: 55,
   stoneNodeCount: 4,
   stoneNodeAmount: 60,
+  // Узлы ресурсов медленно восстанавливаются, чтобы профессии не вымирали.
+  resourceRespawnEveryTicks: 2500,
+  resourceRespawnChance: 0.35,
   resourcePickupRadius: 1.6,
   clayReserveTarget: 40,
   woodReserveTarget: 30,

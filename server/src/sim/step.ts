@@ -13,6 +13,7 @@ import {
   addAntCorpse,
   addClayRemains,
   cleanupResourceNodes,
+  respawnResourceNodes,
   colonyWorldView,
   createWorkerAnt,
   growFoodSources,
@@ -145,6 +146,7 @@ export function step(world: World): void {
     growFoodSources(world);
     respawnDebris(world);
     cleanupResourceNodes(world);
+    respawnResourceNodes(world);
   });
   if (world.tick % 5 === 0) {
     profiler.measure("phase.scentFoodSources", () => scentFoodSources(world));

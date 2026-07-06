@@ -139,7 +139,7 @@ appRoot.innerHTML = `
     <aside class="panel prioPanel" id="prio-panel">
       <h2>Приоритеты</h2>
       <div id="prio-rows"></div>
-      <div class="prioFood">Свободные (на еде): <strong id="prio-food-count">0</strong></div>
+      <div class="prioFood">На еде сейчас: <strong id="prio-food-count">0</strong></div>
     </aside>
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
@@ -660,6 +660,10 @@ style.textContent = `
     cursor: default;
   }
 
+  .prioRow .pcount.short {
+    color: #b33f2e;
+  }
+
   .prioRow .pval {
     width: 14px;
     text-align: center;
@@ -892,28 +896,42 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   const priorities = colony.priorities ?? { clay: 0, wood: 0, stone: 0, build: 0, guard: 0 };
   const counts = countJobs(world);
 
-  // Свободные = живые жители минус разведка минус розданные цели (минимум еды всегда за племенем).
+  // Раздача целей ограничена населением; но показываем ФАКТ: кто реально на еде.
   const population = world.ants.filter((ant) => ant.colonyId === colonyId).length;
   const scouts = world.ants.filter((ant) => ant.colonyId === colonyId && ant.forageRole === "scout").length;
   const assignedTotal = PRIO_KEYS.reduce((sum, k) => sum + (priorities[k] ?? 0), 0);
-  const free = Math.max(0, population - scouts - assignedTotal);
+  const freeForPlus = Math.max(0, population - scouts - assignedTotal);
+
+  // Есть ли на карте живой источник данного ресурса (для подсветки «нет источника»).
+  const nodesAlive: Record<string, boolean> = { clay: false, wood: false, stone: false };
+  for (const node of world.surface.resourceNodes ?? []) {
+    if (node.amount > 0) {
+      nodesAlive[node.kind] = true;
+    }
+  }
 
   const key =
-    currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}`).join("|") + `|${free}|${counts.food}`;
+    currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}:${nodesAlive[k] ? 1 : 0}`).join("|") +
+    `|${freeForPlus}|${counts.food}`;
   if (key === lastPrioKey) {
     return;
   }
   lastPrioKey = key;
 
-  prioRows.innerHTML = PRIO_KEYS.map(
-    (k) =>
+  prioRows.innerHTML = PRIO_KEYS.map((k) => {
+    const target = priorities[k] ?? 0;
+    // Цель есть, людей нет и источник иссяк — честно показываем причину.
+    const short = (k === "clay" || k === "wood" || k === "stone") && target > counts[k] && !nodesAlive[k];
+    return (
       `<div class="prioRow"><span class="plabel">${PRIO_LABELS[k]}</span>` +
-      `<button data-prio="${k}" data-delta="-1" type="button"${(priorities[k] ?? 0) <= 0 ? " disabled" : ""}>−</button>` +
-      `<span class="pval">${priorities[k] ?? 0}</span>` +
-      `<button data-prio="${k}" data-delta="1" type="button"${free <= 0 ? " disabled" : ""}>+</button>` +
-      `<span class="pcount">${counts[k]} чел.</span></div>`
-  ).join("");
-  prioFoodCount.textContent = String(free);
+      `<button data-prio="${k}" data-delta="-1" type="button"${target <= 0 ? " disabled" : ""}>−</button>` +
+      `<span class="pval">${target}</span>` +
+      `<button data-prio="${k}" data-delta="1" type="button"${freeForPlus <= 0 ? " disabled" : ""}>+</button>` +
+      `<span class="pcount${short ? " short" : ""}" ${short ? 'title="Источник иссяк — люди пока на еде"' : ""}>${counts[k]} чел.${short ? " (нет источника)" : ""}</span></div>`
+    );
+  }).join("");
+  // Факт: сколько реально таскают еду (назначенные без источника — тоже здесь).
+  prioFoodCount.textContent = String(counts.food);
 
   for (const button of prioRows.querySelectorAll<HTMLButtonElement>("[data-prio]")) {
     button.addEventListener("click", () => {
