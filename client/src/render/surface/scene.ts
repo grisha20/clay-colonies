@@ -14,7 +14,7 @@ import { drawSurfaceGround } from "./ground";
 import { drawSurfacePheromones } from "./pheromones";
 import { drawSurfaceEntranceAt } from "./entrance";
 import { getEnvironmentTextures } from "./environment";
-import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceDebris, updateSurfaceShadows } from "./entities";
+import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceShadows } from "./entities";
 import { offsetSettings } from "./editor";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
@@ -46,7 +46,7 @@ export function createSurfaceScene(): SurfaceScene {
   const zonesOverlay = new Graphics();
   const pheromones = new Graphics();
   const webs = new Graphics();
-  const debrisGraphics = new Graphics();
+  const selectionGraphics = new Graphics();
 
   staticLayer.label = "staticLayer";
   shadowLayer.label = "shadowLayer";
@@ -56,12 +56,12 @@ export function createSurfaceScene(): SurfaceScene {
   zonesOverlay.label = "zonesOverlay";
   pheromones.label = "pheromones";
   webs.label = "webs";
-  debrisGraphics.label = "debrisGraphics";
-  debrisGraphics.zIndex = 9000; // Мусор и оверлей выделения всегда рисуются поверх самих человечков
+  selectionGraphics.label = "selectionGraphics";
+  selectionGraphics.zIndex = 9000; // Оверлей выделения всегда рисуется поверх самих человечков
 
   // Собираем слои в корень сцены
   root.addChild(staticLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
-  dynamicLayer.addChild(debrisGraphics);
+  dynamicLayer.addChild(selectionGraphics);
 
   if (typeof window !== "undefined") {
     (window as any).printLayers = () => {
@@ -78,7 +78,7 @@ export function createSurfaceScene(): SurfaceScene {
     zonesOverlay,
     pheromones,
     webs,
-    debrisGraphics,
+    selectionGraphics,
     buildingGraphics: [],
     buildingSprites: [],
     entranceGraphics: [],
@@ -243,7 +243,7 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
   // Собираем все координаты готовых стен
   const wallPositions = new Set<string>();
   for (const b of buildings) {
-    if (b.type === "wall" && b.stage === "built") {
+    if ((b.type === "wall" || b.type === "gate") && b.stage === "built") {
       wallPositions.add(`${Math.round(b.pos.x)},${Math.round(b.pos.y)}`);
     }
   }
@@ -258,7 +258,7 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
     const g = new Graphics();
     g.label = `building_${building.type}_${building.id}`;
 
-    if (building.type === "wall") {
+    if (building.type === "wall" || building.type === "gate") {
       const half = (WALL_CELL_SIZE / 2) * cell;
       // Основание стены
       g.zIndex = y + half;
@@ -307,6 +307,13 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
             g.rect(xLeft, y - half - wallRise - topDepth, width, 1.2).fill({ color: 0xffffff, alpha: 0.25 });
           }
           g.rect(xLeft, y - half - wallRise + 2, width, 1.6).fill({ color: darkColor, alpha: 0.35 });
+        }
+
+        // Ворота: тёмный проём и светлая перекладина — читается как проход.
+        if (building.type === "gate") {
+          const gapWidth = Math.max(3, half * 0.9);
+          g.rect(x - gapWidth / 2, y - half - wallRise + 3, gapWidth, wallRise + half * 2 - 4).fill({ color: 0x2e1d12, alpha: 0.92 });
+          g.rect(x - gapWidth / 2 - 1, y - half - wallRise + 1, gapWidth + 2, 2.4).fill({ color: 0xf7c979, alpha: 0.95 });
         }
       }
     } else if (building.type === "storage") {
@@ -617,11 +624,10 @@ export function renderSurface(
   updateSurfaceShadows(scene.shadowLayer, world, cell, bounds);
   drawSurfacePheromones(scene.pheromones, world, cell, bounds);
   updateSurfaceWebs(scene.webs, world, cell, bounds);
-  updateSurfaceDebris(scene.debrisGraphics, world, cell, bounds);
   updateSurfaceFood(scene.foodPool, world, cell, bounds);
   updateSurfaceResources(scene.resourcePool, world, cell, bounds);
   updateSurfaceCarrion(scene.carrionPool, world, cell, bounds);
   updateSurfaceLairs(scene.lairPool, world, cell, bounds);
   updateSurfaceEnemies(scene.enemyPool, scene.carriedCarrionPool, world, cell, bounds);
-  updateSurfaceAnts(scene.antPool, scene.carriedItemsPool, scene.debrisGraphics, world, cell, bounds);
+  updateSurfaceAnts(scene.antPool, scene.carriedItemsPool, scene.selectionGraphics, world, cell, bounds);
 }

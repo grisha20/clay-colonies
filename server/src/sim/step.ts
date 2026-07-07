@@ -19,7 +19,6 @@ import {
   growFoodSources,
   randomHeading,
   respawnCarrion,
-  respawnDebris,
   updateResourceNodeGrowth,
   syncColonyStatsForRuntime,
   syncWorldLegacyFields,
@@ -192,7 +191,6 @@ export function step(world: World): void {
   profiler.measure("phase.resources", () => {
     respawnCarrion(world);
     growFoodSources(world);
-    respawnDebris(world);
     cleanupResourceNodes(world);
     respawnResourceNodes(world);
     updateResourceNodeGrowth(world);

@@ -32,6 +32,11 @@ export type ClientCommand =
       colonyIndex: number;
     }
   | {
+      type: "paintGate";
+      cells: number[];
+      colonyIndex: number;
+    }
+  | {
       type: "eraseBuild";
       cells: number[];
       colonyIndex: number;
@@ -44,6 +49,9 @@ export type ClientCommand =
   | {
       type: "setSpeed";
       value: number;
+    }
+  | {
+      type: "newGame";
     }
   | {
       type: "setView";
@@ -80,6 +88,10 @@ function parseCommand(raw: string): ClientCommand | null {
         type: "setSpeed",
         value: command.value
       };
+    }
+
+    if (command.type === "newGame") {
+      return { type: "newGame" };
     }
 
     if (command.type === "setView") {
@@ -131,7 +143,7 @@ function parseCommand(raw: string): ClientCommand | null {
       return { type: "placeBuilding", building: command.building, x: command.x, y: command.y, colonyIndex };
     }
 
-    if (command.type === "paintWall" || command.type === "eraseBuild") {
+    if (command.type === "paintWall" || command.type === "paintGate" || command.type === "eraseBuild") {
       const rawCells = Array.isArray(command.cells) ? (command.cells as unknown[]) : [];
       const cells: number[] = [];
       for (const cell of rawCells.slice(0, 512)) {
@@ -142,7 +154,13 @@ function parseCommand(raw: string): ClientCommand | null {
       if (cells.length === 0) {
         return null;
       }
-      return command.type === "paintWall" ? { type: "paintWall", cells, colonyIndex } : { type: "eraseBuild", cells, colonyIndex };
+      if (command.type === "paintWall") {
+        return { type: "paintWall", cells, colonyIndex };
+      }
+      if (command.type === "paintGate") {
+        return { type: "paintGate", cells, colonyIndex };
+      }
+      return { type: "eraseBuild", cells, colonyIndex };
     }
 
     if (command.type === "paintZone" || command.type === "eraseZone") {

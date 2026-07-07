@@ -5,7 +5,7 @@ import { loadGenome } from "./ai/genome";
 import { loadSpiderGenome } from "./ai/spiderGenome";
 import { createSocketHub } from "./net/socket";
 import { loadWorldSnapshot, saveWorldSnapshot } from "./state/snapshot";
-import { addFoodSource, createWorld, toNetworkSnapshot } from "./sim/world";
+import { addFoodSource, createWorld, restartColony, toNetworkSnapshot } from "./sim/world";
 import { eraseColonyZone, paintColonyZone } from "./sim/zones";
 import { eraseBuildCells, paintWallCells, placePointBuilding } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
@@ -33,6 +33,9 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
   if (command.type === "paintWall") {
     paintWallCells(world, command.colonyIndex, command.cells);
   }
+  if (command.type === "paintGate") {
+    paintWallCells(world, command.colonyIndex, command.cells, "gate");
+  }
   if (command.type === "eraseBuild") {
     eraseBuildCells(world, command.colonyIndex, command.cells);
   }
@@ -41,6 +44,10 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
     if (colony) {
       colony.colony.priorities = command.priorities;
     }
+  }
+  if (command.type === "newGame") {
+    // Новая партия: свежий мир на месте, геномы и обучение сохраняются.
+    restartColony(world);
   }
   if (command.type === "setSpeed") {
     // 0 = пауза; 1..50 = скорость симуляции.

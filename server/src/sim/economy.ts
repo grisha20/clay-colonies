@@ -169,7 +169,6 @@ export function assignHarvestJobs(world: World): void {
         ant.job !== "forage" ||
         ant.forageRole === "scout" ||
         ant.carrying > 0 ||
-        ant.carryingDebris ||
         ant.state === "fight" ||
         ant.state === "return"
       ) {
@@ -250,7 +249,6 @@ function isFreeForAssignment(ant: Ant): boolean {
     ant.job === "forage" &&
     ant.forageRole !== "scout" &&
     ant.carrying <= 0 &&
-    !ant.carryingDebris &&
     ant.state !== "fight" &&
     ant.state !== "return"
   );
@@ -294,8 +292,8 @@ export function assignBuildJobs(world: World): void {
       return kind === null || resourceObtainable(world, kind);
     })
     .sort((a, b) => {
-      const priorityA = a.type === "wall" ? 1 : 0;
-      const priorityB = b.type === "wall" ? 1 : 0;
+      const priorityA = a.type === "wall" || a.type === "gate" ? 1 : 0;
+      const priorityB = b.type === "wall" || b.type === "gate" ? 1 : 0;
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }

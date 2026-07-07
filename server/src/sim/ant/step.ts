@@ -3,7 +3,6 @@ import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
 import { resolveWallCollision } from "../building";
 import type { World } from "../world";
-import { isWithinRadius } from "./utils";
 import { moveBuilding } from "./build";
 import { moveGuarding } from "./guard";
 import { tryCrossLayer, updateStuckTracking } from "./movement";
@@ -15,10 +14,7 @@ import {
   moveHarvesting,
   moveHungryHome,
   moveHungryToFood,
-  moveSearching,
-  moveCarryingDebris,
-  moveSearchingDebris,
-  nearestAvailableFood
+  moveSearching
 } from "./forage";
 
 export { clearDeadAntPaths } from "./movement";
@@ -62,11 +58,6 @@ export function stepSurface(world: World, ant: Ant): void {
     return;
   }
 
-  if (ant.carryingDebris) {
-    moveCarryingDebris(world, ant);
-    return;
-  }
-
   if (profiler.measure("stepAnt.surface.combat", () => moveFighting(world, ant))) {
     return;
   }
@@ -100,21 +91,6 @@ export function stepSurface(world: World, ant: Ant): void {
     return;
   }
 
-  if (ant.job === "idle" && moveSearchingDebris(world, ant)) {
-    return;
-  }
-
-  if (ant.carrying <= 0 && !ant.carryingDebris) {
-    const food = nearestAvailableFood(world, ant);
-    const hasCloseFood = food && isWithinRadius(ant.pos, food.source.pos, CONFIG.antFoodSightRadius);
-    if (!hasCloseFood && world.ants.length > 10 && world.colony.food > 20 && Math.random() < 0.0003) {
-      ant.job = "idle";
-      if (moveSearchingDebris(world, ant)) {
-        return;
-      }
-    }
-  }
-
   ant.state = "search";
   ant.job = ant.job === "idle" ? "idle" : "forage";
   moveSearching(world, ant);
@@ -143,6 +119,6 @@ export function stepAnt(world: World, ant: Ant): void {
   const prevY = ant.pos.y;
   stepSurface(world, ant);
   // Достроенные стены непроходимы: скольжение вдоль стены или откат.
-  resolveWallCollision(world, ant.pos, prevX, prevY);
+  resolveWallCollision(world, ant.pos, prevX, prevY, ant.colonyId);
   updateStuckTracking(world, ant);
 }

@@ -127,7 +127,7 @@ export function assignForageRoles(world: World): void {
   const hasActiveTarget = !!world.colony.activeFoodTargetId;
   const activeTargetId = world.colony.activeFoodTargetId;
   const availableWorkers = world.ants.filter(
-    (ant) => ant.state !== "dead" && !ant.carryingDebris && !ant.carryingDirt && ant.job !== "harvest" && ant.job !== "build" && ant.job !== "guard"
+    (ant) => ant.state !== "dead" && !ant.carryingDirt && ant.job !== "harvest" && ant.job !== "build" && ant.job !== "guard"
   ).length;
   const reserveTarget = hasActiveTarget && availableWorkers >= 16 ? Math.max(1, Math.ceil(availableWorkers * 0.1)) : 0;
   const foragerLimit = hasActiveTarget
@@ -136,7 +136,6 @@ export function assignForageRoles(world: World): void {
   const regularCandidates = world.ants
     .filter((ant) =>
       ant.state !== "dead" &&
-      !ant.carryingDebris &&
       !ant.carryingDirt &&
       ant.job !== "harvest" &&
       ant.job !== "build" &&
@@ -145,7 +144,6 @@ export function assignForageRoles(world: World): void {
   const scoutCandidates = world.ants
     .filter((ant) =>
       ant.state !== "dead" &&
-      !ant.carryingDebris &&
       !ant.carryingDirt &&
       ant.job !== "harvest" &&
       ant.job !== "build" &&

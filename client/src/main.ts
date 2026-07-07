@@ -144,6 +144,11 @@ appRoot.innerHTML = `
         <span class="bcost" id="cost-wall">2 глины / сегмент</span>
         <span class="bnote">тяни линию мышью</span>
       </button>
+      <button class="buildCard" data-tool="gate" type="button">
+        <span class="bname">Ворота</span>
+        <span class="bcost" id="cost-gate">2 глины + 1 дерево</span>
+        <span class="bnote">проход только своим</span>
+      </button>
       <button class="buildCard" data-tool="idol" type="button">
         <span class="bname">Идол</span>
         <span class="bcost" id="cost-idol">25 глины + 5 камня</span>
@@ -535,6 +540,23 @@ style.textContent = `
     color: #fff6e0;
     font-weight: 600;
     font-size: 13px;
+  }
+
+  .newGameBtn {
+    margin-top: 8px;
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid #8a5429;
+    border-radius: 6px;
+    background: #f3e3c2;
+    color: #4f2f16;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .newGameBtn:hover {
+    background: #ead1a1;
   }
 
   .unitPanel {
@@ -1011,9 +1033,6 @@ function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): 
     const node = world.surface.resourceNodes?.find((item) => item.id === ant.harvestNodeId);
     return node ? `Добывает: ${CARGO_NAMES[resourceNodeYield(node.kind)] ?? node.kind}` : "Добывает ресурс";
   }
-  if (ant.carryingDebris) {
-    return "Прибирается";
-  }
   if (ant.carrying > 0) {
     return "Несёт еду";
   }
@@ -1050,9 +1069,7 @@ function updateUnitPanel(world: WorldSnapshot): void {
   unitCargo.textContent =
     ant.carrying > 0
       ? `${CARGO_NAMES[ant.carryKind ?? "food"] ?? "еда"} (${ant.carrying.toFixed(1)})`
-      : ant.carryingDebris
-        ? "хлам"
-        : "-";
+      : "-";
 }
 
 // Ресурс-бар племени A: иконки + значения + прирост за минуту.
@@ -1105,7 +1122,8 @@ const BUILD_COSTS: Record<string, { clay: number; wood: number; stone: number }>
   storage: { clay: 0, wood: 6, stone: 4 },
   workshop: { clay: 8, wood: 4, stone: 0 },
   idol: { clay: 25, wood: 0, stone: 5 },
-  wall: { clay: 2, wood: 0, stone: 0 }
+  wall: { clay: 2, wood: 0, stone: 0 },
+  gate: { clay: 2, wood: 1, stone: 0 }
 };
 
 function updateBuildCards(world: WorldSnapshot): void {
@@ -1170,10 +1188,10 @@ const antsCount = document.querySelector<HTMLElement>("#ants-count");
 let trampleEnabled = true;
 
 // Инструменты игрока: клик-еда, кисть зон, постройки.
-type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "workshop" | "idol" | "wall" | "erase";
+type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "workshop" | "idol" | "wall" | "gate" | "erase";
 let currentTool: PlayerTool = "food";
 let isPainting = false;
-let dragTool: "harvest" | "forbid" | "wall" | "erase" | null = null;
+let dragTool: "harvest" | "forbid" | "wall" | "gate" | "erase" | null = null;
 let dragStart: { x: number; y: number } | null = null;
 let dragEnd: { x: number; y: number } | null = null;
 
@@ -1186,7 +1204,8 @@ const TOOL_HINTS: Record<PlayerTool, string> = {
   workshop: "Клик - мастерская (8 глины + 4 дерева, делает топоры и кирки). Shift - ставить несколько",
   idol: "Клик - Идол (25 глины + 5 камня). Достроишь - хитрая победа партии",
   wall: "Растяни линию стены (ЛКМ), 2 глины за сегмент",
-  erase: "Растяни прямоугольник - сотрёт зоны и свои стены"
+  gate: "Растяни линию ворот (ЛКМ): 2 глины + 1 дерево за сегмент, проходят только свои",
+  erase: "Растяни прямоугольник - сотрёт зоны, свои стены и ворота"
 };
 
 const colonyNodes = [0, 1].map((index) => {
@@ -1353,11 +1372,24 @@ function updateTasks(world: WorldSnapshot): void {
   const tutorial = objectives.filter((o) => !o.victory);
   const won = victories.some((o) => o.done);
   tasksList.innerHTML =
-    (won ? `<div class="victoryBanner">ПОБЕДА! Партия сыграна — можно начать заново (Сброс)</div>` : "") +
+    (won ? `<div class="victoryBanner">ПОБЕДА! Партия сыграна — начни новую!</div>` : "") +
     `<div class="taskSection">Пути победы (достаточно одного)</div>` +
     victories.map(taskRowHtml).join("") +
     `<div class="taskSection">Обучение</div>` +
-    tutorial.map(taskRowHtml).join("");
+    tutorial.map(taskRowHtml).join("") +
+    `<button class="newGameBtn" id="new-game-btn" type="button">Новая партия</button>`;
+
+  const newGameButton = tasksList.querySelector<HTMLButtonElement>("#new-game-btn");
+  if (newGameButton) {
+    newGameButton.addEventListener("click", () => {
+      if (
+        confirm("Начать новую партию? Мир будет создан заново (обучение и геномы сохранятся).") &&
+        socket.readyState === WebSocket.OPEN
+      ) {
+        socket.send(JSON.stringify({ type: "newGame" }));
+      }
+    });
+  }
 }
 
 function updateHud(world: WorldSnapshot): void {
@@ -1536,7 +1568,7 @@ function updateDragEnd(shiftPressed: boolean): void {
   if (!dragStart || !lastRawTile) {
     return;
   }
-  if (shiftPressed && dragTool === "wall") {
+  if (shiftPressed && (dragTool === "wall" || dragTool === "gate")) {
     dragEnd = snapToAngles(dragStart, lastRawTile);
   } else {
     dragEnd = lastRawTile;
@@ -1597,8 +1629,9 @@ function commitDrag(): void {
     return;
   }
   const colony = currentColonyIndex;
-  if (dragTool === "wall") {
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintWall", cells, colony })), wallLineCells(dragStart, dragEnd), 500);
+  if (dragTool === "wall" || dragTool === "gate") {
+    const commandType = dragTool === "gate" ? "paintGate" : "paintWall";
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: commandType, cells, colony })), wallLineCells(dragStart, dragEnd), 500);
   } else if (dragTool === "harvest" || dragTool === "forbid") {
     const zone = dragTool;
     sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintZone", zone, cells, colony })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
@@ -1676,7 +1709,7 @@ function updateDragPreview(): void {
   }
   const a = worldToScreen(dragStart.x, dragStart.y);
   const b = worldToScreen(dragEnd.x, dragEnd.y);
-  if (dragTool === "wall") {
+  if (dragTool === "wall" || dragTool === "gate") {
     const thickness = Math.max(3, WALL_CELL_SIZE * SURFACE_TILE_SIZE * camera.zoom);
     dragPreview.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: thickness, color: 0xbc6240, alpha: 0.55 });
     dragPreview.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 2, color: 0x5b281c, alpha: 0.9 });
@@ -1816,7 +1849,7 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
   lastPointer = { x: event.clientX, y: event.clientY };
   pixi.canvas.setPointerCapture(event.pointerId);
 
-  if (currentTool === "harvest" || currentTool === "forbid" || currentTool === "wall" || currentTool === "erase") {
+  if (currentTool === "harvest" || currentTool === "forbid" || currentTool === "wall" || currentTool === "gate" || currentTool === "erase") {
     const tile = pointerToTile(event);
     if (tile) {
       isPainting = true;
@@ -2075,14 +2108,14 @@ socket.addEventListener("message", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Shift" && isPainting && dragTool === "wall") {
+  if (event.key === "Shift" && isPainting && (dragTool === "wall" || dragTool === "gate")) {
     updateDragEnd(true);
     updateDragPreview();
   }
 });
 
 window.addEventListener("keyup", (event) => {
-  if (event.key === "Shift" && isPainting && dragTool === "wall") {
+  if (event.key === "Shift" && isPainting && (dragTool === "wall" || dragTool === "gate")) {
     updateDragEnd(false);
     updateDragPreview();
   }

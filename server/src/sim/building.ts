@@ -51,6 +51,9 @@ function buildingCost(type: BuildingType): { clay: number; wood: number; stone: 
   if (type === "idol") {
     return { ...CONFIG.idolCost };
   }
+  if (type === "gate") {
+    return { ...CONFIG.gateCost };
+  }
   return { ...CONFIG.wallCost };
 }
 
@@ -67,6 +70,9 @@ function buildingMaxHp(type: BuildingType): number {
   if (type === "idol") {
     return CONFIG.idolMaxHp;
   }
+  if (type === "gate") {
+    return CONFIG.gateMaxHp;
+  }
   return CONFIG.wallMaxHp;
 }
 
@@ -82,6 +88,9 @@ export function buildRatePerTick(type: BuildingType): number {
   }
   if (type === "idol") {
     return 1 / CONFIG.idolBuildTicks;
+  }
+  if (type === "gate") {
+    return 1 / CONFIG.gateBuildTicks;
   }
   return 1 / CONFIG.wallBuildTicks;
 }
@@ -184,7 +193,12 @@ export function placeHut(world: World, colonyIndex: number, x: number, y: number
 
 const MAX_WALL_CELLS_PER_COMMAND = 512;
 
-export function paintWallCells(world: World, colonyIndex: number, cells: number[]): void {
+export function paintWallCells(
+  world: World,
+  colonyIndex: number,
+  cells: number[],
+  type: "wall" | "gate" = "wall"
+): void {
   const colony = world.colonies[colonyIndex];
   if (!colony) {
     return;
@@ -192,11 +206,11 @@ export function paintWallCells(world: World, colonyIndex: number, cells: number[
   const limit = wallGridWidth() * wallGridHeight();
   const occupied = new Set(
     world.surface.buildings
-      .filter((item) => item.type === "wall")
+      .filter((item) => item.type === "wall" || item.type === "gate")
       .map((item) => wallCellIndexAt(item.pos.x, item.pos.y))
   );
   let segments = world.surface.buildings.filter(
-    (item) => item.colonyId === colony.id && item.type === "wall"
+    (item) => item.colonyId === colony.id && (item.type === "wall" || item.type === "gate")
   ).length;
 
   for (const cell of cells.slice(0, MAX_WALL_CELLS_PER_COMMAND)) {
@@ -210,7 +224,7 @@ export function paintWallCells(world: World, colonyIndex: number, cells: number[
     if (tooCloseToEntrance(world, pos)) {
       continue;
     }
-    world.surface.buildings.push(createBuilding(colony.id, "wall", pos));
+    world.surface.buildings.push(createBuilding(colony.id, type, pos));
     occupied.add(cell);
     segments += 1;
   }
@@ -238,25 +252,38 @@ export function completeBuilding(world: World, building: Building): void {
   building.stage = "built";
   building.progress = 1;
   building.hp = building.maxHp;
-  if (building.type === "wall") {
+  if (building.type === "wall" || building.type === "gate") {
     rebuildWallBlocked(world);
   }
 }
 
 export function rebuildWallBlocked(world: World): void {
   world.wallBlocked.clear();
+  world.gateOwner.clear();
   for (const building of world.surface.buildings) {
-    if (building.type === "wall" && building.stage === "built") {
-      world.wallBlocked.add(wallCellIndexAt(building.pos.x, building.pos.y));
+    if (building.stage !== "built") {
+      continue;
+    }
+    if (building.type === "wall" || building.type === "gate") {
+      const cell = wallCellIndexAt(building.pos.x, building.pos.y);
+      world.wallBlocked.add(cell);
+      if (building.type === "gate") {
+        world.gateOwner.set(cell, building.colonyId);
+      }
     }
   }
 }
 
-export function isWallBlockedAt(world: World, x: number, y: number): boolean {
+export function isWallBlockedAt(world: World, x: number, y: number, colonyId?: string): boolean {
   if (world.wallBlocked.size === 0) {
     return false;
   }
-  return world.wallBlocked.has(wallCellIndexAt(x, y));
+  const cell = wallCellIndexAt(x, y);
+  if (!world.wallBlocked.has(cell)) {
+    return false;
+  }
+  // Ворота: свои жители проходят, чужие и паук — нет.
+  return !(colonyId && world.gateOwner.get(cell) === colonyId);
 }
 
 // Разрешение столкновения со стеной: откат на свободную ось (скольжение вдоль стены).
@@ -265,19 +292,20 @@ export function resolveWallCollision(
   world: World,
   pos: Vec2,
   prevX: number,
-  prevY: number
+  prevY: number,
+  colonyId?: string
 ): void {
-  if (world.wallBlocked.size === 0 || !isWallBlockedAt(world, pos.x, pos.y)) {
+  if (world.wallBlocked.size === 0 || !isWallBlockedAt(world, pos.x, pos.y, colonyId)) {
     return;
   }
-  if (isWallBlockedAt(world, prevX, prevY)) {
+  if (isWallBlockedAt(world, prevX, prevY, colonyId)) {
     return;
   }
-  if (!isWallBlockedAt(world, pos.x, prevY)) {
+  if (!isWallBlockedAt(world, pos.x, prevY, colonyId)) {
     pos.y = prevY;
     return;
   }
-  if (!isWallBlockedAt(world, prevX, pos.y)) {
+  if (!isWallBlockedAt(world, prevX, pos.y, colonyId)) {
     pos.x = prevX;
     return;
   }
@@ -293,7 +321,7 @@ export function damageBuilding(world: World, building: Building, amount: number)
   building.hp -= amount;
   if (building.hp <= 0) {
     world.surface.buildings = world.surface.buildings.filter((item) => item.id !== building.id);
-    if (building.type === "wall") {
+    if (building.type === "wall" || building.type === "gate") {
       rebuildWallBlocked(world);
     }
   }

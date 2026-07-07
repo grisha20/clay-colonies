@@ -4,7 +4,6 @@ import {
   type Ant,
   type Brood,
   type Colony,
-  type Debris,
   type Enemy,
   type FoodSource,
   type DurableWorldSnapshot,
@@ -61,6 +60,8 @@ export type World = Omit<WorldSnapshot, "snapshotVersion" | "protocolVersion" | 
   zoneSets: ZoneSets;
   // Клетки, занятые ДОСТРОЕННЫМИ стенами (индексы стенной сетки 2x2). Общие для всего мира.
   wallBlocked: Set<number>;
+  // Ворота: клетка стенной сетки -> colonyId владельца (свои проходят, чужие и паук — нет).
+  gateOwner: Map<number, string>;
   pheromones: {
     width: number;
     height: number;
@@ -73,7 +74,6 @@ let nextAntId = 1;
 let nextFoodSourceId = 0;
 let nextCarrionId = 0;
 let nextResourceNodeId = 0;
-const MAX_SURFACE_DEBRIS = 80;
 const MAX_SNAPSHOT_STORAGE_ROOMS = 15;
 const MAX_SURFACE_FOOD_SOURCES = 40;
 const FOOD_MERGE_RADIUS = 4;
@@ -346,82 +346,6 @@ export function cleanupResourceNodes(world: World): void {
   }
 }
 
-function makeDebrisSources(entrances: Vec2[]): Debris[] {
-  const debris: Debris[] = [];
-  const debrisCount = 8;
-  let nextDebrisId = 1;
-
-  for (let i = 0; i < debrisCount; i++) {
-    let pos = { x: 0, y: 0 };
-    let valid = false;
-
-    for (let attempt = 0; attempt < 100; attempt++) {
-      pos = {
-        x: 3 + Math.random() * (CONFIG.mapWidth - 6),
-        y: 3 + Math.random() * (CONFIG.mapHeight - 6)
-      };
-
-      let minDistanceSq = Infinity;
-      for (const ent of entrances) {
-        const distSq = distanceSq(pos, ent);
-        if (distSq < minDistanceSq) {
-          minDistanceSq = distSq;
-        }
-      }
-
-      if (minDistanceSq >= 25 * 25) {
-        valid = true;
-        break;
-      }
-    }
-
-    debris.push({
-      id: `debris-${nextDebrisId}`,
-      type: Math.random() < 0.5 ? "pebble" : "leaf",
-      pos
-    });
-    nextDebrisId += 1;
-  }
-
-  return debris;
-}
-
-function normalizeSurfaceDebris(surface: Surface, entrances: Vec2[]): Debris[] {
-  const debris = surface.debris ?? makeDebrisSources(entrances);
-  if (debris.length <= MAX_SURFACE_DEBRIS) {
-    return debris;
-  }
-
-  const kept = new Map<string, Debris>();
-  for (const item of debris) {
-    let nearestEntranceDistanceSq = Number.POSITIVE_INFINITY;
-    for (const entrance of entrances) {
-      nearestEntranceDistanceSq = Math.min(nearestEntranceDistanceSq, distanceSq(item.pos, entrance));
-    }
-
-    const bucket = `${Math.floor(item.pos.x / 8)}:${Math.floor(item.pos.y / 8)}:${item.type}`;
-    if (nearestEntranceDistanceSq >= 3 * 3 && nearestEntranceDistanceSq <= 24 * 24 && !kept.has(bucket)) {
-      kept.set(bucket, item);
-    }
-
-    if (kept.size >= MAX_SURFACE_DEBRIS) {
-      break;
-    }
-  }
-
-  if (kept.size < MAX_SURFACE_DEBRIS) {
-    for (const item of debris) {
-      kept.set(item.id, item);
-      if (kept.size >= MAX_SURFACE_DEBRIS) {
-        break;
-      }
-    }
-  }
-
-  console.warn(`Trimmed surface debris from ${debris.length} to ${kept.size} while loading snapshot`);
-  return Array.from(kept.values());
-}
-
 function mergeFoodSources(sources: FoodSource[]): FoodSource[] {
   const merged: FoodSource[] = [];
   for (const source of sources) {
@@ -511,49 +435,6 @@ function compactStorageRooms(underground: Underground): void {
   underground.roomsVersion = (underground.roomsVersion ?? 1) + 1;
   underground.digTasksVersion = (underground.digTasksVersion ?? 1) + 1;
   console.warn(`Compacted storage rooms from ${storageRooms.length} to ${keptStorage.length} while loading snapshot`);
-}
-
-export function respawnDebris(world: World): void {
-  if (!world.surface.debris) {
-    world.surface.debris = [];
-  }
-
-  if (world.surface.debris.length >= 15) {
-    return;
-  }
-
-  if (world.tick % 600 === 0 && Math.random() < 0.15) {
-    const entrances = world.colonies.map((c) => c.surfaceEntrance);
-    let pos = { x: 0, y: 0 };
-    let valid = false;
-
-    for (let attempt = 0; attempt < 80; attempt++) {
-      pos = {
-        x: 3 + Math.random() * (CONFIG.mapWidth - 6),
-        y: 3 + Math.random() * (CONFIG.mapHeight - 6)
-      };
-
-      let minDistanceSq = Infinity;
-      for (const ent of entrances) {
-        const distSq = distanceSq(pos, ent);
-        if (distSq < minDistanceSq) {
-          minDistanceSq = distSq;
-        }
-      }
-
-      if (minDistanceSq >= 25 * 25) {
-        valid = true;
-        break;
-      }
-    }
-
-    const nextDebrisId = Math.random().toString(36).substr(2, 9);
-    world.surface.debris.push({
-      id: `debris-${nextDebrisId}`,
-      type: Math.random() < 0.5 ? "pebble" : "leaf",
-      pos
-    });
-  }
 }
 
 export function respawnCarrion(world: World): void {
@@ -838,7 +719,6 @@ export function createWorld(
     entrances,
     foodSources: makeFoodSources(),
     carrion: makeCarrionSources(),
-    debris: makeDebrisSources(entrances),
     resourceNodes: makeResourceNodes(),
     buildings: []
   };
@@ -861,6 +741,7 @@ export function createWorld(
     spiderFitness: createSpiderFitnessState(),
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
+    gateOwner: new Map<number, string>(),
     objectives: createObjectives(),
     weather: createWeather(),
     ants: colonies.flatMap((colony) => colony.ants),
@@ -1030,7 +911,6 @@ export function worldFromSnapshot(
   const enemies = normalizeEnemies(snapshot);
   syncEnemyIdCounter(enemies, snapshot.tick);
   const entrances = snapshot.surface.entrances ?? colonies.map((colony) => colony.surfaceEntrance);
-  const debris = normalizeSurfaceDebris(snapshot.surface, entrances);
 
   const world: World = {
     ...snapshot,
@@ -1039,7 +919,6 @@ export function worldFromSnapshot(
       foodSources,
       carrion,
       entrances,
-      debris,
       resourceNodes,
       buildings
     },
@@ -1054,6 +933,7 @@ export function worldFromSnapshot(
     spiderFitness: createSpiderFitnessState(),
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
+    gateOwner: new Map<number, string>(),
     objectives: restoreObjectives(snapshot.objectives),
     weather: snapshot.weather ?? createWeather(),
     ants: snapshotAnts,

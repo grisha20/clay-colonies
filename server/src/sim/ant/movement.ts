@@ -155,7 +155,7 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 
   // Порыв блуждания перекрывает цель (работает и без стен: давка, углы).
   const burst = wanderBurstDirection(world, ant);
   if (burst) {
-    if (world.wallBlocked.size === 0 || !isWallBlockedAt(world, ant.pos.x + burst.x * 2.4, ant.pos.y + burst.y * 2.4)) {
+    if (world.wallBlocked.size === 0 || !isWallBlockedAt(world, ant.pos.x + burst.x * 2.4, ant.pos.y + burst.y * 2.4, ant.colonyId)) {
       return burst;
     }
     return normalize({ x: -burst.x, y: -burst.y });
@@ -164,16 +164,16 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 
     return desired;
   }
   const lookAhead = 2.4;
-  if (!isWallBlockedAt(world, ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead)) {
+  if (!isWallBlockedAt(world, ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead, ant.colonyId)) {
     return desired;
   }
   const sign = numericAntId(ant.id) % 2 === 0 ? 1 : -1;
   const along = { x: -desired.y * sign, y: desired.x * sign };
-  if (!isWallBlockedAt(world, ant.pos.x + along.x * lookAhead, ant.pos.y + along.y * lookAhead)) {
+  if (!isWallBlockedAt(world, ant.pos.x + along.x * lookAhead, ant.pos.y + along.y * lookAhead, ant.colonyId)) {
     return normalize({ x: along.x + desired.x * 0.12, y: along.y + desired.y * 0.12 });
   }
   const back = { x: desired.y * sign, y: -desired.x * sign };
-  if (!isWallBlockedAt(world, ant.pos.x + back.x * lookAhead, ant.pos.y + back.y * lookAhead)) {
+  if (!isWallBlockedAt(world, ant.pos.x + back.x * lookAhead, ant.pos.y + back.y * lookAhead, ant.colonyId)) {
     return normalize({ x: back.x + desired.x * 0.12, y: back.y + desired.y * 0.12 });
   }
   // Тупик с трёх сторон: разворачиваемся.

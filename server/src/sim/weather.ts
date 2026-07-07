@@ -56,7 +56,7 @@ function applyRain(world: World): void {
     return;
   }
   for (const building of [...world.surface.buildings]) {
-    if (building.type === "wall" && building.stage === "built") {
+    if ((building.type === "wall" || building.type === "gate") && building.stage === "built") {
       damageBuilding(world, building, CONFIG.rainWallDamage);
     }
   }

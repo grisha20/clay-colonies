@@ -16,7 +16,7 @@ const { loadSpiderGenome } = await import("../ai/spiderGenome");
 const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
 const { step } = await import("../sim/step");
 const { paintColonyZone, zoneIndexAt } = await import("../sim/zones");
-const { placeHut, placePointBuilding, paintWallCells, wallCellIndexAt, completeBuilding } = await import("../sim/building");
+const { placeHut, placePointBuilding, paintWallCells, wallCellIndexAt, completeBuilding, isWallBlockedAt } = await import("../sim/building");
 
 let failures = 0;
 
@@ -139,6 +139,24 @@ for (let i = 0; i < 1500; i += 1) {
 }
 check("Фаза 4: стена почти непроходима", crossings <= 50, `пересечений=${crossings}`);
 
+// --- Ворота: свои проходят, чужие и паук — нет ---
+const gateX = entrance.x;
+const gateY = wallY + 8;
+paintWallCells(world, 0, [wallCellIndexAt(gateX, gateY)], "gate");
+const gate = world.surface.buildings.find((building) => building.type === "gate");
+if (gate) {
+  gate.delivered.clay = gate.cost.clay;
+  gate.delivered.wood = gate.cost.wood;
+  completeBuilding(world, gate);
+}
+check("Ворота: сегмент ставится и достраивается", gate?.stage === "built", `stage=${gate?.stage}`);
+check(
+  "Ворота: свои проходят, чужие и паук — нет",
+  isWallBlockedAt(world, gateX, gateY, colonyA.id) === false &&
+    isWallBlockedAt(world, gateX, gateY, "colony-2") === true &&
+    isWallBlockedAt(world, gateX, gateY) === true
+);
+
 // --- Снапшот: мир переживает сохранение/загрузку ---
 const snapshot = JSON.parse(JSON.stringify(toSnapshot(world, false)));
 const reloaded = worldFromSnapshot(snapshot, genome, spiderGenome, genomeB);
@@ -151,6 +169,17 @@ for (let i = 0; i < 300; i += 1) {
   step(reloaded);
 }
 check("Снапшот: мир живёт после загрузки", reloaded.ants.length > 0);
+
+// --- Новая партия: рестарт мира на месте, обучение сохраняется ---
+const { restartColony } = await import("../sim/world");
+const genomeBefore = world.colonies[0].genomeState.current;
+restartColony(world);
+check("Новая партия: мир свежий и живой", world.tick === 0 && world.ants.length > 0, `tick=${world.tick}, ants=${world.ants.length}`);
+check("Новая партия: обучение сохранилось", world.colonies[0].genomeState.current === genomeBefore);
+for (let i = 0; i < 200; i += 1) {
+  step(world);
+}
+check("Новая партия: симуляция идёт дальше", world.tick === 200);
 
 console.log(failures === 0 ? "\nВСЕ ПРОВЕРКИ ПРОЙДЕНЫ" : `\nПРОВАЛОВ: ${failures}`);
 process.exit(failures === 0 ? 0 : 1);

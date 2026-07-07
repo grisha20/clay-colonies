@@ -11,7 +11,6 @@ import {
   getSpearTexture,
   getFoodTexture
 } from "../../sprites";
-import { drawPebble, drawLeaf } from "./ground";
 import { getEnvironmentTextures } from "./environment";
 import { offsetSettings } from "./editor";
 
@@ -62,17 +61,8 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     if (ant.layer !== "surface" || !isInBounds(ant.pos, bounds, 7)) {
       continue;
     }
-    const carrying = ant.state === "carry" || ant.carrying > 0 || !!ant.carryingDebris;
+    const carrying = ant.state === "carry" || ant.carrying > 0;
     drawSoftShadow(graphics, ant.pos.x * cell, ant.pos.y * cell + 22, carrying ? 18 : 16, carrying ? 6.5 : 5.8, 0.24);
-  }
-
-  if (world.surface.debris) {
-    for (const item of world.surface.debris) {
-      if (!isInBounds(item.pos, bounds, 3)) {
-        continue;
-      }
-      drawSoftShadow(graphics, item.pos.x * cell, item.pos.y * cell + 3, item.type === "pebble" ? 5.5 : 4.5, 2.2, 0.11);
-    }
   }
 }
 
@@ -348,13 +338,14 @@ export function updateSurfaceEnemies(
 export function updateSurfaceAnts(
   pool: SpritePool,
   carriedItemsPool: SpritePool,
-  debrisGraphics: Graphics,
+  selectionGraphics: Graphics,
   world: WorldSnapshot,
   cell: number,
   bounds: ViewBounds
 ): void {
   beginPool(pool);
   beginPool(carriedItemsPool);
+  selectionGraphics.clear();
   const props = getEnvironmentTextures().props;
 
   for (const ant of world.ants) {
@@ -365,7 +356,7 @@ export function updateSurfaceAnts(
       continue;
     }
 
-    const carrying = ant.state === "carry" || ant.carrying > 0 || !!ant.carryingDebris;
+    const carrying = ant.state === "carry" || ant.carrying > 0;
     const color = ant.colonyId === "colony-2" ? "red" : "dark";
     const sprite = acquireSprite(pool);
     sprite.texture = getClayfolkTexture(carrying, color);
@@ -431,8 +422,8 @@ export function updateSurfaceAnts(
     if (ant.id === selectedAntId) {
       const sx = ant.pos.x * cell;
       const sy = ant.pos.y * cell;
-      debrisGraphics.circle(sx, sy + 4, 11).stroke({ width: 1.8, color: 0xfff3c4, alpha: 0.9 });
-      debrisGraphics.circle(sx, sy + 4, 13.5).stroke({ width: 1, color: 0xfff3c4, alpha: 0.35 });
+      selectionGraphics.circle(sx, sy + 4, 11).stroke({ width: 1.8, color: 0xfff3c4, alpha: 0.9 });
+      selectionGraphics.circle(sx, sy + 4, 13.5).stroke({ width: 1, color: 0xfff3c4, alpha: 0.35 });
     }
 
     if (ant.job === "guard") {
@@ -447,32 +438,9 @@ export function updateSurfaceAnts(
       placeSprite(spearSprite, cx + settings.offsetX * facing, cy + settings.offsetY, rot + (facing > 0 ? settings.rotation : -settings.rotation));
       spearSprite.zIndex = feetY + 0.01;
     }
-
-    if (ant.carryingDebris) {
-      const debrisSprite = acquireSprite(carriedItemsPool);
-      const isPebble = ant.carryingDebris === "pebble";
-      const settings = isPebble ? offsetSettings.pebble : offsetSettings.leaf;
-      debrisSprite.texture = isPebble ? getStoneTexture() : getFoodTexture();
-      debrisSprite.anchor.set(0.5);
-      debrisSprite.scale.set(settings.scale, settings.scale);
-      debrisSprite.tint = 0xffffff;
-      debrisSprite.alpha = 0.95;
-
-      const hX = Math.cos(headingAngle);
-      const hY = Math.sin(headingAngle);
-      const offsetDist = cell * (settings.offsetDist / 8);
-      placeSprite(debrisSprite, cx + hX * offsetDist, cy + hY * offsetDist, rot + Math.PI / 2);
-      debrisSprite.zIndex = feetY + 0.01;
-    }
   }
 
   endPool(pool);
   endPool(carriedItemsPool);
 }
 
-export function updateSurfaceDebris(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
-  graphics.clear();
-  void world;
-  void cell;
-  void bounds;
-}

@@ -1,4 +1,4 @@
-import { resourceNodeYield, type Ant, type Debris, type Vec2 } from "../../../../shared/types";
+import { resourceNodeYield, type Ant, type Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { tickCache } from "../cache";
 import { addFoodSource } from "../world";
@@ -209,15 +209,6 @@ export function dropCarriedFood(world: World, ant: Ant): void {
     ant.carrying = 0;
     ant.carryKind = undefined;
     ant.harvestHits = 0;
-  }
-  if (ant.carryingDebris) {
-    const nextDebrisId = Math.random().toString(36).substr(2, 9);
-    world.surface.debris.push({
-      id: `debris-${nextDebrisId}`,
-      type: ant.carryingDebris,
-      pos: { ...ant.pos }
-    });
-    ant.carryingDebris = null;
   }
 }
 

@@ -329,6 +329,10 @@ export const CONFIG = {
   wallCost: { clay: 2, wood: 0, stone: 0 },
   wallMaxHp: 80,
   wallBuildTicks: 70,
+  // Ворота: сегмент стены, через который проходят только свои жители.
+  gateCost: { clay: 2, wood: 1, stone: 0 },
+  gateMaxHp: 80,
+  gateBuildTicks: 90,
   storageCost: { clay: 0, wood: 6, stone: 4 },
   storageMaxHp: 100,
   storageBuildTicks: 200,

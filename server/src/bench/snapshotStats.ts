@@ -49,8 +49,7 @@ const stats = {
     width: snapshot.surface.width,
     height: snapshot.surface.height,
     foodSources: snapshot.surface.foodSources.length,
-    carrion: snapshot.surface.carrion.length,
-    debris: snapshot.surface.debris?.length ?? 0
+    carrion: snapshot.surface.carrion.length
   },
   pheromones: {
     foodSparseCells: sparseLength(snapshot.pheromones.food),

@@ -50,7 +50,6 @@ function spreadSurfaceAnts(world: World, totalAnts: number): void {
         job: "forage",
         carrying: 0,
         carryingDirt: false,
-        carryingDebris: null,
         pos: {
           x: 2 + Math.random() * (world.surface.width - 4),
           y: 2 + Math.random() * (world.surface.height - 4)

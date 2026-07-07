@@ -42,7 +42,6 @@ function setupCrowd(world: World): void {
     }
   ];
   world.surface.carrion = [];
-  world.surface.debris = [];
   world.enemies = [
     {
       id: "crowd-spider-1",
@@ -81,7 +80,6 @@ function setupCrowd(world: World): void {
         job: "forage",
         carrying: 0,
         carryingDirt: false,
-        carryingDebris: null,
         pos: {
           x: center.x + Math.cos(angle) * radius + jitter,
           y: center.y + Math.sin(angle) * radius - jitter

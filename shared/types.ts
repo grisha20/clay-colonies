@@ -2,8 +2,8 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 9;
-export const CURRENT_PROTOCOL_VERSION = 9;
+export const CURRENT_SNAPSHOT_VERSION = 11;
+export const CURRENT_PROTOCOL_VERSION = 11;
 
 export type Vec2 = {
   x: number;
@@ -68,19 +68,13 @@ export type Brood = {
   isPrincess: boolean;
 };
 
-export type Debris = {
-  id: string;
-  type: "pebble" | "leaf";
-  pos: Vec2;
-};
-
 // Зоны игрока: крупные клетки 4x4 мировых единицы (сетка 120x120 для карты 480x480).
 export const ZONE_CELL_SIZE = 4;
 export type ZoneType = "harvest" | "forbid";
 
 // Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
 export const WALL_CELL_SIZE = 2;
-export type BuildingType = "hut" | "wall" | "storage" | "idol" | "workshop";
+export type BuildingType = "hut" | "wall" | "gate" | "storage" | "idol" | "workshop";
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {
@@ -169,7 +163,6 @@ export type Ant = {
   digTarget?: Vec2;
   digStandPos?: Vec2;
   digProgress?: number;
-  carryingDebris?: "pebble" | "leaf" | null;
   foundFoodSourceId?: string;
   scoutTrail?: Vec2[];
   foundFoodTrail?: Vec2[];
@@ -296,7 +289,6 @@ export type Surface = {
   entrances: Vec2[];
   foodSources: FoodSource[];
   carrion: FoodSource[];
-  debris: Debris[];
   resourceNodes: ResourceNode[];
   buildings: Building[];
 };
