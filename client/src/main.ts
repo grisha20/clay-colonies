@@ -157,9 +157,21 @@ appRoot.innerHTML = `
     </section>
     <aside class="panel prioPanel" id="prio-panel">
       <h2>Приоритеты</h2>
-      <div class="prioSummary" id="prio-summary"></div>
+      <div class="prioStats" id="prio-stats">
+        <div class="prioStat" title="Общее количество жителей колонии">
+          <span class="prioStatVal" id="prio-pop">0</span>
+          <span class="prioStatLabel">жителей</span>
+        </div>
+        <div class="prioStat" id="prio-free-container" title="Свободные жители, которых можно переназначить">
+          <span class="prioStatVal" id="prio-free">0</span>
+          <span class="prioStatLabel">свободно</span>
+        </div>
+        <div class="prioStat" title="Жители, собирающие еду">
+          <span class="prioStatVal" id="prio-food">0</span>
+          <span class="prioStatLabel">на еде</span>
+        </div>
+      </div>
       <div id="prio-rows"></div>
-      <div class="prioFood">На еде сейчас: <strong id="prio-food-count">0</strong></div>
     </aside>
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
@@ -657,78 +669,139 @@ style.textContent = `
   .prioPanel {
     right: 14px;
     bottom: 200px;
-    width: 220px;
-    padding: 10px 12px;
+    width: 232px;
+    padding: 12px;
   }
 
   .prioPanel h2 {
-    margin: 0 0 6px;
+    margin: 0 0 10px;
     font-size: 14px;
     color: #5a3d22;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1.5px solid #8a6a44;
+    padding-bottom: 4px;
+  }
+
+  .prioStats {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .prioStat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgb(220 202 165 / 0.4);
+    border: 1px solid #bda37e;
+    border-radius: 6px;
+    padding: 4px 2px;
+    text-align: center;
+  }
+
+  .prioStatVal {
+    font-size: 15px;
+    font-weight: bold;
+    color: #3a2a18;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prioStatLabel {
+    font-size: 9.5px;
+    color: #7a6647;
+    text-transform: uppercase;
+    font-weight: 600;
   }
 
   .prioRow {
-    display: flex;
+    display: grid;
+    grid-template-columns: 56px 24px 14px 24px 1fr 32px;
     align-items: center;
-    gap: 6px;
-    min-height: 26px;
+    gap: 4px;
+    height: 30px;
     font-size: 13px;
     color: #4a3520;
+    border-bottom: 1px solid rgb(138 106 68 / 0.15);
+  }
+
+  .prioRow:last-child {
+    border-bottom: none;
   }
 
   .prioRow .plabel {
-    width: 64px;
-    flex: none;
+    font-weight: 500;
   }
 
   .prioRow button {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 1.5px solid #8a6a44;
-    border-radius: 5px;
-    background: rgb(255 244 214 / 0.7);
+    border-radius: 6px;
+    background: rgb(255 244 214 / 0.85);
     color: #4a3520;
     cursor: pointer;
-    line-height: 1;
+    font-size: 15px;
+    font-weight: bold;
+    transition: background 0.15s, transform 0.05s;
+    user-select: none;
+  }
+
+  .prioRow button:hover:not(:disabled) {
+    background: #ffebb3;
+    transform: scale(1.05);
+  }
+
+  .prioRow button:active:not(:disabled) {
+    transform: scale(0.95);
   }
 
   .prioRow button:disabled {
-    opacity: 0.35;
-    cursor: default;
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: rgb(200 190 170 / 0.4);
+    border-color: #a09078;
+  }
+
+  .prioRow .pval {
+    text-align: center;
+    font-weight: 700;
+    color: #3a2a18;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prioRow .pcount {
+    text-align: right;
+    color: #8a7a5c;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
   }
 
   .prioRow .pcount.short {
     color: #b33f2e;
+    font-weight: bold;
+    position: relative;
+    cursor: help;
   }
 
-  .prioRow .pval {
-    width: 14px;
-    text-align: center;
-    font-weight: 600;
-    color: #3a2a18;
+  .prioRow .pcount.short::after {
+    content: " ⚠️";
+    font-size: 10px;
   }
 
-  .prioRow .pcount {
-    margin-left: auto;
-    color: #8a7a5c;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .prioFood {
-    margin-top: 6px;
-    font-size: 12.5px;
-    color: #7a6647;
-  }
-
-  .prioSummary {
-    margin: 0 0 6px;
+  .prioRow .ptool {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     font-size: 12px;
-    color: #7a6647;
-    line-height: 1.35;
-  }
-
-  .prioSummary strong {
-    color: #3a2a18;
+    opacity: 0.85;
+    white-space: nowrap;
+    gap: 2px;
   }
 
   .minimapPanel {
@@ -901,8 +974,10 @@ const PRIO_LABELS: Record<PrioKey, string> = {
   guard: "Стража"
 };
 const prioRows = document.querySelector<HTMLElement>("#prio-rows");
-const prioFoodCount = document.querySelector<HTMLElement>("#prio-food-count");
-const prioSummary = document.querySelector<HTMLElement>("#prio-summary");
+const prioPop = document.querySelector<HTMLElement>("#prio-pop");
+const prioFree = document.querySelector<HTMLElement>("#prio-free");
+const prioFood = document.querySelector<HTMLElement>("#prio-food");
+const prioFreeContainer = document.querySelector<HTMLElement>("#prio-free-container");
 let lastPrioKey = "";
 
 function sendPriorities(priorities: Record<PrioKey, number>): void {
@@ -940,7 +1015,7 @@ function countJobs(world: WorldSnapshot): Record<PrioKey, number> & { food: numb
 }
 
 function updatePriorityPanel(world: WorldSnapshot): void {
-  if (!prioRows || !prioFoodCount) {
+  if (!prioRows || !prioPop || !prioFree || !prioFood || !prioFreeContainer) {
     return;
   }
   const colonyId = currentColonyIndex === 1 ? "colony-2" : "colony-1";
@@ -974,23 +1049,35 @@ function updatePriorityPanel(world: WorldSnapshot): void {
     const target = priorities[k] ?? 0;
     // Цель есть, людей нет и источник иссяк — честно показываем причину.
     const short = (k === "clay" || k === "wood" || k === "stone") && target > counts[k] && !nodesAlive[k];
+    
+    let toolHtml = "";
+    if (k === "wood") {
+      toolHtml = `<div class="ptool" title="Топоры в поселении: ${colony.axes ?? 0}">🪓${colony.axes ?? 0}</div>`;
+    } else if (k === "stone") {
+      toolHtml = `<div class="ptool" title="Кирки в поселении: ${colony.picks ?? 0}">⛏️${colony.picks ?? 0}</div>`;
+    } else {
+      toolHtml = `<div class="ptool"></div>`;
+    }
+
     return (
-      `<div class="prioRow"><span class="plabel">${PRIO_LABELS[k]}</span>` +
+      `<div class="prioRow">` +
+      `<span class="plabel">${PRIO_LABELS[k]}</span>` +
       `<button data-prio="${k}" data-delta="-1" type="button"${target <= 0 ? " disabled" : ""}>−</button>` +
       `<span class="pval">${target}</span>` +
       `<button data-prio="${k}" data-delta="1" type="button"${freeForPlus <= 0 ? " disabled" : ""}>+</button>` +
-      `<span class="pcount${short ? " short" : ""}" ${short ? 'title="Источник иссяк — люди пока на еде"' : ""}>${counts[k]} чел.${short ? " (нет источника)" : ""}</span>` +
-      `${k === "wood" ? `<small>топоры: ${colony.axes ?? 0}</small>` : k === "stone" ? `<small>кирки: ${colony.picks ?? 0}</small>` : ""}</div>`
+      `<span class="pcount${short ? " short" : ""}" ${short ? 'title="Источник иссяк — люди пока на еде"' : ""}>${counts[k]}</span>` +
+      `${toolHtml}` +
+      `</div>`
     );
   }).join("");
-  // Факт: сколько реально таскают еду (назначенные без источника — тоже здесь).
-  prioFoodCount.textContent = String(counts.food);
-  if (prioSummary) {
-    prioSummary.innerHTML =
-      `Жителей: <strong>${population}</strong> · разведка: ${scouts} · ` +
-      `назначено: ${Math.min(assignedTotal, Math.max(0, population - scouts))} · ` +
-      `можно назначить: <strong>${freeForPlus}</strong> · топоры: ${colony.axes ?? 0} · кирки: ${colony.picks ?? 0}`;
-  }
+
+  // Обновляем статистику в шапке
+  prioPop.textContent = String(population);
+  prioFree.textContent = String(freeForPlus);
+  prioFood.textContent = String(counts.food);
+
+  // Подробный тултип для свободных жителей
+  prioFreeContainer.title = `Свободно для назначения: ${freeForPlus}\n(Всего жителей: ${population}, разведчики: ${scouts}, назначено на задачи: ${assignedTotal})`;
 
   for (const button of prioRows.querySelectorAll<HTMLButtonElement>("[data-prio]")) {
     button.addEventListener("click", () => {
