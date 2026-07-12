@@ -16,6 +16,7 @@ import { drawSurfaceEntranceAt } from "./entrance";
 import { getEnvironmentTextures } from "./environment";
 import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceShadows } from "./entities";
 import { offsetSettings } from "./editor";
+import { updateAndDrawParticles } from "./particles";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
   return (
@@ -47,6 +48,7 @@ export function createSurfaceScene(): SurfaceScene {
   const pheromones = new Graphics();
   const webs = new Graphics();
   const selectionGraphics = new Graphics();
+  const particleGraphics = new Graphics();
 
   staticLayer.label = "staticLayer";
   shadowLayer.label = "shadowLayer";
@@ -58,10 +60,12 @@ export function createSurfaceScene(): SurfaceScene {
   webs.label = "webs";
   selectionGraphics.label = "selectionGraphics";
   selectionGraphics.zIndex = 9000; // Оверлей выделения всегда рисуется поверх самих человечков
+  particleGraphics.label = "particleGraphics";
+  particleGraphics.zIndex = 1; // Частицы позади существ и объектов, но поверх земли
 
   // Собираем слои в корень сцены
   root.addChild(staticLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
-  dynamicLayer.addChild(selectionGraphics);
+  dynamicLayer.addChild(selectionGraphics, particleGraphics);
 
   if (typeof window !== "undefined") {
     (window as any).printLayers = () => {
@@ -79,6 +83,7 @@ export function createSurfaceScene(): SurfaceScene {
     pheromones,
     webs,
     selectionGraphics,
+    particleGraphics,
     buildingGraphics: [],
     buildingSprites: [],
     entranceGraphics: [],
@@ -287,7 +292,8 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
 
         // 1. Рисуем тень (только если нет соседа снизу)
         if (!hasDown) {
-          g.rect(xLeft, y + half - 2, width, 4).fill({ color: 0x24190f, alpha: 0.25 });
+          // Тень падает вниз от стены (к камере)
+          g.rect(xLeft, y + half, width, 4).fill({ color: 0x1d120b, alpha: 0.24 });
         }
 
         // 2. Отрисовка геометрии стены
@@ -332,8 +338,8 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0x8a5429, alpha: 0.35 + building.progress * 0.5 });
         g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x4f2f16, alpha: 0.8 });
       } else {
-        // Сарай с двускатной крышей, по росту жителей.
-        g.ellipse(x + 3, y + half * 0.82, half * 1.25, half * 0.34).fill({ color: 0x24190f, alpha: 0.24 });
+        // Тень смещена еще выше под основание строения
+        g.ellipse(x + 3, y + half * 0.65, half * 1.25, half * 0.34).fill({ color: 0x1d120b, alpha: 0.24 });
 
         const storage = new Sprite(getEnvironmentTextures().props.storage);
         storage.anchor.set(0.5, 1);
@@ -359,7 +365,8 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0xbc6240, alpha: 0.3 + building.progress * 0.42 });
         g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        g.ellipse(x + 4, y + half * 0.95, half * 1.6, half * 0.42).fill({ color: 0x24190f, alpha: 0.24 });
+        // Тень смещена еще выше под основание строения
+        g.ellipse(x + 4, y + half * 0.75, half * 1.6, half * 0.42).fill({ color: 0x1d120b, alpha: 0.24 });
 
         const workshop = new Sprite(getEnvironmentTextures().props.workshop);
         workshop.anchor.set(0.5, 1);
@@ -387,7 +394,8 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - 3, y - poleH * building.progress, 6, poleH * building.progress).fill({ color: clayColor, alpha: 0.7 });
         g.circle(x, y, 2.2 * cell).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        g.ellipse(x + 2, y + 4, 2.4 * cell, 0.8 * cell).fill({ color: 0x24190f, alpha: 0.25 });
+        // Тень смещена еще выше под основание идола
+        g.ellipse(x + 2, y - 6, 2.4 * cell, 0.7 * cell).fill({ color: 0x1d120b, alpha: 0.24 });
         g.rect(x - 3, y - poleH, 6, poleH + 2).fill({ color: 0x8a5429, alpha: 1 });
         g.rect(x - 8, y - poleH * 0.55, 16, 3).fill({ color: 0x8a5429, alpha: 1 });
         g.circle(x, y - poleH, maskR).fill({ color: clayColor, alpha: 1 });
@@ -415,7 +423,8 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.circle(x, y, radius).fill({ color: clayColor, alpha: 0.35 + building.progress * 0.5 });
         g.circle(x, y, radius).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        g.ellipse(x + 3, y + radius * 0.62, radius * 1.18, radius * 0.34).fill({ color: 0x24190f, alpha: 0.24 });
+        // Тень смещена еще выше под основание хижины
+        g.ellipse(x + 3, y + radius * 0.5, radius * 1.18, radius * 0.34).fill({ color: 0x1d120b, alpha: 0.24 });
 
         const hut = new Sprite(getEnvironmentTextures().props.hut);
         hut.anchor.set(0.5, 1);
@@ -630,4 +639,5 @@ export function renderSurface(
   updateSurfaceLairs(scene.lairPool, world, cell, bounds);
   updateSurfaceEnemies(scene.enemyPool, scene.carriedCarrionPool, world, cell, bounds);
   updateSurfaceAnts(scene.antPool, scene.carriedItemsPool, scene.selectionGraphics, world, cell, bounds);
+  updateAndDrawParticles(scene.particleGraphics, world, cell, camera, viewportWidth, viewportHeight);
 }

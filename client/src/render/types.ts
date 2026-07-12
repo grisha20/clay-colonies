@@ -37,6 +37,7 @@ export type SurfaceScene = {
   pheromones: Graphics;
   webs: Graphics;
   selectionGraphics: Graphics;
+  particleGraphics: Graphics;
   buildingGraphics?: Graphics[];
   buildingSprites?: Sprite[];
   entranceGraphics?: Graphics[];

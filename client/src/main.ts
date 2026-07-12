@@ -31,6 +31,7 @@ appRoot.innerHTML = `
       <button id="btn-speed" class="quickBtn" type="button" title="Скорость">1x</button>
       <button id="btn-settings" class="quickBtn" type="button" title="Настройки">⚙</button>
     </section>
+    <div class="panel gameStateToggle" id="game-state-toggle">Состояние игры</div>
     <section class="panel settingsMenu" id="settings-menu" style="display: none;">
       <div class="settingsRow"><span>Скорость</span>
         <div class="segmented speedControls" aria-label="Скорость">
@@ -176,15 +177,19 @@ appRoot.innerHTML = `
     <aside class="panel minimapPanel">
       <canvas id="minimap" width="168" height="168"></canvas>
     </aside>
-    <footer class="panel status">
+    <footer class="panel status collapsed" id="status-panel">
       <span id="status">Подключение к ws://localhost:8787</span>
       <span id="tool-hint">Клик по карте - подкинуть еду</span>
       <span id="weather-label"></span>
-      <span class="perfStat">FPS <strong id="fps">0</strong></span>
-      <span class="perfStat">Packet <strong id="packet-ms">0</strong> ms</span>
-      <span class="perfStat">Payload <strong id="payload-kb">0</strong> KB</span>
-      <span class="perfStat">Render <strong id="render-ms">0</strong> ms</span>
-      <span class="perfStat">Ants <strong id="ants-count">0</strong></span>
+      <div class="perfRow">
+        <span class="perfStat">FPS <strong id="fps">0</strong></span>
+        <span class="perfStat">Packet <strong id="packet-ms">0</strong> ms</span>
+        <span class="perfStat">Payload <strong id="payload-kb">0</strong> KB</span>
+      </div>
+      <div class="perfRow">
+        <span class="perfStat">Render <strong id="render-ms">0</strong> ms</span>
+        <span class="perfStat">Ants <strong id="ants-count">0</strong></span>
+      </div>
     </footer>
   </main>
 `;
@@ -285,7 +290,7 @@ style.textContent = `
 
   .settingsMenu {
     right: 14px;
-    top: 70px;
+    top: 72px;
     width: min(430px, calc(100vw - 28px));
     padding: 12px;
     display: grid;
@@ -323,7 +328,7 @@ style.textContent = `
 
   .toolDock {
     left: 14px;
-    bottom: 58px;
+    bottom: 14px;
     padding: 6px;
     display: flex;
     gap: 6px;
@@ -820,15 +825,55 @@ style.textContent = `
   }
 
   .status {
-    left: 14px;
-    bottom: 14px;
-    max-width: calc(100vw - 28px);
-    padding: 8px 10px;
+    right: 14px;
+    top: 118px;
+    max-width: min(440px, calc(100vw - 28px));
+    padding: 10px 12px;
     display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 6px;
     color: #5a4630;
     font-size: 13px;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+    z-index: 4;
+  }
+
+  .status.collapsed {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+  }
+
+  .status .perfRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .gameStateToggle {
+    right: 14px;
+    top: 82px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #7a6647;
+    user-select: none;
+    transition: all 0.15s ease-in-out;
+    z-index: 4;
+  }
+
+  .gameStateToggle:hover {
+    background: rgb(232 200 95 / 0.6);
+    color: #3a2a18;
+  }
+
+  .gameStateToggle.active {
+    background: #b5793f;
+    color: #fff6e0;
+    border-color: #8a6a44;
   }
 
   .perfStat strong {
@@ -872,6 +917,8 @@ document.querySelector(".nestControls")?.remove();
 const canvasHost = document.querySelector<HTMLDivElement>("#canvas-host");
 const appShell = document.querySelector<HTMLElement>(".app");
 const status = document.querySelector<HTMLElement>("#status");
+const statusPanel = document.querySelector<HTMLElement>("#status-panel");
+const statusToggle = document.querySelector<HTMLElement>("#game-state-toggle");
 const viewButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-view]"));
 const nestButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-nest]"));
 const speedButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-speed]"));
@@ -1816,6 +1863,14 @@ btnTrample.addEventListener("click", () => {
   btnTrample.classList.toggle("active", trampleEnabled);
   btnTrample.textContent = trampleEnabled ? "Вкл" : "Выкл";
 });
+
+if (statusPanel && statusToggle) {
+  statusToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isCollapsed = statusPanel.classList.toggle("collapsed");
+    statusToggle.classList.toggle("active", !isCollapsed);
+  });
+}
 
 for (const button of cameraButtons) {
   button.addEventListener("click", () => {
