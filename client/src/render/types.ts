@@ -31,6 +31,7 @@ export type SurfaceScene = {
   root: Container;
   staticLayer: Container;
   waterLayer: Container;
+  fishLayer: Container;
   shadowLayer: Graphics;
   dynamicLayer: Container;
   fireGlow: Graphics;
@@ -39,6 +40,7 @@ export type SurfaceScene = {
   webs: Graphics;
   selectionGraphics: Graphics;
   particleGraphics: Graphics;
+  fishingGraphics: Graphics;
   buildingGraphics?: Graphics[];
   buildingSprites?: Sprite[];
   entranceGraphics?: Graphics[];
@@ -51,6 +53,7 @@ export type SurfaceScene = {
   enemyPool: SpritePool;
   antPool: SpritePool;
   carriedItemsPool: SpritePool;
+  fishPool: SpritePool;
   staticKey: string;
   entranceKey: string;
   zoneKey: string;

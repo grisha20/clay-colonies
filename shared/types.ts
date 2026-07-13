@@ -2,10 +2,9 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-// v13: rectilinear lake masks replace the earlier freeform contours. Old saves may
-// contain actors/resources inside the corrected water area, so reset them cleanly.
-export const CURRENT_SNAPSHOT_VERSION = 13;
-export const CURRENT_PROTOCOL_VERSION = 13;
+// v14: persistent lake fish, fishing jobs and rods are part of snapshots/protocol.
+export const CURRENT_SNAPSHOT_VERSION = 14;
+export const CURRENT_PROTOCOL_VERSION = 14;
 
 export type Vec2 = {
   x: number;
@@ -144,11 +143,16 @@ export type Ant = {
   colonyId: string;
   role: "worker";
   strength: number;
-  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard";
-  carryKind?: "food" | ResourceKind;
+  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard" | "fish";
+  carryKind?: "food" | "fish" | ResourceKind;
   harvestNodeId?: string;
   // Прогресс многоударной добычи у текущего узла (в тиках «долбления»).
   harvestHits?: number;
+  fishingTargetId?: string;
+  fishingStandPos?: Vec2;
+  fishingLurePos?: Vec2;
+  fishingTicks?: number;
+  caughtFishSpecies?: FishSpecies;
   buildTargetId?: string;
   forageRole?: "scout" | "forager";
   preferredTask?: "dig";
@@ -227,6 +231,7 @@ export type Colony = {
   // Общий запас инструментов племени: лимитируют число дровосеков и каменотёсов.
   axes: number;
   picks: number;
+  rods: number;
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).
   // «+» берёт человека из свободных, «−» возвращает. Свободные — на еде.
   priorities: {
@@ -235,6 +240,7 @@ export type Colony = {
     stone: number;
     build: number;
     guard: number;
+    fish: number;
   };
   zones?: {
     version: number;
@@ -270,6 +276,22 @@ export type FoodSource = {
   createdAt?: number;
 };
 
+export type FishSpecies = "gold" | "blue" | "silver" | "red";
+export type FishState = "swim" | "lured" | "respawning";
+
+/** A fish is a persistent lake actor. Caught fish wait in respawning state instead of appearing from nowhere. */
+export type Fish = {
+  id: string;
+  lakeId: "north" | "south";
+  species: FishSpecies;
+  state: FishState;
+  pos: Vec2;
+  heading: Vec2;
+  targetAntId?: string;
+  lurePos?: Vec2;
+  respawnAt?: number;
+};
+
 export type Enemy = {
   id: string;
   type: "spider";
@@ -293,6 +315,7 @@ export type Surface = {
   carrion: FoodSource[];
   resourceNodes: ResourceNode[];
   buildings: Building[];
+  fish: Fish[];
 };
 
 export type SparseGrid = {

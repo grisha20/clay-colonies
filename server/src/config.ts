@@ -68,6 +68,8 @@ export const CONFIG = {
   roomExpandMaxTiles: 18,
 
   startingWorkers: 8,
+  // A starter axe breaks the wood -> workshop -> tools bootstrap cycle.
+  startingAxes: 1,
   // «Глина — это всё»: новый житель лепится из глины.
   newResidentClayCost: 3,
   startingClay: 10,
@@ -344,10 +346,24 @@ export const CONFIG = {
   maxWorkshopsPerColony: 2,
   axeCost: { wood: 2, stone: 1 },
   pickCost: { wood: 2, stone: 2 },
+  rodCost: { wood: 2, stone: 0 },
   toolCraftTicks: 200,
   maxAxes: 3,
   maxPicks: 3,
+  maxRods: 4,
   dropPointRadius: 3,
+
+  // Рыбалка: постоянная популяция в каждом озере, видимый подход рыбы к поплавку и медленное восстановление.
+  fishPerLake: 16,
+  fishSwimSpeed: 0.035,
+  fishLureSpeed: 0.11,
+  fishTurnEveryTicks: 90,
+  fishingStandRadius: 1.15,
+  fishingBiteRadius: 0.8,
+  fishingMinCastTicks: 70,
+  fishRespawnMinTicks: 1100,
+  fishRespawnMaxTicks: 1900,
+  fishFoodYield: 5,
   maxBuildersPerSite: 2,
   maxActiveBuilders: 4,
   buildMinFood: 15,

@@ -31,6 +31,7 @@ import { completeBuilding, placePointBuilding, rebuildWallBlocked, syncBuildingI
 import { createObjectives, restoreObjectives } from "./objectives";
 import { createWeather } from "./weather";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
+import { createInitialFishPopulation } from "./fishing";
 
 export type ColonyRuntime = {
   id: string;
@@ -767,7 +768,8 @@ export function createWorld(
     foodSources: makeFoodSources(),
     carrion: makeCarrionSources(),
     resourceNodes: makeResourceNodes(),
-    buildings: []
+    buildings: [],
+    fish: createInitialFishPopulation()
   };
   const enemies = [createSpider()];
   const colonies = [
@@ -836,11 +838,14 @@ export function worldFromSnapshot(
       `Snapshot version ${snapshotVersion} is newer than supported ${CURRENT_SNAPSHOT_VERSION}; trying best-effort load.`
     );
   }
-  if (snapshotVersion !== CURRENT_SNAPSHOT_VERSION) {
+  if (snapshotVersion < 13 || snapshotVersion > CURRENT_SNAPSHOT_VERSION) {
     console.warn(
       `Snapshot version ${snapshotVersion} is incompatible with surface-only Clayfolk ${CURRENT_SNAPSHOT_VERSION}; starting a clean world.`
     );
     return createWorld(genomeState, spiderGenomeState, genomeStateB);
+  }
+  if (snapshotVersion === 13) {
+    console.warn("Migrating snapshot v13 to v14 fishing populations and colony rods.");
   }
 
   if (!snapshot.colonies?.length) {
@@ -888,6 +893,12 @@ export function worldFromSnapshot(
   nextResourceNodeId = Math.max(nextResourceNodeId, maxResourceId + 1);
   const buildings = snapshot.surface.buildings ?? [];
   syncBuildingIdCounter(buildings);
+  const fish = (snapshot.surface.fish ?? createInitialFishPopulation()).map((item) => ({
+    ...item,
+    state: item.state === "respawning" ? "respawning" as const : "swim" as const,
+    targetAntId: undefined,
+    lurePos: undefined
+  }));
   const colonies = snapshot.colonies.map((colonySnapshot, index): ColonyRuntime => {
     const surfaceEntrance = snapshot.surface.entrances?.[index] ?? (index === 0 ? CONFIG.surfaceEntrance : CONFIG.surfaceEntranceB);
     const underground = makeLegacyEmptyUnderground(surfaceEntrance);
@@ -910,9 +921,19 @@ export function worldFromSnapshot(
         wood: colonySnapshot.colony.wood ?? 0,
         stone: colonySnapshot.colony.stone ?? 0,
         fire: colonySnapshot.colony.fire ?? 1,
-        axes: colonySnapshot.colony.axes ?? 0,
+        // Old saves could deadlock after consuming their loose sticks: trees need
+        // an axe, while an axe needs a workshop built with wood.
+        axes: Math.max(CONFIG.startingAxes, colonySnapshot.colony.axes ?? 0),
         picks: colonySnapshot.colony.picks ?? 0,
-        priorities: colonySnapshot.colony.priorities ?? { clay: 1, wood: 1, stone: 1, build: 1, guard: 1 },
+        rods: colonySnapshot.colony.rods ?? 0,
+        priorities: {
+          clay: colonySnapshot.colony.priorities?.clay ?? 1,
+          wood: colonySnapshot.colony.priorities?.wood ?? 1,
+          stone: colonySnapshot.colony.priorities?.stone ?? 1,
+          build: colonySnapshot.colony.priorities?.build ?? 1,
+          guard: colonySnapshot.colony.priorities?.guard ?? 1,
+          fish: colonySnapshot.colony.priorities?.fish ?? 1
+        },
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,
@@ -967,7 +988,8 @@ export function worldFromSnapshot(
       carrion,
       entrances,
       resourceNodes,
-      buildings
+      buildings,
+      fish
     },
     colony: colonies[0].colony,
     underground: colonies[0].underground,

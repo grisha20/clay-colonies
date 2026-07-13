@@ -16,6 +16,7 @@ import {
   moveHungryToFood,
   moveSearching
 } from "./forage";
+import { moveFishing } from "../fishing";
 
 export { clearDeadAntPaths } from "./movement";
 
@@ -29,7 +30,7 @@ export function stepSurface(world: World, ant: Ant): void {
     ant.state = "search";
   }
 
-  if ((ant.state === "return" || ant.state === "carry" || ant.carrying > 0) && tryCrossLayer(world, ant)) {
+  if (ant.carryKind !== "fish" && (ant.state === "return" || ant.state === "carry" || ant.carrying > 0) && tryCrossLayer(world, ant)) {
     return;
   }
 
@@ -46,6 +47,10 @@ export function stepSurface(world: World, ant: Ant): void {
   }
 
   if (ant.job === "build" && moveBuilding(world, ant)) {
+    return;
+  }
+
+  if (ant.job === "fish" && moveFishing(world, ant)) {
     return;
   }
 

@@ -7,6 +7,14 @@ export const offsetSettings = {
     "scale": 1.1,
     "rotation": 0.35
   },
+  "fishingRod": {
+    "offsetX": 3,
+    "offsetY": 8,
+    "anchorX": 0.2,
+    "anchorY": 0.9,
+    "scale": 1.45,
+    "rotation": 0.08
+  },
   "swing": {
     "swingSpeed": 0.16,
     "swingAmpY": 1.2,
@@ -31,6 +39,11 @@ export const offsetSettings = {
     "offsetX": 1,
     "offsetY": 2.5,
     "scale": 2.2
+  },
+  "fish": {
+    "offsetX": 1,
+    "offsetY": 2.2,
+    "scale": 0.38
   },
   "pebble": {
     "offsetDist": 5.6,

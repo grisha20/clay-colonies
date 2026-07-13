@@ -118,7 +118,11 @@ export function assignHarvestJobs(world: World): void {
     }
     const node = nodeById(world, ant.harvestNodeId);
     const kind: ResourceKind | undefined =
-      node ? resourceNodeYield(node.kind) : ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined;
+      node
+        ? resourceNodeYield(node.kind)
+        : ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone"
+          ? ant.carryKind
+          : undefined;
     const stillWanted = kind ? colonyWantsResource(world, kind) : false;
 
     if ((!economyReady || !stillWanted || (!node && ant.carrying <= 0)) && ant.carrying <= 0) {

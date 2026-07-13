@@ -252,6 +252,22 @@ export const spriteMaps = {
     "....11....",
     "....11....",
     "....11...."
+  ],
+  fishingRod: [
+    "...........11..",
+    "..........11...",
+    ".........11....",
+    "........11.....",
+    ".......11......",
+    "......11.......",
+    ".....11........",
+    "....11.........",
+    "...11..........",
+    "..11...........",
+    ".22............",
+    ".22............",
+    ".22............",
+    "..2............"
   ]
 } as const;
 
@@ -357,6 +373,10 @@ export const spritePalettes = {
     "1": 0x6b4a24,
     "2": 0x4a3b32,
     "3": 0xc9c4b4
+  },
+  fishingRod: {
+    "1": 0x7b4a20,
+    "2": 0x3d2717
   }
 } as const;
 
@@ -429,6 +449,10 @@ export function getStoneTexture(): Texture {
 
 export function getSpearTexture(): Texture {
   return makeTexture("spear", [...spriteMaps.spear], spritePalettes.spear);
+}
+
+export function getFishingRodTexture(): Texture {
+  return makeTexture("fishingRod", [...spriteMaps.fishingRod], spritePalettes.fishingRod);
 }
 
 // Пиксельные иконки для DOM-панелей (ресурс-бар): PNG data-URL с масштабом.

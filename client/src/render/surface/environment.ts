@@ -2,6 +2,7 @@ import { Assets, Rectangle, Sprite, Texture } from "pixi.js";
 
 const summerBase = "/assets/environment/summer-plains/summer_plains_v1.0_standard";
 const customBase = "/assets/environment/custom";
+const fishSheetUrl = `${customBase}/fishing/fish-species.png`;
 const campfireFrameUrls = Array.from({ length: 6 }, (_, index) =>
   `${customBase}/campfire/campfire_${String(index).padStart(2, "0")}.png`
 );
@@ -17,6 +18,7 @@ export const environmentAssetUrls = [
   `${customBase}/hut.png`,
   `${customBase}/storage.png`,
   `${customBase}/workshop-cutout.png`,
+  fishSheetUrl,
   ...campfireFrameUrls
 ] as const;
 
@@ -63,6 +65,10 @@ type EnvironmentTextures = {
     tent: Texture;
     bridge: Texture;
     fence: Texture;
+    fish: {
+      swim: { gold: Texture; blue: Texture; silver: Texture; red: Texture };
+      carry: { gold: Texture; blue: Texture; silver: Texture; red: Texture };
+    };
   };
 };
 
@@ -98,6 +104,124 @@ function image(url: string): Texture {
   }
 
   const texture = Texture.from(url);
+  texture.source.scaleMode = "nearest";
+  textureCache.set(key, texture);
+  return texture;
+}
+
+function fishTexture(row: 0 | 1 | 2 | 3, view: "swim" | "carry"): Texture {
+  const key = `${fishSheetUrl}:fish:${row}:${view}`;
+  const cached = textureCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  const source = Texture.from(fishSheetUrl);
+  const carryY = [72, 366, 656, 944][row];
+  // Each top-down pose is 305 px tall in the supplied sheet. Keep that size so
+  // the in-game scale stays unchanged, but align every crop to its own fish:
+  // the old first crop cut through the gold tail, while later crops included
+  // coloured tail pixels from the preceding row.
+  const swimY = [55, 375, 650, 930][row];
+  const canvas = document.createElement("canvas");
+  canvas.width = view === "swim" ? 64 : 96;
+  canvas.height = view === "swim" ? 88 : 64;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    throw new Error("Canvas 2D context is required for fish texture");
+  }
+  context.imageSmoothingEnabled = false;
+  if (view === "swim") {
+    context.drawImage(source.source.resource as CanvasImageSource, 842, swimY, 285, 305, 0, 0, canvas.width, canvas.height);
+  } else {
+    context.drawImage(source.source.resource as CanvasImageSource, 110, carryY, 390, 260, 0, 0, canvas.width, canvas.height);
+  }
+
+  // The supplied image contains a baked checkerboard. Remove only the pale neutral
+  // region connected to the crop edges, preserving white scales inside silver fish.
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  const visited = new Uint8Array(canvas.width * canvas.height);
+  const stack: number[] = [];
+  const isBackdrop = (index: number): boolean => {
+    const offset = index * 4;
+    const r = pixels.data[offset];
+    const g = pixels.data[offset + 1];
+    const b = pixels.data[offset + 2];
+    return Math.min(r, g, b) > 218 && Math.max(r, g, b) - Math.min(r, g, b) < 18;
+  };
+  for (let x = 0; x < canvas.width; x += 1) {
+    stack.push(x, (canvas.height - 1) * canvas.width + x);
+  }
+  for (let y = 0; y < canvas.height; y += 1) {
+    stack.push(y * canvas.width, y * canvas.width + canvas.width - 1);
+  }
+  while (stack.length > 0) {
+    const index = stack.pop()!;
+    if (visited[index] || !isBackdrop(index)) {
+      continue;
+    }
+    visited[index] = 1;
+    pixels.data[index * 4 + 3] = 0;
+    const x = index % canvas.width;
+    const y = Math.floor(index / canvas.width);
+    if (x > 0) stack.push(index - 1);
+    if (x + 1 < canvas.width) stack.push(index + 1);
+    if (y > 0) stack.push(index - canvas.width);
+    if (y + 1 < canvas.height) stack.push(index + canvas.width);
+  }
+
+  // Generated sheet cells also contain tiny detached fragments from neighbouring
+  // poses (tails, guide marks and dark pixels). Keep only the largest opaque
+  // connected component: the selected fish itself. This preserves its exact
+  // pixel art while removing every loose speck around it.
+  const componentVisited = new Uint8Array(canvas.width * canvas.height);
+  let largestComponent: number[] = [];
+  for (let start = 0; start < componentVisited.length; start += 1) {
+    if (componentVisited[start] || pixels.data[start * 4 + 3] === 0) {
+      continue;
+    }
+    const component: number[] = [];
+    const componentStack = [start];
+    componentVisited[start] = 1;
+    while (componentStack.length > 0) {
+      const index = componentStack.pop()!;
+      component.push(index);
+      const x = index % canvas.width;
+      const y = Math.floor(index / canvas.width);
+      // Pixel-art fins and tail tips often touch the body only diagonally.
+      // Use 8-way connectivity so those intended pixels stay attached while
+      // detached sheet fragments behind the tail are still discarded.
+      const neighbours = [
+        x > 0 ? index - 1 : -1,
+        x + 1 < canvas.width ? index + 1 : -1,
+        y > 0 ? index - canvas.width : -1,
+        y + 1 < canvas.height ? index + canvas.width : -1,
+        x > 0 && y > 0 ? index - canvas.width - 1 : -1,
+        x + 1 < canvas.width && y > 0 ? index - canvas.width + 1 : -1,
+        x > 0 && y + 1 < canvas.height ? index + canvas.width - 1 : -1,
+        x + 1 < canvas.width && y + 1 < canvas.height ? index + canvas.width + 1 : -1
+      ];
+      for (const neighbour of neighbours) {
+        if (neighbour >= 0 && !componentVisited[neighbour] && pixels.data[neighbour * 4 + 3] > 0) {
+          componentVisited[neighbour] = 1;
+          componentStack.push(neighbour);
+        }
+      }
+    }
+    if (component.length > largestComponent.length) {
+      largestComponent = component;
+    }
+  }
+  const keep = new Uint8Array(canvas.width * canvas.height);
+  for (const index of largestComponent) {
+    keep[index] = 1;
+  }
+  for (let index = 0; index < keep.length; index += 1) {
+    if (!keep[index]) {
+      pixels.data[index * 4 + 3] = 0;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+  const texture = Texture.from(canvas);
   texture.source.scaleMode = "nearest";
   textureCache.set(key, texture);
   return texture;
@@ -267,6 +391,20 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       hut: image(`${customBase}/hut.png`),
       storage: image(`${customBase}/storage.png`),
       workshop: image(`${customBase}/workshop-cutout.png`),
+      fish: {
+        swim: {
+          gold: fishTexture(0, "swim"),
+          blue: fishTexture(1, "swim"),
+          silver: fishTexture(2, "swim"),
+          red: fishTexture(3, "swim")
+        },
+        carry: {
+          gold: fishTexture(0, "carry"),
+          blue: fishTexture(1, "carry"),
+          silver: fishTexture(2, "carry"),
+          red: fishTexture(3, "carry")
+        }
+      },
       tent: crop(assetsUrl, 344, 780, 140, 75),
       bridge: crop(assetsUrl, 0, 742, 86, 92),
       fence: crop(assetsUrl, 108, 754, 170, 62)

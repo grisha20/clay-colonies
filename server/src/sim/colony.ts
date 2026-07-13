@@ -20,9 +20,10 @@ export function createColony(
     wood: 0,
     stone: 0,
     fire: 1,
-    axes: 0,
+    axes: CONFIG.startingAxes,
     picks: 0,
-    priorities: { clay: 1, wood: 1, stone: 1, build: 1, guard: 1 },
+    rods: 0,
+    priorities: { clay: 1, wood: 1, stone: 1, build: 1, guard: 1, fish: 1 },
     population: {
       workers: CONFIG.startingWorkers,
       scouts: CONFIG.startingScouts,

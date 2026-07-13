@@ -9,6 +9,7 @@ import { assignBuildJobs, assignGuardJobs, assignHarvestJobs } from "./economy";
 import { updateObjectives } from "./objectives";
 import { updateWeather } from "./weather";
 import { assignForageRoles, updateColonyFoodMemory } from "./foodMemory";
+import { assignFishingJobs, updateFishPopulation } from "./fishing";
 import {
   addAntCorpse,
   addClayRemains,
@@ -27,7 +28,8 @@ import {
 } from "./world";
 
 let scentOffsets: { dx: number; dy: number; falloff: number }[] | null = null;
-const toolCraftProgress = new Map<string, { ticks: number; next: "axe" | "pick" }>();
+type ToolKind = "axe" | "pick" | "rod";
+const toolCraftProgress = new Map<string, { ticks: number; next: ToolKind }>();
 
 function getScentOffsets(radius: number): { dx: number; dy: number; falloff: number }[] {
   if (scentOffsets) {
@@ -103,21 +105,22 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     toolCraftProgress.delete(colony.id);
     return;
   }
-  const progress = toolCraftProgress.get(colony.id) ?? { ticks: 0, next: colony.colony.axes <= 0 ? "axe" : "pick" };
+  const progress = toolCraftProgress.get(colony.id) ?? { ticks: 0, next: colony.colony.axes <= 0 ? "axe" : colony.colony.picks <= 0 ? "pick" : "rod" };
   const wantsAxe = colony.colony.axes < CONFIG.maxAxes;
   const wantsPick = colony.colony.picks < CONFIG.maxPicks;
-  if (!wantsAxe && !wantsPick) {
+  const wantsRod = colony.colony.rods < CONFIG.maxRods;
+  if (!wantsAxe && !wantsPick && !wantsRod) {
     progress.ticks = 0;
     toolCraftProgress.set(colony.id, progress);
     return;
   }
+  const order: ToolKind[] = ["axe", "pick", "rod"];
+  const wanted = (tool: ToolKind): boolean => tool === "axe" ? wantsAxe : tool === "pick" ? wantsPick : wantsRod;
   let next = progress.next;
-  if (next === "axe" && !wantsAxe) {
-    next = "pick";
-  } else if (next === "pick" && !wantsPick) {
-    next = "axe";
+  for (let offset = 0; offset < order.length && !wanted(next); offset += 1) {
+    next = order[(order.indexOf(next) + 1) % order.length];
   }
-  const cost = next === "axe" ? CONFIG.axeCost : CONFIG.pickCost;
+  const cost = next === "axe" ? CONFIG.axeCost : next === "pick" ? CONFIG.pickCost : CONFIG.rodCost;
   if (colony.colony.wood < cost.wood || colony.colony.stone < cost.stone) {
     progress.next = next;
     progress.ticks = 0;
@@ -132,8 +135,11 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     if (next === "axe") {
       colony.colony.axes = Math.min(CONFIG.maxAxes, colony.colony.axes + 1);
       progress.next = "pick";
-    } else {
+    } else if (next === "pick") {
       colony.colony.picks = Math.min(CONFIG.maxPicks, colony.colony.picks + 1);
+      progress.next = "rod";
+    } else {
+      colony.colony.rods = Math.min(CONFIG.maxRods, colony.colony.rods + 1);
       progress.next = "axe";
     }
     progress.ticks = 0;
@@ -194,6 +200,7 @@ export function step(world: World): void {
     cleanupResourceNodes(world);
     respawnResourceNodes(world);
     updateResourceNodeGrowth(world);
+    updateFishPopulation(world);
   });
   if (world.tick % 5 === 0) {
     profiler.measure("phase.scentFoodSources", () => scentFoodSources(world));
@@ -210,6 +217,7 @@ export function step(world: World): void {
       assignHarvestJobs(scopedWorld);
       assignBuildJobs(scopedWorld);
       assignGuardJobs(scopedWorld);
+      assignFishingJobs(scopedWorld);
       updateTickCache(scopedWorld);
       profiler.measure("stepAnt", () => {
         for (const ant of colony.ants) {

@@ -110,7 +110,7 @@ appRoot.innerHTML = `
       <span class="res"><img id="icon-wood" alt="дерево"><strong id="res-wood">0</strong><em id="rate-wood"></em></span>
       <span class="res"><img id="icon-stone" alt="камень"><strong id="res-stone">0</strong><em id="rate-stone"></em></span>
       <span class="res"><img id="icon-pop" alt="жители"><strong id="res-pop">0/0</strong></span>
-      <span class="res" title="Инструменты"><strong id="res-tools">Т0 К0</strong></span>
+      <span class="res" title="Инструменты: топоры, кирки, удочки"><strong id="res-tools">Т0 К0 У0</strong></span>
       <span class="res" title="Костёр"><strong id="res-fire">100%</strong></span>
     </section>
     <aside class="panel tasksPanel">
@@ -139,7 +139,7 @@ appRoot.innerHTML = `
       <button class="buildCard" data-tool="workshop" type="button">
         <span class="bname">Мастерская</span>
         <span class="bcost" id="cost-workshop">8 глины + 4 дерева</span>
-        <span class="bnote">топоры и кирки</span>
+        <span class="bnote">топоры, кирки и удочки</span>
       </button>
       <button class="buildCard" data-tool="wall" type="button">
         <span class="bname">Стена</span>
@@ -1008,18 +1008,19 @@ const unitEnergy = document.querySelector<HTMLElement>("#unit-energy");
 const unitCargo = document.querySelector<HTMLElement>("#unit-cargo");
 let selectedAnt: string | null = null;
 
-const CARGO_NAMES: Record<string, string> = { food: "еда", clay: "глина", wood: "дерево", stone: "камень" };
+const CARGO_NAMES: Record<string, string> = { food: "еда", fish: "рыба", clay: "глина", wood: "дерево", stone: "камень" };
 
 // Панель приоритетов: веса 0..5 распределяют ограниченных жителей по занятиям.
 // Еда — все остальные. Авторитет — сервер (colony.priorities из снапшота).
-const PRIO_KEYS = ["clay", "wood", "stone", "build", "guard"] as const;
+const PRIO_KEYS = ["clay", "wood", "stone", "build", "guard", "fish"] as const;
 type PrioKey = (typeof PRIO_KEYS)[number];
 const PRIO_LABELS: Record<PrioKey, string> = {
   clay: "Глина",
   wood: "Дерево",
   stone: "Камень",
   build: "Стройка",
-  guard: "Стража"
+  guard: "Стража",
+  fish: "Рыбак"
 };
 const prioRows = document.querySelector<HTMLElement>("#prio-rows");
 const prioPop = document.querySelector<HTMLElement>("#prio-pop");
@@ -1035,7 +1036,7 @@ function sendPriorities(priorities: Record<PrioKey, number>): void {
 }
 
 function countJobs(world: WorldSnapshot): Record<PrioKey, number> & { food: number } {
-  const counts = { clay: 0, wood: 0, stone: 0, build: 0, guard: 0, food: 0 };
+  const counts = { clay: 0, wood: 0, stone: 0, build: 0, guard: 0, fish: 0, food: 0 };
   const colonyId = currentColonyIndex === 1 ? "colony-2" : "colony-1";
   for (const ant of world.ants) {
     if (ant.colonyId !== colonyId) {
@@ -1045,9 +1046,11 @@ function countJobs(world: WorldSnapshot): Record<PrioKey, number> & { food: numb
       counts.build += 1;
     } else if (ant.job === "guard") {
       counts.guard += 1;
+    } else if (ant.job === "fish") {
+      counts.fish += 1;
     } else if (ant.job === "harvest") {
       const kind =
-        (ant.carryKind && ant.carryKind !== "food" ? ant.carryKind : undefined) ??
+        (ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone" ? ant.carryKind : undefined) ??
         (() => {
           const node = world.surface.resourceNodes?.find((item) => item.id === ant.harvestNodeId);
           return node ? resourceNodeYield(node.kind) : undefined;
@@ -1068,7 +1071,7 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   }
   const colonyId = currentColonyIndex === 1 ? "colony-2" : "colony-1";
   const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
-  const priorities = colony.priorities ?? { clay: 0, wood: 0, stone: 0, build: 0, guard: 0 };
+  const priorities = colony.priorities ?? { clay: 0, wood: 0, stone: 0, build: 0, guard: 0, fish: 0 };
   const counts = countJobs(world);
 
   // Раздача целей ограничена населением; но показываем ФАКТ: кто реально на еде.
@@ -1078,16 +1081,17 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   const freeForPlus = Math.max(0, population - scouts - assignedTotal);
 
   // Есть ли на карте живой источник данного ресурса (для подсветки «нет источника»).
-  const nodesAlive: Record<string, boolean> = { clay: false, wood: false, stone: false };
+  const nodesAlive: Record<string, boolean> = { clay: false, wood: false, stone: false, fish: false };
   for (const node of world.surface.resourceNodes ?? []) {
     if (node.amount > 0) {
       nodesAlive[resourceNodeYield(node.kind)] = true;
     }
   }
+  nodesAlive.fish = (world.surface.fish ?? []).some((fish) => fish.state !== "respawning");
 
   const key =
     currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}:${nodesAlive[k] ? 1 : 0}`).join("|") +
-    `|${freeForPlus}|${counts.food}|${population}|${colony.axes ?? 0}|${colony.picks ?? 0}`;
+    `|${freeForPlus}|${counts.food}|${population}|${colony.axes ?? 0}|${colony.picks ?? 0}|${colony.rods ?? 0}`;
   if (key === lastPrioKey) {
     return;
   }
@@ -1096,13 +1100,15 @@ function updatePriorityPanel(world: WorldSnapshot): void {
   prioRows.innerHTML = PRIO_KEYS.map((k) => {
     const target = priorities[k] ?? 0;
     // Цель есть, людей нет и источник иссяк — честно показываем причину.
-    const short = (k === "clay" || k === "wood" || k === "stone") && target > counts[k] && !nodesAlive[k];
+    const short = (k === "clay" || k === "wood" || k === "stone" || k === "fish") && target > counts[k] && !nodesAlive[k];
     
     let toolHtml = "";
     if (k === "wood") {
       toolHtml = `<div class="ptool" title="Топоры в поселении: ${colony.axes ?? 0}">🪓${colony.axes ?? 0}</div>`;
     } else if (k === "stone") {
       toolHtml = `<div class="ptool" title="Кирки в поселении: ${colony.picks ?? 0}">⛏️${colony.picks ?? 0}</div>`;
+    } else if (k === "fish") {
+      toolHtml = `<div class="ptool" title="Удочки в поселении: ${colony.rods ?? 0}">🎣${colony.rods ?? 0}</div>`;
     } else {
       toolHtml = `<div class="ptool"></div>`;
     }
@@ -1157,6 +1163,15 @@ function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): 
   }
   if (ant.job === "guard") {
     return "Охраняет лагерь";
+  }
+  if (ant.job === "fish") {
+    if (ant.carrying > 0 && ant.carryKind === "fish") {
+      return "Несёт улов на склад";
+    }
+    if ((ant.fishingTicks ?? 0) > 0) {
+      return "Рыбачит у озера";
+    }
+    return "Идёт на рыбалку";
   }
   if (ant.job === "build") {
     return ant.carrying > 0 ? "Несёт материал на стройку" : "Строит";
@@ -1299,7 +1314,7 @@ function updateResourceBar(world: WorldSnapshot): void {
     resourceBarNodes.pop.textContent = `${colony.population.workers}/${colony.nestCapacity ?? "-"}`;
   }
   if (resourceBarNodes.tools) {
-    resourceBarNodes.tools.textContent = `Т${colony.axes ?? 0} К${colony.picks ?? 0}`;
+    resourceBarNodes.tools.textContent = `Т${colony.axes ?? 0} К${colony.picks ?? 0} У${colony.rods ?? 0}`;
   }
   if (resourceBarNodes.fire) {
     const fire = Math.round(((colony.fire ?? 1) as number) * 100);

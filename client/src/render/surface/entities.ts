@@ -9,6 +9,7 @@ import {
   getWoodTexture,
   getStoneTexture,
   getSpearTexture,
+  getFishingRodTexture,
   getFoodTexture
 } from "../../sprites";
 import { getEnvironmentTextures } from "./environment";
@@ -135,6 +136,43 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
   }
 
   endPool(pool);
+}
+
+export function updateSurfaceFish(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  beginPool(pool);
+  const textures = getEnvironmentTextures().props.fish.swim;
+  for (const fish of world.surface.fish ?? []) {
+    if (fish.state === "respawning" || !isInBounds(fish.pos, bounds, 4)) {
+      continue;
+    }
+    const sprite = acquireSprite(pool);
+    sprite.texture = textures[fish.species];
+    sprite.anchor.set(0.5);
+    const pulse = Math.sin(world.tick * 0.12 + fish.id.length) * 0.025;
+    sprite.scale.set(0.3 + pulse, 0.3 - pulse * 0.5);
+    sprite.alpha = fish.state === "lured" ? 0.95 : 0.82;
+    sprite.tint = fish.state === "lured" ? 0xffffff : 0xe6fbff;
+    const rotation = Math.atan2(fish.heading.y, fish.heading.x) + Math.PI / 2;
+    placeSprite(sprite, fish.pos.x * cell, fish.pos.y * cell + Math.sin(world.tick * 0.08 + fish.pos.x) * 1.2, rotation);
+    sprite.zIndex = fish.pos.y * cell;
+  }
+  endPool(pool);
+}
+
+export function updateFishingEffects(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  graphics.clear();
+  for (const ant of world.ants) {
+    if (ant.layer !== "surface" || ant.job !== "fish" || !ant.fishingLurePos || (ant.fishingTicks ?? 0) <= 0 || !isInBounds(ant.pos, bounds, 7)) {
+      continue;
+    }
+    const startX = ant.pos.x * cell + ant.heading.x * 13;
+    const startY = ant.pos.y * cell - 16;
+    const lureX = ant.fishingLurePos.x * cell;
+    const lureY = ant.fishingLurePos.y * cell;
+    graphics.moveTo(startX, startY).lineTo(lureX, lureY).stroke({ width: 1.2, color: 0xe8dfc4, alpha: 0.9 });
+    graphics.circle(lureX, lureY, 2.4).fill({ color: 0xd24b2e, alpha: 0.95 });
+    graphics.circle(lureX, lureY, 4.5 + Math.sin(world.tick * 0.16) * 1.2).stroke({ width: 1, color: 0xd9ffff, alpha: 0.5 });
+  }
 }
 
 // Узлы ресурсов: всё, что похоже на ресурс, приходит из серверного snapshot.
@@ -379,7 +417,7 @@ export function updateSurfaceAnts(
       const itemSprite = acquireSprite(carriedItemsPool);
       let itemTexture = props.tomato;
       const kind = ant.carryKind ?? "food";
-      const settings = offsetSettings[kind] ?? offsetSettings.food;
+      const settings = kind === "fish" ? offsetSettings.fish : offsetSettings[kind] ?? offsetSettings.food;
 
       if (kind === "clay") {
         itemTexture = getClayTexture();
@@ -389,6 +427,8 @@ export function updateSurfaceAnts(
         itemTexture = getStoneTexture();
       } else if (kind === "food") {
         itemTexture = props.tomato;
+      } else if (kind === "fish") {
+        itemTexture = props.fish.carry[ant.caughtFishSpecies ?? "blue"];
       }
 
       itemSprite.texture = itemTexture;
@@ -438,9 +478,20 @@ export function updateSurfaceAnts(
       placeSprite(spearSprite, cx + settings.offsetX * facing, cy + settings.offsetY, rot + (facing > 0 ? settings.rotation : -settings.rotation));
       spearSprite.zIndex = feetY + 0.01;
     }
+
+    if (ant.job === "fish") {
+      const rod = acquireSprite(carriedItemsPool);
+      const settings = offsetSettings.fishingRod;
+      rod.texture = getFishingRodTexture();
+      rod.anchor.set(settings.anchorX, settings.anchorY);
+      rod.scale.set(settings.scale * facing, settings.scale);
+      rod.tint = 0xffffff;
+      rod.alpha = 0.98;
+      placeSprite(rod, cx + settings.offsetX * facing, cy + settings.offsetY, rot + (facing > 0 ? settings.rotation : -settings.rotation));
+      rod.zIndex = feetY + 0.02;
+    }
   }
 
   endPool(pool);
   endPool(carriedItemsPool);
 }
-

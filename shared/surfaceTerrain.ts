@@ -91,6 +91,16 @@ export function isWaterAt(x: number, y: number): boolean {
   return lakeFieldAt(x, y) > 0;
 }
 
+/** Stable authored-lake identity used by fishing, rendering and future map generation. */
+export function lakeIdAt(x: number, y: number): LakeId | null {
+  for (const lake of LAKE_DEFINITIONS) {
+    if (isInsidePolygon(x, y, lake.outline)) {
+      return lake.id;
+    }
+  }
+  return null;
+}
+
 export function isDeepWaterAt(x: number, y: number): boolean {
   return lakeFieldAt(x, y) > 0.43;
 }

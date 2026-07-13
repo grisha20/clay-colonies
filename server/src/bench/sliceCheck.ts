@@ -13,13 +13,14 @@ process.env.SPIDER_GENOME_FILE = "./.slice-genome-spider.json";
 // Динамические импорты: env выставлен ДО чтения config.ts.
 const { loadGenome } = await import("../ai/genome");
 const { loadSpiderGenome } = await import("../ai/spiderGenome");
-const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
+const { createWorld, toSnapshot, worldFromSnapshot, colonyWorldView } = await import("../sim/world");
 const { step } = await import("../sim/step");
 const { CONFIG } = await import("../config");
 const { paintColonyZone, zoneIndexAt } = await import("../sim/zones");
 const { placeHut, placePointBuilding, paintWallCells, wallCellIndexAt, completeBuilding, isWallBlockedAt, isSurfaceBlockedAt, resolveSurfaceCollision } = await import("../sim/building");
-const { isWaterAt, LAKE_DEFINITIONS } = await import("../../../shared/surfaceTerrain");
+const { isWaterAt, lakeIdAt, LAKE_DEFINITIONS } = await import("../../../shared/surfaceTerrain");
 const { calculateSurfacePath } = await import("../sim/ant/movement");
+const { assignFishingJobs, moveFishing, updateFishPopulation } = await import("../sim/fishing");
 
 let failures = 0;
 
@@ -37,6 +38,23 @@ const world = createWorld(genome, spiderGenome, genomeB);
 const colonyA = world.colonies[0];
 const entrance = colonyA.surfaceEntrance;
 
+check(
+  "Старт: каждое поселение получает топор и может добывать дерево",
+  world.colonies.every((colony) => colony.colony.axes >= CONFIG.startingAxes),
+  `axes=${world.colonies.map((colony) => colony.colony.axes).join(",")}`
+);
+const deadlockedSnapshot = JSON.parse(JSON.stringify(toSnapshot(world, false)));
+for (const colonySnapshot of deadlockedSnapshot.colonies) {
+  colonySnapshot.colony.axes = 0;
+  colonySnapshot.colony.wood = 0;
+}
+const repairedWorld = worldFromSnapshot(deadlockedSnapshot, genome, spiderGenome, genomeB);
+check(
+  "Сохранение: старый мир без топоров автоматически выходит из тупика",
+  repairedWorld.colonies.every((colony) => colony.colony.axes >= CONFIG.startingAxes),
+  `axes=${repairedWorld.colonies.map((colony) => colony.colony.axes).join(",")}`
+);
+
 // --- Озёра: фиксированная форма, физика, генерация и строительство ---
 check("Озёра: центры северного и южного озера заполнены водой", isWaterAt(238, 115) && isWaterAt(237, 352));
 check(
@@ -52,6 +70,15 @@ check(
 );
 check("Озёра: ресурсы не созданы в воде", world.surface.resourceNodes.every((node) => !isWaterAt(node.pos.x, node.pos.y)));
 check("Озёра: еда не создана в воде", world.surface.foodSources.every((source) => !isWaterAt(source.pos.x, source.pos.y)));
+check(
+  "Рыбалка: в каждом озере живёт полная популяция четырёх видов",
+  LAKE_DEFINITIONS.every((lake) => world.surface.fish.filter((fish) => fish.lakeId === lake.id).length === CONFIG.fishPerLake) &&
+    new Set(world.surface.fish.map((fish) => fish.species)).size === 4
+);
+check(
+  "Рыбалка: каждая рыба создана в воде своего озера",
+  world.surface.fish.every((fish) => isWaterAt(fish.pos.x, fish.pos.y) && lakeIdAt(fish.pos.x, fish.pos.y) === fish.lakeId)
+);
 const waterBuildingCount = world.surface.buildings.length;
 check("Озёра: строительство в воде отвергается", !placePointBuilding(world, 0, "hut", 238, 115) && world.surface.buildings.length === waterBuildingCount);
 const waterWallCount = world.surface.buildings.length;
@@ -69,6 +96,64 @@ check(
   Boolean(lakeRoute && lakeRoute.length > 0 && lakeRoute.every((point) => !isWaterAt(point.x, point.y))),
   `точек=${lakeRoute?.length ?? 0}`
 );
+
+// --- Рыбалка: назначение, сухой берег, приманивание, улов, доставка и восстановление ---
+const fishWorld = worldFromSnapshot(JSON.parse(JSON.stringify(toSnapshot(world, false))), genome, spiderGenome, genomeB);
+const fishColony = fishWorld.colonies[0];
+const fishingView = colonyWorldView(fishWorld, fishColony);
+fishColony.colony.rods = 1;
+fishColony.colony.priorities = { clay: 0, wood: 0, stone: 0, build: 0, guard: 0, fish: 1 };
+assignFishingJobs(fishingView);
+const fisher = fishColony.ants.find((ant) => ant.job === "fish");
+const targetFish = fishWorld.surface.fish.find((fish) => fish.id === fisher?.fishingTargetId);
+check("Рыбалка: удочка назначает отдельного рыбака и конкретную рыбу", Boolean(fisher && targetFish));
+check(
+  "Рыбалка: рыбак стоит на суше, а поплавок находится в том же озере",
+  Boolean(
+    fisher?.fishingStandPos && fisher.fishingLurePos && targetFish &&
+    !isWaterAt(fisher.fishingStandPos.x, fisher.fishingStandPos.y) &&
+    lakeIdAt(fisher.fishingLurePos.x, fisher.fishingLurePos.y) === targetFish.lakeId
+  )
+);
+let fishApproached = false;
+if (fisher?.fishingStandPos && fisher.fishingLurePos && targetFish) {
+  fisher.pos = { ...fisher.fishingStandPos };
+  const initialDistance = Math.hypot(targetFish.pos.x - fisher.fishingLurePos.x, targetFish.pos.y - fisher.fishingLurePos.y);
+  for (let index = 0; index < 2200 && fisher.carryKind !== "fish"; index += 1) {
+    fishWorld.tick += 1;
+    fishingView.tick = fishWorld.tick;
+    updateFishPopulation(fishWorld);
+    moveFishing(fishingView, fisher);
+    const distance = Math.hypot(targetFish.pos.x - fisher.fishingLurePos?.x!, targetFish.pos.y - fisher.fishingLurePos?.y!);
+    fishApproached ||= distance < initialDistance - 2;
+  }
+}
+check("Рыбалка: рыба видимо подплывает к поплавку до поклёвки", fishApproached);
+check(
+  "Рыбалка: поймана именно выбранная рыба, она ждёт восстановления, улов в руках",
+  Boolean(fisher?.carryKind === "fish" && fisher.carrying === CONFIG.fishFoodYield && targetFish?.state === "respawning")
+);
+if (fisher) {
+  const foodBeforeCatch = fishColony.colony.food;
+  fisher.pos = { ...fishColony.surfaceEntrance };
+  moveFishing(fishingView, fisher);
+  check(
+    "Рыбалка: рыбак сдаёт улов как еду и возвращается к собирательству",
+    fishColony.colony.food === foodBeforeCatch + CONFIG.fishFoodYield && fisher.job === "forage" && fisher.carrying === 0
+  );
+  for (const fish of fishWorld.surface.fish) {
+    fish.state = "respawning";
+    fish.respawnAt = fishWorld.tick + 1000;
+    fish.targetAntId = undefined;
+    fish.lurePos = undefined;
+  }
+  assignFishingJobs(fishingView);
+  check("Рыбалка: пустые озёра переводят рыбаков на собирательство", !fishColony.ants.some((ant) => ant.job === "fish"));
+  fishWorld.surface.fish[0].respawnAt = fishWorld.tick;
+  updateFishPopulation(fishWorld);
+  assignFishingJobs(fishingView);
+  check("Рыбалка: после восстановления рыбы профессия включается снова", fishColony.ants.some((ant) => ant.job === "fish"));
+}
 
 // --- Фаза 2: экономика глины и дерева ---
 for (let i = 0; i < 6000; i += 1) {
@@ -128,7 +213,7 @@ if (workshop) {
   colonyA.colony.clay = Math.max(colonyA.colony.clay, workshop.cost.clay + 4);
   colonyA.colony.wood = Math.max(colonyA.colony.wood, workshop.cost.wood + CONFIG.axeCost.wood + CONFIG.pickCost.wood + CONFIG.fireWoodCost * 4);
   colonyA.colony.stone = Math.max(colonyA.colony.stone, CONFIG.axeCost.stone + CONFIG.pickCost.stone + 4);
-  colonyA.colony.priorities = { clay: 0, wood: 0, stone: 0, build: 6, guard: 0 };
+colonyA.colony.priorities = { clay: 0, wood: 0, stone: 0, build: 6, guard: 0, fish: 0 };
 }
 for (let i = 0; i < 12000 && workshop && workshop.stage !== "built"; i += 1) {
   step(world);
@@ -144,15 +229,15 @@ check("Фаза инструментов: мастерская готова", wo
 // campfire consumption must not randomly starve a finished workshop of its two recipes.
 colonyA.colony.wood = Math.max(colonyA.colony.wood, 100);
 colonyA.colony.stone = Math.max(colonyA.colony.stone, 20);
-for (let i = 0; i < 18000 && (colonyA.colony.axes < 1 || colonyA.colony.picks < 1); i += 1) {
+for (let i = 0; i < 18000 && (colonyA.colony.axes < 1 || colonyA.colony.picks < 1 || colonyA.colony.rods < 1); i += 1) {
   step(world);
 }
 check(
-  "Фаза инструментов: мастерская сделала топор и кирку",
-  colonyA.colony.axes >= 1 && colonyA.colony.picks >= 1,
-  `axes=${colonyA.colony.axes}, picks=${colonyA.colony.picks}, wood ${beforeTools.wood.toFixed(1)}->${colonyA.colony.wood.toFixed(1)}, stone ${beforeTools.stone.toFixed(1)}->${colonyA.colony.stone.toFixed(1)}`
+  "Инструменты: стартовый топор есть, мастерская сделала кирку и удочку",
+  colonyA.colony.axes >= 1 && colonyA.colony.picks >= 1 && colonyA.colony.rods >= 1,
+  `axes=${colonyA.colony.axes}, picks=${colonyA.colony.picks}, rods=${colonyA.colony.rods}, wood ${beforeTools.wood.toFixed(1)}->${colonyA.colony.wood.toFixed(1)}, stone ${beforeTools.stone.toFixed(1)}->${colonyA.colony.stone.toFixed(1)}`
 );
-colonyA.colony.priorities = { clay: 1, wood: 1, stone: 1, build: 1, guard: 1 };
+colonyA.colony.priorities = { clay: 1, wood: 1, stone: 1, build: 1, guard: 1, fish: 1 };
 for (let i = 0; i < 4000; i += 1) {
   step(world);
 }
@@ -219,6 +304,8 @@ const reloaded = worldFromSnapshot(snapshot, genome, spiderGenome, genomeB);
 check(
   "Снапшот: постройки и запасы переживают загрузку",
   reloaded.surface.buildings.length === world.surface.buildings.length &&
+    reloaded.surface.fish.length === world.surface.fish.length &&
+    reloaded.colonies[0].colony.rods === colonyA.colony.rods &&
     Math.abs(reloaded.colonies[0].colony.clay - colonyA.colony.clay) < 0.01
 );
 for (let i = 0; i < 300; i += 1) {

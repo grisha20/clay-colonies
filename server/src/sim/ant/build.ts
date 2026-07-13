@@ -76,7 +76,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
   }
 
   // Несём материал на площадку (или глину на починку размытой стены).
-  if (ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
+  if (ant.carrying > 0 && (ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone")) {
     if (isWithinRadius(ant.pos, building.pos, CONFIG.buildingDeliverRadius)) {
       const kind = ant.carryKind;
       if (building.stage === "built") {

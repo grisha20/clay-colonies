@@ -15,7 +15,7 @@ import { drawSurfaceGround } from "./ground";
 import { drawSurfacePheromones } from "./pheromones";
 import { drawSurfaceEntranceAt } from "./entrance";
 import { getEnvironmentTextures } from "./environment";
-import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceWebs, updateSurfaceShadows } from "./entities";
+import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceFish, updateFishingEffects, updateSurfaceWebs, updateSurfaceShadows } from "./entities";
 import { offsetSettings } from "./editor";
 import { updateAndDrawParticles } from "./particles";
 
@@ -43,6 +43,7 @@ export function createSurfaceScene(): SurfaceScene {
   const root = new Container();
   const staticLayer = new Container();
   const waterLayer = new Container();
+  const fishLayer = new Container();
   const shadowLayer = new Graphics();
   const dynamicLayer = new Container();
   const fireGlow = new Graphics();
@@ -51,9 +52,11 @@ export function createSurfaceScene(): SurfaceScene {
   const webs = new Graphics();
   const selectionGraphics = new Graphics();
   const particleGraphics = new Graphics();
+  const fishingGraphics = new Graphics();
 
   staticLayer.label = "staticLayer";
   waterLayer.label = "waterLayer";
+  fishLayer.label = "fishLayer";
   shadowLayer.label = "shadowLayer";
   dynamicLayer.label = "dynamicLayer";
   dynamicLayer.sortableChildren = true; // Сортируем все человечки, кусты, ресурсы и здания по y-координате низа!
@@ -65,10 +68,12 @@ export function createSurfaceScene(): SurfaceScene {
   selectionGraphics.zIndex = 9000; // Оверлей выделения всегда рисуется поверх самих человечков
   particleGraphics.label = "particleGraphics";
   particleGraphics.zIndex = 1; // Частицы позади существ и объектов, но поверх земли
+  fishingGraphics.label = "fishingGraphics";
+  fishingGraphics.zIndex = 8990;
 
   // Собираем слои в корень сцены
-  root.addChild(staticLayer, waterLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
-  dynamicLayer.addChild(selectionGraphics, particleGraphics);
+  root.addChild(staticLayer, waterLayer, fishLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
+  dynamicLayer.addChild(selectionGraphics, particleGraphics, fishingGraphics);
 
   if (typeof window !== "undefined") {
     (window as any).printLayers = () => {
@@ -80,6 +85,7 @@ export function createSurfaceScene(): SurfaceScene {
     root,
     staticLayer,
     waterLayer,
+    fishLayer,
     shadowLayer,
     dynamicLayer,
     fireGlow,
@@ -88,6 +94,7 @@ export function createSurfaceScene(): SurfaceScene {
     webs,
     selectionGraphics,
     particleGraphics,
+    fishingGraphics,
     buildingGraphics: [],
     buildingSprites: [],
     entranceGraphics: [],
@@ -104,6 +111,7 @@ export function createSurfaceScene(): SurfaceScene {
     enemyPool: createSpritePool(dynamicLayer, () => createSpiderSprite(4)),
     antPool: createSpritePool(dynamicLayer, () => createClayfolkSprite(false, 2.85)),
     carriedItemsPool: createSpritePool(dynamicLayer, () => new Sprite()),
+    fishPool: createSpritePool(fishLayer, () => new Sprite()),
     staticKey: "",
     entranceKey: "",
     zoneKey: ""
@@ -755,6 +763,7 @@ export function renderSurface(
   // Гарантируем правильный порядок слоев (особенно важно при HMR перезагрузках Vite)
   scene.root.addChild(scene.staticLayer);
   scene.root.addChild(scene.waterLayer);
+  scene.root.addChild(scene.fishLayer);
   scene.root.addChild(scene.shadowLayer);
   scene.root.addChild(scene.zonesOverlay);
   scene.root.addChild(scene.pheromones);
@@ -773,6 +782,7 @@ export function renderSurface(
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);
   }
   updateLakeWater(scene);
+  updateSurfaceFish(scene.fishPool, world, cell, bounds);
 
   if (scene.trampleSprite) {
     scene.trampleSprite.visible = trampleEnabled;
@@ -807,6 +817,7 @@ export function renderSurface(
   updateSurfaceCarrion(scene.carrionPool, world, cell, bounds);
   updateSurfaceLairs(scene.lairPool, world, cell, bounds);
   updateSurfaceEnemies(scene.enemyPool, scene.carriedCarrionPool, world, cell, bounds);
+  updateFishingEffects(scene.fishingGraphics, world, cell, bounds);
   updateSurfaceAnts(scene.antPool, scene.carriedItemsPool, scene.selectionGraphics, world, cell, bounds);
   updateAndDrawParticles(scene.particleGraphics, world, cell, camera, viewportWidth, viewportHeight);
 }
