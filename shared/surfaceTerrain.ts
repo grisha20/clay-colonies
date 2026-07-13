@@ -88,7 +88,9 @@ export function lakeFieldAt(x: number, y: number): number {
 }
 
 export function isWaterAt(x: number, y: number): boolean {
-  return lakeFieldAt(x, y) > 0;
+  // Water membership only needs the polygon test. Calling lakeFieldAt here used
+  // to recompute the distance to every shoreline segment for every actor tick.
+  return lakeIdAt(x, y) !== null;
 }
 
 /** Stable authored-lake identity used by fishing, rendering and future map generation. */

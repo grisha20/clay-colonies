@@ -56,6 +56,7 @@ export type SurfaceScene = {
   fishPool: SpritePool;
   staticKey: string;
   entranceKey: string;
+  buildingKey: string;
   zoneKey: string;
   groundSprite?: Sprite;
   trampleTexture?: RenderTexture;

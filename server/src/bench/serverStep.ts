@@ -5,7 +5,8 @@ import { loadWorldSnapshot } from "../state/snapshot";
 import { step } from "../sim/step";
 import { createWorld, syncWorldLegacyFields, toSnapshot, worldFromSnapshot, type World } from "../sim/world";
 
-const TARGETS = [160, 320, 640, 1000] as const;
+const TARGETS = [16, 32, 64, 160, 320, 640, 1000] as const;
+const WARMUP_STEPS = 5;
 const STEPS = 20;
 
 function time<T>(label: string, fn: () => T): T {
@@ -50,6 +51,10 @@ function spreadSurfaceAnts(world: World, totalAnts: number): void {
         job: "forage",
         carrying: 0,
         carryingDirt: false,
+        scoutTrail: [],
+        foundFoodTrail: undefined,
+        foundFoodSourceId: undefined,
+        knownActiveFoodTargetId: undefined,
         pos: {
           x: 2 + Math.random() * (world.surface.width - 4),
           y: 2 + Math.random() * (world.surface.height - 4)
@@ -75,6 +80,10 @@ console.log(`Benchmark steps per target: ${STEPS}`);
 for (const target of TARGETS) {
   const world = cloneWorld(baseSnapshot, loadedWorld);
   spreadSurfaceAnts(world, target);
+
+  for (let index = 0; index < WARMUP_STEPS; index += 1) {
+    step(world);
+  }
 
   const totalMs = measureMs(`${target} ants / ${STEPS} steps`, () => {
     for (let index = 0; index < STEPS; index += 1) {

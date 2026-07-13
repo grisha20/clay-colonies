@@ -17,8 +17,23 @@ import {
   moveSearching
 } from "./forage";
 import { moveFishing } from "../fishing";
+import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { consumeFoodStock } from "../foodStock";
 
 export { clearDeadAntPaths } from "./movement";
+
+export function updateWaterExposure(ant: Ant): boolean {
+  if (isWaterAt(ant.pos.x, ant.pos.y)) {
+    ant.waterExposure = (ant.waterExposure ?? 0) + CONFIG.waterExposurePerTick;
+    if (ant.waterExposure >= CONFIG.waterExposureDeathTicks) {
+      ant.state = "dead";
+      return true;
+    }
+    return false;
+  }
+  ant.waterExposure = Math.max(0, (ant.waterExposure ?? 0) - CONFIG.waterDryingPerTick);
+  return false;
+}
 
 export function stepSurface(world: World, ant: Ant): void {
   if (
@@ -55,7 +70,7 @@ export function stepSurface(world: World, ant: Ant): void {
   }
 
   if (ant.state === "carry") {
-    if (ant.carryKind && ant.carryKind !== "food") {
+    if (ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone") {
       moveHarvestCarrying(world, ant);
       return;
     }
@@ -111,7 +126,7 @@ export function stepAnt(world: World, ant: Ant): void {
 
   if (ant.energy <= 0) {
     if (canUseStorageMeal(world, true)) {
-      world.colony.food -= CONFIG.workerMealCost;
+      consumeFoodStock(world.colony, CONFIG.workerMealCost);
       ant.energy = CONFIG.maxEnergy;
       ant.state = "search";
     } else {
@@ -125,5 +140,8 @@ export function stepAnt(world: World, ant: Ant): void {
   stepSurface(world, ant);
   // Достроенные стены непроходимы: скольжение вдоль стены или откат.
   resolveSurfaceCollision(world, ant.pos, prevX, prevY, ant.colonyId);
+  if (updateWaterExposure(ant)) {
+    return;
+  }
   updateStuckTracking(world, ant);
 }

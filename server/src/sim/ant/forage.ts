@@ -23,6 +23,7 @@ import {
   isColonyStarving
 } from "./colony-state";
 import { hasDugRoom } from "./brood";
+import { addFoodStock, foodKindForSource, isFoodCarryKind } from "../foodStock";
 import { nearestDropPoint } from "../building";
 
 export type SurfaceFoodTarget = {
@@ -145,6 +146,7 @@ export function pickupFoodIfReached(world: World, ant: Ant, target: SurfaceFoodT
   source.amount = Math.max(0, source.amount - amount);
   ant.energy = CONFIG.maxEnergy;
   ant.carrying = amount;
+  ant.carryKind = foodKindForSource(source);
   if (
     ant.forageRole === "scout" ||
     !world.colony.activeFoodTargetId ||
@@ -496,12 +498,12 @@ export function moveCarrying(world: World, ant: Ant): void {
 
   // Фуражир без отчёта разведчика может сдать еду в ближайший склад.
   // Разведчик и носитель отчёта всегда идут к входу: там регистрируется знание о еде.
-  if (ant.forageRole !== "scout" && !ant.foundFoodSourceId && (ant.carryKind ?? "food") === "food") {
+  if (ant.forageRole !== "scout" && !ant.foundFoodSourceId && isFoodCarryKind(ant.carryKind)) {
     const drop = nearestDropPoint(world, ant.pos);
     const dropIsEntrance = drop.x === world.surface.entrance.x && drop.y === world.surface.entrance.y;
     if (!dropIsEntrance) {
       if (isWithinRadius(ant.pos, drop, CONFIG.dropPointRadius)) {
-        world.colony.food += ant.carrying;
+        addFoodStock(world.colony, ant.carryKind === "meat" ? "meat" : ant.carryKind === "fish" ? "fish" : "fruit", ant.carrying);
         world.fitness.totalFoodDeposited += ant.carrying;
         ant.carrying = 0;
         ant.carryKind = undefined;
@@ -564,6 +566,7 @@ export function collectUndergroundCarrion(world: World, ant: Ant): boolean {
   const amount = Math.min(source.amount, Math.max(0.35, ant.strength));
   source.amount = Math.max(0, source.amount - amount);
   ant.carrying = amount;
+  ant.carryKind = "meat";
   ant.state = "deposit";
   return true;
 }
@@ -592,7 +595,7 @@ export function moveHarvestCarrying(world: World, ant: Ant): void {
 
 // Один шаг сборщика ресурса: дойти до узла, взять кусок, отнести к лагерю.
 export function moveHarvesting(world: World, ant: Ant): boolean {
-  if (ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
+  if (ant.carrying > 0 && (ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone")) {
     ant.state = "carry";
     moveHarvestCarrying(world, ant);
     return true;

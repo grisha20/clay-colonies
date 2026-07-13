@@ -120,6 +120,11 @@ export const CONFIG = {
   energyDrainPerTick: 0.24,
   lowEnergyThreshold: 250,
   workerMealCost: 0.4,
+  // Clayfolk may survive a brief fall into water, but prolonged immersion dissolves them.
+  waterExposureDeathTicks: 120,
+  waterExposurePerTick: 1,
+  waterDryingPerTick: 2,
+  waterSpeedFactor: 0.55,
   // Hungry surface workers return before they are starving, so a failed food trip does not become a death march.
   refuelEnergyThreshold: 420,
   randomWander: 0.12,
@@ -355,9 +360,12 @@ export const CONFIG = {
 
   // Рыбалка: постоянная популяция в каждом озере, видимый подход рыбы к поплавку и медленное восстановление.
   fishPerLake: 16,
-  fishSwimSpeed: 0.035,
-  fishLureSpeed: 0.11,
-  fishTurnEveryTicks: 90,
+  fishSwimSpeed: 0.075,
+  fishLureSpeed: 0.14,
+  fishTurnEveryTicks: 70,
+  fishWanderAngle: 0.42,
+  fishTurnBlend: 0.18,
+  fishShoreLookAhead: 4,
   fishingStandRadius: 1.15,
   fishingBiteRadius: 0.8,
   fishingMinCastTicks: 70,

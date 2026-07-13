@@ -2,7 +2,7 @@
 // Площадка (site) -> доставка ресурсов со склада лагеря -> стройка (inProgress) -> готово (built).
 // Готовые стены блокируют движение через сетку клеток WALL_CELL_SIZE x WALL_CELL_SIZE.
 import { WALL_CELL_SIZE, type Building, type BuildingType, type Vec2 } from "../../../shared/types";
-import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { isWaterAt, lakeFieldAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import type { World } from "./world";
 
@@ -335,8 +335,15 @@ export function resolveSurfaceCollision(
   if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId)) {
     return;
   }
-  // Old snapshots can place an actor in a cell that later became water. Let it leave.
+  // Old snapshots can place an actor in a cell that later became water. Let it
+  // move only toward shallower water; the previous rule allowed unrestricted
+  // movement once an actor had crossed the shoreline by even one pixel.
   if (isSurfaceBlockedAt(world, prevX, prevY, colonyId)) {
+    if (isWaterAt(prevX, prevY) && lakeFieldAt(pos.x, pos.y) < lakeFieldAt(prevX, prevY)) {
+      return;
+    }
+    pos.x = prevX;
+    pos.y = prevY;
     return;
   }
   if (!isSurfaceBlockedAt(world, pos.x, prevY, colonyId)) {

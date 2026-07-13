@@ -199,6 +199,33 @@ export const spriteMaps = {
     "1221",
     ".11."
   ],
+  fruitIcon: [
+    "...3...",
+    "..33...",
+    ".1111..",
+    "122221.",
+    "122221.",
+    ".12221.",
+    "..111.."
+  ],
+  fishIcon: [
+    "........1",
+    "...111.12",
+    ".11222122",
+    "122232221",
+    ".11222122",
+    "...111.12",
+    "........1"
+  ],
+  meatIcon: [
+    "......11.",
+    ".....1221",
+    "..1111221",
+    ".1222221.",
+    "1223321..",
+    ".12221...",
+    "..111...."
+  ],
   berry: [
     ".22.",
     "2132",
@@ -341,6 +368,21 @@ export const spritePalettes = {
     "1": 0x3d8b45,
     "2": 0x7abf5a
   },
+  fruitIcon: {
+    "1": 0x8f251d,
+    "2": 0xe34b2f,
+    "3": 0x4f8a31
+  },
+  fishIcon: {
+    "1": 0x244d73,
+    "2": 0x4f9ec7,
+    "3": 0xbde9e8
+  },
+  meatIcon: {
+    "1": 0x5f2822,
+    "2": 0xb94b3f,
+    "3": 0xf1a080
+  },
   berry: {
     "1": berryDark,
     "2": berryMid,
@@ -459,7 +501,7 @@ export function getFishingRodTexture(): Texture {
 const iconCache = new Map<string, string>();
 
 export function spriteIconDataUrl(
-  name: "food" | "clay" | "wood" | "stone" | "pop",
+  name: "food" | "fruit" | "fish" | "meat" | "clay" | "wood" | "stone" | "pop",
   scale = 4
 ): string {
   const key = `${name}_${scale}`;
@@ -471,13 +513,19 @@ export function spriteIconDataUrl(
   const source: { rows: readonly string[]; palette: Palette } =
     name === "food"
       ? { rows: spriteMaps.food, palette: spritePalettes.food }
+      : name === "fruit"
+        ? { rows: spriteMaps.fruitIcon, palette: spritePalettes.fruitIcon }
+        : name === "fish"
+          ? { rows: spriteMaps.fishIcon, palette: spritePalettes.fishIcon }
+          : name === "meat"
+            ? { rows: spriteMaps.meatIcon, palette: spritePalettes.meatIcon }
       : name === "clay"
-        ? { rows: spriteMaps.clayLump, palette: spritePalettes.clayLump }
-        : name === "wood"
-          ? { rows: spriteMaps.woodStick, palette: spritePalettes.woodStick }
-          : name === "stone"
-            ? { rows: spriteMaps.stoneChunk, palette: spritePalettes.stoneChunk }
-            : { rows: spriteMaps.clayfolk, palette: spritePalettes.clayfolk };
+              ? { rows: spriteMaps.clayLump, palette: spritePalettes.clayLump }
+              : name === "wood"
+                ? { rows: spriteMaps.woodStick, palette: spritePalettes.woodStick }
+                : name === "stone"
+                  ? { rows: spriteMaps.stoneChunk, palette: spritePalettes.stoneChunk }
+                  : { rows: spriteMaps.clayfolk, palette: spritePalettes.clayfolk };
 
   const width = Math.max(...source.rows.map((row) => row.length));
   const height = source.rows.length;

@@ -5,6 +5,44 @@ import { SURFACE_TERRAIN_CELL_SIZE, isDeepWaterAt, isWaterAt } from "../../../sh
 import type { Camera } from "./types";
 import { SURFACE_TILE_SIZE } from "./types";
 
+let staticMinimapCache: { key: string; canvas: HTMLCanvasElement } | null = null;
+
+function staticMinimapLayer(canvas: HTMLCanvasElement, world: WorldSnapshot): HTMLCanvasElement {
+  const entrances = world.surface.entrances ?? [world.surface.entrance];
+  const key = [canvas.width, canvas.height, world.surface.width, world.surface.height, ...entrances.flatMap((item) => [item.x, item.y])].join(":");
+  if (staticMinimapCache?.key === key) {
+    return staticMinimapCache.canvas;
+  }
+  const layer = document.createElement("canvas");
+  layer.width = canvas.width;
+  layer.height = canvas.height;
+  const context = layer.getContext("2d")!;
+  const scale = layer.width / world.surface.width;
+  const toX = (x: number) => x * scale;
+  const toY = (y: number) => y * scale;
+  context.fillStyle = "#7fa14f";
+  context.fillRect(0, 0, layer.width, layer.height);
+  for (let y = 0; y < world.surface.height; y += SURFACE_TERRAIN_CELL_SIZE) {
+    for (let x = 0; x < world.surface.width; x += SURFACE_TERRAIN_CELL_SIZE) {
+      const centerX = x + SURFACE_TERRAIN_CELL_SIZE * 0.5;
+      const centerY = y + SURFACE_TERRAIN_CELL_SIZE * 0.5;
+      if (!isWaterAt(centerX, centerY)) {
+        continue;
+      }
+      context.fillStyle = isDeepWaterAt(centerX, centerY) ? "#1b8c98" : "#32c3c1";
+      context.fillRect(toX(x), toY(y), SURFACE_TERRAIN_CELL_SIZE * scale + 0.3, SURFACE_TERRAIN_CELL_SIZE * scale + 0.3);
+    }
+  }
+  for (const entrance of entrances) {
+    context.fillStyle = "#c2a06a";
+    context.beginPath();
+    context.ellipse(toX(entrance.x), toY(entrance.y), 38 * scale, 28 * scale, 0, 0, Math.PI * 2);
+    context.fill();
+  }
+  staticMinimapCache = { key, canvas: layer };
+  return layer;
+}
+
 export function drawMinimap(
   canvas: HTMLCanvasElement,
   world: WorldSnapshot,
@@ -20,28 +58,7 @@ export function drawMinimap(
   const toX = (x: number) => x * scale;
   const toY = (y: number) => y * scale;
 
-  // Фон: трава + поляны лагерей.
-  context.fillStyle = "#7fa14f";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Large authored lakes use same shared terrain formula as server collision.
-  for (let y = 0; y < world.surface.height; y += SURFACE_TERRAIN_CELL_SIZE) {
-    for (let x = 0; x < world.surface.width; x += SURFACE_TERRAIN_CELL_SIZE) {
-      const centerX = x + SURFACE_TERRAIN_CELL_SIZE * 0.5;
-      const centerY = y + SURFACE_TERRAIN_CELL_SIZE * 0.5;
-      if (!isWaterAt(centerX, centerY)) {
-        continue;
-      }
-      context.fillStyle = isDeepWaterAt(centerX, centerY) ? "#1b8c98" : "#32c3c1";
-      context.fillRect(toX(x), toY(y), SURFACE_TERRAIN_CELL_SIZE * scale + 0.3, SURFACE_TERRAIN_CELL_SIZE * scale + 0.3);
-    }
-  }
-  for (const entrance of world.surface.entrances ?? [world.surface.entrance]) {
-    context.fillStyle = "#c2a06a";
-    context.beginPath();
-    context.ellipse(toX(entrance.x), toY(entrance.y), 38 * scale, 28 * scale, 0, 0, Math.PI * 2);
-    context.fill();
-  }
+  context.drawImage(staticMinimapLayer(canvas, world), 0, 0);
 
   // Узлы ресурсов.
   for (const node of world.surface.resourceNodes ?? []) {

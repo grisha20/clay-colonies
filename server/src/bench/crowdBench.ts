@@ -80,6 +80,10 @@ function setupCrowd(world: World): void {
         job: "forage",
         carrying: 0,
         carryingDirt: false,
+        scoutTrail: [],
+        foundFoodTrail: undefined,
+        foundFoodSourceId: undefined,
+        knownActiveFoodTargetId: undefined,
         pos: {
           x: center.x + Math.cos(angle) * radius + jitter,
           y: center.y + Math.sin(angle) * radius - jitter

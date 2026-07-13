@@ -93,6 +93,7 @@ export type Building = {
 
 // Ресурсы склада племени (что лежит в запасах и что несут жители).
 export type ResourceKind = "clay" | "wood" | "stone";
+export type FoodKind = "fruit" | "fish" | "meat";
 
 // Узлы на карте: «что видишь — то можно добыть».
 // tree/stick дают дерево, stone/loose-stone дают камень, clay даёт глину.
@@ -144,7 +145,7 @@ export type Ant = {
   role: "worker";
   strength: number;
   job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard" | "fish";
-  carryKind?: "food" | "fish" | ResourceKind;
+  carryKind?: "food" | FoodKind | ResourceKind;
   harvestNodeId?: string;
   // Прогресс многоударной добычи у текущего узла (в тиках «долбления»).
   harvestHits?: number;
@@ -160,6 +161,8 @@ export type Ant = {
   state: AntState;
   pos: Vec2;
   energy: number;
+  /** Ticks of accumulated water damage; dries back toward zero on land. */
+  waterExposure?: number;
   carrying: number;
   heading: Vec2;
   broodId?: string;
@@ -223,6 +226,8 @@ export type Colony = {
   knownFood: { id: string; pos: Vec2; lastSeenTick: number; trail?: Vec2[] }[];
   activeFoodTargetId?: string;
   food: number;
+  /** Real food inventory. `food` remains its compatibility aggregate. */
+  foodStock?: Record<FoodKind, number>;
   clay: number;
   wood: number;
   stone: number;

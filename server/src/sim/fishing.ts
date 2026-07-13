@@ -11,6 +11,7 @@ import { isWithinRadius } from "./ant/utils";
 import { zoneIndexAt } from "./zones";
 import type { World } from "./world";
 import { moveSurfaceToward } from "./ant/movement";
+import { addFoodStock } from "./foodStock";
 
 type FishingSpot = { lakeId: Fish["lakeId"]; stand: Vec2; lure: Vec2 };
 
@@ -84,6 +85,42 @@ function moveFishToward(fish: Fish, target: Vec2, speed: number): void {
   }
 }
 
+function normalizedHeading(x: number, y: number): Vec2 {
+  const length = Math.hypot(x, y);
+  return length > 0.0001 ? { x: x / length, y: y / length } : { x: 1, y: 0 };
+}
+
+function rotatedHeading(heading: Vec2, angle: number): Vec2 {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return { x: heading.x * cos - heading.y * sin, y: heading.x * sin + heading.y * cos };
+}
+
+function turnFishToward(fish: Fish, desired: Vec2, blend: number = CONFIG.fishTurnBlend): void {
+  fish.heading = normalizedHeading(
+    fish.heading.x * (1 - blend) + desired.x * blend,
+    fish.heading.y * (1 - blend) + desired.y * blend
+  );
+}
+
+function deeperWaterHeading(fish: Fish): Vec2 {
+  let best = fish.heading;
+  let bestDepth = -Number.POSITIVE_INFINITY;
+  // Probe a broad fan around the current course. The depth field is shared by
+  // all fish, so shoreline avoidance stays cheap and deterministic.
+  for (let step = -4; step <= 4; step += 1) {
+    const candidate = rotatedHeading(fish.heading, step * Math.PI / 4);
+    const x = fish.pos.x + candidate.x * CONFIG.fishShoreLookAhead;
+    const y = fish.pos.y + candidate.y * CONFIG.fishShoreLookAhead;
+    const depth = lakeIdAt(x, y) === fish.lakeId ? lakeFieldAt(x, y) : -1;
+    if (depth > bestDepth) {
+      bestDepth = depth;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
 /** Advances visible fish and restores caught individuals after their own cooldown. */
 export function updateFishPopulation(world: World): void {
   for (let index = 0; index < world.surface.fish.length; index += 1) {
@@ -112,8 +149,17 @@ export function updateFishPopulation(world: World): void {
     }
 
     if ((world.tick + index * 29) % CONFIG.fishTurnEveryTicks === 0) {
-      const angle = seededUnit(world.tick + index * 997) * Math.PI * 2;
-      fish.heading = { x: Math.cos(angle), y: Math.sin(angle) };
+      const wander = (seededUnit(world.tick + index * 997) * 2 - 1) * CONFIG.fishWanderAngle;
+      turnFishToward(fish, rotatedHeading(fish.heading, wander));
+    }
+    if ((world.tick + index * 7) % 10 === 0) {
+      const lookAhead = {
+        x: fish.pos.x + fish.heading.x * CONFIG.fishShoreLookAhead,
+        y: fish.pos.y + fish.heading.y * CONFIG.fishShoreLookAhead
+      };
+      if (lakeIdAt(lookAhead.x, lookAhead.y) !== fish.lakeId || lakeFieldAt(lookAhead.x, lookAhead.y) < 0.14) {
+        turnFishToward(fish, deeperWaterHeading(fish));
+      }
     }
     const next = {
       x: fish.pos.x + fish.heading.x * CONFIG.fishSwimSpeed,
@@ -122,8 +168,7 @@ export function updateFishPopulation(world: World): void {
     if (lakeIdAt(next.x, next.y) === fish.lakeId && lakeFieldAt(next.x, next.y) > 0.08) {
       fish.pos = next;
     } else {
-      const angle = seededUnit(world.tick * 7 + index * 311) * Math.PI * 2;
-      fish.heading = { x: Math.cos(angle), y: Math.sin(angle) };
+      turnFishToward(fish, deeperWaterHeading(fish), 0.28);
     }
   }
 }
@@ -291,7 +336,7 @@ export function assignFishingJobs(world: World): void {
 function deliverFish(world: World, ant: Ant): void {
   const drop = nearestDropPoint(world, ant.pos);
   if (isWithinRadius(ant.pos, drop, CONFIG.dropPointRadius)) {
-    world.colony.food += ant.carrying;
+    addFoodStock(world.colony, "fish", ant.carrying);
     ant.carrying = 0;
     ant.carryKind = undefined;
     ant.caughtFishSpecies = undefined;

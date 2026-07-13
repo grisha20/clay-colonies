@@ -5,6 +5,8 @@ import {
   ZONE_CELL_SIZE,
   resourceNodeTool,
   resourceNodeYield,
+  type Ant,
+  type Fish,
   type NetworkWorldSnapshot,
   type WorldSnapshot
 } from "../../shared/types";
@@ -105,7 +107,10 @@ appRoot.innerHTML = `
       </div>
     </aside>
     <section class="panel resourceBar" id="resource-bar">
-      <span class="res"><img id="icon-food" alt="еда"><strong id="res-food">0</strong><em id="rate-food"></em></span>
+      <span class="res" title="Вся еда"><img id="icon-food" alt="еда"><strong id="res-food">0</strong><em id="rate-food"></em></span>
+      <span class="res" title="Фрукты"><img id="icon-fruit" alt="фрукты"><strong id="res-fruit">0</strong></span>
+      <span class="res" title="Рыба"><img id="icon-fish" alt="рыба"><strong id="res-fish">0</strong></span>
+      <span class="res" title="Мясо"><img id="icon-meat" alt="мясо"><strong id="res-meat">0</strong></span>
       <span class="res"><img id="icon-clay" alt="глина"><strong id="res-clay">0</strong><em id="rate-clay"></em></span>
       <span class="res"><img id="icon-wood" alt="дерево"><strong id="res-wood">0</strong><em id="rate-wood"></em></span>
       <span class="res"><img id="icon-stone" alt="камень"><strong id="res-stone">0</strong><em id="rate-stone"></em></span>
@@ -1008,7 +1013,7 @@ const unitEnergy = document.querySelector<HTMLElement>("#unit-energy");
 const unitCargo = document.querySelector<HTMLElement>("#unit-cargo");
 let selectedAnt: string | null = null;
 
-const CARGO_NAMES: Record<string, string> = { food: "еда", fish: "рыба", clay: "глина", wood: "дерево", stone: "камень" };
+const CARGO_NAMES: Record<string, string> = { food: "еда", fruit: "фрукты", fish: "рыба", meat: "мясо", clay: "глина", wood: "дерево", stone: "камень" };
 
 // Панель приоритетов: веса 0..5 распределяют ограниченных жителей по занятиям.
 // Еда — все остальные. Авторитет — сервер (colony.priorities из снапшота).
@@ -1225,6 +1230,9 @@ function updateUnitPanel(world: WorldSnapshot): void {
 // Ресурс-бар племени A: иконки + значения + прирост за минуту.
 const resourceBarNodes = {
   food: document.querySelector<HTMLElement>("#res-food"),
+  fruit: document.querySelector<HTMLElement>("#res-fruit"),
+  fish: document.querySelector<HTMLElement>("#res-fish"),
+  meat: document.querySelector<HTMLElement>("#res-meat"),
   clay: document.querySelector<HTMLElement>("#res-clay"),
   wood: document.querySelector<HTMLElement>("#res-wood"),
   stone: document.querySelector<HTMLElement>("#res-stone"),
@@ -1238,6 +1246,9 @@ const resourceBarNodes = {
 };
 for (const [id, name] of [
   ["icon-food", "food"],
+  ["icon-fruit", "fruit"],
+  ["icon-fish", "fish"],
+  ["icon-meat", "meat"],
   ["icon-clay", "clay"],
   ["icon-wood", "wood"],
   ["icon-stone", "stone"],
@@ -1307,6 +1318,9 @@ function updateResourceBar(world: WorldSnapshot): void {
   const minutes = Math.max(0.25, (now - first.at) / 60000);
 
   if (resourceBarNodes.food) resourceBarNodes.food.textContent = String(Math.floor(colony.food ?? 0));
+  if (resourceBarNodes.fruit) resourceBarNodes.fruit.textContent = String(Math.floor(colony.foodStock?.fruit ?? colony.food ?? 0));
+  if (resourceBarNodes.fish) resourceBarNodes.fish.textContent = String(Math.floor(colony.foodStock?.fish ?? 0));
+  if (resourceBarNodes.meat) resourceBarNodes.meat.textContent = String(Math.floor(colony.foodStock?.meat ?? 0));
   if (resourceBarNodes.clay) resourceBarNodes.clay.textContent = String(Math.floor(colony.clay ?? 0));
   if (resourceBarNodes.wood) resourceBarNodes.wood.textContent = String(Math.floor(colony.wood ?? 0));
   if (resourceBarNodes.stone) resourceBarNodes.stone.textContent = String(Math.floor(colony.stone ?? 0));
@@ -1424,6 +1438,7 @@ type AntInterp = {
   currAngle: number;
   layer: string;
 };
+type FishInterp = Omit<AntInterp, "layer"> & { state: Fish["state"] };
 
 let currentView: ViewMode = "surface";
 let currentUndergroundColony = 0;
@@ -1431,9 +1446,18 @@ let cameraMode: CameraMode = "follow";
 let currentSpeed = 1;
 let camera: Camera = { x: 50, y: 50, zoom: DEFAULT_SURFACE_ZOOM };
 let latestWorld: NetworkWorldSnapshot | null = null;
+let interpolatedWorld: NetworkWorldSnapshot | null = null;
+const interpolatedAnts: Ant[] = [];
+const interpolatedAntById = new Map<string, Ant>();
+const interpolatedFish: Fish[] = [];
+const interpolatedFishById = new Map<string, Fish>();
+let lastPanelUpdateAt = 0;
+let lastMinimapUpdateAt = 0;
 let lastRenderAt = 0;
 let lastPacketTime = 0;
 let lastPheromones: WorldSnapshot["pheromones"] | null = null;
+const pheromoneBuffers: Array<{ food: Float32Array; home: Float32Array }> = [];
+let pheromoneBufferIndex = 0;
 let warnedProtocolVersion = false;
 let isDragging = false;
 let pointerDown = false;
@@ -1445,6 +1469,7 @@ let currentFps = 0;
 let lastRenderCostMs = 0;
 let lastPayloadKb = 0;
 const antInterp = new Map<string, AntInterp>();
+const fishInterp = new Map<string, FishInterp>();
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -1582,7 +1607,7 @@ function updatePerfHud(world: WorldSnapshot): void {
 }
 
 function draw(interpT: number): void {
-  if (!latestWorld) {
+  if (!latestWorld || !interpolatedWorld) {
     return;
   }
   if (!snapshotMatchesView(latestWorld)) {
@@ -1595,22 +1620,34 @@ function draw(interpT: number): void {
     clampCamera(latestWorld);
   }
 
-  const ants = latestWorld.ants.map((ant) => {
+  for (const ant of interpolatedAnts) {
     const ip = antInterp.get(ant.id);
     if (!ip) {
-      return ant;
+      continue;
     }
-    const x = ip.prevX + (ip.currX - ip.prevX) * interpT;
-    const y = ip.prevY + (ip.currY - ip.prevY) * interpT;
+    ant.pos.x = ip.prevX + (ip.currX - ip.prevX) * interpT;
+    ant.pos.y = ip.prevY + (ip.currY - ip.prevY) * interpT;
     const angle = lerpAngle(ip.prevAngle, ip.currAngle, interpT);
-    return { ...ant, pos: { x, y }, heading: { x: Math.cos(angle), y: Math.sin(angle) } };
-  });
+    ant.heading.x = Math.cos(angle);
+    ant.heading.y = Math.sin(angle);
+  }
+  for (const fish of interpolatedFish) {
+    const ip = fishInterp.get(fish.id);
+    if (!ip) {
+      continue;
+    }
+    fish.pos.x = ip.prevX + (ip.currX - ip.prevX) * interpT;
+    fish.pos.y = ip.prevY + (ip.currY - ip.prevY) * interpT;
+    const angle = lerpAngle(ip.prevAngle, ip.currAngle, interpT);
+    fish.heading.x = Math.cos(angle);
+    fish.heading.y = Math.sin(angle);
+  }
 
   const renderStart = performance.now();
   renderWorld(
     pixi.stage,
     pixi.renderer,
-    { ...latestWorld, ants },
+    interpolatedWorld,
     currentView,
     pixi.screen.width,
     pixi.screen.height,
@@ -2187,8 +2224,8 @@ socket.addEventListener("error", () => {
   statusNode.textContent = "Ошибка WebSocket";
 });
 
-function unpackSparseGrid(sparse: any, size: number): Float32Array {
-  const arr = new Float32Array(size);
+function unpackSparseGrid(sparse: any, arr: Float32Array): Float32Array {
+  arr.fill(0);
   if (sparse && sparse.i && sparse.v) {
     const indices = sparse.i;
     const values = sparse.v;
@@ -2211,7 +2248,9 @@ socket.addEventListener("message", (event) => {
   lastPacketTime = now;
 
   const rawMessage = String(event.data);
-  lastPayloadKb = Math.round(new Blob([rawMessage]).size / 1024);
+  // Network snapshots are JSON and overwhelmingly ASCII; string length gives
+  // an accurate HUD estimate without allocating a Blob for every packet.
+  lastPayloadKb = Math.round(rawMessage.length / 1024);
   const snap = JSON.parse(rawMessage) as NetworkWorldSnapshot;
   const protocolVersion = snap.protocolVersion ?? 1;
   if (!warnedProtocolVersion && protocolVersion !== CURRENT_PROTOCOL_VERSION) {
@@ -2222,8 +2261,14 @@ socket.addEventListener("message", (event) => {
   const hasNewPheromones = snap.pheromones && snap.pheromones.food && snap.pheromones.food.i && snap.pheromones.food.i.length > 0;
   if (hasNewPheromones) {
     const size = snap.pheromones.width * snap.pheromones.height;
-    snap.pheromones.food = unpackSparseGrid(snap.pheromones.food, size);
-    snap.pheromones.home = unpackSparseGrid(snap.pheromones.home, size);
+    pheromoneBufferIndex = (pheromoneBufferIndex + 1) % 2;
+    let buffers = pheromoneBuffers[pheromoneBufferIndex];
+    if (!buffers || buffers.food.length !== size) {
+      buffers = { food: new Float32Array(size), home: new Float32Array(size) };
+      pheromoneBuffers[pheromoneBufferIndex] = buffers;
+    }
+    snap.pheromones.food = unpackSparseGrid(snap.pheromones.food, buffers.food);
+    snap.pheromones.home = unpackSparseGrid(snap.pheromones.home, buffers.home);
     lastPheromones = snap.pheromones;
   } else if (lastPheromones) {
     snap.pheromones = lastPheromones;
@@ -2263,16 +2308,91 @@ socket.addEventListener("message", (event) => {
     }
   }
 
+  interpolatedAnts.length = 0;
+  for (const ant of snap.ants) {
+    let renderAnt = interpolatedAntById.get(ant.id);
+    if (!renderAnt) {
+      renderAnt = { ...ant, pos: { ...ant.pos }, heading: { ...ant.heading } };
+      interpolatedAntById.set(ant.id, renderAnt);
+    } else {
+      const pos = renderAnt.pos;
+      const heading = renderAnt.heading;
+      Object.assign(renderAnt, ant);
+      renderAnt.pos = pos;
+      renderAnt.heading = heading;
+    }
+    interpolatedAnts.push(renderAnt);
+  }
+  for (const id of interpolatedAntById.keys()) {
+    if (!seen.has(id)) {
+      interpolatedAntById.delete(id);
+    }
+  }
+  const seenFish = new Set<string>();
+  interpolatedFish.length = 0;
+  for (const fish of snap.surface.fish ?? []) {
+    seenFish.add(fish.id);
+    const angle = Math.atan2(fish.heading.y, fish.heading.x);
+    const existing = fishInterp.get(fish.id);
+    const teleported = existing && Math.hypot(fish.pos.x - existing.currX, fish.pos.y - existing.currY) > 8;
+    if (existing && existing.state === fish.state && !teleported) {
+      existing.prevX = existing.currX;
+      existing.prevY = existing.currY;
+      existing.prevAngle = existing.currAngle;
+      existing.currX = fish.pos.x;
+      existing.currY = fish.pos.y;
+      existing.currAngle = angle;
+    } else {
+      fishInterp.set(fish.id, {
+        prevX: fish.pos.x,
+        prevY: fish.pos.y,
+        prevAngle: angle,
+        currX: fish.pos.x,
+        currY: fish.pos.y,
+        currAngle: angle,
+        state: fish.state
+      });
+    }
+
+    let renderFish = interpolatedFishById.get(fish.id);
+    if (!renderFish) {
+      renderFish = { ...fish, pos: { ...fish.pos }, heading: { ...fish.heading } };
+      interpolatedFishById.set(fish.id, renderFish);
+    } else {
+      const pos = renderFish.pos;
+      const heading = renderFish.heading;
+      Object.assign(renderFish, fish);
+      renderFish.pos = pos;
+      renderFish.heading = heading;
+    }
+    interpolatedFish.push(renderFish);
+  }
+  for (const id of fishInterp.keys()) {
+    if (!seenFish.has(id)) {
+      fishInterp.delete(id);
+      interpolatedFishById.delete(id);
+    }
+  }
+
   latestWorld = snap;
-  updateHud(snap);
-  updateTasks(snap);
-  updateResourceBar(snap);
-  updateBuildCards(snap);
-  updateUnitPanel(snap);
-  updatePriorityPanel(snap);
-  updateWeatherLabel();
-  if (minimapCanvas) {
+  interpolatedWorld = {
+    ...snap,
+    surface: { ...snap.surface, fish: interpolatedFish },
+    ants: interpolatedAnts
+  };
+  if (now - lastPanelUpdateAt >= 250) {
+    updateHud(snap);
+    updateTasks(snap);
+    updateResourceBar(snap);
+    updateBuildCards(snap);
+    updateUnitPanel(snap);
+    updatePriorityPanel(snap);
+    updateWeatherLabel();
+    lastPanelUpdateAt = now;
+  }
+  if (minimapCanvas && now - lastMinimapUpdateAt >= 200) {
     drawMinimap(minimapCanvas, snap, camera, pixi.screen.width, pixi.screen.height);
+    lastMinimapUpdateAt = now;
   }
   updatePerfHud(snap);
   if (camera.x === 50 && camera.y === 50) {

@@ -9,9 +9,10 @@ import type { World } from "../world";
 import { randomHeading } from "../world";
 import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, numericAntId, posTile } from "./utils";
 import { zoneCellCenter, zoneIndexAt } from "../zones";
-import { isSurfaceBlockedAt } from "../building";
+import { isSurfaceBlockedAt, isWallBlockedAt } from "../building";
 import { isSheltered } from "../weather";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { addFoodStock, consumeFoodStock, normalizedCarryFoodKind } from "../foodStock";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -30,6 +31,34 @@ type SurfacePath = {
 const surfacePaths = new Map<string, SurfacePath>();
 const SURFACE_PATH_CELL_SIZE = 4;
 const surfaceQueryScratch: Ant[] = [];
+const speedQueryScratch: Ant[] = [];
+const lakeClearanceCache = new Map<string, Uint8Array>();
+
+function buildLakeClearance(width: number, height: number): Uint8Array {
+  const clearance = new Uint8Array(width * height);
+  const shoreClearance = 1.35;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const center = surfaceCellCenter({ x, y });
+      clearance[y * width + x] =
+        isWaterAt(center.x, center.y) ||
+        isWaterAt(center.x - shoreClearance, center.y) ||
+        isWaterAt(center.x + shoreClearance, center.y) ||
+        isWaterAt(center.x, center.y - shoreClearance) ||
+        isWaterAt(center.x, center.y + shoreClearance)
+          ? 0
+          : 1;
+    }
+  }
+  return clearance;
+}
+
+const defaultSurfacePathWidth = Math.ceil(CONFIG.mapWidth / SURFACE_PATH_CELL_SIZE);
+const defaultSurfacePathHeight = Math.ceil(CONFIG.mapHeight / SURFACE_PATH_CELL_SIZE);
+lakeClearanceCache.set(
+  `${defaultSurfacePathWidth}x${defaultSurfacePathHeight}`,
+  buildLakeClearance(defaultSurfacePathWidth, defaultSurfacePathHeight)
+);
 
 export function clearDeadAntPaths(activeIds: Set<string>): void {
   for (const antId of antPaths.keys()) {
@@ -82,11 +111,30 @@ export function calculateSurfacePath(world: World, from: Vec2, to: Vec2, colonyI
   }
   const width = Math.ceil(world.surface.width / SURFACE_PATH_CELL_SIZE);
   const height = Math.ceil(world.surface.height / SURFACE_PATH_CELL_SIZE);
+  const cacheKey = `${width}x${height}`;
+  let lakeClearance = lakeClearanceCache.get(cacheKey);
+  if (!lakeClearance) {
+    lakeClearance = buildLakeClearance(width, height);
+    lakeClearanceCache.set(cacheKey, lakeClearance);
+  }
   const start = surfaceCell(from);
   const target = surfaceCell(to);
-  const isOpen = (cell: Vec2) =>
-    cell.x >= 0 && cell.y >= 0 && cell.x < width && cell.y < height &&
-    !isSurfaceBlockedAt(world, surfaceCellCenter(cell).x, surfaceCellCenter(cell).y, colonyId);
+  const isOpen = (cell: Vec2) => {
+    if (cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height) {
+      return false;
+    }
+    const index = cell.y * width + cell.x;
+    if (!lakeClearance![index]) {
+      return false;
+    }
+    const center = surfaceCellCenter(cell);
+    const shoreClearance = 1.35;
+    return !isWallBlockedAt(world, center.x, center.y, colonyId) &&
+      !isWallBlockedAt(world, center.x - shoreClearance, center.y, colonyId) &&
+      !isWallBlockedAt(world, center.x + shoreClearance, center.y, colonyId) &&
+      !isWallBlockedAt(world, center.x, center.y - shoreClearance, colonyId) &&
+      !isWallBlockedAt(world, center.x, center.y + shoreClearance, colonyId);
+  };
   if (!isOpen(start) || !isOpen(target)) {
     return null;
   }
@@ -193,7 +241,7 @@ function wanderBurstDirection(world: World, ant: Ant): Vec2 | null {
 
 export function surfaceMoveSpeed(world: World, ant: Ant): number {
   let nearbyWorkers = 0;
-  const list = tickCache.surfaceAnts;
+  const list = tickCache.surfaceAntGrid.queryInto(ant.pos, CONFIG.defenseRadius, speedQueryScratch);
   const len = list.length;
   const defRad = CONFIG.defenseRadius;
   for (let i = 0; i < len; i += 1) {
@@ -220,6 +268,10 @@ export function surfaceMoveSpeed(world: World, ant: Ant): number {
   // Дождь: мокрые жители вне укрытий (костёр/хижины) заметно медленнее.
   if (world.weather.state === "rain" && !isSheltered(world, ant.pos)) {
     speed *= CONFIG.rainWetSpeedFactor;
+  }
+
+  if (isWaterAt(ant.pos.x, ant.pos.y)) {
+    speed *= CONFIG.waterSpeedFactor;
   }
 
   // Замедление муравьев на паутине вокруг гнезда паука
@@ -658,7 +710,7 @@ export function tryCrossLayer(world: World, ant: Ant): boolean {
     return false;
   }
   // Сборщик сдаёт глину/дерево/камень в ближайшую точку сдачи (moveHarvestCarrying).
-  if (ant.job === "harvest" && ant.carrying > 0 && ant.carryKind && ant.carryKind !== "food") {
+  if (ant.job === "harvest" && ant.carrying > 0 && (ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone")) {
     return false;
   }
   if (ant.layer === "underground") {
@@ -682,13 +734,13 @@ export function tryCrossLayer(world: World, ant: Ant): boolean {
           world.colony.stone += ant.carrying;
         } else {
           registerScoutFoodReport(world, ant);
-          world.colony.food += ant.carrying;
+          addFoodStock(world.colony, normalizedCarryFoodKind(kind), ant.carrying);
           world.fitness.totalFoodDeposited += ant.carrying;
         }
         ant.carrying = 0;
         ant.carryKind = undefined;
       } else if (canUseCampMeal(world)) {
-        world.colony.food -= CONFIG.workerMealCost;
+        consumeFoodStock(world.colony, CONFIG.workerMealCost);
         ant.energy = CONFIG.maxEnergy;
       }
       ant.state = "search";

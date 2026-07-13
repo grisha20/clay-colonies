@@ -16,11 +16,14 @@ const { loadSpiderGenome } = await import("../ai/spiderGenome");
 const { createWorld, toSnapshot, worldFromSnapshot, colonyWorldView } = await import("../sim/world");
 const { step } = await import("../sim/step");
 const { CONFIG } = await import("../config");
+const { simulationSlice } = await import("../loop");
 const { paintColonyZone, zoneIndexAt } = await import("../sim/zones");
 const { placeHut, placePointBuilding, paintWallCells, wallCellIndexAt, completeBuilding, isWallBlockedAt, isSurfaceBlockedAt, resolveSurfaceCollision } = await import("../sim/building");
-const { isWaterAt, lakeIdAt, LAKE_DEFINITIONS } = await import("../../../shared/surfaceTerrain");
+const { isWaterAt, lakeFieldAt, lakeIdAt, LAKE_DEFINITIONS } = await import("../../../shared/surfaceTerrain");
 const { calculateSurfacePath } = await import("../sim/ant/movement");
+const { updateWaterExposure } = await import("../sim/ant/step");
 const { assignFishingJobs, moveFishing, updateFishPopulation } = await import("../sim/fishing");
+const { consumeFoodStock, foodKindForSource } = await import("../sim/foodStock");
 
 let failures = 0;
 
@@ -38,6 +41,16 @@ const world = createWorld(genome, spiderGenome, genomeB);
 const colonyA = world.colonies[0];
 const entrance = colonyA.surfaceEntrance;
 
+const speed20 = simulationSlice(20);
+const speed50 = simulationSlice(50);
+check(
+  "Производительность: высокие скорости разбиты на короткие порции без потери темпа",
+  speed20.stepsPerTick <= 3 && speed50.stepsPerTick <= 3 &&
+    Math.round((speed20.stepsPerTick * 1000) / speed20.targetTickMs) >= 200 &&
+    Math.round((speed50.stepsPerTick * 1000) / speed50.targetTickMs) >= 500,
+  `20x=${speed20.stepsPerTick}/${speed20.targetTickMs}ms, 50x=${speed50.stepsPerTick}/${speed50.targetTickMs}ms`
+);
+
 check(
   "Старт: каждое поселение получает топор и может добывать дерево",
   world.colonies.every((colony) => colony.colony.axes >= CONFIG.startingAxes),
@@ -53,6 +66,35 @@ check(
   "Сохранение: старый мир без топоров автоматически выходит из тупика",
   repairedWorld.colonies.every((colony) => colony.colony.axes >= CONFIG.startingAxes),
   `axes=${repairedWorld.colonies.map((colony) => colony.colony.axes).join(",")}`
+);
+const legacyFoodSnapshot = JSON.parse(JSON.stringify(toSnapshot(world, false)));
+for (const colonySnapshot of legacyFoodSnapshot.colonies) {
+  delete colonySnapshot.colony.foodStock;
+  colonySnapshot.colony.food = 77;
+}
+const migratedFoodWorld = worldFromSnapshot(legacyFoodSnapshot, genome, spiderGenome, genomeB);
+check(
+  "Еда: старый общий запас переносится во фрукты без потерь",
+  migratedFoodWorld.colonies.every((colony) =>
+    colony.colony.food === 77 && colony.colony.foodStock?.fruit === 77 &&
+    colony.colony.foodStock.fish === 0 && colony.colony.foodStock.meat === 0
+  )
+);
+check(
+  "Еда: кусты дают фрукты, падаль и туша паука дают мясо",
+  foodKindForSource({ kind: "food" }) === "fruit" &&
+    foodKindForSource({ kind: "carrion" }) === "meat" &&
+    foodKindForSource({ kind: "spiderCarcass" }) === "meat"
+);
+const foodSpendProbe = {
+  ...colonyA.colony,
+  food: 6,
+  foodStock: { fruit: 1, fish: 2, meat: 3 }
+};
+check(
+  "Еда: питание расходует категории и сохраняет общий итог",
+  consumeFoodStock(foodSpendProbe, 4) && foodSpendProbe.food === 2 &&
+    foodSpendProbe.foodStock.fruit === 1 && foodSpendProbe.foodStock.fish === 1 && foodSpendProbe.foodStock.meat === 0
 );
 
 // --- Озёра: фиксированная форма, физика, генерация и строительство ---
@@ -93,14 +135,40 @@ check(
 const lakeRoute = calculateSurfacePath(world, { x: 165, y: 145 }, { x: 300, y: 145 }, colonyA.id);
 check(
   "Озёра: жители строят сухой обход, а не упираются в берег",
-  Boolean(lakeRoute && lakeRoute.length > 0 && lakeRoute.every((point) => !isWaterAt(point.x, point.y))),
+  Boolean(lakeRoute && lakeRoute.length > 0 && lakeRoute.every((point) => lakeFieldAt(point.x, point.y) <= -0.01)),
   `точек=${lakeRoute?.length ?? 0}`
 );
+const waterEscapeProbe = { x: 238, y: 116 };
+resolveSurfaceCollision(world, waterEscapeProbe, 238, 115, colonyA.id);
+check("Озёра: попавший в воду житель может двигаться только к берегу", waterEscapeProbe.y === 115);
+const dissolvingAnt = { ...colonyA.ants[0], pos: { x: 238, y: 115 }, state: "search" as const, waterExposure: 0 };
+let dissolvedInWater = false;
+for (let index = 0; index < CONFIG.waterExposureDeathTicks; index += 1) {
+  dissolvedInWater ||= updateWaterExposure(dissolvingAnt);
+}
+check("Озёра: долгое пребывание в воде растворяет глиняного жителя", dissolvedInWater);
 
 // --- Рыбалка: назначение, сухой берег, приманивание, улов, доставка и восстановление ---
 const fishWorld = worldFromSnapshot(JSON.parse(JSON.stringify(toSnapshot(world, false))), genome, spiderGenome, genomeB);
 const fishColony = fishWorld.colonies[0];
 const fishingView = colonyWorldView(fishWorld, fishColony);
+const swimStart = new Map(fishWorld.surface.fish.map((fish) => [fish.id, { ...fish.pos }]));
+let sharpestFishTurn = 1;
+for (let index = 0; index < 600; index += 1) {
+  const previousHeadings = new Map(fishWorld.surface.fish.map((fish) => [fish.id, { ...fish.heading }]));
+  fishWorld.tick += 1;
+  updateFishPopulation(fishWorld);
+  for (const fish of fishWorld.surface.fish) {
+    const previous = previousHeadings.get(fish.id)!;
+    sharpestFishTurn = Math.min(sharpestFishTurn, previous.x * fish.heading.x + previous.y * fish.heading.y);
+  }
+}
+check(
+  "Рыбы: свободно плавают по озеру и не залипают у берега",
+  fishWorld.surface.fish.every((fish) => lakeIdAt(fish.pos.x, fish.pos.y) === fish.lakeId && lakeFieldAt(fish.pos.x, fish.pos.y) > 0.08) &&
+    fishWorld.surface.fish.some((fish) => Math.hypot(fish.pos.x - swimStart.get(fish.id)!.x, fish.pos.y - swimStart.get(fish.id)!.y) > 4)
+);
+check("Рыбы: курс меняется плавно без вращения на месте", sharpestFishTurn > 0.7, `minDot=${sharpestFishTurn.toFixed(2)}`);
 fishColony.colony.rods = 1;
 fishColony.colony.priorities = { clay: 0, wood: 0, stone: 0, build: 0, guard: 0, fish: 1 };
 assignFishingJobs(fishingView);
@@ -135,11 +203,14 @@ check(
 );
 if (fisher) {
   const foodBeforeCatch = fishColony.colony.food;
+  const fishBeforeCatch = fishColony.colony.foodStock?.fish ?? 0;
   fisher.pos = { ...fishColony.surfaceEntrance };
   moveFishing(fishingView, fisher);
   check(
     "Рыбалка: рыбак сдаёт улов как еду и возвращается к собирательству",
-    fishColony.colony.food === foodBeforeCatch + CONFIG.fishFoodYield && fisher.job === "forage" && fisher.carrying === 0
+    fishColony.colony.food === foodBeforeCatch + CONFIG.fishFoodYield &&
+      fishColony.colony.foodStock?.fish === fishBeforeCatch + CONFIG.fishFoodYield &&
+      fisher.job === "forage" && fisher.carrying === 0
   );
   for (const fish of fishWorld.surface.fish) {
     fish.state = "respawning";

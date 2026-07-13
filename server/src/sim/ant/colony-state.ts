@@ -2,6 +2,7 @@ import type { Ant, Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { tickCache } from "../cache";
 import type { World } from "../world";
+import { consumeFoodStock } from "../foodStock";
 
 export function queenGuardIds(world: World): Set<string> {
   return tickCache.queenGuardIds;
@@ -46,7 +47,7 @@ export function maybeFeedUndergroundAnt(world: World, ant: Ant, ignoreSurfaceFoo
     return false;
   }
 
-  world.colony.food -= CONFIG.workerMealCost;
+  consumeFoodStock(world.colony, CONFIG.workerMealCost);
   ant.energy = CONFIG.maxEnergy;
   return true;
 }

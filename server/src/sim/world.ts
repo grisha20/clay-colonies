@@ -28,6 +28,7 @@ import { createSpider, syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
 import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
 import { completeBuilding, placePointBuilding, rebuildWallBlocked, syncBuildingIdCounter } from "./building";
+import { normalizeFoodStock } from "./foodStock";
 import { createObjectives, restoreObjectives } from "./objectives";
 import { createWeather } from "./weather";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
@@ -972,6 +973,7 @@ export function worldFromSnapshot(
       homePheromone: new PheromoneGrid(snapshot.pheromones.width, snapshot.pheromones.height, index === 0 ? snapshot.pheromones.home : undefined),
       zoneSets: createZoneSets()
     };
+    normalizeFoodStock(runtime.colony);
     rebuildZoneSetsFromColony(runtime);
     syncColonyStatsForRuntime(runtime);
     return runtime;

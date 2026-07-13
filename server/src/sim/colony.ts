@@ -16,6 +16,7 @@ export function createColony(
     knownFood: [],
     activeFoodTargetId: undefined,
     food: CONFIG.startingFoodStorage,
+    foodStock: { fruit: CONFIG.startingFoodStorage, fish: 0, meat: 0 },
     clay: CONFIG.startingClay,
     wood: 0,
     stone: 0,

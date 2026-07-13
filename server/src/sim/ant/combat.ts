@@ -2,6 +2,7 @@ import { resourceNodeYield, type Ant, type Vec2 } from "../../../../shared/types
 import { CONFIG } from "../../config";
 import { tickCache } from "../cache";
 import { addFoodSource } from "../world";
+import { isFoodCarryKind } from "../foodStock";
 import type { World } from "../world";
 import { distance, isWithinRadius, normalize } from "./utils";
 import {
@@ -197,8 +198,8 @@ export function nearestSuperFood(world: World, pos: Vec2): { pos: Vec2; amount: 
 export function dropCarriedFood(world: World, ant: Ant): void {
   if (ant.carrying > 0) {
     const kind = ant.carryKind ?? "food";
-    if (kind === "food") {
-      addFoodSource(world, ant.pos.x, ant.pos.y, ant.carrying);
+    if (isFoodCarryKind(kind)) {
+      addFoodSource(world, ant.pos.x, ant.pos.y, ant.carrying, kind === "meat" ? "carrion" : "food");
     } else {
       // Глина/дерево/камень возвращаются в узел, откуда взяты (или пропадают).
       const node = world.surface.resourceNodes.find((item) => item.id === ant.harvestNodeId);

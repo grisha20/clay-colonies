@@ -9,6 +9,18 @@ export type LoopController = {
   getSpeed(): number;
 };
 
+export function simulationSlice(simSpeed: number): { targetTickMs: number; stepsPerTick: number } {
+  const maxStepsPerSlice = 3;
+  const paused = simSpeed === 0;
+  let targetTickMs = simSpeed <= 1 ? CONFIG.tickMs : Math.max(20, Math.floor(CONFIG.tickMs / simSpeed));
+  let stepsPerTick = paused ? 0 : simSpeed === 1 ? 1 : Math.max(1, Math.round(simSpeed / (CONFIG.tickMs / targetTickMs)));
+  if (stepsPerTick > maxStepsPerSlice) {
+    stepsPerTick = maxStepsPerSlice;
+    targetTickMs = Math.max(4, Math.floor((CONFIG.tickMs * stepsPerTick) / simSpeed));
+  }
+  return { targetTickMs, stepsPerTick };
+}
+
 export function startLoop(world: World, onSnapshot: (includePheromones: boolean) => void): LoopController {
   let simSpeed = 1;
   let lastPheromoneSentAt = 0;
@@ -19,12 +31,9 @@ export function startLoop(world: World, onSnapshot: (includePheromones: boolean)
   function runTick() {
     const now = Date.now();
 
-    // Пауза: мир не считается, но снапшоты продолжают уходить клиентам.
-    const paused = simSpeed === 0;
-
-    // Рассчитываем целевое время тика и количество шагов на основе текущей simSpeed
-    const targetTickMs = simSpeed <= 1 ? CONFIG.tickMs : Math.max(20, Math.floor(CONFIG.tickMs / simSpeed));
-    const stepsPerTick = paused ? 0 : simSpeed === 1 ? 1 : Math.max(1, Math.round(simSpeed / (CONFIG.tickMs / targetTickMs)));
+    // Smaller slices preserve requested steps/second while yielding to
+    // networking more often. At 50x this is 3 steps about every 6 ms.
+    const { targetTickMs, stepsPerTick } = simulationSlice(simSpeed);
 
     // Замеряем каждый симуляционный шаг отдельно, чтобы профайлер фаз считал ms/step.
     for (let i = 0; i < stepsPerTick; i += 1) {

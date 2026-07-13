@@ -114,6 +114,7 @@ export function createSurfaceScene(): SurfaceScene {
     fishPool: createSpritePool(fishLayer, () => new Sprite()),
     staticKey: "",
     entranceKey: "",
+    buildingKey: "",
     zoneKey: ""
   };
 }
@@ -408,6 +409,24 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
 
 // Постройки: площадка (контур) -> стройка (полупрозрачно) -> готово (плотный цвет глины).
 function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
+  const buildings = world.surface.buildings ?? [];
+  const buildingKey = buildings.map((building) => [
+    building.id,
+    building.type,
+    building.stage,
+    building.pos.x,
+    building.pos.y,
+    building.progress,
+    building.delivered.clay,
+    building.delivered.wood,
+    building.delivered.stone,
+    building.colonyId
+  ].join(":")).join("|");
+  if (scene.buildingKey === buildingKey) {
+    return;
+  }
+  scene.buildingKey = buildingKey;
+
   // Сначала удаляем старые Graphics зданий
   for (const g of scene.buildingGraphics ?? []) {
     g.destroy();
@@ -417,8 +436,6 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
     sprite.destroy();
   }
   scene.buildingSprites = [];
-
-  const buildings = world.surface.buildings ?? [];
 
   // Собираем все координаты готовых стен
   const wallPositions = new Set<string>();

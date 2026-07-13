@@ -26,6 +26,7 @@ import {
   type ColonyRuntime,
   type World
 } from "./world";
+import { consumeFoodStock } from "./foodStock";
 
 let scentOffsets: { dx: number; dy: number; falloff: number }[] | null = null;
 type ToolKind = "axe" | "pick" | "rod";
@@ -177,7 +178,7 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
   }
 
   colony.colony.clay -= CONFIG.newResidentClayCost;
-  colony.colony.food -= CONFIG.eggCost;
+  consumeFoodStock(colony.colony, CONFIG.eggCost);
   colony.colony.reproductionCooldown = CONFIG.broodLayCooldownTicks;
   const ant = createWorkerAnt(colony.surfaceEntrance, "surface", colony.id);
   ant.job = "forage";

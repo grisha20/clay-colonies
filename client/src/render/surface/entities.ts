@@ -10,6 +10,7 @@ import {
   getStoneTexture,
   getSpearTexture,
   getFishingRodTexture,
+  getCarrionTexture,
   getFoodTexture
 } from "../../sprites";
 import { getEnvironmentTextures } from "./environment";
@@ -17,6 +18,7 @@ import { offsetSettings } from "./editor";
 
 // Выбранный житель (панель юнита): подсветка кольцом.
 let selectedAntId: string | null = null;
+const webDrawKeys = new WeakMap<Graphics, string>();
 
 export function setSelectedAntId(id: string | null): void {
   selectedAntId = id;
@@ -294,6 +296,20 @@ export function updateSurfaceLairs(pool: SpritePool, world: WorldSnapshot, cell:
 }
 
 export function updateSurfaceWebs(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  const left = Math.floor(bounds.left);
+  const right = Math.ceil(bounds.right);
+  const top = Math.floor(bounds.top);
+  const bottom = Math.ceil(bounds.bottom);
+  const key = [
+    left, right, top, bottom,
+    ...world.enemies.flatMap((enemy) => enemy.type === "spider"
+      ? [enemy.id, enemy.lair.x, enemy.lair.y, enemy.hp > 0 ? 1 : 0]
+      : [])
+  ].join(":");
+  if (webDrawKeys.get(graphics) === key) {
+    return;
+  }
+  webDrawKeys.set(graphics, key);
   graphics.clear();
 
   for (const enemy of world.enemies) {
@@ -417,7 +433,8 @@ export function updateSurfaceAnts(
       const itemSprite = acquireSprite(carriedItemsPool);
       let itemTexture = props.tomato;
       const kind = ant.carryKind ?? "food";
-      const settings = kind === "fish" ? offsetSettings.fish : offsetSettings[kind] ?? offsetSettings.food;
+      const settingsKind = kind === "fruit" || kind === "meat" ? "food" : kind;
+      const settings = settingsKind === "fish" ? offsetSettings.fish : offsetSettings[settingsKind] ?? offsetSettings.food;
 
       if (kind === "clay") {
         itemTexture = getClayTexture();
@@ -429,6 +446,8 @@ export function updateSurfaceAnts(
         itemTexture = props.tomato;
       } else if (kind === "fish") {
         itemTexture = props.fish.carry[ant.caughtFishSpecies ?? "blue"];
+      } else if (kind === "meat") {
+        itemTexture = getCarrionTexture();
       }
 
       itemSprite.texture = itemTexture;

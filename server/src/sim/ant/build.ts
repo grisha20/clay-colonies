@@ -8,6 +8,7 @@ import type { World } from "../world";
 import { isColonyStarving } from "./colony-state";
 import { moveSurfaceToward } from "./movement";
 import { isWithinRadius } from "./utils";
+import { consumeFoodStock } from "../foodStock";
 
 const builderWaitTicks = new Map<string, number>();
 
@@ -62,7 +63,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
   if (ant.energy < CONFIG.lowEnergyThreshold && ant.carrying <= 0) {
     if (isWithinRadius(ant.pos, world.surface.entrance, 5)) {
       if (world.colony.food >= CONFIG.workerMealCost) {
-        world.colony.food -= CONFIG.workerMealCost;
+        consumeFoodStock(world.colony, CONFIG.workerMealCost);
         ant.energy = CONFIG.maxEnergy;
       } else {
         releaseBuilder(ant);
