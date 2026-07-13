@@ -1,6 +1,7 @@
 // Минимапа: упрощённая картина мира на 2D-canvas + рамка вьюпорта.
 // Перерисовывается на каждом снапшоте (10 раз/с) — при <100 точках это дёшево.
 import type { WorldSnapshot } from "../../../shared/types";
+import { SURFACE_TERRAIN_CELL_SIZE, isDeepWaterAt, isWaterAt } from "../../../shared/surfaceTerrain";
 import type { Camera } from "./types";
 import { SURFACE_TILE_SIZE } from "./types";
 
@@ -22,6 +23,19 @@ export function drawMinimap(
   // Фон: трава + поляны лагерей.
   context.fillStyle = "#7fa14f";
   context.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Large authored lakes use same shared terrain formula as server collision.
+  for (let y = 0; y < world.surface.height; y += SURFACE_TERRAIN_CELL_SIZE) {
+    for (let x = 0; x < world.surface.width; x += SURFACE_TERRAIN_CELL_SIZE) {
+      const centerX = x + SURFACE_TERRAIN_CELL_SIZE * 0.5;
+      const centerY = y + SURFACE_TERRAIN_CELL_SIZE * 0.5;
+      if (!isWaterAt(centerX, centerY)) {
+        continue;
+      }
+      context.fillStyle = isDeepWaterAt(centerX, centerY) ? "#1b8c98" : "#32c3c1";
+      context.fillRect(toX(x), toY(y), SURFACE_TERRAIN_CELL_SIZE * scale + 0.3, SURFACE_TERRAIN_CELL_SIZE * scale + 0.3);
+    }
+  }
   for (const entrance of world.surface.entrances ?? [world.surface.entrance]) {
     context.fillStyle = "#c2a06a";
     context.beginPath();

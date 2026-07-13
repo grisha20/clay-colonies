@@ -3,6 +3,7 @@
 // + быстрые Set в ColonyRuntime.zoneSets (для проверок в горячем цикле).
 // Клетка зоны = ZONE_CELL_SIZE x ZONE_CELL_SIZE мировых единиц.
 import { ZONE_CELL_SIZE, type Vec2, type ZoneType } from "../../../shared/types";
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import type { ColonyRuntime, World } from "./world";
 
@@ -98,6 +99,12 @@ export function paintColonyZone(world: World, colonyIndex: number, zone: ZoneTyp
   const target = zone === "harvest" ? colony.zoneSets.harvest : colony.zoneSets.forbid;
   const other = zone === "harvest" ? colony.zoneSets.forbid : colony.zoneSets.harvest;
   for (const cell of sanitizeCells(cells)) {
+    const center = zoneCellCenter(cell);
+    // A forbid mark over water is harmless and may be useful visually. Harvest water
+    // would create a target with no valid task, so ignore it at source.
+    if (zone === "harvest" && isWaterAt(center.x, center.y)) {
+      continue;
+    }
     if (!target.has(cell)) {
       target.add(cell);
       other.delete(cell); // клетка не может быть и добычей, и запретом

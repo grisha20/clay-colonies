@@ -2,8 +2,10 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-export const CURRENT_SNAPSHOT_VERSION = 11;
-export const CURRENT_PROTOCOL_VERSION = 11;
+// v13: rectilinear lake masks replace the earlier freeform contours. Old saves may
+// contain actors/resources inside the corrected water area, so reset them cleanly.
+export const CURRENT_SNAPSHOT_VERSION = 13;
+export const CURRENT_PROTOCOL_VERSION = 13;
 
 export type Vec2 = {
   x: number;

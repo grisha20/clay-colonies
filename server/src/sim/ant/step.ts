@@ -1,7 +1,7 @@
 import type { Ant } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
-import { resolveWallCollision } from "../building";
+import { resolveSurfaceCollision } from "../building";
 import type { World } from "../world";
 import { moveBuilding } from "./build";
 import { moveGuarding } from "./guard";
@@ -119,6 +119,6 @@ export function stepAnt(world: World, ant: Ant): void {
   const prevY = ant.pos.y;
   stepSurface(world, ant);
   // Достроенные стены непроходимы: скольжение вдоль стены или откат.
-  resolveWallCollision(world, ant.pos, prevX, prevY, ant.colonyId);
+  resolveSurfaceCollision(world, ant.pos, prevX, prevY, ant.colonyId);
   updateStuckTracking(world, ant);
 }

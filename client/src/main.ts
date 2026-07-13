@@ -8,6 +8,7 @@ import {
   type NetworkWorldSnapshot,
   type WorldSnapshot
 } from "../../shared/types";
+import { isWaterAt } from "../../shared/surfaceTerrain";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
 import { spriteIconDataUrl } from "./sprites";
@@ -1765,7 +1766,16 @@ function commitDrag(): void {
   const colony = currentColonyIndex;
   if (dragTool === "wall" || dragTool === "gate") {
     const commandType = dragTool === "gate" ? "paintGate" : "paintWall";
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: commandType, cells, colony })), wallLineCells(dragStart, dragEnd), 500);
+    const gridWidth = Math.ceil(latestWorld!.surface.width / WALL_CELL_SIZE);
+    const dryCells = wallLineCells(dragStart, dragEnd).filter((index) => {
+      const x = (index % gridWidth) * WALL_CELL_SIZE + WALL_CELL_SIZE * 0.5;
+      const y = Math.floor(index / gridWidth) * WALL_CELL_SIZE + WALL_CELL_SIZE * 0.5;
+      return !isWaterAt(x, y);
+    });
+    if (dryCells.length === 0 && toolHint) {
+      toolHint.textContent = "Вода: здесь нельзя строить";
+    }
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: commandType, cells, colony })), dryCells, 500);
   } else if (dragTool === "harvest" || dragTool === "forbid") {
     const zone = dragTool;
     sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintZone", zone, cells, colony })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
@@ -2074,6 +2084,12 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (currentTool === "hut" || currentTool === "storage" || currentTool === "workshop" || currentTool === "idol") {
+    if (isWaterAt(tile.x, tile.y)) {
+      if (toolHint) {
+        toolHint.textContent = "Вода: здесь нельзя строить";
+      }
+      return;
+    }
     socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y, colony: currentColonyIndex }));
     if (!event.shiftKey) {
       setTool("food"); // одиночная постройка: режим снимается, Shift — серия

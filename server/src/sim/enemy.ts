@@ -2,9 +2,10 @@ import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { applyMode, chooseMode, hasAvailableCarrion, isSpiderFastMode, type SpiderMode } from "../ai/spiderBrain";
 import { recordAndEvolveSpider, saveSpiderGenome } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 import { tickCache } from "./cache";
 import { isWithinRadius } from "./ant/utils";
-import { resolveWallCollision } from "./building";
+import { resolveSurfaceCollision } from "./building";
 import { addFoodSource, type World } from "./world";
 
 const enemyQueryScratch: Ant[] = [];
@@ -26,7 +27,7 @@ function randomSurfacePoint(): Vec2 {
       y: 8 + Math.random() * (CONFIG.mapHeight - 16)
     };
 
-    if (!isWithinRadius(pos, CONFIG.surfaceEntrance, CONFIG.spiderAvoidRadius * 2.5)) {
+    if (!isWaterAt(pos.x, pos.y) && !isWithinRadius(pos, CONFIG.surfaceEntrance, CONFIG.spiderAvoidRadius * 2.5)) {
       return pos;
     }
   }
@@ -49,7 +50,11 @@ function randomLairPoint(): Vec2 {
             : { x: Math.random() * CONFIG.mapWidth, y: CONFIG.mapHeight - Math.random() * margin }
     );
 
-    if (!isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) && !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)) {
+    if (
+      !isWaterAt(pos.x, pos.y) &&
+      !isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) &&
+      !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)
+    ) {
       return pos;
     }
   }
@@ -412,7 +417,7 @@ export function updateEnemies(world: World): void {
     const prevSpiderX = enemy.pos.x;
     const prevSpiderY = enemy.pos.y;
     moveSpider(world, enemy, liveAntsCount);
-    resolveWallCollision(world, enemy.pos, prevSpiderX, prevSpiderY);
+    resolveSurfaceCollision(world, enemy.pos, prevSpiderX, prevSpiderY);
     const hungry = enemy.hunger >= CONFIG.spiderHungryThreshold;
     const attackRadius = hungry ? CONFIG.spiderHungryAttackRadius : CONFIG.spiderAttackRadius;
     const damage = hungry ? CONFIG.spiderHungryDamage : CONFIG.spiderDamagePerTick;

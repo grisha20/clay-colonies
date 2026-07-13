@@ -9,8 +9,9 @@ import type { World } from "../world";
 import { randomHeading } from "../world";
 import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, numericAntId, posTile } from "./utils";
 import { zoneCellCenter, zoneIndexAt } from "../zones";
-import { isWallBlockedAt } from "../building";
+import { isSurfaceBlockedAt } from "../building";
 import { isSheltered } from "../weather";
+import { isWaterAt } from "../../../../shared/surfaceTerrain";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -19,6 +20,15 @@ export type CachedPath = {
 };
 
 export const antPaths = new Map<string, CachedPath>();
+type SurfacePath = {
+  targetCell: Vec2;
+  points: Vec2[];
+};
+
+// Surface routes only exist when a straight line meets water. Kept separate from
+// underground paths because lake shore remains stable while walls can change often.
+const surfacePaths = new Map<string, SurfacePath>();
+const SURFACE_PATH_CELL_SIZE = 4;
 const surfaceQueryScratch: Ant[] = [];
 
 export function clearDeadAntPaths(activeIds: Set<string>): void {
@@ -27,11 +37,120 @@ export function clearDeadAntPaths(activeIds: Set<string>): void {
       antPaths.delete(antId);
     }
   }
+  for (const antId of surfacePaths.keys()) {
+    if (!activeIds.has(antId)) {
+      surfacePaths.delete(antId);
+    }
+  }
   for (const antId of stuckTracker.keys()) {
     if (!activeIds.has(antId)) {
       stuckTracker.delete(antId);
     }
   }
+}
+
+function surfaceCell(pos: Vec2): Vec2 {
+  return {
+    x: Math.floor(pos.x / SURFACE_PATH_CELL_SIZE),
+    y: Math.floor(pos.y / SURFACE_PATH_CELL_SIZE)
+  };
+}
+
+function surfaceCellCenter(cell: Vec2): Vec2 {
+  return {
+    x: (cell.x + 0.5) * SURFACE_PATH_CELL_SIZE,
+    y: (cell.y + 0.5) * SURFACE_PATH_CELL_SIZE
+  };
+}
+
+function lineCrossesWater(from: Vec2, to: Vec2): boolean {
+  const span = distance(from, to);
+  const steps = Math.max(1, Math.ceil(span / 2));
+  for (let step = 1; step < steps; step += 1) {
+    const ratio = step / steps;
+    if (isWaterAt(from.x + (to.x - from.x) * ratio, from.y + (to.y - from.y) * ratio)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Coarse BFS route around lakes. Every returned point is dry land. */
+export function calculateSurfacePath(world: World, from: Vec2, to: Vec2, colonyId: string): Vec2[] | null {
+  if (!lineCrossesWater(from, to)) {
+    return [];
+  }
+  const width = Math.ceil(world.surface.width / SURFACE_PATH_CELL_SIZE);
+  const height = Math.ceil(world.surface.height / SURFACE_PATH_CELL_SIZE);
+  const start = surfaceCell(from);
+  const target = surfaceCell(to);
+  const isOpen = (cell: Vec2) =>
+    cell.x >= 0 && cell.y >= 0 && cell.x < width && cell.y < height &&
+    !isSurfaceBlockedAt(world, surfaceCellCenter(cell).x, surfaceCellCenter(cell).y, colonyId);
+  if (!isOpen(start) || !isOpen(target)) {
+    return null;
+  }
+  const startIndex = start.y * width + start.x;
+  const targetIndex = target.y * width + target.x;
+  const previous = new Int32Array(width * height);
+  previous.fill(-1);
+  const queue = new Int32Array(width * height);
+  let head = 0;
+  let tail = 0;
+  queue[tail++] = startIndex;
+  previous[startIndex] = -2;
+  const directions = [
+    { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+    { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+  ];
+  while (head < tail && previous[targetIndex] === -1) {
+    const current = queue[head++];
+    const currentCell = { x: current % width, y: Math.floor(current / width) };
+    for (const direction of directions) {
+      const next = { x: currentCell.x + direction.x, y: currentCell.y + direction.y };
+      const nextIndex = next.y * width + next.x;
+      if (previous[nextIndex] !== -1 || !isOpen(next)) {
+        continue;
+      }
+      // Do not cut diagonally through a lake corner.
+      if (direction.x !== 0 && direction.y !== 0 && (!isOpen({ x: currentCell.x + direction.x, y: currentCell.y }) || !isOpen({ x: currentCell.x, y: currentCell.y + direction.y }))) {
+        continue;
+      }
+      previous[nextIndex] = current;
+      queue[tail++] = nextIndex;
+    }
+  }
+  if (previous[targetIndex] === -1) {
+    return null;
+  }
+  const path: Vec2[] = [];
+  for (let index = targetIndex; index !== startIndex;) {
+    path.push(surfaceCellCenter({ x: index % width, y: Math.floor(index / width) }));
+    index = previous[index];
+  }
+  path.reverse();
+  return path;
+}
+
+function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
+  if (!lineCrossesWater(ant.pos, target)) {
+    surfacePaths.delete(ant.id);
+    return target;
+  }
+  const targetCell = surfaceCell(target);
+  let route = surfacePaths.get(ant.id);
+  if (!route || route.targetCell.x !== targetCell.x || route.targetCell.y !== targetCell.y) {
+    const points = calculateSurfacePath(world, ant.pos, target, ant.colonyId);
+    if (!points || points.length === 0) {
+      return target;
+    }
+    route = { targetCell, points };
+    surfacePaths.set(ant.id, route);
+  }
+  while (route.points.length > 1 && distance(ant.pos, route.points[0]) < 1.8) {
+    route.points.shift();
+  }
+  return route.points[0] ?? target;
 }
 
 // Анти-застревание: житель, который долго топчется на месте (карман забора,
@@ -155,25 +274,22 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 
   // Порыв блуждания перекрывает цель (работает и без стен: давка, углы).
   const burst = wanderBurstDirection(world, ant);
   if (burst) {
-    if (world.wallBlocked.size === 0 || !isWallBlockedAt(world, ant.pos.x + burst.x * 2.4, ant.pos.y + burst.y * 2.4, ant.colonyId)) {
+    if (!isSurfaceBlockedAt(world, ant.pos.x + burst.x * 2.4, ant.pos.y + burst.y * 2.4, ant.colonyId)) {
       return burst;
     }
     return normalize({ x: -burst.x, y: -burst.y });
   }
-  if (world.wallBlocked.size === 0) {
-    return desired;
-  }
   const lookAhead = 2.4;
-  if (!isWallBlockedAt(world, ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead, ant.colonyId)) {
+  if (!isSurfaceBlockedAt(world, ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead, ant.colonyId)) {
     return desired;
   }
   const sign = numericAntId(ant.id) % 2 === 0 ? 1 : -1;
   const along = { x: -desired.y * sign, y: desired.x * sign };
-  if (!isWallBlockedAt(world, ant.pos.x + along.x * lookAhead, ant.pos.y + along.y * lookAhead, ant.colonyId)) {
+  if (!isSurfaceBlockedAt(world, ant.pos.x + along.x * lookAhead, ant.pos.y + along.y * lookAhead, ant.colonyId)) {
     return normalize({ x: along.x + desired.x * 0.12, y: along.y + desired.y * 0.12 });
   }
   const back = { x: desired.y * sign, y: -desired.x * sign };
-  if (!isWallBlockedAt(world, ant.pos.x + back.x * lookAhead, ant.pos.y + back.y * lookAhead, ant.colonyId)) {
+  if (!isSurfaceBlockedAt(world, ant.pos.x + back.x * lookAhead, ant.pos.y + back.y * lookAhead, ant.colonyId)) {
     return normalize({ x: back.x + desired.x * 0.12, y: back.y + desired.y * 0.12 });
   }
   // Тупик с трёх сторон: разворачиваемся.
@@ -182,7 +298,8 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 
 
 export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpiders: boolean, allowSeparation = true): void {
   const speed = surfaceMoveSpeed(world, ant);
-  let desired = normalize({ x: target.x - ant.pos.x, y: target.y - ant.pos.y });
+  const routeTarget = surfaceRouteTarget(world, ant, target);
+  let desired = normalize({ x: routeTarget.x - ant.pos.x, y: routeTarget.y - ant.pos.y });
 
   if (avoidSpiders) {
     desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
@@ -196,14 +313,14 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
   const avoidanceTurn = beforeAvoidX * desired.x + beforeAvoidY * desired.y < 0.9;
 
   if (allowSeparation) {
-    const dist = distance(ant.pos, target);
+    const dist = distance(ant.pos, routeTarget);
     const isTargetEntrance = target.x === world.surface.entrance.x && target.y === world.surface.entrance.y;
     if (!isTargetEntrance || dist > 8.0) {
       desired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, desired));
     }
   }
 
-  const dist = distance(ant.pos, target);
+  const dist = distance(ant.pos, routeTarget);
   // Базовая маневренность k = 0.18. Чем ближе к цели (до 4 единиц), тем точнее маневрируем (до 1.0)
   let k = dist < 4.0 ? 0.18 + (1.0 - 0.18) * (1.0 - dist / 4.0) : 0.18;
   if (avoidanceTurn) {

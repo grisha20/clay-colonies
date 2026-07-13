@@ -28,6 +28,13 @@ type EnvironmentTextures = {
     dirt: Texture;
     dirtSoft: Texture;
     water: Texture;
+    lakeShallowFrames: Texture[];
+    lakeDeepFrames: Texture[];
+    lakeBank: Texture;
+    lakeCorners: {
+      outer: { nw: Texture; ne: Texture; sw: Texture; se: Texture };
+      inner: { nw: Texture; ne: Texture; sw: Texture; se: Texture };
+    };
     sandPatch: Texture;
     pathHorizontal: Texture;
     pathVertical: Texture;
@@ -96,6 +103,110 @@ function image(url: string): Texture {
   return texture;
 }
 
+function lakeBankOverlay(url: string): Texture {
+  const key = `${url}:lake-bank-overlay`;
+  const cached = textureCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  const source = Texture.from(url);
+  const canvas = document.createElement("canvas");
+  canvas.width = 32;
+  canvas.height = 64;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    throw new Error("Canvas 2D context is required for lake bank texture");
+  }
+  context.imageSmoothingEnabled = false;
+  context.drawImage(source.source.resource as CanvasImageSource, 0, 0, 32, 64, 0, 0, 32, 64);
+  const pixels = context.getImageData(0, 0, 32, 64);
+  for (let index = 0; index < pixels.data.length; index += 4) {
+    const y = Math.floor(index / 4 / 32);
+    // Rows 0..7 are copied grass; rows 32..63 are repeated open water. Keep the
+    // authored sand, stone and first shallow-water transition as one bank band.
+    if (y < 8 || y >= 32) {
+      pixels.data[index + 3] = 0;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = "nearest";
+  textureCache.set(key, texture);
+  return texture;
+}
+
+type LakeCornerKind = "outer" | "inner";
+type LakeCornerDirection = "nw" | "ne" | "sw" | "se";
+
+function lakeCornerOverlay(url: string, kind: LakeCornerKind, direction: LakeCornerDirection): Texture {
+  const key = `${url}:lake-corner:${kind}:${direction}`;
+  const cached = textureCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const source = Texture.from(url);
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = 32;
+  sourceCanvas.height = 64;
+  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  if (!sourceContext) {
+    throw new Error("Canvas 2D context is required for lake corner source");
+  }
+  sourceContext.imageSmoothingEnabled = false;
+  sourceContext.drawImage(source.source.resource as CanvasImageSource, 0, 0, 32, 64, 0, 0, 32, 64);
+  const sourcePixels = sourceContext.getImageData(0, 0, 32, 64);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    throw new Error("Canvas 2D context is required for lake corner texture");
+  }
+  const pixels = context.createImageData(64, 64);
+  const mirrorX = direction === "ne" || direction === "se";
+  const mirrorY = direction === "sw" || direction === "se";
+
+  for (let y = 0; y < 64; y += 1) {
+    for (let x = 0; x < 64; x += 1) {
+      const u = mirrorX ? 63.5 - x : x + 0.5;
+      const v = mirrorY ? 63.5 - y : y + 0.5;
+      const dx = kind === "outer" ? 64 - u : u;
+      const dy = kind === "outer" ? 64 - v : v;
+      const radius = Math.hypot(dx, dy);
+      const sourceY = Math.floor(kind === "outer" ? 64 - radius : radius);
+      if (sourceY < 8 || sourceY >= 32) {
+        continue;
+      }
+
+      const angle = Math.atan2(dy, dx);
+      const sourceX = Math.max(0, Math.min(31, Math.floor((angle / (Math.PI / 2)) * 32)));
+      const sourceIndex = (sourceY * 32 + sourceX) * 4;
+      const sourceRed = sourcePixels.data[sourceIndex];
+      const sourceGreen = sourcePixels.data[sourceIndex + 1];
+      const sourceBlue = sourcePixels.data[sourceIndex + 2];
+      // The jagged first bank row contains a few pixels of the demo's own lime
+      // background. They are useful on its sample strip but create wedges when
+      // bent around a concave corner, so let the real map grass show through.
+      if (kind === "inner" && sourceGreen > sourceRed * 1.05 && sourceBlue < 110) {
+        continue;
+      }
+      const targetIndex = (y * 64 + x) * 4;
+      pixels.data[targetIndex] = sourceRed;
+      pixels.data[targetIndex + 1] = sourceGreen;
+      pixels.data[targetIndex + 2] = sourceBlue;
+      pixels.data[targetIndex + 3] = sourcePixels.data[sourceIndex + 3];
+    }
+  }
+
+  context.putImageData(pixels, 0, 0);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = "nearest";
+  textureCache.set(key, texture);
+  return texture;
+}
+
 function buildEnvironmentTextures(): EnvironmentTextures {
   if (environmentTextures) {
     return environmentTextures;
@@ -103,6 +214,7 @@ function buildEnvironmentTextures(): EnvironmentTextures {
 
   const tilesUrl = `${summerBase}/tiles.png`;
   const cc0TilesUrl = "/assets/environment/grassy-topdown-cc0/topdown grassy tileset.png";
+  const waterAnimationUrl = "/assets/environment/summer-plains-water-animation-demo/water_animation_demo/water_animation_demo.png";
   const assetsUrl = `${summerBase}/assets.png`;
   environmentTextures = {
     terrain: {
@@ -111,6 +223,25 @@ function buildEnvironmentTextures(): EnvironmentTextures {
       dirt: crop(tilesUrl, 128, 20, 32, 32),
       dirtSoft: crop(cc0TilesUrl, 80, 80, 32, 32),
       water: crop(cc0TilesUrl, 144, 144, 32, 32),
+      // Summer Plains demo: six frames across. Row 1 is clear shallow water,
+      // bottom row is deep water; both match the shoreline palette in tiles.png.
+      lakeShallowFrames: Array.from({ length: 6 }, (_, frame) => crop(waterAnimationUrl, frame * 32, 32, 32, 32)),
+      lakeDeepFrames: Array.from({ length: 6 }, (_, frame) => crop(waterAnimationUrl, frame * 32, 96, 32, 32)),
+      lakeBank: lakeBankOverlay(waterAnimationUrl),
+      lakeCorners: {
+        outer: {
+          nw: lakeCornerOverlay(waterAnimationUrl, "outer", "nw"),
+          ne: lakeCornerOverlay(waterAnimationUrl, "outer", "ne"),
+          sw: lakeCornerOverlay(waterAnimationUrl, "outer", "sw"),
+          se: lakeCornerOverlay(waterAnimationUrl, "outer", "se")
+        },
+        inner: {
+          nw: lakeCornerOverlay(waterAnimationUrl, "inner", "nw"),
+          ne: lakeCornerOverlay(waterAnimationUrl, "inner", "ne"),
+          sw: lakeCornerOverlay(waterAnimationUrl, "inner", "sw"),
+          se: lakeCornerOverlay(waterAnimationUrl, "inner", "se")
+        }
+      },
       sandPatch: crop(tilesUrl, 272, 192, 64, 64),
       pathHorizontal: crop(tilesUrl, 288, 288, 128, 32),
       pathVertical: crop(tilesUrl, 352, 192, 32, 128)

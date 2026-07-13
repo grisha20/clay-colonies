@@ -2,6 +2,7 @@
 // Площадка (site) -> доставка ресурсов со склада лагеря -> стройка (inProgress) -> готово (built).
 // Готовые стены блокируют движение через сетку клеток WALL_CELL_SIZE x WALL_CELL_SIZE.
 import { WALL_CELL_SIZE, type Building, type BuildingType, type Vec2 } from "../../../shared/types";
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import type { World } from "./world";
 
@@ -161,6 +162,9 @@ export function placePointBuilding(
   if (tooCloseToEntrance(world, pos)) {
     return false;
   }
+  if (isWaterAt(pos.x, pos.y)) {
+    return false;
+  }
   const sameType = world.surface.buildings.filter(
     (item) => item.colonyId === colony.id && item.type === type
   );
@@ -221,7 +225,7 @@ export function paintWallCells(
       continue;
     }
     const pos = wallCellCenter(cell);
-    if (tooCloseToEntrance(world, pos)) {
+    if (tooCloseToEntrance(world, pos) || isWaterAt(pos.x, pos.y)) {
       continue;
     }
     world.surface.buildings.push(createBuilding(colony.id, type, pos));
@@ -286,6 +290,14 @@ export function isWallBlockedAt(world: World, x: number, y: number, colonyId?: s
   return !(colonyId && world.gateOwner.get(cell) === colonyId);
 }
 
+/** All permanent surface blockers. Keep water and constructed obstacles in one API. */
+export function isSurfaceBlockedAt(world: World, x: number, y: number, colonyId?: string): boolean {
+  if (x < 0 || y < 0 || x >= CONFIG.mapWidth || y >= CONFIG.mapHeight) {
+    return true;
+  }
+  return isWaterAt(x, y) || isWallBlockedAt(world, x, y, colonyId);
+}
+
 // Разрешение столкновения со стеной: откат на свободную ось (скольжение вдоль стены).
 // Если предыдущая позиция сама в стене (стену достроили над агентом) — не мешаем выбраться.
 export function resolveWallCollision(
@@ -306,6 +318,32 @@ export function resolveWallCollision(
     return;
   }
   if (!isWallBlockedAt(world, prevX, pos.y, colonyId)) {
+    pos.x = prevX;
+    return;
+  }
+  pos.x = prevX;
+  pos.y = prevY;
+}
+
+export function resolveSurfaceCollision(
+  world: World,
+  pos: Vec2,
+  prevX: number,
+  prevY: number,
+  colonyId?: string
+): void {
+  if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId)) {
+    return;
+  }
+  // Old snapshots can place an actor in a cell that later became water. Let it leave.
+  if (isSurfaceBlockedAt(world, prevX, prevY, colonyId)) {
+    return;
+  }
+  if (!isSurfaceBlockedAt(world, pos.x, prevY, colonyId)) {
+    pos.y = prevY;
+    return;
+  }
+  if (!isSurfaceBlockedAt(world, prevX, pos.y, colonyId)) {
     pos.x = prevX;
     return;
   }

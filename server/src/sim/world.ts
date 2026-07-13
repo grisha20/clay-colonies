@@ -18,6 +18,7 @@ import {
   type Vec2,
   type WorldSnapshot
 } from "../../../shared/types";
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 import { computeDirectives, createFitnessState, type ColonyDirectives, type FitnessState } from "../ai/controller";
 import type { GenomeState } from "../ai/genome";
 import type { SpiderGenomeState } from "../ai/spiderGenome";
@@ -125,27 +126,72 @@ function isWithinRadius(a: { x: number; y: number }, b: { x: number; y: number }
   return distanceSq(a, b) <= radius * radius;
 }
 
+function isSpawnableSurfacePos(pos: Vec2, waterBuffer = 1.5): boolean {
+  if (pos.x < 2 || pos.y < 2 || pos.x >= CONFIG.mapWidth - 2 || pos.y >= CONFIG.mapHeight - 2) {
+    return false;
+  }
+  if (isWaterAt(pos.x, pos.y)) {
+    return false;
+  }
+  return !isWaterAt(pos.x + waterBuffer, pos.y) && !isWaterAt(pos.x - waterBuffer, pos.y) && !isWaterAt(pos.x, pos.y + waterBuffer) && !isWaterAt(pos.x, pos.y - waterBuffer);
+}
+
+function nearestSpawnableSurfacePos(pos: Vec2): Vec2 {
+  if (isSpawnableSurfacePos(pos, 0)) {
+    return pos;
+  }
+  for (let radius = 2; radius <= 64; radius += 2) {
+    for (let dx = -radius; dx <= radius; dx += 2) {
+      for (const dy of [-radius, radius]) {
+        const candidate = { x: pos.x + dx, y: pos.y + dy };
+        if (isSpawnableSurfacePos(candidate, 0)) {
+          return candidate;
+        }
+      }
+    }
+    for (let dy = -radius + 2; dy <= radius - 2; dy += 2) {
+      for (const dx of [-radius, radius]) {
+        const candidate = { x: pos.x + dx, y: pos.y + dy };
+        if (isSpawnableSurfacePos(candidate, 0)) {
+          return candidate;
+        }
+      }
+    }
+  }
+  return { x: 8, y: 8 };
+}
+
 function randomSurfacePosAwayFromNest(minNestDistance: number): { x: number; y: number } {
   for (let attempt = 0; attempt < 80; attempt += 1) {
     const pos = {
       x: 3 + Math.random() * (CONFIG.mapWidth - 6),
       y: 3 + Math.random() * (CONFIG.mapHeight - 6)
     };
-    if (!isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) && !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)) {
+    if (
+      isSpawnableSurfacePos(pos) &&
+      !isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) &&
+      !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)
+    ) {
       return pos;
     }
   }
 
-  return { x: CONFIG.mapWidth - 8, y: 8 };
+  return nearestSpawnableSurfacePos({ x: CONFIG.mapWidth - 8, y: 8 });
 }
 
 function randomSurfacePosNear(center: Vec2, minRadius: number, maxRadius: number): Vec2 {
-  const angle = Math.random() * Math.PI * 2;
-  const radius = minRadius + Math.random() * Math.max(0.01, maxRadius - minRadius);
-  return {
-    x: Math.max(2, Math.min(CONFIG.mapWidth - 2, center.x + Math.cos(angle) * radius)),
-    y: Math.max(2, Math.min(CONFIG.mapHeight - 2, center.y + Math.sin(angle) * radius))
-  };
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = minRadius + Math.random() * Math.max(0.01, maxRadius - minRadius);
+    const pos = {
+      x: Math.max(2, Math.min(CONFIG.mapWidth - 2, center.x + Math.cos(angle) * radius)),
+      y: Math.max(2, Math.min(CONFIG.mapHeight - 2, center.y + Math.sin(angle) * radius))
+    };
+    if (isSpawnableSurfacePos(pos)) {
+      return pos;
+    }
+  }
+  return nearestSpawnableSurfacePos(center);
 }
 
 function hitsPerUnitForNode(kind: ResourceNodeKind): number {
@@ -511,10 +557,11 @@ export function addFoodSource(
   amount: number,
   kind: FoodSource["kind"] = "food"
 ): FoodSource {
-  const pos = {
+  const requestedPos = {
     x: Math.max(1.5, Math.min(world.surface.width - 1.5, x)),
     y: Math.max(1.5, Math.min(world.surface.height - 1.5, y))
   };
+  const pos = nearestSpawnableSurfacePos(requestedPos);
   for (const existing of world.surface.foodSources) {
     if (
       existing.amount > 0 &&

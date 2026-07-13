@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 import type { Texture } from "pixi.js";
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
+import { isLakeShoreAt, isWaterAt, lakeFieldAt } from "../../../../shared/surfaceTerrain";
 import type { ViewBounds } from "../types";
 import { getEnvironmentTextures } from "./environment";
 
@@ -56,26 +57,6 @@ function isCampOrFoodClearing(x: number, y: number, world: WorldSnapshot): numbe
   return Math.max(camp, food * 0.55);
 }
 
-function isWaterPatch(x: number, y: number, world: WorldSnapshot): boolean {
-  const entrances = world.surface.entrances ?? [world.surface.entrance];
-  if (distanceToNearest({ x, y }, entrances) < 42) {
-    return false;
-  }
-  const cx = Math.floor(x / 42);
-  const cy = Math.floor(y / 42);
-  if (hash2(cx, cy, 130) > 0.035) {
-    return false;
-  }
-  const pondX = cx * 42 + 16 + hash2(cx, cy, 131) * 10;
-  const pondY = cy * 42 + 14 + hash2(cx, cy, 132) * 12;
-  const localX = x - pondX;
-  const localY = y - pondY;
-  const radiusX = 9 + hash2(cx, cy, 133) * 7;
-  const radiusY = 6 + hash2(cx, cy, 134) * 5;
-  const wobble = 0.82 + hash2(Math.floor(x / 3), Math.floor(y / 3), 135) * 0.34;
-  return (localX * localX) / (radiusX * radiusX) + (localY * localY) / (radiusY * radiusY) < wobble;
-}
-
 function drawPixelFleck(root: Graphics, x: number, y: number, size: number, color: number, alpha: number): void {
   const px = Math.round(x);
   const py = Math.round(y);
@@ -83,16 +64,46 @@ function drawPixelFleck(root: Graphics, x: number, y: number, size: number, colo
   root.rect(px, py, s, s).fill({ color, alpha });
 }
 
-function drawPond(root: Graphics, x: number, y: number, rx: number, ry: number, seed: number): void {
-  root.ellipse(x + 3, y + 5, rx * 1.13, ry * 1.16).fill({ color: 0x8f6c38, alpha: 0.28 });
-  root.ellipse(x, y, rx, ry).fill(0x2f8fa5);
-  root.ellipse(x - rx * 0.12, y - ry * 0.08, rx * 0.76, ry * 0.72).fill(0x3ca9bd);
-  root.ellipse(x - rx * 0.32, y - ry * 0.28, rx * 0.28, ry * 0.12).fill({ color: 0xb7e0dc, alpha: 0.32 });
-  for (let i = 0; i < 5; i += 1) {
-    const px = x + (hash2(seed, i, 171) - 0.5) * rx * 1.25;
-    const py = y + (hash2(seed, i, 172) - 0.5) * ry * 1.1;
-    root.ellipse(px, py, 5 + hash2(seed, i, 173) * 7, 1.1).fill({ color: 0xb6e2df, alpha: 0.32 });
+function drawLakeBanks(
+  root: Container,
+  spriteRoot: Container,
+  cell: number,
+  width: number,
+  height: number,
+  rockTexture: Texture,
+  grassTexture: Texture
+): void {
+  const bankStep = 2;
+  const shoreDetails = new Graphics();
+  for (let y = 0; y < height; y += bankStep) {
+    for (let x = 0; x < width; x += bankStep) {
+      const centerX = x + bankStep * 0.5;
+      const centerY = y + bankStep * 0.5;
+      const field = lakeFieldAt(centerX, centerY);
+      if (field < -0.22 || field > -0.02) {
+        continue;
+      }
+      if (isLakeShoreAt(centerX, centerY) && hash2(x, y, 941) > 0.5) {
+        const px = (x + hash2(x, y, 942) * bankStep) * cell;
+        const py = (y + hash2(x, y, 943) * bankStep) * cell;
+        drawPixelFleck(shoreDetails, px, py, 1.2 + hash2(x, y, 944) * 1.7, field > 0 ? 0x557965 : 0xa7864d, 0.72);
+      }
+
+      // Sparse clusters only on dry outer bank. They break long clean contours
+      // without obscuring the readable beach-to-water transition.
+      if (field < -0.025 && field > -0.22) {
+        const decor = hash2(x, y, 945);
+        const px = (x + 0.2 + hash2(x, y, 946) * 0.6) * cell;
+        const py = (y + 0.25 + hash2(x, y, 947) * 0.5) * cell;
+        if (decor > 0.992) {
+          addAssetProp(root, spriteRoot, rockTexture, px, py + 5, 0.26 + hash2(x, y, 948) * 0.1, 0, 0xd0c59e);
+        } else if (decor < 0.012) {
+          addAssetProp(root, spriteRoot, grassTexture, px, py + 4, 0.22 + hash2(x, y, 949) * 0.08, 0, 0x9bb85d);
+        }
+      }
+    }
   }
+  root.addChild(shoreDetails);
 }
 
 type ForestTree = {
@@ -363,6 +374,7 @@ export function drawSurfaceGround(
     }
   }
   shadowRoot.addChild(dirtEdge);
+  drawLakeBanks(shadowRoot, spriteRoot, cell, width, height, props.rockSmall, props.grassTuft);
 
   const ground = new Graphics();
   for (let y = top; y < bottom; y += 1) {
@@ -370,7 +382,7 @@ export function drawSurfaceGround(
       const noise = hash2(x, y, 1);
       const speckle = hash2(x, y, 2);
       const clearing = isCampOrFoodClearing(x + 0.5, y + 0.5, world);
-      const water = isWaterPatch(x + 0.5, y + 0.5, world);
+      const water = isWaterAt(x + 0.5, y + 0.5);
       if (!water && (clearing > 0.04 || speckle > 0.55)) {
         const color = noise < 0.28 ? 0xc99650 : noise > 0.82 ? 0xe6c074 : 0xd8ad63;
         const size = cell * (0.18 + hash2(x, y, 13) * 0.34);
@@ -382,29 +394,12 @@ export function drawSurfaceGround(
 
       if (!water && speckle > 0.982) {
         ground.rect(Math.round((x + 0.35) * cell), Math.round((y + 0.35) * cell), Math.max(1, Math.ceil(cell * 0.2)), Math.max(1, Math.ceil(cell * 0.2))).fill({ color: 0xf0d28d, alpha: 0.55 });
-      } else if (speckle < 0.035) {
+      } else if (!water && speckle < 0.035) {
         ground.rect(Math.round((x + 0.45) * cell), Math.round((y + 0.45) * cell), Math.max(1, Math.ceil(cell * 0.16)), Math.max(1, Math.ceil(cell * 0.16))).fill({ color: 0x7f6135, alpha: 0.24 });
       }
     }
   }
 
-  for (let gy = Math.floor(top / 42) * 42; gy <= bottom; gy += 42) {
-    for (let gx = Math.floor(left / 42) * 42; gx <= right; gx += 42) {
-      const cx = gx + 18 + hash2(gx, gy, 131) * 10;
-      const cy = gy + 15 + hash2(gx, gy, 132) * 12;
-      if (
-        cx < left - 18 ||
-        cx > right + 18 ||
-        cy < top - 18 ||
-        cy > bottom + 18 ||
-        distanceToNearest({ x: cx, y: cy }, world.surface.entrances ?? [world.surface.entrance]) < 42 ||
-        hash2(Math.floor(gx / 42), Math.floor(gy / 42), 130) > 0.035
-      ) {
-        continue;
-      }
-      drawPond(ground, cx * cell, cy * cell, cell * (8 + hash2(gx, gy, 133) * 6), cell * (5 + hash2(gx, gy, 134) * 4), gx * 811 + gy);
-    }
-  }
   shadowRoot.addChild(ground);
 
   for (const entrance of entrances) {

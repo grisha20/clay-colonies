@@ -1,5 +1,6 @@
-import { Container, Graphics, RenderTexture, Sprite, Renderer } from "pixi.js";
+import { Container, Graphics, RenderTexture, Sprite, Renderer, TilingSprite } from "pixi.js";
 import { WALL_CELL_SIZE, ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
+import { isDeepWaterAt, isWaterAt, SURFACE_TERRAIN_CELL_SIZE } from "../../../../shared/surfaceTerrain";
 import { createSpritePool } from "../spritePool";
 import type { Camera, SurfaceScene, ViewBounds } from "../types";
 import { SURFACE_TILE_SIZE } from "../types";
@@ -41,6 +42,7 @@ export function visibleSurfaceBounds(camera: Camera, viewportWidth: number, view
 export function createSurfaceScene(): SurfaceScene {
   const root = new Container();
   const staticLayer = new Container();
+  const waterLayer = new Container();
   const shadowLayer = new Graphics();
   const dynamicLayer = new Container();
   const fireGlow = new Graphics();
@@ -51,6 +53,7 @@ export function createSurfaceScene(): SurfaceScene {
   const particleGraphics = new Graphics();
 
   staticLayer.label = "staticLayer";
+  waterLayer.label = "waterLayer";
   shadowLayer.label = "shadowLayer";
   dynamicLayer.label = "dynamicLayer";
   dynamicLayer.sortableChildren = true; // Сортируем все человечки, кусты, ресурсы и здания по y-координате низа!
@@ -64,7 +67,7 @@ export function createSurfaceScene(): SurfaceScene {
   particleGraphics.zIndex = 1; // Частицы позади существ и объектов, но поверх земли
 
   // Собираем слои в корень сцены
-  root.addChild(staticLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
+  root.addChild(staticLayer, waterLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
   dynamicLayer.addChild(selectionGraphics, particleGraphics);
 
   if (typeof window !== "undefined") {
@@ -76,6 +79,7 @@ export function createSurfaceScene(): SurfaceScene {
   return {
     root,
     staticLayer,
+    waterLayer,
     shadowLayer,
     dynamicLayer,
     fireGlow,
@@ -114,6 +118,10 @@ function rebuildSurfaceStatic(
   staticKey: string
 ): void {
   scene.staticLayer.removeChildren();
+  scene.waterLayer.removeChildren();
+  scene.waterSprites = [];
+  scene.waterFrames = undefined;
+  scene.waterFrame = undefined;
   if (scene.groundSprite) {
     scene.groundSprite.destroy({ children: true, texture: true });
     scene.groundSprite = undefined;
@@ -178,8 +186,167 @@ function rebuildSurfaceStatic(
   scene.trampleSprite = trampleSprite;
   scene.staticLayer.addChild(trampleSprite);
 
+  buildLakeWaterLayer(scene, world, cell);
+
   tempContainer.destroy({ children: true });
   scene.staticKey = staticKey;
+}
+
+function buildLakeWaterLayer(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
+  const frames = getEnvironmentTextures().terrain;
+  const widthPx = world.surface.width * cell;
+  const heightPx = world.surface.height * cell;
+  const shallowMask = new Graphics();
+  const deepMask = new Graphics();
+  const shoreTiles: Sprite[] = [];
+  const terrainCell = SURFACE_TERRAIN_CELL_SIZE;
+  const tilePx = terrainCell * cell;
+  const columns = Math.ceil(world.surface.width / terrainCell);
+  const rows = Math.ceil(world.surface.height / terrainCell);
+  const waterCell = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < columns && y < rows &&
+    isWaterAt((x + 0.5) * terrainCell, (y + 0.5) * terrainCell);
+
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < columns; x += 1) {
+      const worldX = (x + 0.5) * terrainCell;
+      const worldY = (y + 0.5) * terrainCell;
+      if (!isWaterAt(worldX, worldY)) {
+        continue;
+      }
+      shallowMask.rect(x * tilePx, y * tilePx, tilePx, tilePx).fill(0xffffff);
+      const dryN = !waterCell(x, y - 1);
+      const dryS = !waterCell(x, y + 1);
+      const dryW = !waterCell(x - 1, y);
+      const dryE = !waterCell(x + 1, y);
+      const addCorner = (
+        texture: (typeof frames.lakeCorners.outer)["nw"],
+        positionX: number,
+        positionY: number
+      ) => {
+        const corner = new Sprite(texture);
+        corner.position.set(positionX * tilePx, positionY * tilePx);
+        corner.width = tilePx * 2;
+        corner.height = tilePx * 2;
+        shoreTiles.push(corner);
+      };
+      const addInnerCornerWater = (
+        dryCellX: number,
+        dryCellY: number,
+        direction: "nw" | "ne" | "sw" | "se"
+      ) => {
+        const centerOnLeft = direction === "nw" || direction === "sw";
+        const centerOnTop = direction === "nw" || direction === "ne";
+        const radius = tilePx;
+        for (let row = 0; row < Math.ceil(tilePx); row += 1) {
+          const dy = centerOnTop ? row + 0.5 : tilePx - row - 0.5;
+          const boundary = Math.sqrt(Math.max(0, radius * radius - dy * dy));
+          if (centerOnLeft) {
+            const start = Math.ceil(boundary);
+            shallowMask.rect(dryCellX * tilePx + start, dryCellY * tilePx + row, tilePx - start, 1).fill(0xffffff);
+          } else {
+            const width = Math.max(0, Math.floor(tilePx - boundary));
+            shallowMask.rect(dryCellX * tilePx, dryCellY * tilePx + row, width, 1).fill(0xffffff);
+          }
+        }
+      };
+      const addEdge = (direction: "n" | "s" | "w" | "e") => {
+        const edge = new Sprite(frames.lakeBank);
+        edge.anchor.set(0.5);
+        edge.width = tilePx;
+        edge.height = tilePx * 2;
+        if (direction === "n") edge.position.set((x + 0.5) * tilePx, y * tilePx);
+        else if (direction === "s") {
+          edge.position.set((x + 0.5) * tilePx, (y + 1) * tilePx);
+          edge.rotation = Math.PI;
+        } else if (direction === "w") {
+          edge.position.set(x * tilePx, (y + 0.5) * tilePx);
+          edge.rotation = -Math.PI / 2;
+        } else {
+          edge.position.set((x + 1) * tilePx, (y + 0.5) * tilePx);
+          edge.rotation = Math.PI / 2;
+        }
+        shoreTiles.push(edge);
+      };
+      const outerNW = dryN && dryW;
+      const outerNE = dryN && dryE;
+      const outerSW = dryS && dryW;
+      const outerSE = dryS && dryE;
+      const innerReplacesN = dryN && (waterCell(x - 1, y - 1) || waterCell(x + 1, y - 1));
+      const innerReplacesS = dryS && (waterCell(x - 1, y + 1) || waterCell(x + 1, y + 1));
+      const innerReplacesW = dryW && (waterCell(x - 1, y - 1) || waterCell(x - 1, y + 1));
+      const innerReplacesE = dryE && (waterCell(x + 1, y - 1) || waterCell(x + 1, y + 1));
+
+      // Convex turns replace the two intersecting straight strips with a proper
+      // quarter-circle made from the very same bank pixels.
+      if (outerNW) addCorner(frames.lakeCorners.outer.nw, x - 1, y - 1);
+      if (outerNE) addCorner(frames.lakeCorners.outer.ne, x, y - 1);
+      if (outerSW) addCorner(frames.lakeCorners.outer.sw, x - 1, y);
+      if (outerSE) addCorner(frames.lakeCorners.outer.se, x, y);
+
+      if (dryN && !outerNW && !outerNE && !innerReplacesN) addEdge("n");
+      if (dryS && !outerSW && !outerSE && !innerReplacesS) addEdge("s");
+      if (dryW && !outerNW && !outerSW && !innerReplacesW) addEdge("w");
+      if (dryE && !outerNE && !outerSE && !innerReplacesE) addEdge("e");
+
+      // Concave turns are detected by diagonal land surrounded by water. These
+      // four checks deliberately stay independent for arbitrary generated maps.
+      if (!dryN && !dryW && !waterCell(x - 1, y - 1)) {
+        addInnerCornerWater(x - 1, y - 1, "nw");
+        addCorner(frames.lakeCorners.inner.nw, x - 1, y - 1);
+      }
+      if (!dryN && !dryE && !waterCell(x + 1, y - 1)) {
+        addInnerCornerWater(x + 1, y - 1, "ne");
+        addCorner(frames.lakeCorners.inner.ne, x, y - 1);
+      }
+      if (!dryS && !dryW && !waterCell(x - 1, y + 1)) {
+        addInnerCornerWater(x - 1, y + 1, "sw");
+        addCorner(frames.lakeCorners.inner.sw, x - 1, y);
+      }
+      if (!dryS && !dryE && !waterCell(x + 1, y + 1)) {
+        addInnerCornerWater(x + 1, y + 1, "se");
+        addCorner(frames.lakeCorners.inner.se, x, y);
+      }
+    }
+  }
+  // Depth transition uses a finer visual grid than collision/shore autotiles.
+  // This keeps large deep-water masses organic without changing straight banks.
+  const depthCell = 2;
+  for (let y = 0; y < world.surface.height; y += depthCell) {
+    for (let x = 0; x < world.surface.width; x += depthCell) {
+      if (isDeepWaterAt(x + depthCell / 2, y + depthCell / 2)) {
+        deepMask.rect(x * cell, y * cell, depthCell * cell, depthCell * cell).fill(0xffffff);
+      }
+    }
+  }
+
+  const shallow = TilingSprite.from(frames.lakeShallowFrames[0], { width: widthPx, height: heightPx });
+  const deep = TilingSprite.from(frames.lakeDeepFrames[0], { width: widthPx, height: heightPx });
+  shallow.mask = shallowMask;
+  deep.mask = deepMask;
+  shallow.tilePosition.set(7, 11);
+  deep.tilePosition.set(19, 3);
+  scene.waterLayer.addChild(shallow, deep, ...shoreTiles, shallowMask, deepMask);
+  scene.waterSprites = [
+    { sprite: shallow, depth: "shallow", phase: 0 },
+    { sprite: deep, depth: "deep", phase: 3 }
+  ];
+  scene.waterFrames = { shallow: frames.lakeShallowFrames, deep: frames.lakeDeepFrames };
+}
+
+function updateLakeWater(scene: SurfaceScene): void {
+  if (!scene.waterSprites || !scene.waterFrames) {
+    return;
+  }
+  const frame = Math.floor(Date.now() / 145) % scene.waterFrames.shallow.length;
+  if (scene.waterFrame === frame) {
+    return;
+  }
+  scene.waterFrame = frame;
+  for (const entry of scene.waterSprites) {
+    const frames = entry.depth === "shallow" ? scene.waterFrames.shallow : scene.waterFrames.deep;
+    entry.sprite.texture = frames[(frame + entry.phase) % frames.length];
+  }
 }
 
 function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell: number, entranceKey: string): void {
@@ -587,6 +754,7 @@ export function renderSurface(
 
   // Гарантируем правильный порядок слоев (особенно важно при HMR перезагрузках Vite)
   scene.root.addChild(scene.staticLayer);
+  scene.root.addChild(scene.waterLayer);
   scene.root.addChild(scene.shadowLayer);
   scene.root.addChild(scene.zonesOverlay);
   scene.root.addChild(scene.pheromones);
@@ -604,6 +772,7 @@ export function renderSurface(
   if (scene.staticKey !== staticKey) {
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);
   }
+  updateLakeWater(scene);
 
   if (scene.trampleSprite) {
     scene.trampleSprite.visible = trampleEnabled;

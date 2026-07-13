@@ -1,4 +1,4 @@
-import type { Container, Graphics, Sprite, RenderTexture } from "pixi.js";
+import type { Container, Graphics, Sprite, RenderTexture, Texture, TilingSprite } from "pixi.js";
 
 export type ViewMode = "surface";
 export type Camera = {
@@ -30,6 +30,7 @@ export type SpritePool = {
 export type SurfaceScene = {
   root: Container;
   staticLayer: Container;
+  waterLayer: Container;
   shadowLayer: Graphics;
   dynamicLayer: Container;
   fireGlow: Graphics;
@@ -58,6 +59,9 @@ export type SurfaceScene = {
   trampleSprite?: Sprite;
   trailPainter?: Graphics;
   eraserGraphics?: Graphics;
+  waterSprites?: Array<{ sprite: TilingSprite; depth: "shallow" | "deep"; phase: number }>;
+  waterFrames?: { shallow: Texture[]; deep: Texture[] };
+  waterFrame?: number;
 };
 
 export type UndergroundScene = {
