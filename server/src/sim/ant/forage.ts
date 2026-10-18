@@ -27,6 +27,7 @@ import { hasDugRoom } from "./brood";
 import { addFoodStock, foodKindForSource, isFoodCarryKind } from "../foodStock";
 import { nearestDropPoint } from "../building";
 import { surfacePointOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
+import { taskApproach } from "../taskAccess";
 
 export type SurfaceFoodTarget = {
   source: { id: string; pos: Vec2; amount: number; kind?: "food" | "carrion" | "antCorpse" | "spiderCarcass" };
@@ -551,6 +552,8 @@ export function moveHarvesting(world: World, ant: Ant): boolean {
 
   ant.state = "search";
   ant.harvestHits = 0;
-  moveSurfaceToward(world, ant, node.pos, !isColonyStarving(world));
+  const approach=taskApproach(world,node.pos,CONFIG.resourcePickupRadius);
+  if(!approach){ant.job="forage";ant.harvestNodeId=undefined;return false;}
+  moveSurfaceToward(world, ant, approach, !isColonyStarving(world));
   return true;
 }

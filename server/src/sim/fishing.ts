@@ -12,6 +12,7 @@ import { zoneIndexAt } from "./zones";
 import type { World } from "./world";
 import { moveSurfaceToward } from "./ant/movement";
 import { addFoodStock } from "./foodStock";
+import { taskApproach } from "./taskAccess";
 
 type FishingSpot = { lakeId: Fish["lakeId"]; stand: Vec2; lure: Vec2 };
 
@@ -264,7 +265,7 @@ function assignTarget(world: World, ant: Ant, fish: Fish): boolean {
     }
     const score = Math.hypot(ant.pos.x - spot.stand.x, ant.pos.y - spot.stand.y) +
       Math.hypot(fish.pos.x - spot.lure.x, fish.pos.y - spot.lure.y) * 0.3;
-    if (score < bestScore) {
+    if (score < bestScore && taskApproach(world,spot.stand)) {
       bestScore = score;
       best = spot;
     }
@@ -296,7 +297,7 @@ export function assignFishingJobs(world: World): void {
     const target = world.surface.fish.find(
       (fish) => fish.id === ant.fishingTargetId && fish.state !== "respawning" && fish.targetAntId === ant.id
     );
-    if (retained >= cap || !target) {
+    if (retained >= cap || !target || !ant.fishingStandPos || !taskApproach(world,ant.fishingStandPos)) {
       fallbackToForaging(world, ant);
     } else {
       retained += 1;

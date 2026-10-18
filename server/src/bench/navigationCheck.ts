@@ -15,6 +15,8 @@ const { surfaceRoute, surfaceLineOpen } = await import("../../../shared/surfaceN
 const { CONFIG } = await import("../config");
 const { stepAnt } = await import("../sim/ant/step");
 const { moveSearching } = await import("../sim/ant/forage");
+const { taskApproach } = await import("../sim/taskAccess");
+const { assignBuildJobs, assignHarvestJobs } = await import("../sim/economy");
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x-b.x,a.y-b.y);
 function fence(x:number,y:number,type:Building["type"]="wall"):Building {
   return {id:`fence-${x}-${y}`,type,colonyId:"colony-1",pos:{x,y},stage:"built",progress:1,cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,...(type==="gate"?{gateSpan:3,gateAxis:"horizontal" as const}:{})};
@@ -46,6 +48,22 @@ function travel(w:ReturnType<typeof fresh>, a:Ant, goal:Vec2, budget:number, str
 let failures=0,passed=0;
 function check(name:string,run:()=>void) { try {run();passed++;console.log(`PASS  ${name}`);}catch(e){failures++;console.error(`FAIL  ${name}: ${(e as Error).message}`);} }
 try {
+  check("Доступность: замкнутая ограда не назначает работу снаружи; открытие ворот восстанавливает доступ",()=>{
+    const w=fresh(),c=w.colonies[0],scoped=colonyWorldView(w,c);
+    for(const gate of w.surface.buildings.filter(b=>b.type==="gate")){w.surface.buildings=w.surface.buildings.filter(b=>b.id!==gate.id);for(const dx of [-2,0,2])w.surface.buildings.push(fence(gate.pos.x+dx,gate.pos.y));}
+    scoped.surface.buildings=w.surface.buildings;
+    rebuildWallBlocked(w);
+    const target={x:170,y:240};assert.equal(taskApproach(scoped,target,1.6),undefined);
+    const site={...fence(170,240),id:"closed-site",type:"hut" as const,stage:"site" as const};w.surface.buildings.push(site);
+    c.colony.food=100;c.colony.priorities.build=4;c.colony.priorities.clay=4;
+    w.surface.resourceNodes=[{...w.surface.resourceNodes[0],id:"closed-clay",kind:"clay",pos:target,amount:100}];
+    for(const a of c.ants){a.pos={x:120,y:240};a.job="forage";a.forageRole="forager";a.state="search";a.carrying=0;}
+    assignBuildJobs(scoped);assignHarvestJobs(scoped);assert.ok(c.ants.every(a=>a.job!=="build"&&a.job!=="harvest"));
+    w.surface.buildings=w.surface.buildings.filter(b=>!(b.type==="wall"&&b.pos.y===215&&[119,121,123].includes(b.pos.x)));w.surface.buildings.push(fence(121,215,"gate"));
+    // Scoped views share a building array until the world replaces it.
+    scoped.surface.buildings=w.surface.buildings;rebuildWallBlocked(w);
+    assert.ok(taskApproach(scoped,target,1.6));
+  });
   check("Разведчик без видимой еды выходит из огороженного лагеря через общий маршрут",()=>{
     const w=fresh(),c=w.colonies[0],a=c.ants[0],scoped=colonyWorldView(w,c);
     w.surface.foodSources=[];w.surface.carrion=[];a.pos={x:120,y:240};a.state="search";a.job="forage";a.forageRole="scout";a.carrying=0;

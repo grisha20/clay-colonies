@@ -10,6 +10,7 @@ import { moveSurfaceToward } from "./movement";
 import { isWithinRadius } from "./utils";
 import { consumeFoodStock } from "../foodStock";
 import { buildingServicePoint } from "../../../../shared/buildingGeometry";
+import { taskApproach } from "../taskAccess";
 
 const builderWaitTicks = new Map<string, number>();
 export function resetBuilderRuntime(): void { builderWaitTicks.clear(); }
@@ -61,6 +62,8 @@ export function moveBuilding(world: World, ant: Ant): boolean {
     return false;
   }
   const workPoint = buildingServicePoint(building);
+  const approach = taskApproach(world,workPoint,CONFIG.buildingDeliverRadius);
+  if(!approach){releaseBuilder(ant);return false;}
 
   // Голодный строитель подкрепляется у лагеря; без еды на складе — бросает стройку.
   if (ant.energy < CONFIG.lowEnergyThreshold && ant.carrying <= 0) {
@@ -98,7 +101,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
       return true;
     }
     ant.state = "carry";
-    moveSurfaceToward(world, ant, workPoint, !isColonyStarving(world));
+    moveSurfaceToward(world, ant, approach, !isColonyStarving(world));
     return true;
   }
 

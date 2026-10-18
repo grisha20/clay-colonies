@@ -7,6 +7,8 @@ import { CONFIG } from "../config";
 import type { World } from "./world";
 import { zoneIndexAt } from "./zones";
 import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { taskApproach } from "./taskAccess";
+import { buildingServicePoint } from "../../../shared/buildingGeometry";
 
 function reserveTarget(kind: ResourceKind): number {
   if (kind === "clay") {
@@ -48,6 +50,7 @@ function activeToolUsers(world: World, tool: "axe" | "pick"): number {
 
 function canAssignNode(world: World, node: ResourceNode, toolUsers: { axe: number; pick: number }): boolean {
   if (isWaterAt(node.pos.x, node.pos.y)) return false;
+  if (!taskApproach(world,node.pos,CONFIG.resourcePickupRadius)) return false;
   if (node.kind === "tree" && node.growth === "sapling") {
     return false;
   }
@@ -127,7 +130,7 @@ export function assignHarvestJobs(world: World): void {
           : undefined;
     const stillWanted = kind ? counts[kind] < priorityCount(world, kind) : false;
 
-    if ((!economyReady || !stillWanted || (!node && ant.carrying <= 0)) && ant.carrying <= 0) {
+    if ((!economyReady || !stillWanted || !node || !taskApproach(world,node.pos,CONFIG.resourcePickupRadius)) && ant.carrying <= 0) {
       ant.job = "forage";
       ant.harvestNodeId = undefined;
       ant.carryKind = undefined;
@@ -267,7 +270,7 @@ function resourceObtainable(world: World, kind: ResourceKind): boolean {
   if (colonyStock(world, kind) >= 0.5) {
     return true;
   }
-  return world.surface.resourceNodes.some((node) => resourceNodeYield(node.kind) === kind && node.amount > 0 && !isWaterAt(node.pos.x, node.pos.y));
+  return world.surface.resourceNodes.some((node) => resourceNodeYield(node.kind) === kind && node.amount > 0 && !isWaterAt(node.pos.x, node.pos.y) && taskApproach(world,node.pos,CONFIG.resourcePickupRadius));
 }
 
 // Первый недостающий ресурс площадки (дублирует ant/build.neededResource, чтобы не плодить импорт-циклы).
@@ -295,6 +298,7 @@ export function assignBuildJobs(world: World): void {
         (building.stage !== "built" || building.hp < building.maxHp * 0.75)
     )
     .filter((building) => {
+      if(!taskApproach(world,buildingServicePoint(building),CONFIG.buildingDeliverRadius))return false;
       // Не гоняем строителей к площадке, чей ресурс сейчас недостижим.
       const kind = siteNeededKind(building);
       return kind === null || resourceObtainable(world, kind);
