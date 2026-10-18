@@ -15,6 +15,7 @@ import { offsetSettings } from "./editor";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
 import { fishingCastActive } from "../../../../shared/fishingCast";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { submergedClay, submergedCorpse } from "../../../../shared/surfaceRemains";
 
 const webDrawKeys = new WeakMap<Graphics, string>();
 
@@ -52,7 +53,7 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     }
   }
   for (const node of world.surface.resourceNodes) {
-    if (node.amount <= 0 || !isInBounds(node.pos, bounds, 10)) continue;
+    if (node.amount <= 0 || submergedClay(node) || !isInBounds(node.pos, bounds, 10)) continue;
     if (node.kind === "tree") drawGroundShadow(graphics, lighting, node.pos.x * cell, node.pos.y * cell, 18, 6, 54);
     else if (!node.id.startsWith("wash-")) drawGroundShadow(graphics, lighting, node.pos.x * cell, node.pos.y * cell + 7, node.kind === "loose-stone" ? 7 : 16, 5, 8, 0.7);
   }
@@ -67,7 +68,7 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
   }
 
   for (const source of world.surface.carrion) {
-    if (source.amount <= 0 || !isInBounds(source.pos, bounds, 5)) {
+    if (source.amount <= 0 || submergedCorpse(source) || !isInBounds(source.pos, bounds, 5)) {
       continue;
     }
     const size = Math.min(18, 8 + Math.sqrt(source.amount) * 1.4);
@@ -236,7 +237,7 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
   const props = getEnvironmentTextures().props;
 
   for (const node of world.surface.resourceNodes ?? []) {
-    if (node.amount <= 0 || !isInBounds(node.pos, bounds, 8)) {
+    if (node.amount <= 0 || submergedClay(node) || !isInBounds(node.pos, bounds, 8)) {
       continue;
     }
 
@@ -318,7 +319,7 @@ export function updateSurfaceCarrion(pool: SpritePool, world: WorldSnapshot, cel
   beginPool(pool);
 
   for (const source of world.surface.carrion) {
-    if (source.amount <= 0 || !isInBounds(source.pos, bounds, 4)) {
+    if (source.amount <= 0 || submergedCorpse(source) || !isInBounds(source.pos, bounds, 4)) {
       continue;
     }
 

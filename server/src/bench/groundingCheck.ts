@@ -12,7 +12,8 @@ import { lakeShorePortals, nearLakeShore } from "../../../shared/amphibianNaviga
 import { fenceContains } from "../../../shared/fenceGeometry";
 const temp = await mkdtemp(path.join(os.tmpdir(), "clayfolk-grounding-"));
 for (const key of ["SNAPSHOT_FILE", "GENOME_FILE", "GENOME_FILE_B", "SPIDER_GENOME_FILE"]) process.env[key] = path.join(temp, key + ".json");
-const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
+const { createWorld, toSnapshot, worldFromSnapshot, addAntCorpse, addClayRemains, cleanupResourceNodes, respawnCarrion } = await import("../sim/world");
+const { dissolveAnt } = await import("../sim/water");
 const { randomGenome } = await import("../ai/genome");
 const { randomSpiderGenome } = await import("../ai/spiderGenome");
 const { updateWildlife, moveCreature } = await import("../sim/wildlife");
@@ -28,6 +29,43 @@ function fresh() {
 let count = 0;
 function check(name: string, run: () => void) { run(); count++; console.log(`PASS  ${name}`); }
 try {
+  check("Озёра: смытая глина и погибшие жители не оставляют пунктир и мясо на воде", () => {
+    for (const start of [{ x: 210, y: 140 }, { x: 210, y: 360 }]) {
+      const w = fresh(), a = w.ants[0], before = w.surface.resourceNodes.length;
+      a.pos = { ...start };
+      for (let i = 0; i < 40; i++) { a.pos.x += .3; dissolveAnt(a, 1, w); }
+      assert.equal(w.surface.resourceNodes.length, before, "no trail of permanent resource nodes");
+      assert.ok((a.dissolved ?? 0) > 0, "immersion still erodes the resident");
+      a.state = "dead";
+      assert.equal(addAntCorpse(w, a), null);
+      addClayRemains(w, a);
+      assert.equal(w.surface.resourceNodes.length, before, "partly dissolved dead resident leaves no deposit in water");
+      assert.equal(w.surface.carrion.some(s => s.kind === "antCorpse"), false);
+      a.pos = { x: 120, y: 250 }; a.state = "idle";
+      dissolveAnt(a, 1, w);
+      assert.ok(w.surface.resourceNodes.some(n => n.id.startsWith("wash-")), "erosion on dry ground is still collectible");
+      assert.ok(addAntCorpse(w, a), "land remains are preserved");
+    }
+  });
+  check("Старое сохранение: растворены только озёрные остатки; суша, постройки и жители сохранены", () => {
+    const w = fresh(); w.tick = 12345;
+    const wet = { x: 210, y: 360 }, dry = { x: 120, y: 250 };
+    for (const [name, pos] of [["water", wet], ["land", dry]] as const) {
+      w.surface.resourceNodes.push({ id: `wash-${name}`, kind: "clay", pos, amount: 1, maxAmount: 1, hitsPerUnit: 2 });
+      w.surface.carrion.push({ id: `carrion-${name}`, kind: "antCorpse", pos, amount: 1 });
+    }
+    const loaded = worldFromSnapshot(toSnapshot(w, false), w.colonies[0].genomeState, w.spiderGenomeState, w.colonies[1].genomeState);
+    assert.equal(loaded.tick, w.tick);
+    assert.deepEqual(loaded.surface.buildings, w.surface.buildings);
+    assert.deepEqual(loaded.ants.map(a => a.id), w.ants.map(a => a.id));
+    for (const target of [loaded, w]) {
+      cleanupResourceNodes(target); respawnCarrion(target);
+      assert.equal(target.surface.resourceNodes.some(n => n.id === "wash-water"), false);
+      assert.equal(target.surface.carrion.some(s => s.id === "carrion-water"), false);
+      assert.ok(target.surface.resourceNodes.some(n => n.id === "wash-land"));
+      assert.ok(target.surface.carrion.some(s => s.id === "carrion-land"));
+    }
+  });
   check("Стража обоих племён не ждёт на камнях костра: старые позиции покидаются, посты раздельны",()=>{
     for(const index of [0,1]) {
       const w=fresh(),c=w.colonies[index],camp=c.surfaceEntrance;

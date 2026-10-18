@@ -40,6 +40,7 @@ import { clearDeadPanic } from "./ant/combat";
 import { resetEnemyRuntime } from "./enemy";
 import { resetBuilderRuntime } from "./ant/build";
 import { taskMotionReport } from "./taskProgress";
+import { submergedClay, submergedCorpse } from "../../../shared/surfaceRemains";
 
 export type ColonyRuntime = {
   id: string;
@@ -396,8 +397,8 @@ export function updateResourceNodeGrowth(world: World): void {
 }
 
 export function cleanupResourceNodes(world: World): void {
-  if (world.surface.resourceNodes.some((node) => node.amount <= 0.01)) {
-    world.surface.resourceNodes = world.surface.resourceNodes.filter((node) => node.amount > 0.01);
+  if (world.surface.resourceNodes.some((node) => node.amount <= 0.01 || submergedClay(node))) {
+    world.surface.resourceNodes = world.surface.resourceNodes.filter((node) => node.amount > 0.01 && !submergedClay(node));
   }
 }
 
@@ -493,7 +494,7 @@ function compactStorageRooms(underground: Underground): void {
 }
 
 export function respawnCarrion(world: World): void {
-  world.surface.carrion = world.surface.carrion.filter((source) => source.amount > 0);
+  world.surface.carrion = world.surface.carrion.filter((source) => source.amount > 0 && !submergedCorpse(source));
   if (CONFIG.carrionDecayEveryTicks > 0 && world.tick > 0 && world.tick % CONFIG.carrionDecayEveryTicks === 0) {
     for (const source of world.surface.carrion) {
       if (source.kind === "antCorpse" || source.kind === "carrion") {
@@ -512,6 +513,7 @@ export function respawnCarrion(world: World): void {
 
 // «Глина — это всё»: павший оставляет ком глины (перелепить или пустить на стену).
 export function addClayRemains(world: World, ant: Ant): void {
+  if (ant.layer === "surface" && isWaterAt(ant.pos.x, ant.pos.y)) return;
   const amount = CONFIG.deadClayAmount * Math.max(0, 1 - (ant.dissolved ?? 0));
   if (amount <= 0.001) return;
   // Сливаем с ближайшим комом, чтобы поле боя не превращалось в сотню крошек.
@@ -532,7 +534,8 @@ export function addClayRemains(world: World, ant: Ant): void {
   });
 }
 
-export function addAntCorpse(world: World, ant: Ant): FoodSource {
+export function addAntCorpse(world: World, ant: Ant): FoodSource | null {
+  if (ant.layer === "surface" && isWaterAt(ant.pos.x, ant.pos.y)) return null;
   const source: FoodSource = {
     id: `carrion-${nextCarrionId}`,
     pos: { ...ant.pos },
@@ -884,7 +887,7 @@ export function worldFromSnapshot(
   }, 0);
   nextFoodSourceId = Math.max(nextFoodSourceId, maxFoodId + 1);
   const foodSources = mergeFoodSources(snapshot.surface.foodSources.map((source) => normalizeFoodKind(source, "food")));
-  const carrion = (snapshot.surface.carrion ?? makeCarrionSources()).map((source) => normalizeCarrionKind(source));
+  const carrion = (snapshot.surface.carrion ?? makeCarrionSources()).map((source) => normalizeCarrionKind(source)).filter(source => !submergedCorpse(source));
   const maxCarrionId = carrion.reduce((max, source) => {
     const numeric = Number(source.id.replace("carrion-", ""));
     return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
@@ -892,7 +895,7 @@ export function worldFromSnapshot(
   nextCarrionId = Math.max(nextCarrionId, maxCarrionId + 1);
   const genomeStates = [genomeState, genomeStateB];
   const resourceNodes = (snapshot.surface.resourceNodes ?? makeResourceNodes())
-    .filter((node) => node.amount > 0.01)
+    .filter((node) => node.amount > 0.01 && !submergedClay(node))
     .map((node) => ({
       ...node,
       maxAmount: node.maxAmount ?? node.amount,
