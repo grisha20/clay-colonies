@@ -6,6 +6,7 @@ import { isWaterAt, lakeFieldAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import { insideHearth, crossesHearth, outsideHearth } from "../../../shared/campGeometry";
 import { buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding, buildingServicePoint } from "../../../shared/buildingGeometry";
+import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
 import type { World } from "./world";
 
 let nextBuildingId = 1;
@@ -162,20 +163,6 @@ export function placePointBuilding(
     x: Math.max(2, Math.min(CONFIG.mapWidth - 2, x)),
     y: Math.max(2, Math.min(CONFIG.mapHeight - 2, y))
   };
-  if (tooCloseToEntrance(world, pos)) {
-    return false;
-  }
-  if (isWaterAt(pos.x, pos.y)) {
-    return false;
-  }
-  const footprint = buildingFootprint({ type, pos, stage: "built" } as Building)!;
-  for (let i = 0; i < 16; i++) {
-    const a = i * Math.PI / 8;
-    if (isWaterAt(footprint.x + Math.cos(a) * (footprint.rx + 0.6), footprint.y + Math.sin(a) * (footprint.ry + 0.6))) return false;
-  }
-  const sameType = world.surface.buildings.filter(
-    (item) => item.colonyId === colony.id && item.type === type
-  );
   const limit =
     type === "hut"
       ? CONFIG.maxHutsPerColony
@@ -184,17 +171,7 @@ export function placePointBuilding(
         : type === "workshop"
           ? CONFIG.maxWorkshopsPerColony
           : CONFIG.maxStoragesPerColony;
-  if (sameType.length >= limit) {
-    return false;
-  }
-  // Не ставить точечную постройку вплотную к другой постройке.
-  for (const item of world.surface.buildings) {
-    const dx = item.pos.x - pos.x;
-    const dy = item.pos.y - pos.y;
-    if (dx * dx + dy * dy < 8 * 8) {
-      return false;
-    }
-  }
+  if (pointBuildingPlacement(world.surface, colony.id, type, pos, limit, CONFIG.buildingEntranceMargin)) return false;
   world.surface.buildings.push(createBuilding(colony.id, type, pos));
   return true;
 }

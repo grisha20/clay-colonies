@@ -1,4 +1,5 @@
 import { lakePoints as waterPoints, lakeLineOpen as waterSegment, lakeRoute } from "../../../shared/lakeNavigation";
+import { lakeLilyPads } from "../../../shared/lakeHabitat";
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { LAKE_DEFINITIONS, isWaterAt, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../shared/dayCycle";
@@ -31,7 +32,7 @@ function swim(world: World, enemy: Enemy, target: Vec2, speed: number): void {
     }
   }
   let plan = swimPlans.get(enemy);
-  if (!plan || dist(plan.target, goal) > 3) {
+  if (!plan || dist(plan.target, goal) > 3 || (dist(enemy.pos, plan.target) < 0.7 && dist(enemy.pos, goal) > 0.5)) {
     const route = lakeRoute(id, enemy.pos, goal) ?? [];
     plan = { target: { ...goal }, points: route }; swimPlans.set(enemy, plan);
   }
@@ -177,6 +178,7 @@ export function updateWildlife(world: World): void {
       enemy.captiveId = undefined;
       enemy.nextGrabAt = world.tick + 200;
     } else if (captive) {
+      if (enemy.type === "lakeMonster") { enemy.lakeRestUntil = 0; enemy.lakePadIndex = undefined; }
       moveCreature(world, enemy, enemy.lair, enemy.type === "lakeMonster" ? CONFIG.lakeMonsterDragSpeed : CONFIG.beetleDragSpeed);
       captive.pos = { ...enemy.pos };
       captive.heading = { x: Math.cos(world.tick * 0.4), y: Math.sin(world.tick * 0.4) };
@@ -185,6 +187,7 @@ export function updateWildlife(world: World): void {
     }
     const target = targetFor(world, enemy);
     if (target) {
+      if (enemy.type === "lakeMonster") { enemy.lakeRestUntil = 0; enemy.lakePadIndex = undefined; enemy.lakeNextRestAt = world.tick + 300; }
       moveCreature(world, enemy, target.pos, enemy.type === "lakeMonster" ? CONFIG.lakeMonsterSpeed : CONFIG.beetleSpeed);
       if (dist(enemy.pos, target.pos) < (enemy.type === "lakeMonster" ? 3 : 1.8) && world.tick >= (enemy.nextGrabAt ?? 0)) {
         // No capture through a wall, gate or shoreline obstacle.
@@ -200,10 +203,28 @@ export function updateWildlife(world: World): void {
       }
     } else if (enemy.type === "lakeMonster") {
       enemy.hunger += 1;
+      if ((enemy.lakeRestUntil ?? 0) > world.tick) continue;
+      enemy.lakeNextRestAt ??= world.tick + 150;
+      if (world.tick >= enemy.lakeNextRestAt && enemy.hunger < 450) {
+        const pads = lakeLilyPads(enemy.lakeId!);
+        if (pads.length) {
+          enemy.lakePadIndex ??= pads.reduce((best, p, i) => dist(p, enemy.pos) < dist(pads[best], enemy.pos) ? i : best, 0);
+          const pad = pads[enemy.lakePadIndex];
+          if (pad) {
+            swim(world, enemy, pad, 0.16);
+            if (dist(enemy.pos, pad) < 0.5) {
+              enemy.pos = { ...pad }; enemy.lakeRestUntil = world.tick + 180;
+              enemy.lakeNextRestAt = enemy.lakeRestUntil + 600;
+            }
+            continue;
+          }
+        }
+      }
+      enemy.lakePadIndex = undefined;
       const fish = enemy.hunger > 450 ? world.surface.fish.filter(f => f.state !== "respawning" && f.lakeId === enemy.lakeId).sort((a, b) => dist(a.pos, enemy.pos) - dist(b.pos, enemy.pos))[0] : undefined;
       if (fish) {
         swim(world, enemy, fish.pos, 0.22);
-        if (dist(fish.pos, enemy.pos) < 1.6) { fish.state = "respawning"; fish.respawnAt = world.tick + CONFIG.fishRespawnMinTicks; fish.targetAntId = undefined; fish.lurePos = undefined; enemy.hunger = 0; enemy.hp = Math.min(enemy.maxHp, enemy.hp + 8); }
+        if (dist(fish.pos, enemy.pos) < 1.6) { fish.state = "respawning"; fish.respawnAt = world.tick + CONFIG.fishRespawnMinTicks; fish.targetAntId = undefined; fish.lurePos = undefined; enemy.hunger = 0; enemy.lakeNextRestAt = world.tick + 60; enemy.hp = Math.min(enemy.maxHp, enemy.hp + 8); }
       } else {
         let patrol = patrols.get(enemy);
         if (!patrol || world.tick >= patrol.until || dist(enemy.pos, patrol.target) < 1) {

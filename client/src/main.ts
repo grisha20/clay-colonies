@@ -14,6 +14,8 @@ import {
 import { isWaterAt } from "../../shared/surfaceTerrain";
 import { surfaceRoute, surfaceLineOpen, routePoint } from "../../shared/surfaceNavigation";
 import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
+import { pointBuildingPlacement } from "../../shared/buildingPlacement";
+import { BuildingGhost } from "./render/surface/buildingGhost";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
 import { preloadGardenArt } from "./render/surface/gardenArt";
@@ -1897,6 +1899,20 @@ function commitDrag(): void {
 
 // Превью растягивания: рисуется в экранных координатах поверх мира.
 const dragPreview = new Graphics();
+const buildGhost = new BuildingGhost();
+let hoverScreen: { x: number; y: number } | null = null;
+function updateBuildGhost(): void {
+  buildGhost.visible = false;
+  if (!latestWorld || !hoverScreen || currentView !== "surface" || (pointerDown && isDragging) ||
+    (currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol")) return;
+  const pos = surfaceTileFromGlobal(latestWorld, hoverScreen.x, hoverScreen.y);
+  if (!pos) return;
+  const owner = latestWorld.colonies[currentColonyIndex]?.id ?? latestWorld.colony.id;
+  const reason = buildGhost.show(latestWorld, currentTool, pos, owner);
+  const screen = worldToScreen(pos.x, pos.y); buildGhost.position.set(screen.x, screen.y); buildGhost.scale.set(camera.zoom);
+  if (buildGhost.parent !== pixi.stage) pixi.stage.addChild(buildGhost);
+  if (toolHint) toolHint.textContent = reason ?? TOOL_HINTS[currentTool];
+}
 
 // Дождь: затемнение + косые штрихи в экранных координатах.
 const rainOverlay = new Graphics();
@@ -2023,6 +2039,7 @@ pixi.ticker.add(() => {
   const interpT = lastPacketTime > 0 ? Math.min((now - lastPacketTime) / packetInterval, 1) : 1;
   draw(interpT);
   updateRainOverlay();
+  updateBuildGhost();
   framesSinceFpsUpdate += 1;
   if (now - lastFpsUpdateAt >= 1000) {
     currentFps = Math.round((framesSinceFpsUpdate * 1000) / Math.max(1, now - lastFpsUpdateAt));
@@ -2137,6 +2154,8 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
 });
 
 pixi.canvas.addEventListener("pointermove", (event) => {
+  const rect = pixi.canvas.getBoundingClientRect();
+  hoverScreen = { x: (event.clientX - rect.left) * pixi.screen.width / rect.width, y: (event.clientY - rect.top) * pixi.screen.height / rect.height };
   updateHoverHint(event);
   if (!pointerDown || currentView !== "surface" || !latestWorld) {
     return;
@@ -2172,6 +2191,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
   clampCamera(latestWorld);
 });
 
+pixi.canvas.addEventListener("pointerleave", () => { hoverScreen = null; buildGhost.visible = false; });
 pixi.canvas.addEventListener("pointerup", (event) => {
   pointerDown = false;
   pixi.canvas.releasePointerCapture(event.pointerId);
@@ -2213,9 +2233,11 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (currentTool === "hut" || currentTool === "storage" || currentTool === "workshop" || currentTool === "idol") {
-    if (isWaterAt(tile.x, tile.y)) {
+    const owner = latestWorld.colonies[currentColonyIndex]?.id ?? latestWorld.colony.id;
+    const reason = pointBuildingPlacement(latestWorld.surface, owner, currentTool, tile);
+    if (reason) {
       if (toolHint) {
-        toolHint.textContent = "Вода: здесь нельзя строить";
+        toolHint.textContent = reason;
       }
       return;
     }

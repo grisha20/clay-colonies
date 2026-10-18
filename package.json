@@ -16,6 +16,7 @@
     "check:gameplay": "tsx server/src/bench/gameplayCheck.ts",
     "check:motion": "tsx server/src/bench/motionCheck.ts",
     "check:world": "tsx server/src/bench/worldCheck.ts",
+    "check:grounding": "tsx server/src/bench/groundingCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },
   "devDependencies": {

@@ -18,11 +18,13 @@ import { drawGameplay } from "./gameplay";
 import { actorMotion } from "./motion";
 import { HEARTH_RADIUS_Y } from "../../../../shared/campGeometry";
 import { surfaceLighting } from "./lighting";
-import { getBuildingArt } from "./buildingArt";
+import { getBuildingArt, getFenceArt } from "./buildingArt";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
 import { campStockSprites } from "./campStock";
 import { royalWalk } from "./royals";
 import { drawBuildingGround } from "./buildingGround";
+import { updateFootprints } from "./footprints";
+import { updateLakeDetails } from "./lakeArt";
 import { buildingGardens } from "./gardenArt";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
@@ -53,6 +55,7 @@ export function createSurfaceScene(): SurfaceScene {
   const shadowLayer = new Graphics();
   const campGround = new Container();
   const buildingGround = new Graphics();
+  const footGround = new Graphics(), lakeDetails = new Container(), lakeRipples = new Graphics();
   const dynamicLayer = new Container();
   const fireGlow = new Graphics();
   const zonesOverlay = new Graphics();
@@ -83,7 +86,7 @@ export function createSurfaceScene(): SurfaceScene {
   fishingGraphics.zIndex = 8990;
 
   // Собираем слои в корень сцены
-  root.addChild(staticLayer, waterLayer, fishLayer, campGround, buildingGround, fireGlow, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, nightVeil);
+  root.addChild(staticLayer, waterLayer, fishLayer, lakeDetails, lakeRipples, campGround, buildingGround, footGround, fireGlow, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, nightVeil);
   dynamicLayer.addChild(selectionGraphics, particleGraphics, fishingGraphics, gameplayGraphics);
 
   if (typeof window !== "undefined") {
@@ -100,6 +103,7 @@ export function createSurfaceScene(): SurfaceScene {
     shadowLayer,
     campGround,
     buildingGround,
+    footGround, lakeDetails, lakeRipples,
     dynamicLayer,
     fireGlow,
     zonesOverlay,
@@ -534,40 +538,13 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
         const hasUp = wallPositions.has(`${bx},${by - 2}`);
         const hasDown = wallPositions.has(`${bx},${by + 2}`);
 
-        // Объёмная стена выше жителей: тень, лицевая грань, светлый верх.
-        const wallRise = offsetSettings.buildingGeometry.wallRise * cell;
-        const topDepth = 4;
-
-        // Нахлесты для сглаживания швов по горизонтали
-        const xLeft = hasLeft ? x - half : x - half - 1;
-        const xRight = hasRight ? x + half : x + half + 1;
-        const width = xRight - xLeft;
-
-        // 2. Отрисовка геометрии стены
-        if (hasDown) {
-          // Если есть сосед снизу, рисуем только сплошную крышу до нижнего соседа
-          g.rect(xLeft, y - half - wallRise - topDepth, width, half * 2 + topDepth + 1).fill({ color: 0xef9a64, alpha: 1 });
-          if (!hasUp) {
-            g.rect(xLeft, y - half - wallRise - topDepth, width, 2).fill({ color: 0xffffff, alpha: 0.2 });
-          }
-        } else {
-          // Соседа снизу нет -> рисуем полноценную лицевую грань и крышу сверху
-          g.rect(xLeft, y - half - wallRise, width, wallRise + half * 2).fill({ color: clayColor, alpha: 1 });
-          g.rect(xLeft, y + half - 3, width, 3).fill({ color: darkColor, alpha: 0.9 });
-          g.rect(xLeft, y - half - wallRise - topDepth, width, topDepth + 2).fill({ color: 0xef9a64, alpha: 1 });
-
-          if (!hasUp) {
-            g.rect(xLeft, y - half - wallRise - topDepth, width, 1.2).fill({ color: 0xffffff, alpha: 0.25 });
-          }
-          g.rect(xLeft, y - half - wallRise + 2, width, 1.6).fill({ color: darkColor, alpha: 0.35 });
-        }
-
-        // Ворота: тёмный проём и светлая перекладина — читается как проход.
-        if (building.type === "gate") {
-          const gapWidth = Math.max(3, half * 0.9);
-          g.rect(x - gapWidth / 2, y - half - wallRise + 3, gapWidth, wallRise + half * 2 - 4).fill({ color: 0x2e1d12, alpha: 0.92 });
-          g.rect(x - gapWidth / 2 - 1, y - half - wallRise + 1, gapWidth + 2, 2.4).fill({ color: 0xf7c979, alpha: 0.95 });
-        }
+        const vertical = (hasUp || hasDown) && !(hasLeft || hasRight);
+        const art = getFenceArt(building.type === "gate", vertical, cell);
+        const fence = new Sprite(art.texture); fence.anchor.set(0.5, 1);
+        fence.width = art.width; fence.height = art.height;
+        fence.position.set(x, y + half); fence.zIndex = y + half;
+        fence.label = `fence_${building.id}`;
+        scene.dynamicLayer.addChild(fence); scene.buildingSprites?.push(fence);
       }
     } else if (building.type === "storage") {
       const half = 2.9 * cell;
@@ -847,8 +824,11 @@ export function renderSurface(
   scene.root.addChild(scene.staticLayer);
   scene.root.addChild(scene.waterLayer);
   scene.root.addChild(scene.fishLayer);
+  scene.root.addChild(scene.lakeDetails);
+  scene.root.addChild(scene.lakeRipples);
   scene.root.addChild(scene.campGround);
   scene.root.addChild(scene.buildingGround);
+  scene.root.addChild(scene.footGround);
   scene.root.addChild(scene.fireGlow);
   scene.root.addChild(scene.shadowLayer);
   scene.root.addChild(scene.zonesOverlay);
@@ -871,6 +851,8 @@ export function renderSurface(
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);
   }
   updateLakeWater(scene);
+  updateLakeDetails(scene.lakeDetails, scene.lakeRipples, world, cell, bounds);
+  updateFootprints(scene.footGround, world, cell, bounds);
   updateSurfaceFish(scene.fishPool, world, cell, bounds);
 
   if (scene.trampleSprite) {

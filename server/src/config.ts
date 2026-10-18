@@ -1,4 +1,5 @@
 import path from "node:path";
+import { POINT_BUILDING_LIMITS } from "../../shared/buildingPlacement";
 
 const cwdName = path.basename(process.cwd()).toLowerCase();
 
@@ -104,7 +105,7 @@ export const CONFIG = {
   idolCost: { clay: 25, wood: 0, stone: 5 },
   idolMaxHp: 200,
   idolBuildTicks: 500,
-  maxIdolsPerColony: 1,
+  maxIdolsPerColony: POINT_BUILDING_LIMITS.idol,
   startingMiners: 5,
   startingEggs: 2,
   startingLarvae: 0,
@@ -347,12 +348,12 @@ export const CONFIG = {
   storageCost: { clay: 0, wood: 6, stone: 4 },
   storageMaxHp: 100,
   storageBuildTicks: 200,
-  maxStoragesPerColony: 6,
+  maxStoragesPerColony: POINT_BUILDING_LIMITS.storage,
   // Мастерская: производит инструменты из ресурсов склада.
   workshopCost: { clay: 8, wood: 4, stone: 0 },
   workshopMaxHp: 100,
   workshopBuildTicks: 220,
-  maxWorkshopsPerColony: 2,
+  maxWorkshopsPerColony: POINT_BUILDING_LIMITS.workshop,
   axeCost: { wood: 2, stone: 1 },
   pickCost: { wood: 2, stone: 2 },
   rodCost: { wood: 2, stone: 0 },
@@ -382,7 +383,7 @@ export const CONFIG = {
   buildingDeliverRadius: 2.4,
   buildRadius: 2.6,
   buildingEntranceMargin: 7,
-  maxHutsPerColony: 8,
+  maxHutsPerColony: POINT_BUILDING_LIMITS.hut,
   maxWallSegmentsPerColony: 160,
 
   // Стража: пара жителей держится у лагеря, пока жив паук.

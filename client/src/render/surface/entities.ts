@@ -5,7 +5,7 @@ import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import { getEnvironmentTextures } from "./environment";
 import { actorMotion, animationSeed, residentScale } from "./motion";
-import { creatureDimensions, getCreatureArt } from "./creatureArt";
+import { creatureDimensions, getCreatureArt, lakeTailArt } from "./creatureArt";
 import { getEquipmentArt } from "./equipmentArt";
 import { fishingRodMount, residentPlacement } from "./residentLayout";
 import { getFishArt, swimmingFishArt } from "./fishArt";
@@ -37,8 +37,15 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     if (building.stage !== "built" || !isInBounds(building.pos, bounds, 12)) continue;
     const wall = building.type === "wall" || building.type === "gate";
     const f = buildingFootprint(building);
-    const y = f ? (f.y + f.ry * 0.25) * cell : building.pos.y * cell + cell;
+    const y = f ? (f.y + f.ry * 0.35) * cell : building.pos.y * cell + cell;
     drawGroundShadow(graphics, lighting, building.pos.x * cell, y, f ? f.rx * cell : cell, f ? f.ry * cell * 0.85 : 3, wall ? 22 : building.type === "idol" ? 30 : 48);
+    if (f) {
+      // A narrow seam touches the visible bottom edge; the broad footprint
+      // alone read as an oval detached from the pasted-on sprite.
+      const baseline = (f.y + f.ry) * cell;
+      graphics.ellipse(f.x * cell, baseline - 0.7, f.rx * cell * 0.78, 1.5).fill({ color: 0x302016, alpha: 0.24 });
+      graphics.ellipse(f.x * cell, baseline - 0.8, f.rx * cell * 0.55, 0.65).fill({ color: 0x241a12, alpha: 0.2 });
+    }
   }
   for (const node of world.surface.resourceNodes) {
     if (node.amount <= 0 || !isInBounds(node.pos, bounds, 10)) continue;
@@ -66,9 +73,9 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     if (enemy.type === "spider" && isInBounds(enemy.lair, bounds, 5)) {
       drawGroundShadow(graphics, lighting, enemy.lair.x * cell, enemy.lair.y * cell + 7, 20, 8, 15);
     }
-    if (enemy.hp > 0 && isInBounds(enemy.pos, bounds, 5)) {
+    if (enemy.hp > 0 && enemy.type !== "lakeMonster" && isInBounds(enemy.pos, bounds, 5)) {
       const shape = creatureDimensions(enemy.type);
-      drawGroundShadow(graphics, lighting, enemy.pos.x * cell, enemy.pos.y * cell + 3, shape.shadowX, shape.shadowY, shape.height * 0.6, enemy.type === "lakeMonster" ? 0.6 : 1);
+      drawGroundShadow(graphics, lighting, enemy.pos.x * cell, enemy.pos.y * cell + 3, shape.shadowX, shape.shadowY, shape.height * 0.6);
     }
   }
 
@@ -78,7 +85,14 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     }
     const scale = residentScale(ant) / 1.85;
     const body = residentPlacement(world, ant, cell);
-    drawGroundShadow(graphics, lighting, body.x, body.groundY + 1, 8 * scale, 3 * scale, 30 * scale, ant.capturedBy ? 0.5 : 1);
+    if (ant.capturedBy) continue;
+    drawGroundShadow(graphics, lighting, body.x, body.groundY, 7 * scale, 2.5 * scale, 25 * scale);
+    const pose = actorMotion.resident(ant), side = pose.look === "side";
+    for (const sign of [-1, 1]) {
+      const contact = pose.walk > 0.15 ? 0.16 + 0.16 * Math.max(0, Math.cos(pose.phase) * sign) : 0.3;
+      graphics.ellipse(body.x + sign * (side ? 2.3 : 3.4) * scale, body.groundY - 0.35, 2.2 * scale, 0.85 * scale)
+        .fill({ color: 0x2d2017, alpha: contact });
+    }
   }
 }
 
@@ -315,6 +329,7 @@ export function updateSurfaceLairs(pool: SpritePool, world: WorldSnapshot, cell:
     const feetY = enemy.lair.y * cell;
     placeSprite(sprite, enemy.lair.x * cell, feetY, 0);
     sprite.zIndex = feetY;
+
   }
 
   endPool(pool);
@@ -389,7 +404,7 @@ export function updateSurfaceEnemies(
     }
 
     const sprite = acquireSprite(pool);
-    const pose = actorMotion.enemy(enemy), art = getCreatureArt(enemy, pose);
+    const pose = actorMotion.enemy(enemy), art = getCreatureArt(enemy, pose, world.tick);
     sprite.texture = art.texture;
     sprite.anchor.set(art.anchorX, art.anchorY);
     const hpRatio = enemy.maxHp > 0 ? Math.max(0.2, Math.min(1, enemy.hp / enemy.maxHp)) : 1;
@@ -400,6 +415,17 @@ export function updateSurfaceEnemies(
     sprite.position.set(enemy.pos.x * cell, enemy.pos.y * cell + pose.bob);
     sprite.rotation = pose.lean;
     sprite.zIndex = feetY;
+    const tailArt = lakeTailArt(enemy, pose, world.tick);
+    if (tailArt) {
+      const tail = acquireSprite(pool), direction = tailArt.mirror ? -1 : 1;
+      tail.texture = tailArt.texture; tail.anchor.set(0, 0.96);
+      tail.scale.set(tailArt.scale * direction, tailArt.scale);
+      // No foot cycle: the body glides while only the tail sweeps sideways.
+      const sway = Math.sin(actorMotion.time * 3 + animationSeed(enemy.id)) * 0.12 * pose.walk;
+      const ox = tailArt.offsetX * direction;
+      tail.position.set(sprite.x + Math.cos(sprite.rotation) * ox, sprite.y + Math.sin(sprite.rotation) * ox);
+      tail.rotation = sprite.rotation + sway; tail.alpha = sprite.alpha; tail.tint = sprite.tint; tail.zIndex = feetY + 0.01;
+    }
 
     if (enemy.carrying > 0) {
       const cargo = acquireSprite(carriedCarrionPool);

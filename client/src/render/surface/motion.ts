@@ -129,9 +129,9 @@ export class MotionTracker {
       const heading = length > 0.0001 ? { x: dx / length, y: dy / length } : { x: 0, y: 0 };
       const motion = this.advance(this.creatures, enemy.id, enemy.pos, heading, elapsed, false);
       if (running) {
-        motion.pose.bob = Math.sin(motion.phase * 2) * (enemy.type === "lakeMonster" ? 1.5 : 0.7) * motion.walk;
+        motion.pose.bob = enemy.type === "lakeMonster" ? 0 : Math.sin(motion.phase * 2) * 0.7 * motion.walk;
         motion.pose.lean = Math.sin(motion.phase) * (enemy.type === "beetle" ? 0.1 : 0.045) * motion.walk;
-        motion.pose.stretch = 1 + Math.sin(this.clock * 2.3 + motion.seed) * 0.018;
+        motion.pose.stretch = enemy.type === "lakeMonster" ? 1 : 1 + Math.sin(this.clock * 2.3 + motion.seed) * 0.018;
       }
     }
     for (const key of this.creatures.keys()) if (!enemies.has(key)) this.creatures.delete(key);

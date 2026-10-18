@@ -35,6 +35,9 @@ export type SurfaceScene = {
   shadowLayer: Graphics;
   campGround: Container;
   buildingGround: Graphics;
+  footGround: Graphics;
+  lakeDetails: Container;
+  lakeRipples: Graphics;
   dynamicLayer: Container;
   fireGlow: Graphics;
   zonesOverlay: Graphics;

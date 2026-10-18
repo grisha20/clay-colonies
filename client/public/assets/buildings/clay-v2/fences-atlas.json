@@ -1,0 +1,36 @@
+{
+  "imageWidth": 1254,
+  "imageHeight": 1254,
+  "columns": 2,
+  "rows": 2,
+  "frames": [
+    {
+      "x": 42,
+      "y": 252,
+      "width": 661,
+      "height": 310,
+      "anchorX": 0.5
+    },
+    {
+      "x": 815,
+      "y": 82,
+      "width": 353,
+      "height": 508,
+      "anchorX": 0.5
+    },
+    {
+      "x": 51,
+      "y": 704,
+      "width": 641,
+      "height": 386,
+      "anchorX": 0.5
+    },
+    {
+      "x": 778,
+      "y": 659,
+      "width": 447,
+      "height": 477,
+      "anchorX": 0.5
+    }
+  ]
+}

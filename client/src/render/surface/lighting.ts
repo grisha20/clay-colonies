@@ -15,9 +15,9 @@ export function surfaceLighting(world: WorldSnapshot, cell: number): SurfaceLigh
 }
 
 export function castShadow(lighting: SurfaceLighting, x: number, y: number, height: number): { dx: number; dy: number; alpha: number } {
-  let dx = lighting.sunX * height * lighting.sunLength * 0.65;
-  let dy = height * lighting.sunLength * 0.25;
-  let alpha = 0.17 * (1 - lighting.darkness);
+  let dx = lighting.sunX * height * lighting.sunLength * 0.5;
+  let dy = height * lighting.sunLength * 0.19;
+  let alpha = 0.14 * (1 - lighting.darkness);
   let strongest = 0;
   for (const light of lighting.lights) {
     const vx = x - light.x, vy = y - light.y, distance = Math.hypot(vx, vy);

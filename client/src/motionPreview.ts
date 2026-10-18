@@ -1,6 +1,6 @@
-import { Application, Container, Sprite, Text } from "pixi.js";
+import { Application, Container, Sprite, Text, TilingSprite } from "pixi.js";
 import type { Ant, Enemy, Fish, FishSpecies, WorldSnapshot } from "../../shared/types";
-import { preloadEnvironmentAssets } from "./render/surface/environment";
+import { getEnvironmentTextures, preloadEnvironmentAssets } from "./render/surface/environment";
 import { preloadGardenArt } from "./render/surface/gardenArt";
 import { preloadCharacterArt } from "./render/surface/characterArt";
 import { preloadCreatureArt } from "./render/surface/creatureArt";
@@ -16,6 +16,10 @@ import { drawGameplay } from "./render/surface/gameplay";
 import { preloadBuildingArt } from "./render/surface/buildingArt";
 import { royalWalk } from "./render/surface/royals";
 import { drawSurfaceGround } from "./render/surface/ground";
+import { lakeLilyPads } from "../../shared/lakeHabitat";
+import { updateLakeDetails } from "./render/surface/lakeArt";
+import { updateFootprints, footprintCount } from "./render/surface/footprints";
+import { BuildingGhost } from "./render/surface/buildingGhost";
 import { campShelterPoints } from "../../shared/campShelter";
 
 const app = new Application();
@@ -67,6 +71,10 @@ function enemy(index: number, type: Enemy["type"], name: string, walking = true,
   world.enemies.push(actor); label(name, index); return actor;
 }
 function loadGroup() {
+  campScene.root.position.set(0, 0);
+  campScene.lakeDetails.visible = group.value === "lake"; campScene.lakeRipples.clear();
+  campScene.footGround.clear();
+  for (const child of actors.children.filter(c => c.label === "preview_ghost")) child.destroy({ children: true });
   elapsed = 0; lastStatusAt = 0; actorMotion.reset(); homes.clear();
   packetSeconds = 0; packetTicks = 0;
   for (const child of campScene.staticLayer.removeChildren()) child.destroy({ children: true });
@@ -91,6 +99,32 @@ function loadGroup() {
         const root = homes.get(actor.id)!; homes.delete(actor.id); actor.id = `royal-${role}-preview-${i}`; homes.set(actor.id, root);
       }
     }
+  } else if (group.value === "lake") {
+    const padIndex = 2, pad = lakeLilyPads("north")[padIndex];
+    campScene.root.position.set(360 - pad.x * cell * scale, 340 - pad.y * cell * scale);
+    const water = new TilingSprite({ texture: getEnvironmentTextures().terrain.lakeShallowFrames[0], width: 480 * cell, height: 480 * cell });
+    water.tint = 0xb3c7ad; campScene.staticLayer.addChild(water);
+    const rest = enemy(0, "lakeMonster", "", false, { lakeId: "north", pos: { ...pad }, lakePadIndex: padIndex, lakeRestUntil: 1e9 }); homes.delete(rest.id);
+    const swim = enemy(1, "lakeMonster", "", true, { lakeId: "north", pos: { x: pad.x + 15, y: pad.y + 11 } });
+    homes.set(swim.id, { ...swim.pos, walking: true });
+    for (const child of labels.removeChildren()) child.destroy();
+  } else if (group.value === "fences" || group.value === "placement") {
+    const add = (type: "hut" | "wall" | "gate", x: number, y: number) => world.surface.buildings.push({ id: `fixture-${x}-${y}`, type, colonyId: "colony-1", pos: { x, y }, stage: "built", hp: 100, maxHp: 100, progress: 1, cost: { clay: 0, wood: 0, stone: 0 }, delivered: { clay: 0, wood: 0, stone: 0 } });
+    if (group.value === "fences") {
+      for (let x = 17; x <= 47; x += 2) add(x === 33 ? "gate" : "wall", x, 23);
+      for (let y = 25; y <= 37; y += 2) add("wall", 17, y);
+      for (let i = 0; i < 4; i++) { const a = ant(i, "", { pos: { x: 25 + i * 5, y: i % 2 ? 26 : 22 } }); homes.delete(a.id); }
+    } else {
+      add("hut", 16, 28); add("hut", 48, 28);
+      for (const [x, y] of [[32, 18], [48, 28]]) {
+        const ghost = new BuildingGhost(); ghost.show(world, "hut", { x, y }, "colony-1");
+        ghost.position.set(x * cell, y * cell); ghost.zIndex = y * cell + 90; ghost.label = "preview_ghost"; actors.addChild(ghost);
+      }
+    }
+    for (const child of labels.removeChildren()) child.destroy();
+  } else if (group.value === "steps") {
+    for (let i = 0; i < 6; i++) { const a = ant(i, "", { pos: { x: 12 + i * 7, y: 17 + i % 2 * 9 } }, true); homes.set(a.id, { ...a.pos, walking: true }); }
+    for (const child of labels.removeChildren()) child.destroy();
   } else if (group.value === "buildings") {
     for (const [i, type] of (["hut", "storage", "workshop", "idol"] as const).entries()) {
       const x = i % 2 ? 48 : 16, y = i < 2 ? 18 : 36;
@@ -170,7 +204,7 @@ function loadGroup() {
   }
 }
 function loadGround() {
-  if (campLike() || group.value === "buildings" || group.value === "royals") {
+  if (campLike() || ["buildings", "royals", "steps", "fences", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
     const terrain = { ...world, surface: { ...world.surface, entrances: world.surface.entrances.length ? world.surface.entrances : [{ x: 32, y: 24 }] } };
     drawSurfaceGround(campScene.staticLayer, actors, terrain, cell, { left: 0, right: 64, top: 0, bottom: 44 }, false);
   }
@@ -178,7 +212,7 @@ function loadGround() {
 group.onchange = () => { loadGroup(); loadGround(); };
 pause.onclick = () => { world.session.speed = world.session.speed ? 0 : Number(speed.value); pause.textContent = world.session.speed ? "Пауза" : "Продолжить"; };
 speed.onchange = () => { if (world.session.speed) world.session.speed = Number(speed.value); };
-loadGroup();
+loadGroup(); loadGround();
 app.ticker.maxFPS = 60;
 app.ticker.add(ticker => {
   const start = performance.now(), dt = Math.min(0.05, ticker.deltaMS / 1000), running = world.session.speed ?? 1;
@@ -221,12 +255,15 @@ app.ticker.add(ticker => {
   for (const a of world.ants) if (!a.capturedBy && !campLike() && group.value !== "combat" && group.value !== "royals") actorMotion.setFacing(a.id, heading, "resident");
   for (const e of world.enemies) actorMotion.setFacing(e.id, heading, "creature");
   const positions = all.map(a => ({ ...a.pos }));
-  for (const actor of all) { const root = homes.get(actor.id); if (root) actor.pos = { x: root.x, y: root.y }; }
+  for (const actor of all) { const root = homes.get(actor.id); if (root && group.value !== "steps" && !group.value.startsWith("crowd")) actor.pos = { x: root.x, y: root.y }; }
   for (const a of world.ants) if (a.capturedBy) { const captor = world.enemies.find(e => e.id === a.capturedBy); if (captor) a.pos = { ...captor.pos }; }
+  if (group.value === "lake") updateLakeDetails(campScene.lakeDetails, campScene.lakeRipples, world, cell, bounds);
+  if (document.querySelector<HTMLInputElement>("#footprints")!.checked) updateFootprints(campScene.footGround, world, cell, bounds);
+  else campScene.footGround.clear();
   updateSurfaceShadows(shadows, world.surface.resourceNodes.length ? { ...world, surface: { ...world.surface, resourceNodes: [] } } : world, cell, bounds);
   updateSurfaceEntrances(campScene, world, cell, JSON.stringify(world.surface.entrances));
   updateFireGlow(campScene.fireGlow, world, cell);
-  updateBuildings(campScene, campLike() || group.value === "buildings" ? world : { ...world, surface: { ...world.surface, buildings: [] } }, cell);
+  updateBuildings(campScene, campLike() || ["buildings", "fences", "placement"].includes(group.value) ? world : { ...world, surface: { ...world.surface, buildings: [] } }, cell);
   drawGameplay(campScene, world, cell);
   updateSurfaceFish(fishes, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);
@@ -236,12 +273,12 @@ app.ticker.add(ticker => {
     const gun = waterGunMount(residentPlacement(world, guard, cell), guard, cell);
     if (gun.target) effects.moveTo(gun.tip.x, gun.tip.y).lineTo(gun.target.x, gun.target.y).stroke({ color: 0x8de5f7, width: 2 });
   }
-  all.forEach((a, i) => { a.pos = positions[i]; });
+  all.forEach((a, i) => { a.pos = positions[i]; if (group.value === "steps" && a.pos.x > 59) a.pos.x = 5; });
   world.ants = normalResidents;
   frameCount++;
   if (start - lastFpsAt >= 1000) { measuredFps = Math.round(frameCount * 1000 / (start - lastFpsAt)); frameCount = 0; lastFpsAt = start; }
   if (start - lastStatusAt > 300) {
-    document.querySelector("#status")!.textContent = `${world.ants.length} жителей · ${world.enemies.length} существ · ${world.surface.fish.length} рыб · ${measuredFps} FPS · подготовка кадра ${(performance.now() - start).toFixed(1)} мс`;
+    document.querySelector("#status")!.textContent = `${world.ants.length} жителей · ${world.enemies.length} существ · ${world.surface.fish.length} рыб · ${footprintCount(campScene.footGround)} следов · ${measuredFps} FPS · подготовка кадра ${(performance.now() - start).toFixed(1)} мс`;
     lastStatusAt = start;
   }
 });
