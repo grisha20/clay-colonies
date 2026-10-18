@@ -11,7 +11,7 @@ import { drawSurfaceGround } from "./ground";
 import { drawSurfacePheromones } from "./pheromones";
 import { drawSurfaceEntranceAt } from "./entrance";
 import { getEnvironmentTextures } from "./environment";
-import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceFish, updateFishingEffects, updateSurfaceWebs, updateSurfaceShadows } from "./entities";
+import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceFish, updateFishingEffects, updateSurfaceWebs, updateSurfaceShadows, updatePropContacts } from "./entities";
 import { offsetSettings } from "./editor";
 import { updateAndDrawParticles } from "./particles";
 import { drawGameplay } from "./gameplay";
@@ -510,7 +510,7 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
     const foundation = buildingFootprint(building);
     if (foundation) {
       const art = getBuildingArt(building.type, foundation.rx * 2 * cell * 1.12);
-      const sprite = new Sprite(art.texture); sprite.anchor.set(art.anchorX, 1); sprite.scale.set(art.scale);
+      const sprite = new Sprite(art.texture); sprite.anchor.set(art.anchorX, art.anchorY); sprite.scale.set(art.scale);
       sprite.position.set(x, (foundation.y + foundation.ry) * cell); sprite.zIndex = sprite.y;
       sprite.label = `${building.type}_${building.id}`;
       scene.dynamicLayer.addChild(sprite); scene.buildingSprites?.push(sprite);
@@ -833,7 +833,7 @@ export function renderSurface(
   const staticKey = [
     world.surface.width,
     world.surface.height,
-    "surface-clay-materials-v4"
+    "surface-clay-materials-v5-grounded"
   ].join(":");
   if (scene.staticKey !== staticKey) {
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);
@@ -881,5 +881,6 @@ export function renderSurface(
   updateFishingEffects(scene.fishingGraphics, world, cell, bounds);
   updateSurfaceAnts(scene.antPool, scene.carriedItemsPool, scene.selectionGraphics, world, cell, bounds);
   drawGameplay(scene, world, cell);
+  updatePropContacts(scene.shadowLayer, scene.dynamicLayer, world, cell, bounds);
   updateAndDrawParticles(scene.particleGraphics, world, cell, camera, viewportWidth, viewportHeight);
 }

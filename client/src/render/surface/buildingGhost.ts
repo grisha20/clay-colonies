@@ -15,7 +15,7 @@ export class BuildingGhost extends Container {
     const warning=reason?null:placementAccessWarning(world.surface,owner,[{type,pos,colonyId:owner,id:"ghost",stage:"built"} as Building]);
     const f = buildingFootprint({ type, pos, stage: "built" } as Building)!;
     const art = getBuildingArt(type, f.rx * 2 * cell * 1.12);
-    this.image.texture = art.texture; this.image.anchor.set(art.anchorX, 1); this.image.scale.set(art.scale);
+    this.image.texture = art.texture; this.image.anchor.set(art.anchorX, art.anchorY); this.image.scale.set(art.scale);
     this.image.position.set(0, (f.y + f.ry - pos.y) * cell); this.image.alpha = 0.5;
     this.image.tint = reason ? 0xef8373 : 0xffffff;
     const color = reason ? 0xe65e46 : warning ? 0xf1bb55 : 0xc2d78a;

@@ -7,7 +7,9 @@ export type SurfaceLighting = { darkness: number; sunX: number; sunLength: numbe
 
 export function surfaceLighting(world: WorldSnapshot, cell: number): SurfaceLighting {
   const sun = dayCycle(world.tick);
-  return { darkness: sun.darkness, sunX: -Math.sin(sun.sunAngle), sunLength: 0.3 + Math.abs(Math.sin(sun.sunAngle)) * 0.7,
+  // Generated models have a baked upper-left key light. Reversing the shadow
+  // at noon contradicts their shaded right side; vary length, keep that key.
+  return { darkness: sun.darkness, sunX: .85, sunLength: 0.65 + Math.abs(Math.sin(sun.sunAngle)) * 0.35,
     lights: world.surface.entrances.map((p, index) => {
       const fire = Math.max(0, Math.min(1, world.colonies[index]?.colony.fire ?? 0));
       return { x: p.x * cell, y: p.y * cell, radius: (7 + fire * 9) * cell, fire };
@@ -16,8 +18,8 @@ export function surfaceLighting(world: WorldSnapshot, cell: number): SurfaceLigh
 
 export function castShadow(lighting: SurfaceLighting, x: number, y: number, height: number): { dx: number; dy: number; alpha: number } {
   let dx = lighting.sunX * height * lighting.sunLength * 0.5;
-  let dy = height * lighting.sunLength * 0.19;
-  let alpha = 0.14 * (1 - lighting.darkness);
+  let dy = height * lighting.sunLength * 0.32;
+  let alpha = 0.22 * (1 - lighting.darkness);
   let strongest = 0;
   for (const light of lighting.lights) {
     const vx = x - light.x, vy = y - light.y, distance = Math.hypot(vx, vy);
@@ -46,23 +48,27 @@ export function shadowOutline(x: number, y: number, rx: number, ry: number, dx: 
   // Sweep a horizontal footprint along the light vector. Rotating an ellipse
   // here turns wide foundations into vertical cigars around noon.
   const points: number[] = [];
-  for (let i = 0; i < 40; i++) {
-    const a = i / 40 * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
     const far = c * dx / Math.max(1, rx) + s * dy / Math.max(1, ry) > 0;
     points.push(x + c * rx * spread + (far ? dx : 0), y + s * ry * spread + (far ? dy : 0));
   }
   return points;
 }
 
-export function drawGroundShadow(g: Graphics, lighting: SurfaceLighting, x: number, y: number, rx: number, ry: number, height = 0, opacity = 1): void {
+export function drawGroundShadow(g: Graphics, lighting: SurfaceLighting, x: number, y: number, rx: number, ry: number, height = 0, opacity = 1, contact = true): void {
   if (height > 0) {
     const cast = castShadow(lighting, x, y, height);
     for (let band = 3; band >= 1; band--) {
-      g.poly(shadowOutline(x, y, rx, ry, cast.dx, cast.dy, 1 + band * 0.08)).fill({ color: 0x453927, alpha: cast.alpha * opacity * 0.22 });
+      // Only the faint outer band reaches the tip. Equal-density displaced
+      // ovals read as the shadow of an airborne object even with correct feet.
+      const reach = band / 3;
+      g.poly(shadowOutline(x, y, rx, ry, cast.dx * reach, cast.dy * reach, 1 + band * 0.1)).fill({ color: 0x423427, alpha: cast.alpha * opacity * 0.3 });
     }
   }
-  const contact = (0.18 - lighting.darkness * 0.035) * opacity;
-  g.ellipse(x, y, rx * 1.12, ry * 1.15).fill({ color: 0x251b14, alpha: contact * 0.25 });
-  g.ellipse(x, y, rx * 0.84, ry * 0.85).fill({ color: 0x251b14, alpha: contact * 0.48 });
-  g.ellipse(x, y, rx * 0.48, ry * 0.5).fill({ color: 0x251b14, alpha: contact * 0.65 });
+  if (!contact) return;
+  const density = (0.22 - lighting.darkness * 0.035) * opacity;
+  g.ellipse(x, y, rx * 1.04, ry).fill({ color: 0x302419, alpha: density * 0.25 });
+  g.ellipse(x, y, rx * 0.8, ry * 0.72).fill({ color: 0x302419, alpha: density * 0.48 });
+  g.ellipse(x, y, rx * 0.55, ry * 0.42).fill({ color: 0x302419, alpha: density * 0.65 });
 }

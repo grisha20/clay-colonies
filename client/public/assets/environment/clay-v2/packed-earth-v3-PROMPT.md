@@ -1,0 +1,7 @@
+# Packed earth v3
+
+Generated with the built-in imagegen tool on 18.10.2026. Reference: `buildings/clay-v2/buildings-atlas.png` (material/style only). Final asset: `packed-earth-v3.png`. Original generated pixels preserved; renderer layers the texture at reduced contrast over a matching clay base.
+
+## Exact prompt
+
+Use case: stylized-concept. Asset type: seamless ground texture for Clayfolk 2D clay stop-motion colony sim. Input image is STYLE/MATERIAL reference only, do not reproduce buildings or objects. Create one square 1024x1024 tile of level compacted warm light umber clay-earth, orthographic directly overhead, filling entire image edge to edge, perfectly tileable in both axes. Same tactile hand sculpted matte clay material and warm muted earthy colors as reference building clay, but less orange, moderately lighter than its shaded walls. Subtle broad natural clay variation with fine sparse sand grains at a consistent tiny scale. Very restrained low contrast, mostly quiet smooth packed earth, tiny soft worn impressions, absolutely no large clods or relief bumps. Neutral diffuse illumination from upper left, no directional cast shadows, no vignette, no gradients across tile, no ambient occlusion at edges. No buildings, no characters, no grass, no stones, no cracks, no borders, no text, no grid. Intended to support small clay figures so they appear standing on an actual clay diorama floor. Surface must not resemble gravel, lawn, fabric, paper or flat pixel art. Single uniform material tile, not an atlas.

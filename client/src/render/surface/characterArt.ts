@@ -2,6 +2,7 @@ import { Assets, Rectangle, Texture } from "pixi.js";
 import type { LookDirection } from "./motion";
 import { loadSpriteAtlas, type LoadedAtlas } from "./atlas";
 import type { HeadSeat } from "./royalHeadgear";
+import { spriteGrounding, type GroundProfile } from "./spriteGrounding";
 
 export const residentAtlasUrl = "/assets/characters/clayfolk/resident-atlas.png";
 // Read-only alpha inspection of the generated atlas. Each frame keeps the
@@ -12,20 +13,37 @@ const frames = [
   [77,656,161,263,.49689], [395,653,165,257,.45758], [698,653,161,266,.53106], [1010,654,161,256,.54037],
   [83,966,147,254,.5034], [410,962,144,264,.42014], [707,965,150,256,.51], [1015,962,142,264,.57746]
 ] as const;
-export type CharacterArt = { texture: Texture; anchorX: number; scale: number; head?: HeadSeat };
+export type CharacterArt = { texture: Texture; anchorX: number; anchorY?: number; scale: number; head?: HeadSeat; ground?: GroundProfile };
 const atlas: CharacterArt[] = [];
 let actions: LoadedAtlas;
 let actionScale = 1;
 let captiveHead: CharacterArt;
 let walking: LoadedAtlas, carryingWalk: LoadedAtlas;
+const registered = new WeakMap<CharacterArt, CharacterArt>();
+const walkFrames = new Map<LoadedAtlas, CharacterArt[]>();
+const actionFrames: CharacterArt[] = [];
+
+function grounded(art: CharacterArt): CharacterArt {
+  let result = registered.get(art);
+  if (!result) {
+    const ground = spriteGrounding(art.texture), delta = art.texture.height - ground.bottom;
+    result = { ...art, ground, anchorY: ground.bottom / art.texture.height,
+      head: art.head ? { ...art.head, y: art.head.y + delta * art.scale } : undefined };
+    registered.set(art, result);
+  }
+  return result;
+}
 
 function walkingArt(source: LoadedAtlas, index: number): CharacterArt {
+  const existing = walkFrames.get(source)?.[index]; if (existing) return existing;
   const f = source.data.frames[index], scale = 19 / f.height;
   // Register the torso on the head centre, so toe travel doesn't shift the
   // whole body left/right between adjacent walking frames.
   const anchorX = f.head ? f.head.x / f.width : f.anchorX;
-  return { texture: source.textures[index], anchorX, scale,
-    head: f.head ? { x: 0, y: (f.head.y - f.height) * scale, width: f.head.width * scale } : undefined };
+  const art = grounded({ texture: source.textures[index], anchorX, scale,
+    head: f.head ? { x: 0, y: (f.head.y - f.height) * scale, width: f.head.width * scale } : undefined });
+  if (!walkFrames.has(source)) walkFrames.set(source, []);
+  walkFrames.get(source)![index] = art; return art;
 }
 
 export async function preloadCharacterArt(): Promise<void> {
@@ -45,6 +63,10 @@ export async function preloadCharacterArt(): Promise<void> {
   }
   const [x, y, width, height, anchorX] = frames[0];
   captiveHead = { texture: new Texture({ source, frame: new Rectangle(x, y, width, Math.round(height * 0.44)) }), anchorX, scale: 19 / 258 };
+  // Analyze every pose up front; no canvas reads or temporary art in the frame loop.
+  for (const art of atlas) grounded(art);
+  for (const source of [walking, carryingWalk]) source.textures.forEach((_, i) => walkingArt(source, i));
+  actions.textures.forEach((texture, i) => actionFrames.push(grounded({ texture, anchorX: actions.data.frames[i].anchorX, scale: actionScale })));
 }
 
 export function getResidentArt(look: LookDirection, facing: number, legFrame = 0, handsRaised = false, working = 0, work = 0): CharacterArt {
@@ -58,9 +80,9 @@ export function getResidentArt(look: LookDirection, facing: number, legFrame = 0
   if (working > 0.4) {
     const actionRow = working > 0.4 ? work > 0.5 ? 3 : 2 : legFrame === 2 ? 1 : 0;
     const index = actionRow * 4 + column;
-    return { texture: actions.textures[index], anchorX: actions.data.frames[index].anchorX, scale: actionScale };
+    return actionFrames[index];
   }
-  return atlas[row * 4 + column];
+  return grounded(atlas[row * 4 + column]);
 }
 
 export function getCaptiveHeadArt(): CharacterArt { return captiveHead; }

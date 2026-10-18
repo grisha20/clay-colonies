@@ -3,6 +3,7 @@ import { Assets, Rectangle, Sprite, Texture } from "pixi.js";
 const summerBase = "/assets/environment/summer-plains/summer_plains_v1.0_standard";
 const customBase = "/assets/environment/custom";
 const clayTerrainUrl = "/assets/environment/clay-v2/terrain-soft-atlas.png";
+const packedEarthUrl = "/assets/environment/clay-v2/packed-earth-v3.png";
 const fishSheetUrl = `${customBase}/fishing/fish-species.png`;
 const campfireFrameUrls = Array.from({ length: 6 }, (_, index) =>
   `${customBase}/campfire/campfire_${String(index).padStart(2, "0")}.png`
@@ -10,6 +11,7 @@ const campfireFrameUrls = Array.from({ length: 6 }, (_, index) =>
 
 export const environmentAssetUrls = [
   clayTerrainUrl,
+  packedEarthUrl,
   `${summerBase}/tiles.png`,
   `${summerBase}/assets.png`,
   "/assets/environment/grassy-topdown-cc0/topdown grassy tileset.png",
@@ -85,7 +87,8 @@ export async function preloadEnvironmentAssets(): Promise<void> {
   const material = (x: number, y: number) => new Texture({ source: base.source, frame: new Rectangle(x * half, y * half, half, half) });
   environmentTextures!.terrain.grass = material(1, 0);
   environmentTextures!.terrain.grassDeep = material(1, 0);
-  environmentTextures!.terrain.dirt = material(1, 1);
+  environmentTextures!.terrain.dirt = Texture.from(packedEarthUrl);
+  environmentTextures!.terrain.dirt.source.scaleMode = "linear";
   environmentTextures!.terrain.dirtSoft = material(0, 0);
 }
 

@@ -8,7 +8,7 @@ import { preloadEquipmentArt } from "./render/surface/equipmentArt";
 import { preloadFishArt } from "./render/surface/fishArt";
 import { actorMotion } from "./render/surface/motion";
 import { updateSurfaceResidents } from "./render/surface/residents";
-import { updateSurfaceEnemies, updateSurfaceFish, updateSurfaceShadows, updateFishingEffects, updateSurfaceFood } from "./render/surface/entities";
+import { updateSurfaceEnemies, updateSurfaceFish, updateSurfaceShadows, updateFishingEffects, updateSurfaceFood, updatePropContacts } from "./render/surface/entities";
 import { residentPlacement, waterGunMount } from "./render/surface/residentLayout";
 import { createSpritePool } from "./render/spritePool";
 import { createSurfaceScene, updateSurfaceEntrances, updateFireGlow, updateBuildings } from "./render/surface/scene";
@@ -46,9 +46,11 @@ const group = document.querySelector<HTMLSelectElement>("#group")!, direction = 
 const speed = document.querySelector<HTMLSelectElement>("#speed")!, pause = document.querySelector<HTMLButtonElement>("#pause")!;
 const light = document.querySelector<HTMLSelectElement>("#light")!;
 const campLike = () => group.value === "camp" || group.value === "drying";
+const floorGroups = ["food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
+const hasFloor = () => campLike() || floorGroups.includes(group.value) || group.value.startsWith("crowd");
 
 function setLight() {
-  if (!campLike()) return;
+  if (!hasFloor()) return;
   world.tick = light.value === "night" || light.value === "off" ? 4800 : light.value === "morning" ? 600 : light.value === "evening" ? 3600 : 2100;
   for (const c of world.colonies) c.colony.fire = light.value === "off" ? 0 : 1;
 }
@@ -87,7 +89,7 @@ function loadGroup() {
   for (const child of labels.removeChildren()) child.destroy();
   const crowd = group.value.startsWith("crowd"); scale = crowd ? 1 : group.value === "royals" ? 3 : 2;
   campScene.root.scale.set(scale);
-  light.disabled = !campLike();
+  light.disabled = !hasFloor();
   // Minimal, isolated rendering fixture; never connects to the game server.
   world = { tick: 0, ants: [], enemies: [], session: { status: "playing", speed: pause.textContent === "Пауза" ? Number(speed.value) : 0 },
     colonies: ["colony-1", "colony-2", "water"].map(id => ({ id, colony: { alarm: false, axes: 1, picks: 1, rods: 1, food: 80, clay: 20, wood: 20, stone: 20, fire: 1, waterWeapons: id === "water" } })),
@@ -240,6 +242,7 @@ function loadGroup() {
       }
     });
   }
+  if (!campLike()) setLight();
 }
 function loadGround() {
   if(group.value==="shore"){
@@ -249,7 +252,7 @@ function loadGround() {
     for(let y=Math.floor((p.y-25)/4);y<=Math.ceil((p.y+25)/4);y++)for(let x=Math.floor((p.x-34)/4);x<=Math.ceil((p.x+34)/4);x++)if(isWaterAt((x+.5)*4,(y+.5)*4))mask.rect(x*4*cell,y*4*cell,4*cell,4*cell).fill(0xffffff);
     water.mask=mask;campScene.waterLayer.addChild(water,mask);return;
   }
-  if (campLike() || ["food", "buildings", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
+  if (hasFloor()) {
     const terrain = { ...world, surface: { ...world.surface, entrances: world.surface.entrances.length ? world.surface.entrances : [{ x: 32, y: 24 }] } };
     drawSurfaceGround(campScene.staticLayer, actors, terrain, cell, { left: 0, right: 64, top: 0, bottom: 44 }, false);
   }
@@ -318,6 +321,7 @@ app.ticker.add(ticker => {
   updateSurfaceFood(sources, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);
   updateSurfaceResidents(people, props, selection, world, cell, bounds);
+  updatePropContacts(shadows, actors, world, cell, bounds);
   updateFishingEffects(effects, world, cell, bounds);
   if (guard?.shot && actorMotion.resident(guard).shotActive) {
     const gun = waterGunMount(residentPlacement(world, guard, cell), guard, cell);

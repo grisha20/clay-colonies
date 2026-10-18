@@ -11,6 +11,7 @@ import { randomGenome } from "../ai/genome";
 import { randomSpiderGenome } from "../ai/spiderGenome";
 import { royalHeadgearFrame, royalHeadgearMount } from "../../../client/src/render/surface/royalHeadgear";
 import { readFileSync } from "node:fs";
+import { alphaGroundProfile, plantedOffset } from "../../../client/src/render/surface/spriteGrounding";
 
 const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
 const s = { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
@@ -147,11 +148,32 @@ scenario("A newly observed shot remains visible at high speed; stale snapshots n
   assert.equal(tracker.resident(ant).shotActive, false);
   tracker.reset(); frame(); assert.equal(tracker.resident(ant).shotActive, false);
 });
-scenario("Sun shadows turn with the day; night shadows point away from the hearth", () => {
+scenario("Transparent gutters and isolated speckles never become the soles", () => {
+  const width = 40, height = 60, rgba = new Uint8ClampedArray(width * height * 4);
+  for (const [left, right, bottom] of [[7, 15, 51], [25, 33, 48]]) {
+    for (let y = 37; y < bottom; y++) for (let x = left; x <= right; x++) rgba[(y * width + x) * 4 + 3] = 255;
+  }
+  rgba[((height - 1) * width + 20) * 4 + 3] = 255;
+  const profile = alphaGroundProfile(rgba, width, height);
+  assert.equal(profile.bottom, 51);
+  assert.equal(profile.feet.length, 2);
+  assert.deepEqual(profile.feet.map(p => p.y), [51, 48]);
+  assert.ok(profile.feet.every(p => p.rx > 2));
+});
+scenario("A support sole stays on the ground through tilt, breathing, mirroring and shrinking", () => {
+  const profile = { bottom: 50, edge: [], feet: [{ x: 10, y: 50, rx: 4 }, { x: 30, y: 47, rx: 4 }] };
+  for (const angle of [-.16, -.022, 0, .022, .16]) for (const scale of [.22, 1, 1.85]) for (const mirror of [-1, 1]) {
+    const sx = scale * mirror, sy = scale * 1.01, offset = plantedOffset(profile, .5, 40, sx, sy, angle);
+    const soles = profile.feet.map(p => -offset + (p.x - 20) * sx * Math.sin(angle) + (p.y - 50) * sy * Math.cos(angle));
+    assert.ok(Math.abs(Math.max(...soles)) < 1e-8);
+    assert.ok(soles.every(y => y <= 1e-8), "no sole penetrates the ground");
+  }
+});
+scenario("Day shadows match the models' upper-left light; night shadows point away from the hearth", () => {
   world.tick = 600;
   assert.ok(castShadow(surfaceLighting(world, 8), 100, 100, 30).dx > 0);
   world.tick = 3600;
-  assert.ok(castShadow(surfaceLighting(world, 8), 100, 100, 30).dx < 0);
+  assert.ok(castShadow(surfaceLighting(world, 8), 100, 100, 30).dx > 0);
   world.tick = 4800;
   world.colonies.forEach(c => { c.colony.fire = 1; });
   const light = surfaceLighting(world, 8), camp = light.lights[0];

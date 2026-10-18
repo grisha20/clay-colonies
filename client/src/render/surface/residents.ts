@@ -5,10 +5,10 @@ import { acquireSprite, beginPool, endPool } from "../spritePool";
 import type { SpritePool, ViewBounds } from "../types";
 import { offsetSettings } from "./editor";
 import { actorMotion } from "./motion";
-import { getCaptiveHeadArt, getResidentArt } from "./characterArt";
+import { getCaptiveHeadArt } from "./characterArt";
 import { getEquipmentArt, type EquipmentKind } from "./equipmentArt";
 import { attachItem, type ItemMount } from "./attachment";
-import { fishingRodMount, residentPlacement, waterGunMount } from "./residentLayout";
+import { fishingRodMount, residentArt, residentPlacement, waterGunMount } from "./residentLayout";
 import { visualIndex } from "./visualIndex";
 import { getFishArt } from "./fishArt";
 import { royalKind } from "./royals";
@@ -42,9 +42,9 @@ export function updateSurfaceResidents(pool: SpritePool, items: SpritePool, sele
       ball.rotation = pose.spin;
     }
     const body = acquireSprite(pool);
-    const art = mount.captive === "beetle" ? getCaptiveHeadArt() : getResidentArt(pose.look, facing, pose.legFrame, carried, pose.attackActive ? 1 : pose.working, pose.attackActive ? pose.attack : pose.work);
+    const art = mount.captive === "beetle" ? getCaptiveHeadArt() : residentArt(ant);
     body.texture = art.texture;
-    body.anchor.set(art.anchorX, mount.captive === "beetle" ? 0.65 : 1);
+    body.anchor.set(art.anchorX, mount.captive === "beetle" ? 0.65 : art.anchorY ?? 1);
     body.position.set(x, y - (mount.captive === "beetle" ? 8 * size / 1.85 : 0));
     const bodyScale = size * art.scale * (mount.captive === "beetle" ? 0.7 : 1);
     body.scale.set(bodyScale * (2 - mount.stretch), bodyScale * mount.stretch);

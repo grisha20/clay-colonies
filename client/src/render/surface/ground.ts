@@ -115,10 +115,6 @@ type ForestTree = {
 };
 
 function addAssetTree(shadowRoot: Container, spriteRoot: Container, tree: ForestTree): void {
-  const shadow = new Graphics();
-  shadow.ellipse(tree.x + tree.scale * 8, tree.y - tree.scale * 2, tree.scale * 54, tree.scale * 14).fill({ color: 0x1d160d, alpha: 0.24 });
-  shadow.ellipse(tree.x - tree.scale * 3, tree.y - tree.scale * 5, tree.scale * 35, tree.scale * 8).fill({ color: 0x1d160d, alpha: 0.1 });
-  shadowRoot.addChild(shadow);
 
   const sprite = new Sprite(tree.texture);
   sprite.anchor.set(0.5, 1);
@@ -140,9 +136,6 @@ function addAssetProp(
   rotation = 0,
   tint = 0xffffff
 ): void {
-  const shadow = new Graphics();
-  shadow.ellipse(x + scale * 4, y - scale * 2, scale * 18, scale * 5).fill({ color: 0x1d160d, alpha: 0.18 });
-  shadowRoot.addChild(shadow);
 
   const sprite = new Sprite(texture);
   sprite.anchor.set(0.5, 1);
@@ -304,7 +297,11 @@ export function drawSurfaceGround(
   // One continuous material under a feathered mask. The previous 8px stamps
   // left a square pixel fringe against the sculpted buildings.
   const soil = new TilingSprite({ texture: dirtTexture, width: pixelRight - pixelLeft, height: pixelBottom - pixelTop });
-  soil.position.set(pixelLeft, pixelTop); soil.tileScale.set(0.26); soil.tilePosition.set(-pixelLeft, -pixelTop); soil.tint = 0xe5dfca;
+  soil.position.set(pixelLeft, pixelTop); soil.tileScale.set(0.22); soil.tilePosition.set(-pixelLeft, -pixelTop); soil.tint = 0xe4ecdf; soil.alpha = .52;
+  // Quiet material lets small contact shadows read; retain texture without a
+  // noisy gravel plane competing with the clay models' much larger features.
+  const soilMaterial = new Container();
+  soilMaterial.addChild(new Graphics().rect(pixelLeft, pixelTop, soil.width, soil.height).fill(0xbe9c6c), soil);
   const maskCanvas = document.createElement("canvas"), maskStep = 4;
   maskCanvas.width = Math.ceil(soil.width / maskStep); maskCanvas.height = Math.ceil(soil.height / maskStep);
   const context = maskCanvas.getContext("2d")!, pixels = context.createImageData(maskCanvas.width, maskCanvas.height);
@@ -323,10 +320,10 @@ export function drawSurfaceGround(
   // Own the filter: Pixi's pooled alpha-mask filter retains a destroyed source
   // after this temporary ground container is baked, breaking the next lake mask.
   const soilFilter = new MaskFilter({ sprite: soilMask, channel: "alpha" });
-  soil.filters = [soilFilter]; soilMask.renderable = false;
-  soil.on("destroyed", () => soilFilter.destroy());
+  soilMaterial.filters = [soilFilter]; soilMask.renderable = false;
+  soilMaterial.on("destroyed", () => soilFilter.destroy());
   soilMask.on("destroyed", () => maskTexture.destroy(true));
-  shadowRoot.addChild(soil, soilMask);
+  shadowRoot.addChild(soilMaterial, soilMask);
   if (decorate) drawLakeBanks(shadowRoot, spriteRoot, cell, width, height, props.rockSmall, props.grassTuft);
 
   const ground = new Graphics();

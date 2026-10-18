@@ -5,6 +5,7 @@ import { preloadLakeArt } from "./lakeArt";
 import { lakeMonsterResting } from "../../../../shared/lakeHabitat";
 import { Rectangle, Texture } from "pixi.js";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { spriteGrounding } from "./spriteGrounding";
 
 const definitions = {
   spider: { url: "/assets/characters/creatures/spider-atlas.png", height: 54, shadowX: 29, shadowY: 10 },
@@ -17,6 +18,7 @@ const swimParts = new Map<number, { body: Texture; tail: Texture }>();
 export async function preloadCreatureArt(): Promise<void> {
   await Promise.all(Object.entries(definitions).map(async ([key, def]) => loaded.set(key as Enemy["type"], await loadSpriteAtlas(def.url))));
   [swimming] = await Promise.all([loadSpriteAtlas("/assets/characters/creatures/lake-swim-atlas.png"), preloadLakeArt()]);
+  for (const atlas of loaded.values()) atlas.textures.forEach(spriteGrounding);
 }
 export function creatureDimensions(type: Enemy["type"]) { return definitions[type]; }
 export function getSpiderCarcassArt() {
@@ -42,7 +44,8 @@ export function getCreatureArt(enemy: Enemy, pose: ResidentPose, tick = 0) {
   const row = anticipation ? 3 : pose.legFrame === 1 ? 1 : pose.legFrame === 2 ? 2 : 0;
   const index = row * 4 + col, frame = atlas.data.frames[index];
   const referenceHeight = atlas.data.frames.slice(0, 4).reduce((sum, f) => sum + f.height, 0) / 4;
-  return { texture: atlas.textures[index], anchorX: frame.anchorX, anchorY: enemy.type==="lakeMonster"?1:0.78,
+  const ground = spriteGrounding(atlas.textures[index]);
+  return { texture: atlas.textures[index], ground, anchorX: frame.anchorX, anchorY: ground.bottom / frame.height,
     scale: definitions[enemy.type].height / referenceHeight, mirror: false };
 }
 

@@ -1,4 +1,4 @@
-import { Graphics } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
 import type { WorldSnapshot } from "../../../../shared/types";
 import { acquireSprite, beginPool, deterministicOffset, endPool, placeSprite } from "../spritePool";
 import type { SpritePool, ViewBounds } from "../types";
@@ -7,10 +7,11 @@ import { getEnvironmentTextures } from "./environment";
 import { actorMotion, animationSeed, residentScale } from "./motion";
 import { creatureDimensions, getCreatureArt, getSpiderCarcassArt, lakeTailArt } from "./creatureArt";
 import { getEquipmentArt } from "./equipmentArt";
-import { fishingRodMount, residentPlacement } from "./residentLayout";
+import { fishingRodMount, residentArt, residentPlacement } from "./residentLayout";
+import { getBuildingArt } from "./buildingArt";
+import { drawPlacedContact, drawSpriteContact, plantedOffset, spriteGrounding } from "./spriteGrounding";
 import { getFishArt, swimmingFishArt } from "./fishArt";
 import { surfaceLighting, drawGroundShadow } from "./lighting";
-import { campPileRoots } from "./entrance";
 import { offsetSettings } from "./editor";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
 import { fishingCastActive } from "../../../../shared/fishingCast";
@@ -26,14 +27,9 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
   graphics.position.set(0, 0);
   graphics.alpha = 1;
 
-  for (const [index, camp] of world.surface.entrances.entries()) {
+  for (const camp of world.surface.entrances) {
     const x = camp.x * cell, y = camp.y * cell;
     drawGroundShadow(graphics, lighting, x, y + 1, 24, 9, 0, 1.25);
-    for (const kind of Object.keys(campPileRoots) as Array<keyof typeof campPileRoots>) {
-      if ((world.colonies[index]?.colony[kind] ?? 0) <= 0.5) continue;
-      const root = campPileRoots[kind];
-      drawGroundShadow(graphics, lighting, x + root.x, y + root.y - 3, kind === "food" ? 19 : 15, 4, 8, 0.7);
-    }
   }
 
   for (const building of world.surface.buildings) {
@@ -43,19 +39,9 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     // a shadow at every cell centre would put a dark blob inside open gates.
     if (!f) continue;
     const y = (f.y + f.ry * 0.35) * cell;
-    drawGroundShadow(graphics, lighting, building.pos.x * cell, y, f.rx * cell, f.ry * cell * 0.85, building.type === "idol" ? 30 : 48);
-    if (f) {
-      // A narrow seam touches the visible bottom edge; the broad footprint
-      // alone read as an oval detached from the pasted-on sprite.
-      const baseline = (f.y + f.ry) * cell;
-      graphics.ellipse(f.x * cell, baseline - 0.7, f.rx * cell * 0.78, 1.5).fill({ color: 0x302016, alpha: 0.24 });
-      graphics.ellipse(f.x * cell, baseline - 0.8, f.rx * cell * 0.55, 0.65).fill({ color: 0x241a12, alpha: 0.2 });
-    }
-  }
-  for (const node of world.surface.resourceNodes) {
-    if (node.amount <= 0 || submergedClay(node) || !isInBounds(node.pos, bounds, 10)) continue;
-    if (node.kind === "tree") drawGroundShadow(graphics, lighting, node.pos.x * cell, node.pos.y * cell, 18, 6, 54);
-    else if (!node.id.startsWith("wash-")) drawGroundShadow(graphics, lighting, node.pos.x * cell, node.pos.y * cell + 7, node.kind === "loose-stone" ? 7 : 16, 5, 8, 0.7);
+    drawGroundShadow(graphics, lighting, building.pos.x * cell, y, f.rx * cell * .9, f.ry * cell * .65, building.type === "idol" ? 25 : 46, 1, false);
+    const art = getBuildingArt(building.type, f.rx * 2 * cell * 1.12);
+    drawSpriteContact(graphics, art.ground, f.x * cell, (f.y + f.ry) * cell, art.scale, art.anchorX, art.texture.width);
   }
 
   for (const source of world.surface.foodSources) {
@@ -64,16 +50,9 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     }
     const size = Math.min(20, 7 + Math.sqrt(source.amount) * 1.8);
     const fruit = (source.kind ?? "food") === "food";
-    drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.3, fruit ? 18 : 0, 0.8);
+    if (fruit) drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.3, 18, .7, false);
   }
 
-  for (const source of world.surface.carrion) {
-    if (source.amount <= 0 || submergedCorpse(source) || !isInBounds(source.pos, bounds, 5)) {
-      continue;
-    }
-    const size = Math.min(18, 8 + Math.sqrt(source.amount) * 1.4);
-    drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.35, 0, 0.85);
-  }
 
   for (const enemy of world.enemies) {
     if (enemy.type === "spider" && isInBounds(enemy.lair, bounds, 5)) {
@@ -81,7 +60,7 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     }
     if (enemy.hp > 0 && (enemy.type !== "lakeMonster" || !isWaterAt(enemy.pos.x,enemy.pos.y)) && isInBounds(enemy.pos, bounds, 5)) {
       const shape = creatureDimensions(enemy.type);
-      drawGroundShadow(graphics, lighting, enemy.pos.x * cell, enemy.pos.y * cell + 3, shape.shadowX, shape.shadowY, shape.height * 0.6);
+      drawGroundShadow(graphics, lighting, enemy.pos.x * cell, enemy.pos.y * cell, shape.shadowX * .8, shape.shadowY * .45, shape.height * .65, .8, false);
     }
   }
 
@@ -92,12 +71,16 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     const scale = residentScale(ant) / 1.85;
     const body = residentPlacement(world, ant, cell);
     if (ant.capturedBy) continue;
-    drawGroundShadow(graphics, lighting, body.x, body.groundY, 7 * scale, 2.5 * scale, 25 * scale);
-    const pose = actorMotion.resident(ant), side = pose.look === "side";
-    for (const sign of [-1, 1]) {
-      const contact = pose.walk > 0.15 ? 0.16 + 0.16 * Math.max(0, Math.cos(pose.phase) * sign) : 0.3;
-      graphics.ellipse(body.x + sign * (side ? 2.3 : 3.4) * scale, body.groundY - 0.35, 2.2 * scale, 0.85 * scale)
-        .fill({ color: 0x2d2017, alpha: contact });
+    if (isWaterAt(ant.pos.x, ant.pos.y)) continue;
+    drawGroundShadow(graphics, lighting, body.x, body.groundY, 5 * scale, 1.6 * scale, 27 * scale, .9, false);
+    const art = residentArt(ant), c = Math.cos(body.rotation), s = Math.sin(body.rotation);
+    for (const foot of art.ground?.feet ?? []) {
+      const fx = (foot.x - art.anchorX * art.texture.width) * art.scale * body.size * (2 - body.stretch);
+      const fy = (foot.y - art.ground!.bottom) * art.scale * body.size * body.stretch;
+      const x = body.x + fx * c - fy * s, y = body.y + fx * s + fy * c;
+      const rx = Math.max(.8 * scale, foot.rx * art.scale * body.size);
+      graphics.ellipse(x, y + .25 * scale, rx * 1.22, 1.1 * scale).fill({ color: 0x302419, alpha: .15 });
+      graphics.ellipse(x, y, rx, .75 * scale).fill({ color: 0x251b14, alpha: .44 });
     }
   }
 }
@@ -130,6 +113,7 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
       if (source.amount <= 0) continue;
       if (source.kind === "spiderCarcass") {
         const body = acquireSprite(pool), art = getSpiderCarcassArt();
+        body.label = "ground_food";
         body.texture = art.texture; body.anchor.set(.5);
         const scale = art.scale * (.72 + .28 * Math.min(1, source.amount / 140));
         body.scale.set(scale, -scale * .78); body.tint = 0xb9a99a; body.alpha = .88;
@@ -138,12 +122,14 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
       const chunks = Math.min(6, Math.ceil(source.amount / 30));
       for (let i = 0; i < chunks; i++) {
         const meat = acquireSprite(pool), art = getEquipmentArt("meat", 12), offset = deterministicOffset(i + source.id.length, 18);
+        meat.label = "ground_food";
         meat.texture = art.texture; meat.anchor.set(.5); meat.scale.set(art.scale); meat.tint = 0xffffff; meat.alpha = 1;
         placeSprite(meat, x + offset.x, y + offset.y, i * .7); meat.zIndex = y + offset.y + .1;
       }
       continue;
     }
     const bush = acquireSprite(pool);
+    bush.label = "ground_food";
     bush.texture = props.foodBush;
     bush.anchor.set(0.5, 1);
     bush.scale.set(0.96);
@@ -166,6 +152,7 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
       }
 
       const berry = acquireSprite(pool);
+      berry.label = "";
       berry.texture = tomatoTexture;
       berry.anchor.set(0.5);
       // Масштаб ~1.0 для идеального 11x11 пиксельного размера
@@ -312,6 +299,7 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
     }
   }
 
+  for (let i = 0; i < pool.cursor; i++) pool.sprites[i].label = "ground_resource";
   endPool(pool);
 }
 
@@ -327,6 +315,7 @@ export function updateSurfaceCarrion(pool: SpritePool, world: WorldSnapshot, cel
     for (let index = 0; index < chunks; index += 1) {
       const sprite = acquireSprite(pool);
       const offset = deterministicOffset(index + source.id.length * 3, 11);
+      sprite.label = "ground_food";
       const food = getEquipmentArt("meat", 10 + Math.min(5, Math.sqrt(source.amount)));
       sprite.texture = food.texture; sprite.anchor.set(0.5); sprite.scale.set(food.scale); sprite.alpha = 1; sprite.tint = 0xffffff;
       const feetY = source.pos.y * cell + offset.y;
@@ -434,8 +423,11 @@ export function updateSurfaceEnemies(
     sprite.scale.set(art.scale * (art.mirror ? -1 : 1) * (2 - pose.stretch), art.scale * pose.stretch);
     sprite.alpha = 1; sprite.tint = hpRatio < 0.3 ? 0xffd3bd : 0xffffff;
     if (world.ants.some(a => a.melee && actorMotion.resident(a).attack > 0.7 && Math.hypot(a.melee.to.x - enemy.pos.x, a.melee.to.y - enemy.pos.y) < 4)) sprite.tint = 0xffb88d;
-    const feetY = enemy.pos.y * cell + (enemy.type==="lakeMonster"&&!isWaterAt(enemy.pos.x,enemy.pos.y)?0:creatureDimensions(enemy.type).height * 0.22);
-    sprite.position.set(enemy.pos.x * cell, enemy.pos.y * cell + pose.bob);
+    const swimming = enemy.type === "lakeMonster" && isWaterAt(enemy.pos.x,enemy.pos.y);
+    const feetY = enemy.pos.y * cell;
+    const support = "ground" in art && art.ground ? plantedOffset(art.ground, art.anchorX, art.texture.width, sprite.scale.x, sprite.scale.y, pose.lean) : 0;
+    sprite.position.set(enemy.pos.x * cell, enemy.pos.y * cell + (swimming ? pose.bob : -support));
+    sprite.label = swimming ? "swimming_creature" : "ground_creature";
     sprite.rotation = pose.lean;
     sprite.zIndex = feetY;
     const tailArt = lakeTailArt(enemy, pose, world.tick);
@@ -468,3 +460,22 @@ export function updateSurfaceEnemies(
 }
 
 export { updateSurfaceResidents as updateSurfaceAnts, setSelectedAntId } from "./residents";
+
+/** Per-item contacts stay attached even when a pile's pieces are scattered or rotated. */
+export function updatePropContacts(g: Graphics, root: Container, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  const lighting = surfaceLighting(world, cell);
+  for (const child of root.children) {
+    if (!(child instanceof Sprite) || !child.visible || child.alpha <= 0) continue;
+    const label = child.label;
+    const hearth = label.startsWith("campfire_");
+    if (!(hearth || label.startsWith("camp_stock_") || ["ground_resource", "ground_food", "ground_creature", "static_prop", "building_garden", "fence_post"].includes(label))) continue;
+    const pos = { x: child.x / cell, y: child.y / cell };
+    if (!isInBounds(pos, bounds, 15)) continue;
+    if (!hearth && label !== "ground_creature" && label !== "building_garden") {
+      const width = Math.abs(child.width), height = Math.abs(child.height), profile = spriteGrounding(child.texture);
+      const groundY = child.y + ((child.scale.y < 0 ? profile.top ?? 0 : profile.bottom) - child.anchor.y * child.texture.height) * child.scale.y;
+      drawGroundShadow(g, lighting, child.x, groundY, width * .27, Math.min(3, width * .08), height * .6, .65, false);
+    }
+    drawPlacedContact(g, child, label === "building_garden" ? .45 : .9);
+  }
+}

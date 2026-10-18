@@ -2,7 +2,7 @@ import type { WorldSnapshot } from "../../../../shared/types";
 import type { SurfaceScene } from "../types";
 import { actorMotion, animationSeed } from "./motion";
 import { residentPlacement, waterGunMount } from "./residentLayout";
-import { creatureDimensions } from "./creatureArt";
+import { getCreatureArt } from "./creatureArt";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { updateNightVeil } from "./nightLighting";
 import { getHoveredGround } from "./interaction";
@@ -64,7 +64,8 @@ export function drawGameplay(scene: SurfaceScene, world: WorldSnapshot, cell: nu
   }
   for (const enemy of world.enemies) {
     if (enemy.hp <= 0) continue;
-    const x = enemy.pos.x * cell, y = enemy.pos.y * cell - creatureDimensions(enemy.type).height * 0.78 - 7;
+    const pose = actorMotion.enemy(enemy), art = getCreatureArt(enemy, pose, world.tick);
+    const x = enemy.pos.x * cell, y = enemy.pos.y * cell - art.texture.height * art.scale * art.anchorY * pose.stretch - 7;
     if (enemy.type === "lakeMonster" && isWaterAt(enemy.pos.x, enemy.pos.y)) {
       const ripple = Math.sin(actorMotion.time * 3 + enemy.pos.x) * 2;
       g.ellipse(x, enemy.pos.y * cell + 5, 28 + ripple, 8 + ripple * 0.3).stroke({ color: 0xb0e1cf, width: 1, alpha: 0.24 });
