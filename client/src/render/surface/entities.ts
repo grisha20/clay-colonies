@@ -5,7 +5,7 @@ import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
 import { getEnvironmentTextures } from "./environment";
 import { actorMotion, animationSeed, residentScale } from "./motion";
-import { creatureDimensions, getCreatureArt, lakeTailArt } from "./creatureArt";
+import { creatureDimensions, getCreatureArt, getSpiderCarcassArt, lakeTailArt } from "./creatureArt";
 import { getEquipmentArt } from "./equipmentArt";
 import { fishingRodMount, residentPlacement } from "./residentLayout";
 import { getFishArt, swimmingFishArt } from "./fishArt";
@@ -62,7 +62,8 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
       continue;
     }
     const size = Math.min(20, 7 + Math.sqrt(source.amount) * 1.8);
-    drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.3, 18, 0.8);
+    const fruit = (source.kind ?? "food") === "food";
+    drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.3, fruit ? 18 : 0, 0.8);
   }
 
   for (const source of world.surface.carrion) {
@@ -124,6 +125,23 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
 
     const x = source.pos.x * cell;
     const y = source.pos.y * cell;
+    if ((source.kind ?? "food") !== "food") {
+      if (source.amount <= 0) continue;
+      if (source.kind === "spiderCarcass") {
+        const body = acquireSprite(pool), art = getSpiderCarcassArt();
+        body.texture = art.texture; body.anchor.set(.5);
+        const scale = art.scale * (.72 + .28 * Math.min(1, source.amount / 140));
+        body.scale.set(scale, -scale * .78); body.tint = 0xb9a99a; body.alpha = .88;
+        placeSprite(body, x, y, .16); body.zIndex = y;
+      }
+      const chunks = Math.min(6, Math.ceil(source.amount / 30));
+      for (let i = 0; i < chunks; i++) {
+        const meat = acquireSprite(pool), art = getEquipmentArt("meat", 12), offset = deterministicOffset(i + source.id.length, 18);
+        meat.texture = art.texture; meat.anchor.set(.5); meat.scale.set(art.scale); meat.tint = 0xffffff; meat.alpha = 1;
+        placeSprite(meat, x + offset.x, y + offset.y, i * .7); meat.zIndex = y + offset.y + .1;
+      }
+      continue;
+    }
     const bush = acquireSprite(pool);
     bush.texture = props.foodBush;
     bush.anchor.set(0.5, 1);

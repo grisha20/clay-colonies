@@ -8,7 +8,7 @@ import { preloadEquipmentArt } from "./render/surface/equipmentArt";
 import { preloadFishArt } from "./render/surface/fishArt";
 import { actorMotion } from "./render/surface/motion";
 import { updateSurfaceResidents } from "./render/surface/residents";
-import { updateSurfaceEnemies, updateSurfaceFish, updateSurfaceShadows, updateFishingEffects } from "./render/surface/entities";
+import { updateSurfaceEnemies, updateSurfaceFish, updateSurfaceShadows, updateFishingEffects, updateSurfaceFood } from "./render/surface/entities";
 import { residentPlacement, waterGunMount } from "./render/surface/residentLayout";
 import { createSpritePool } from "./render/spritePool";
 import { createSurfaceScene, updateSurfaceEntrances, updateFireGlow, updateBuildings } from "./render/surface/scene";
@@ -37,6 +37,7 @@ app.stage.addChild(campScene.root, labels);
 const people = createSpritePool(actors, () => new Sprite()), props = createSpritePool(actors, () => new Sprite());
 const enemies = createSpritePool(actors, () => new Sprite()), loot = createSpritePool(actors, () => new Sprite());
 const fishes = createSpritePool(fishLayer, () => new Sprite());
+const sources = createSpritePool(actors, () => new Sprite());
 const cell = 8, bounds = { left: -Infinity, right: Infinity, top: -Infinity, bottom: Infinity };
 let world: WorldSnapshot, elapsed = 0, lastStatusAt = 0, scale = 2, frameCount = 0, measuredFps = 0, lastFpsAt = performance.now();
 let packetSeconds = 0, packetTicks = 0;
@@ -102,6 +103,10 @@ function loadGroup() {
         const actor = ant(i + j * 4, `${role === "king" ? "Король" : "Королева"} · ${name}`, { heading: h }, true);
         const root = homes.get(actor.id)!; homes.delete(actor.id); actor.id = `royal-${role}-preview-${i}`; homes.set(actor.id, root);
       }
+    }
+  } else if(group.value==="food") {
+    for (const [i, kind, amount, text] of [[0,"food",140,"Ягодный куст"],[1,"spiderCarcass",140,"Туша паука · мясо"],[2,"spiderCarcass",12,"Туша после сбора"],[3,"carrion",30,"Оставленное мясо"]] as const) {
+      world.surface.foodSources.push({id:`source-${i}`,kind,amount,pos:home(`source-${i}`,i,false)});label(text,i);
     }
   } else if(group.value==="shore") {
     const portal=lakeShorePortals("north")[0];campScene.root.position.set(512-portal.water.x*cell*scale,345-portal.water.y*cell*scale);
@@ -237,7 +242,7 @@ function loadGround() {
     for(let y=Math.floor((p.y-25)/4);y<=Math.ceil((p.y+25)/4);y++)for(let x=Math.floor((p.x-34)/4);x<=Math.ceil((p.x+34)/4);x++)if(isWaterAt((x+.5)*4,(y+.5)*4))mask.rect(x*4*cell,y*4*cell,4*cell,4*cell).fill(0xffffff);
     water.mask=mask;campScene.waterLayer.addChild(water,mask);return;
   }
-  if (campLike() || ["buildings", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
+  if (campLike() || ["food", "buildings", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
     const terrain = { ...world, surface: { ...world.surface, entrances: world.surface.entrances.length ? world.surface.entrances : [{ x: 32, y: 24 }] } };
     drawSurfaceGround(campScene.staticLayer, actors, terrain, cell, { left: 0, right: 64, top: 0, bottom: 44 }, false);
   }
@@ -303,6 +308,7 @@ app.ticker.add(ticker => {
   updateBuildings(campScene, campLike() || ["buildings", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) ? world : { ...world, surface: { ...world.surface, buildings: [] } }, cell);
   drawGameplay(campScene, world, cell);
   updateSurfaceFish(fishes, world, cell, bounds);
+  updateSurfaceFood(sources, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);
   updateSurfaceResidents(people, props, selection, world, cell, bounds);
   updateFishingEffects(effects, world, cell, bounds);

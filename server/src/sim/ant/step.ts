@@ -6,7 +6,7 @@ import type { World } from "../world";
 import { moveBuilding } from "./build";
 import { moveGuarding } from "./guard";
 import { tryCrossLayer, updateStuckTracking } from "./movement";
-import { canUseStorageMeal, shouldReturnFromSurface } from "./colony-state";
+import { canUseStorageMeal } from "./colony-state";
 import { handleEnemyColonyCombat, moveFighting, movePanicking } from "./combat";
 import {
   moveCarrying,
@@ -91,7 +91,9 @@ export function stepSurface(world: World, ant: Ant): void {
     return;
   }
 
-  if (ant.state === "return" || (ant.forageRole !== "scout" && shouldReturnFromSurface(world, ant))) {
+  // Settlement assignment already controls the workforce. The legacy random
+  // recall fought the food route, reversing healthy workers every few ticks.
+  if (ant.state === "return") {
     moveHungryHome(world, ant);
     return;
   }

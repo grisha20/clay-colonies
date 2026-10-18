@@ -19,6 +19,10 @@ export async function preloadCreatureArt(): Promise<void> {
   [swimming] = await Promise.all([loadSpriteAtlas("/assets/characters/creatures/lake-swim-atlas.png"), preloadLakeArt()]);
 }
 export function creatureDimensions(type: Enemy["type"]) { return definitions[type]; }
+export function getSpiderCarcassArt() {
+  const atlas = loaded.get("spider")!;
+  return { texture: atlas.textures[0], scale: definitions.spider.height / atlas.data.frames[0].height };
+}
 export function getCreatureArt(enemy: Enemy, pose: ResidentPose, tick = 0) {
   if (enemy.type === "lakeMonster" && isWaterAt(enemy.pos.x,enemy.pos.y)) {
     const col = pose.look === "front" ? 0 : pose.look === "back" ? 2 : pose.facing < 0 ? 3 : 1;

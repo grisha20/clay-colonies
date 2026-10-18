@@ -19,6 +19,7 @@
     "check:grounding": "tsx server/src/bench/groundingCheck.ts",
     "check:fences": "tsx server/src/bench/fenceCheck.ts",
     "check:navigation": "tsx server/src/bench/navigationCheck.ts",
+    "check:jitter": "tsx server/src/bench/jitterCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },
   "devDependencies": {

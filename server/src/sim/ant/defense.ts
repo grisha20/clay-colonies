@@ -2,13 +2,15 @@ import type { Ant, Vec2 } from "../../../../shared/types";
 import { LAKE_DEFINITIONS, isWaterAt } from "../../../../shared/surfaceTerrain";
 import { CONFIG } from "../../config";
 import type { World } from "../world";
-import { isWallBlockedAt } from "../building";
+import { isWallBlockedAt, isSurfaceBlockedAt } from "../building";
+import { surfaceRoute } from "../../../../shared/surfaceNavigation";
 import { moveSurfaceToward, tryCrossLayer } from "./movement";
 import { dissolveAnt } from "../water";
 import { consumeFoodStock } from "../foodStock";
 import { markMelee, settleMeleePosition } from "../melee";
 
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
+const refuges = new WeakMap<Ant, { enemyId: string; origin: Vec2; goal: Vec2; until: number }>();
 let shorePoints: Vec2[] | undefined;
 function waterBanks(): Vec2[] {
   if (shorePoints) return shorePoints;
@@ -97,7 +99,13 @@ export function moveDefending(world: World, ant: Ant): boolean {
 /** Alarm and visible danger take precedence over ordinary jobs. Cargo is kept. */
 export function moveToSafety(world: World, ant: Ant): boolean {
   if (ant.job === "guard") return false;
-  const danger = world.enemies.find(e => e.hp > 0 && dist(e.pos, ant.pos) < 11);
+  let refuge = refuges.get(ant);
+  const rememberedId = refuge?.enemyId;
+  const remembered = rememberedId && world.enemies.find(e => e.id === rememberedId && e.hp > 0);
+  const home = world.surface.entrance;
+  const danger = world.enemies.find(e => e.hp > 0 && dist(e.pos, ant.pos) < 11) ??
+    (remembered && (world.tick < refuge!.until || dist(remembered.pos, home) < 14) ? remembered : undefined);
+  if (!danger) { refuges.delete(ant); refuge = undefined; }
   if (!world.colony.alarm && !danger && (ant.rescuedUntil ?? 0) <= world.tick) return false;
   if (!world.colony.alarm && danger?.type === "spider" && ant.carrying <= 0 &&
       (danger.raid || world.ants.filter(a => a.state !== "dead").length > 10) &&
@@ -105,7 +113,28 @@ export function moveToSafety(world: World, ant: Ant): boolean {
       (ant.state === "fight" || world.ants.filter(a => a.state === "fight" && a.job !== "guard").length < CONFIG.defenseMaxHelpers)) return false;
   tryCrossLayer(world, ant);
   ant.state = ant.carrying > 0 ? "carry" : "return";
-  const home = world.surface.entrance;
+  if (danger) {
+    if (!refuge || refuge.enemyId !== danger.id || dist(refuge.origin, danger.pos) > 4 || isSurfaceBlockedAt(world, refuge.goal.x, refuge.goal.y, ant.colonyId)) {
+      const seed = Number(ant.id.replace(/\D/g, "")) || 1;
+      const angle = Math.atan2(ant.pos.y - danger.pos.y, ant.pos.x - danger.pos.x) + (seed % 7 - 3) * 0.12;
+      refuge = undefined;
+      refuges.delete(ant);
+      for (const turn of [0, .4, -.4, .8, -.8, 1.3, -1.3, Math.PI]) {
+        const goal = { x: danger.pos.x + Math.cos(angle + turn) * 18, y: danger.pos.y + Math.sin(angle + turn) * 18 };
+        if (dist(goal, home) >= 7 && !isSurfaceBlockedAt(world, goal.x, goal.y, ant.colonyId) && surfaceRoute(world.surface, ant.pos, goal, ant.colonyId)) {
+          refuge = { enemyId: danger.id, origin: { ...danger.pos }, goal, until: world.tick + 80 };
+          refuges.set(ant, refuge); break;
+        }
+      }
+    }
+    if (refuge) {
+      // Hold a safe destination while the hearth is under attack. The old
+      // 9-unit threshold alternated homeward and outward steps every tick.
+      if (dist(ant.pos, refuge.goal) > .6) moveSurfaceToward(world, ant, refuge.goal, false, false);
+      else ant.state = "idle";
+      return true;
+    }
+  }
   if (dist(ant.pos, home) > 4 || danger && dist(danger.pos, home) < 10) {
     if (danger && dist(ant.pos, danger.pos) < 9) {
       const dx = ant.pos.x - danger.pos.x, dy = ant.pos.y - danger.pos.y;

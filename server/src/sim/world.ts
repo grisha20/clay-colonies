@@ -552,6 +552,7 @@ export function growFoodSources(world: World): void {
   }
 
   for (const source of world.surface.foodSources) {
+    if ((source.kind ?? "food") !== "food") continue;
     source.amount = Math.min(CONFIG.playerFoodAmount, source.amount + CONFIG.foodGrowAmount * 0.35);
   }
 

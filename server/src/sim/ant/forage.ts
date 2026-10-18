@@ -49,6 +49,13 @@ function foodPriority(source: SurfaceFoodTarget["source"], starving: boolean): n
   return starving ? 0.55 : 0.18;
 }
 
+const checkedInCycle = new WeakMap<Ant, number>();
+function searchCycle(world: World, ant: Ant): { phase: number; cycle: number; searchTicks: number } {
+  const seed = numericAntId(ant.id) + (ant.colonyId === "colony-2" ? 23 : 0);
+  const searchTicks = 620 + (seed % 360), cycleTicks = searchTicks + 150 + ((seed * 7) % 120);
+  const shiftedTick = world.tick + seed * 41;
+  return { phase: shiftedTick % cycleTicks, cycle: Math.floor(shiftedTick / cycleTicks), searchTicks };
+}
 function shouldReturnToNestDuringSearch(world: World, ant: Ant): boolean {
   if (ant.carrying > 0) {
     return false;
@@ -56,12 +63,7 @@ function shouldReturnToNestDuringSearch(world: World, ant: Ant): boolean {
 
   const seed = numericAntId(ant.id) + (ant.colonyId === "colony-2" ? 23 : 0);
   const distFromEntrance = distance(ant.pos, world.surface.entrance);
-  const searchTicks = 620 + (seed % 360);
-  const checkTicks = 150 + ((seed * 7) % 120);
-  const cycleTicks = searchTicks + checkTicks;
-  const shiftedTick = world.tick + seed * 41;
-  const phase = shiftedTick % cycleTicks;
-  const cycle = Math.floor(shiftedTick / cycleTicks);
+  const { phase, cycle, searchTicks } = searchCycle(world, ant);
   const nearEdge =
     ant.pos.x < 10 ||
     ant.pos.x > world.surface.width - 10 ||
@@ -74,7 +76,7 @@ function shouldReturnToNestDuringSearch(world: World, ant: Ant): boolean {
   );
 
   return (
-    (phase >= searchTicks && distFromEntrance > 9) ||
+    (phase >= searchTicks && checkedInCycle.get(ant) !== cycle && distFromEntrance > 9) ||
     (nearEdge && distFromEntrance > 35) ||
     distFromEntrance > excursionLimit
   );
@@ -315,24 +317,32 @@ function nearestVisibleFood(world: World, ant: Ant): SurfaceFoodTarget | null {
 }
 
 const scoutGoals = new WeakMap<Ant, { pos: Vec2; until: number }>();
+const scoutReturning = new WeakSet<Ant>();
 function moveScoutSearching(world: World, ant: Ant): void {
   const food = nearestVisibleFood(world, ant);
   if (food && pickupFoodIfReached(world, ant, food)) {
+    scoutReturning.delete(ant);
     ant.foundFoodTrail = [...(ant.scoutTrail ?? []), { ...food.source.pos }];
     return;
   }
 
   if (food) {
+    scoutReturning.delete(ant);
     scoutGoals.delete(ant);
     ant.state = "search";
     moveSurfaceToward(world, ant, food.source.pos, !isColonyStarving(world));
     return;
   }
 
-  if (shouldReturnToNestDuringSearch(world, ant)) {
+  if (scoutReturning.has(ant) || shouldReturnToNestDuringSearch(world, ant)) {
     scoutGoals.delete(ant);
-    moveSurfaceToward(world, ant, world.surface.entrance, !isColonyStarving(world));
-    rememberScoutTrail(world, ant); return;
+    if (distance(ant.pos, world.surface.entrance) > 8) {
+      scoutReturning.add(ant);
+      moveSurfaceToward(world, ant, world.surface.entrance, !isColonyStarving(world));
+      rememberScoutTrail(world, ant); return;
+    }
+    scoutReturning.delete(ant);
+    checkedInCycle.set(ant, searchCycle(world, ant).cycle);
   }
   let goal = scoutGoals.get(ant);
   if (!goal || world.tick >= goal.until || world.tick < goal.until - 300 || distance(ant.pos, goal.pos) < 2 || !surfacePointOpen(world.surface, goal.pos, ant.colonyId)) {
