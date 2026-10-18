@@ -2,9 +2,9 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-// v17: long sessions and colony control; v13-v16 saves keep their worlds.
-export const CURRENT_SNAPSHOT_VERSION = 18;
-export const CURRENT_PROTOCOL_VERSION = 18;
+// v19: wide gatehouses; v13-v18 saves retain their worlds and legacy gate cells.
+export const CURRENT_SNAPSHOT_VERSION = 19;
+export const CURRENT_PROTOCOL_VERSION = 19;
 
 export type Vec2 = {
   x: number;
@@ -79,6 +79,9 @@ export type BuildingType = "hut" | "wall" | "gate" | "storage" | "idol" | "works
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {
+  /** Older gates occupy one cell; new gatehouses span three along this axis. */
+  gateAxis?: "horizontal" | "vertical";
+  gateSpan?: number;
   id: string;
   colonyId: string;
   type: BuildingType;

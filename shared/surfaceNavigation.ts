@@ -2,6 +2,7 @@ import { WALL_CELL_SIZE, type Building, type Vec2 } from "./types";
 import { buildingFootprint, crossesBuilding, insideBuilding, outsideBuilding } from "./buildingGeometry";
 import { crossesHearth, insideHearth } from "./campGeometry";
 import { isWaterAt } from "./surfaceTerrain";
+import { fenceContains } from "./fenceGeometry";
 
 export type SurfaceObstacles = { width: number; height: number; buildings: Building[]; entrances: Vec2[] };
 const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -12,7 +13,7 @@ export function surfacePointOpen(surface: SurfaceObstacles, p: Vec2, owner?: str
   return !surface.buildings.some(b => {
     const f = buildingFootprint(b);
     if (f) return insideBuilding(p.x, p.y, f);
-    return b.stage === "built" && (b.type === "wall" || b.type === "gate" && b.colonyId !== owner) && Math.floor(p.x / WALL_CELL_SIZE) === Math.floor(b.pos.x / WALL_CELL_SIZE) && Math.floor(p.y / WALL_CELL_SIZE) === Math.floor(b.pos.y / WALL_CELL_SIZE);
+    return b.stage === "built" && (b.type === "wall" || b.type === "gate" && b.colonyId !== owner) && fenceContains(b, p);
   });
 }
 

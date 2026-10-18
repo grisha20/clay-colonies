@@ -3,6 +3,7 @@ import type { NetworkViewState, NetworkWorldSnapshot, ZoneType } from "../../../
 import { CONFIG } from "../config";
 
 export type ClientCommand =
+  | { type: "placeGate"; colonyIndex: number; x: number; y: number; axis: "horizontal" | "vertical" }
   | { type: "takeControl"; colonyIndex: number }
   | { type: "setAlarm"; colonyIndex: number; value: boolean }
   | { type: "setDefensePost"; colonyIndex: number; x: number; y: number }
@@ -143,6 +144,10 @@ export function parseCommand(raw: string): ClientCommand | null {
       };
     }
 
+    if (command.type === "placeGate") {
+      if ((command.axis !== "horizontal" && command.axis !== "vertical") || typeof command.x !== "number" || typeof command.y !== "number" || !Number.isFinite(command.x) || !Number.isFinite(command.y) || command.x < 0 || command.y < 0 || command.x >= CONFIG.mapWidth || command.y >= CONFIG.mapHeight) return null;
+      return { type: "placeGate", colonyIndex, x: command.x, y: command.y, axis: command.axis };
+    }
     if (command.type === "placeBuilding") {
       if (
         (command.building !== "hut" && command.building !== "storage" && command.building !== "idol" && command.building !== "workshop") ||

@@ -18,13 +18,15 @@ import { drawGameplay } from "./gameplay";
 import { actorMotion } from "./motion";
 import { HEARTH_RADIUS_Y } from "../../../../shared/campGeometry";
 import { surfaceLighting } from "./lighting";
-import { getBuildingArt, getFenceArt } from "./buildingArt";
+import { getBuildingArt } from "./buildingArt";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
 import { campStockSprites } from "./campStock";
 import { royalWalk } from "./royals";
 import { drawBuildingGround } from "./buildingGround";
 import { updateFootprints } from "./footprints";
 import { updateLakeDetails } from "./lakeArt";
+import { drawFences } from "./fenceRender";
+import { fenceCellCenters } from "../../../../shared/fenceGeometry";
 import { buildingGardens } from "./gardenArt";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
@@ -473,7 +475,9 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
     building.delivered.clay,
     building.delivered.wood,
     building.delivered.stone,
-    building.colonyId
+    building.colonyId,
+    building.gateAxis,
+    building.gateSpan
   ].join(":")).join("|");
   if (scene.buildingKey === buildingKey) {
     return;
@@ -492,13 +496,8 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
   }
   scene.buildingSprites = [];
 
-  // Собираем все координаты готовых стен
-  const wallPositions = new Set<string>();
-  for (const b of buildings) {
-    if ((b.type === "wall" || b.type === "gate") && b.stage === "built") {
-      wallPositions.add(`${Math.round(b.pos.x)},${Math.round(b.pos.y)}`);
-    }
-  }
+  const fences = drawFences(scene.dynamicLayer, scene.buildingGround, buildings, cell);
+  scene.buildingSprites.push(...fences.sprites); scene.buildingGraphics.push(fences.contacts);
 
   for (const building of buildings) {
     const isRed = building.colonyId === "colony-2";
@@ -525,27 +524,15 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
       // Основание стены
       g.zIndex = y + half;
 
-      if (building.stage === "site") {
-        g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.4, color: clayColor, alpha: 0.55 });
-      } else if (building.stage === "inProgress") {
-        g.rect(x - half, y - half, half * 2, half * 2).fill({ color: clayColor, alpha: 0.28 + building.progress * 0.4 });
-        g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.4, color: darkColor, alpha: 0.7 });
-      } else {
-        const bx = Math.round(building.pos.x);
-        const by = Math.round(building.pos.y);
-        const hasLeft = wallPositions.has(`${bx - 2},${by}`);
-        const hasRight = wallPositions.has(`${bx + 2},${by}`);
-        const hasUp = wallPositions.has(`${bx},${by - 2}`);
-        const hasDown = wallPositions.has(`${bx},${by + 2}`);
-
-        const vertical = (hasUp || hasDown) && !(hasLeft || hasRight);
-        const art = getFenceArt(building.type === "gate", vertical, cell);
-        const fence = new Sprite(art.texture); fence.anchor.set(0.5, 1);
-        fence.width = art.width; fence.height = art.height;
-        fence.position.set(x, y + half); fence.zIndex = y + half;
-        fence.label = `fence_${building.id}`;
-        scene.dynamicLayer.addChild(fence); scene.buildingSprites?.push(fence);
+      for (const p of fenceCellCenters(building)) {
+        if (building.stage === "site") {
+          g.rect(p.x * cell - half, p.y * cell - half, half * 2, half * 2).stroke({ width: 1.4, color: clayColor, alpha: 0.55 });
+        } else if (building.stage === "inProgress") {
+          g.rect(p.x * cell - half, p.y * cell - half, half * 2, half * 2).fill({ color: clayColor, alpha: 0.28 + building.progress * 0.4 });
+          g.rect(p.x * cell - half, p.y * cell - half, half * 2, half * 2).stroke({ width: 1.4, color: darkColor, alpha: 0.7 });
+        }
       }
+
     } else if (building.type === "storage") {
       const half = 2.9 * cell;
       // Основание склада

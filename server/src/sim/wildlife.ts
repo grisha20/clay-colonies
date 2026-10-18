@@ -1,11 +1,12 @@
 import { lakePoints as waterPoints, lakeLineOpen as waterSegment, lakeRoute } from "../../../shared/lakeNavigation";
 import { lakeLilyPads } from "../../../shared/lakeHabitat";
+import { fenceContains } from "../../../shared/fenceGeometry";
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { LAKE_DEFINITIONS, isWaterAt, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../shared/dayCycle";
 import { CONFIG } from "../config";
 import { calculateSurfacePath } from "./ant/movement";
-import { isWallBlockedAt, resolveSurfaceCollision, damageBuilding, wallCellIndexAt } from "./building";
+import { isWallBlockedAt, resolveSurfaceCollision, damageBuilding } from "./building";
 import { dropCarriedFood } from "./ant/combat";
 import { logEvent } from "./session";
 import { addFoodSource, type World } from "./world";
@@ -85,8 +86,7 @@ export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: nu
   const step = Math.min(speed, d);
   const candidate = { x: enemy.pos.x + (next.x - enemy.pos.x) / d * step, y: enemy.pos.y + (next.y - enemy.pos.y) / d * step };
   if (breakWalls) {
-    const cell = wallCellIndexAt(candidate.x, candidate.y);
-    const wall = world.surface.buildings.find(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && wallCellIndexAt(b.pos.x, b.pos.y) === cell);
+    const wall = world.surface.buildings.find(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && fenceContains(b, candidate));
     if (wall) { damageBuilding(world, wall, CONFIG.raidBuildingDamage); return; }
   }
   if (isWaterAt(candidate.x, candidate.y)) return;

@@ -4,6 +4,7 @@ import { insideHearth, crossesHearth } from "../../../../shared/campGeometry";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../../shared/dayCycle";
 import { campShelterPoints } from "../../../../shared/campShelter";
+import { fenceCellCenters } from "../../../../shared/fenceGeometry";
 
 export function royalKind(ant: Ant): "king" | "queen" | null { return ant.id.startsWith("royal-king-") ? "king" : ant.id.startsWith("royal-queen-") ? "queen" : null; }
 const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -13,7 +14,7 @@ type Walker = { pos: Vec2; heading: Vec2; tick: number; index: number; wait: num
 /** Small local grid, rebuilt only when the estate's permanent obstacles change. */
 function estatePlan(world: WorldSnapshot, colonyId: string, camp: Vec2, key: string): RoutePlan {
   const solids = world.surface.buildings.map(buildingFootprint).filter((f): f is NonNullable<typeof f> => !!f);
-  const walls = new Set(world.surface.buildings.filter(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && !(b.type === "gate" && b.colonyId === colonyId)).map(b => `${Math.floor(b.pos.x / 2)},${Math.floor(b.pos.y / 2)}`));
+  const walls = new Set(world.surface.buildings.filter(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && !(b.type === "gate" && b.colonyId === colonyId)).flatMap(fenceCellCenters).map(p => `${Math.floor(p.x / 2)},${Math.floor(p.y / 2)}`));
   const open = (p: Vec2) => p.x > 1 && p.y > 1 && p.x < world.surface.width - 1 && p.y < world.surface.height - 1 && !isWaterAt(p.x, p.y) && !walls.has(`${Math.floor(p.x / 2)},${Math.floor(p.y / 2)}`) && !world.surface.entrances.some(c => insideHearth(p.x, p.y, c)) && !solids.some(f => insideBuilding(p.x, p.y, f));
   const clear = (a: Vec2, b: Vec2) => {
     if (solids.some(f => crossesBuilding(a, b, f)) || world.surface.entrances.some(c => crossesHearth(a.x, a.y, b.x, b.y, c))) return false;
@@ -80,7 +81,7 @@ export class RoyalWalk {
     const result: Ant[] = [];
     for (const [index, c] of world.colonies.entries()) {
       const camp = world.surface.entrances[index]; if (!camp) continue;
-      const key = `${camp.x},${camp.y}:${world.surface.buildings.filter(b => b.stage === "built").map(b => `${b.id},${b.pos.x},${b.pos.y},${b.type},${b.colonyId}`).join("|")}`;
+      const key = `${camp.x},${camp.y}:${world.surface.buildings.filter(b => b.stage === "built").map(b => `${b.id},${b.pos.x},${b.pos.y},${b.type},${b.colonyId},${b.gateAxis},${b.gateSpan}`).join("|")}`;
       let plan = this.plans.get(c.id);
       if (plan?.key !== key) {
         plan = estatePlan(world, c.id, camp, key); this.plans.set(c.id, plan);

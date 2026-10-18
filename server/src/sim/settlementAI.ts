@@ -4,6 +4,7 @@ import { CONFIG } from "../config";
 import { placePointBuilding, paintWallCells, wallCellIndexAt } from "./building";
 import type { World } from "./world";
 import { trainWaterWeapons } from "./session";
+import { fenceCellCenters } from "../../../shared/fenceGeometry";
 
 /** One settlement-level planner. It pays normal costs through normal workers. */
 export function updateSettlementAI(world: World): void {
@@ -53,7 +54,7 @@ export function updateSettlementAI(world: World): void {
         (Math.abs(offset) <= 2 ? gateCells : wallCells).push(wallCellIndexAt(p.x, p.y));
       }
     }
-    const occupied = new Set(buildings.filter(b => b.type === "wall" || b.type === "gate").map(b => wallCellIndexAt(b.pos.x, b.pos.y)));
+    const occupied = new Set(buildings.filter(b => b.type === "wall" || b.type === "gate").flatMap(fenceCellCenters).map(p => wallCellIndexAt(p.x, p.y)));
     const gates = gateCells.filter(cell => !occupied.has(cell)).slice(0, 2);
     if (gates.length) paintWallCells(world, index, gates, "gate");
     else paintWallCells(world, index, wallCells.filter(cell => !occupied.has(cell)).slice(0, 2));

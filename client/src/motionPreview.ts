@@ -20,6 +20,7 @@ import { lakeLilyPads } from "../../shared/lakeHabitat";
 import { updateLakeDetails } from "./render/surface/lakeArt";
 import { updateFootprints, footprintCount } from "./render/surface/footprints";
 import { BuildingGhost } from "./render/surface/buildingGhost";
+import { FencePreview } from "./render/surface/fencePreview";
 import { campShelterPoints } from "../../shared/campShelter";
 
 const app = new Application();
@@ -108,9 +109,27 @@ function loadGroup() {
     const swim = enemy(1, "lakeMonster", "", true, { lakeId: "north", pos: { x: pad.x + 15, y: pad.y + 11 } });
     homes.set(swim.id, { ...swim.pos, walking: true });
     for (const child of labels.removeChildren()) child.destroy();
-  } else if (group.value === "fences" || group.value === "placement") {
+  } else if (group.value === "fences" || group.value === "fence-stress" || group.value === "fence-build" || group.value === "placement") {
     const add = (type: "hut" | "wall" | "gate", x: number, y: number) => world.surface.buildings.push({ id: `fixture-${x}-${y}`, type, colonyId: "colony-1", pos: { x, y }, stage: "built", hp: 100, maxHp: 100, progress: 1, cost: { clay: 0, wood: 0, stone: 0 }, delivered: { clay: 0, wood: 0, stone: 0 } });
-    if (group.value === "fences") {
+    if (group.value === "fence-stress") {
+      for (let y = 10; y <= 34; y += 2) add("wall", 7, y);
+      for (let x = 17; x <= 57; x += 2) add(x === 37 ? "gate" : "wall", x, 10);
+      for (let i = 0; i < 8; i++) { add("wall", 17 + i * 2, 18 + i * 2); add("wall", 39 + i * 2, 32 - i * 2); }
+      for (const [x,y] of [[35,36],[37,36],[37,38],[39,38],[39,40],[41,40],[57,36]]) add("wall", x, y);
+      add("gate", 49, 37);
+      for (const [i, pos] of [{x:25,y:12},{x:37,y:12},{x:7,y:37}].entries()) { const a=ant(i, "", {pos}); homes.delete(a.id); }
+    } else if (group.value === "fence-build") {
+      for (let x = 9; x <= 55; x += 2) if (x < 29 || x > 33) add("wall",x,15);
+      add("gate",31,15); Object.assign(world.surface.buildings.at(-1)!,{gateAxis:"horizontal",gateSpan:3});
+      // Saved legacy gates should also form a single wide opening.
+      for (let x=9;x<=33;x+=2) add(x>=19&&x<=23?"gate":"wall",x,39);
+      const ghost = new FencePreview();
+      const base = world.surface.buildings[0];
+      const plans = Array.from({length:12},(_,i)=>({...base,id:`ghost-${i}`,pos:{x:9+i*2,y:26}}));
+      plans.push({...base,id:"ghost-gate",type:"gate",pos:{x:47,y:29},gateAxis:"horizontal",gateSpan:3});
+      ghost.show(plans); ghost.label="preview_ghost"; ghost.zIndex=9999; actors.addChild(ghost);
+      for (const [i,pos] of [{x:31,y:17},{x:21,y:40}].entries()) { const a=ant(i,"",{pos}); homes.delete(a.id); }
+    } else if (group.value === "fences") {
       for (let x = 17; x <= 47; x += 2) add(x === 33 ? "gate" : "wall", x, 23);
       for (let y = 25; y <= 37; y += 2) add("wall", 17, y);
       for (let i = 0; i < 4; i++) { const a = ant(i, "", { pos: { x: 25 + i * 5, y: i % 2 ? 26 : 22 } }); homes.delete(a.id); }
@@ -204,7 +223,7 @@ function loadGroup() {
   }
 }
 function loadGround() {
-  if (campLike() || ["buildings", "royals", "steps", "fences", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
+  if (campLike() || ["buildings", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
     const terrain = { ...world, surface: { ...world.surface, entrances: world.surface.entrances.length ? world.surface.entrances : [{ x: 32, y: 24 }] } };
     drawSurfaceGround(campScene.staticLayer, actors, terrain, cell, { left: 0, right: 64, top: 0, bottom: 44 }, false);
   }
@@ -263,7 +282,7 @@ app.ticker.add(ticker => {
   updateSurfaceShadows(shadows, world.surface.resourceNodes.length ? { ...world, surface: { ...world.surface, resourceNodes: [] } } : world, cell, bounds);
   updateSurfaceEntrances(campScene, world, cell, JSON.stringify(world.surface.entrances));
   updateFireGlow(campScene.fireGlow, world, cell);
-  updateBuildings(campScene, campLike() || ["buildings", "fences", "placement"].includes(group.value) ? world : { ...world, surface: { ...world.surface, buildings: [] } }, cell);
+  updateBuildings(campScene, campLike() || ["buildings", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) ? world : { ...world, surface: { ...world.surface, buildings: [] } }, cell);
   drawGameplay(campScene, world, cell);
   updateSurfaceFish(fishes, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);

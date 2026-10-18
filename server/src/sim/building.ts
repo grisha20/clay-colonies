@@ -7,6 +7,7 @@ import { CONFIG } from "../config";
 import { insideHearth, crossesHearth, outsideHearth } from "../../../shared/campGeometry";
 import { buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding, buildingServicePoint } from "../../../shared/buildingGeometry";
 import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
+import { fenceCellCenters, fencePlacement, gatePlacement, GATE_SPAN, snapFencePosition, type GateAxis } from "../../../shared/fenceGeometry";
 import type { World } from "./world";
 
 let nextBuildingId = 1;
@@ -120,17 +121,6 @@ export function nearestDropPoint(world: World, pos: Vec2): Vec2 {
   return best;
 }
 
-function tooCloseToEntrance(world: World, pos: Vec2): boolean {
-  for (const entrance of world.surface.entrances ?? [world.surface.entrance]) {
-    const dx = pos.x - entrance.x;
-    const dy = pos.y - entrance.y;
-    if (dx * dx + dy * dy < CONFIG.buildingEntranceMargin * CONFIG.buildingEntranceMargin) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function createBuilding(colonyId: string, type: BuildingType, pos: Vec2): Building {
   const building: Building = {
     id: `bld-${nextBuildingId}`,
@@ -182,6 +172,24 @@ export function placeHut(world: World, colonyIndex: number, x: number, y: number
 
 const MAX_WALL_CELLS_PER_COMMAND = 512;
 
+export function placeGate(world: World, colonyIndex: number, x: number, y: number, axis: GateAxis): boolean {
+  const colony = world.colonies[colonyIndex];
+  if (!colony) return false;
+  const pos = snapFencePosition({ x, y });
+  if (gatePlacement(world.surface, colony.id, pos, axis, CONFIG.buildingEntranceMargin)) return false;
+  const gate = createBuilding(colony.id, "gate", pos);
+  gate.gateAxis = axis; gate.gateSpan = GATE_SPAN;
+  for (const kind of ["clay", "wood", "stone"] as const) gate.cost[kind] *= GATE_SPAN;
+  gate.maxHp *= GATE_SPAN;
+  const occupied = new Set(fenceCellCenters(gate).map(p => wallCellIndexAt(p.x, p.y)));
+  const retained = world.surface.buildings.filter(b => !(b.type === "wall" && b.colonyId === colony.id && occupied.has(wallCellIndexAt(b.pos.x, b.pos.y))));
+  const segments = retained.filter(b => b.colonyId === colony.id && (b.type === "wall" || b.type === "gate")).reduce((n, b) => n + fenceCellCenters(b).length, 0);
+  if (segments + GATE_SPAN > CONFIG.maxWallSegmentsPerColony) return false;
+  world.surface.buildings = [...retained, gate];
+  rebuildWallBlocked(world);
+  return true;
+}
+
 export function paintWallCells(
   world: World,
   colonyIndex: number,
@@ -196,11 +204,11 @@ export function paintWallCells(
   const occupied = new Set(
     world.surface.buildings
       .filter((item) => item.type === "wall" || item.type === "gate")
-      .map((item) => wallCellIndexAt(item.pos.x, item.pos.y))
+      .flatMap((item) => fenceCellCenters(item).map(p => wallCellIndexAt(p.x, p.y)))
   );
   let segments = world.surface.buildings.filter(
     (item) => item.colonyId === colony.id && (item.type === "wall" || item.type === "gate")
-  ).length;
+  ).reduce((n, b) => n + fenceCellCenters(b).length, 0);
 
   for (const cell of cells.slice(0, MAX_WALL_CELLS_PER_COMMAND)) {
     if (!Number.isInteger(cell) || cell < 0 || cell >= limit) {
@@ -210,7 +218,7 @@ export function paintWallCells(
       continue;
     }
     const pos = wallCellCenter(cell);
-    if (tooCloseToEntrance(world, pos) || isWaterAt(pos.x, pos.y)) {
+    if (fencePlacement(world.surface, colony.id, pos, false, CONFIG.buildingEntranceMargin)) {
       continue;
     }
     world.surface.buildings.push(createBuilding(colony.id, type, pos));
@@ -230,7 +238,7 @@ export function eraseBuildCells(world: World, colonyIndex: number, cells: number
     if (item.colonyId !== colony.id) {
       return true;
     }
-    return !cellSet.has(wallCellIndexAt(item.pos.x, item.pos.y));
+    return !fenceCellCenters(item).some(p => cellSet.has(wallCellIndexAt(p.x, p.y)));
   });
   if (world.surface.buildings.length !== before) {
     rebuildWallBlocked(world);
@@ -254,10 +262,10 @@ export function rebuildWallBlocked(world: World): void {
       continue;
     }
     if (building.type === "wall" || building.type === "gate") {
-      const cell = wallCellIndexAt(building.pos.x, building.pos.y);
-      world.wallBlocked.add(cell);
-      if (building.type === "gate") {
-        world.gateOwner.set(cell, building.colonyId);
+      for (const p of fenceCellCenters(building)) {
+        const cell = wallCellIndexAt(p.x, p.y);
+        world.wallBlocked.add(cell);
+        if (building.type === "gate") world.gateOwner.set(cell, building.colonyId);
       }
     }
   }

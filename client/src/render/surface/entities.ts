@@ -35,10 +35,12 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
 
   for (const building of world.surface.buildings) {
     if (building.stage !== "built" || !isInBounds(building.pos, bounds, 12)) continue;
-    const wall = building.type === "wall" || building.type === "gate";
     const f = buildingFootprint(building);
-    const y = f ? (f.y + f.ry * 0.35) * cell : building.pos.y * cell + cell;
-    drawGroundShadow(graphics, lighting, building.pos.x * cell, y, f ? f.rx * cell : cell, f ? f.ry * cell * 0.85 : 3, wall ? 22 : building.type === "idol" ? 30 : 48);
+    // Fence contacts are registered on individual posts by drawFences;
+    // a shadow at every cell centre would put a dark blob inside open gates.
+    if (!f) continue;
+    const y = (f.y + f.ry * 0.35) * cell;
+    drawGroundShadow(graphics, lighting, building.pos.x * cell, y, f.rx * cell, f.ry * cell * 0.85, building.type === "idol" ? 30 : 48);
     if (f) {
       // A narrow seam touches the visible bottom edge; the broad footprint
       // alone read as an oval detached from the pasted-on sprite.

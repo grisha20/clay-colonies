@@ -16,6 +16,9 @@ import { surfaceRoute, surfaceLineOpen, routePoint } from "../../shared/surfaceN
 import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
 import { pointBuildingPlacement } from "../../shared/buildingPlacement";
 import { BuildingGhost } from "./render/surface/buildingGhost";
+import { FencePreview } from "./render/surface/fencePreview";
+import { fencePlacement, gatePlacement, snapFencePosition, GATE_SPAN, type GateAxis } from "../../shared/fenceGeometry";
+import type { Building, Vec2 } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
 import { preloadGardenArt } from "./render/surface/gardenArt";
@@ -171,8 +174,8 @@ appRoot.innerHTML = `
       </button>
       <button class="buildCard" data-tool="gate" type="button">
         <span class="bname">Ворота</span>
-        <span class="bcost" id="cost-gate">2 глины + 1 дерево</span>
-        <span class="bnote">проход только своим</span>
+        <span class="bcost" id="cost-gate">6 глины + 3 дерева</span>
+        <span class="bnote">одним кликом · R — повернуть</span>
       </button>
       <button class="buildCard" data-tool="idol" type="button">
         <span class="bname">Идол</span>
@@ -1322,7 +1325,7 @@ const BUILD_COSTS: Record<string, { clay: number; wood: number; stone: number }>
   workshop: { clay: 8, wood: 4, stone: 0 },
   idol: { clay: 25, wood: 0, stone: 5 },
   wall: { clay: 2, wood: 0, stone: 0 },
-  gate: { clay: 2, wood: 1, stone: 0 }
+  gate: { clay: 6, wood: 3, stone: 0 }
 };
 
 function updateBuildCards(world: WorldSnapshot): void {
@@ -1393,7 +1396,8 @@ let trampleEnabled = true;
 type PlayerTool = "select" | "post" | "food" | "harvest" | "forbid" | "hut" | "storage" | "workshop" | "idol" | "wall" | "gate" | "erase";
 let currentTool: PlayerTool = "select";
 let isPainting = false;
-let dragTool: "harvest" | "forbid" | "wall" | "gate" | "erase" | null = null;
+let dragTool: "harvest" | "forbid" | "wall" | "erase" | null = null;
+let gateAxis: GateAxis = "horizontal";
 let dragStart: { x: number; y: number } | null = null;
 let dragEnd: { x: number; y: number } | null = null;
 
@@ -1408,7 +1412,7 @@ const TOOL_HINTS: Record<PlayerTool, string> = {
   workshop: "Клик - мастерская (8 глины + 4 дерева, делает топоры и кирки). Shift - ставить несколько",
   idol: "Клик — Идол (25 глины + 5 камня). Ритуал: 3 минуты у живого костра",
   wall: "Растяни линию стены (ЛКМ), 2 глины за сегмент",
-  gate: "Растяни линию ворот (ЛКМ): 2 глины + 1 дерево за сегмент, проходят только свои",
+  gate: "Ворота: ЛКМ — поставить, R — повернуть, Shift — серия. 6 глины + 3 дерева; можно встроить в свой забор",
   erase: "Растяни прямоугольник - сотрёт зоны, свои стены и ворота"
 };
 
@@ -1719,6 +1723,7 @@ function draw(interpT: number): void {
 }
 
 function setTool(tool: PlayerTool): void {
+  if (isPainting) { isPainting = false; dragTool = null; dragStart = null; dragEnd = null; lastRawTile = null; }
   currentTool = tool;
   for (const button of toolButtons) {
     button.classList.toggle("active", button.dataset.tool === tool);
@@ -1815,7 +1820,7 @@ function updateDragEnd(shiftPressed: boolean): void {
   if (!dragStart || !lastRawTile) {
     return;
   }
-  if (shiftPressed && (dragTool === "wall" || dragTool === "gate")) {
+  if (shiftPressed && dragTool === "wall") {
     dragEnd = snapToAngles(dragStart, lastRawTile);
   } else {
     dragEnd = lastRawTile;
@@ -1876,18 +1881,18 @@ function commitDrag(): void {
     return;
   }
   const colony = currentColonyIndex;
-  if (dragTool === "wall" || dragTool === "gate") {
-    const commandType = dragTool === "gate" ? "paintGate" : "paintWall";
+  if (dragTool === "wall") {
     const gridWidth = Math.ceil(latestWorld!.surface.width / WALL_CELL_SIZE);
     const dryCells = wallLineCells(dragStart, dragEnd).filter((index) => {
       const x = (index % gridWidth) * WALL_CELL_SIZE + WALL_CELL_SIZE * 0.5;
       const y = Math.floor(index / gridWidth) * WALL_CELL_SIZE + WALL_CELL_SIZE * 0.5;
-      return !isWaterAt(x, y);
+      const owner = latestWorld!.colonies[currentColonyIndex]?.id ?? latestWorld!.colony.id;
+      return !fencePlacement(latestWorld!.surface, owner, { x, y });
     });
     if (dryCells.length === 0 && toolHint) {
-      toolHint.textContent = "Вода: здесь нельзя строить";
+      toolHint.textContent = "На этой линии нет свободного места для ограды";
     }
-    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: commandType, cells, colony })), dryCells, 500);
+    sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintWall", cells, colony })), dryCells, 500);
   } else if (dragTool === "harvest" || dragTool === "forbid") {
     const zone = dragTool;
     sendCellsChunked((cells) => socket.send(JSON.stringify({ type: "paintZone", zone, cells, colony })), rectCells(dragStart, dragEnd, ZONE_CELL_SIZE), 4000);
@@ -1900,14 +1905,41 @@ function commitDrag(): void {
 // Превью растягивания: рисуется в экранных координатах поверх мира.
 const dragPreview = new Graphics();
 const buildGhost = new BuildingGhost();
+const fencePreview = new FencePreview();
+function previewBuilding(type: "wall" | "gate", pos: Vec2, owner: string, id: string): Building {
+  return { id, type, pos, colonyId: owner, stage: "built", progress: 1, cost: { clay: 0, wood: 0, stone: 0 }, delivered: { clay: 0, wood: 0, stone: 0 }, hp: 100, maxHp: 100, ...(type === "gate" ? { gateAxis, gateSpan: GATE_SPAN } : {}) };
+}
 let hoverScreen: { x: number; y: number } | null = null;
 function updateBuildGhost(): void {
   buildGhost.visible = false;
-  if (!latestWorld || !hoverScreen || currentView !== "surface" || (pointerDown && isDragging) ||
+  fencePreview.visible = false;
+  updateDragPreview();
+  if (!latestWorld || !hoverScreen || currentView !== "surface" || (pointerDown && isDragging)) return;
+  const owner = latestWorld.colonies[currentColonyIndex]?.id ?? latestWorld.colony.id;
+  if (currentTool === "gate" || currentTool === "wall") {
+    const tile = surfaceTileFromGlobal(latestWorld, hoverScreen.x, hoverScreen.y); if (!tile) return;
+    let plans: Building[], invalid = new Set<string>();
+    if (currentTool === "gate") {
+      const pos = snapFencePosition(tile), reason = gatePlacement(latestWorld.surface, owner, pos, gateAxis);
+      plans = [previewBuilding("gate", pos, owner, "gate-preview")];
+      if (reason) invalid.add(plans[0].id);
+      if (toolHint) toolHint.textContent = reason ?? `${TOOL_HINTS.gate} · ${gateAxis === "horizontal" ? "вдоль →" : "вдоль ↓"}`;
+    } else {
+      const width = Math.ceil(latestWorld.surface.width / WALL_CELL_SIZE);
+      const cells = wallLineCells(isPainting && dragStart ? dragStart : tile, isPainting && dragEnd ? dragEnd : tile);
+      plans = cells.map(index => previewBuilding("wall", { x: (index % width + 0.5) * WALL_CELL_SIZE, y: (Math.floor(index / width) + 0.5) * WALL_CELL_SIZE }, owner, `wall-preview-${index}`));
+      for (const p of plans) if (fencePlacement(latestWorld.surface, owner, p.pos)) invalid.add(p.id);
+      if (toolHint) toolHint.textContent = `Ограда: ${plans.length - invalid.size} секций · ${(plans.length - invalid.size) * 2} глины. Shift — прямая/диагональ${invalid.size ? ` · ${invalid.size} недоступных клеток (красные)` : ""}`;
+    }
+    fencePreview.show(plans, invalid, SURFACE_TILE_SIZE);
+    const origin = worldToScreen(0, 0); fencePreview.position.set(origin.x, origin.y); fencePreview.scale.set(camera.zoom);
+    if (fencePreview.parent !== pixi.stage) pixi.stage.addChild(fencePreview);
+    return;
+  }
+  if (
     (currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol")) return;
   const pos = surfaceTileFromGlobal(latestWorld, hoverScreen.x, hoverScreen.y);
   if (!pos) return;
-  const owner = latestWorld.colonies[currentColonyIndex]?.id ?? latestWorld.colony.id;
   const reason = buildGhost.show(latestWorld, currentTool, pos, owner);
   const screen = worldToScreen(pos.x, pos.y); buildGhost.position.set(screen.x, screen.y); buildGhost.scale.set(camera.zoom);
   if (buildGhost.parent !== pixi.stage) pixi.stage.addChild(buildGhost);
@@ -1984,11 +2016,7 @@ function updateDragPreview(): void {
   }
   const a = worldToScreen(dragStart.x, dragStart.y);
   const b = worldToScreen(dragEnd.x, dragEnd.y);
-  if (dragTool === "wall" || dragTool === "gate") {
-    const thickness = Math.max(3, WALL_CELL_SIZE * SURFACE_TILE_SIZE * camera.zoom);
-    dragPreview.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: thickness, color: 0xbc6240, alpha: 0.55 });
-    dragPreview.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 2, color: 0x5b281c, alpha: 0.9 });
-  } else {
+  if (dragTool !== "wall") {
     const color = dragTool === "harvest" ? 0x7ec850 : dragTool === "forbid" ? 0xd9534f : 0xf5f8ef;
     const x = Math.min(a.x, b.x);
     const y = Math.min(a.y, b.y);
@@ -2140,7 +2168,7 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
   lastPointer = { x: event.clientX, y: event.clientY };
   pixi.canvas.setPointerCapture(event.pointerId);
 
-  if (currentTool === "harvest" || currentTool === "forbid" || currentTool === "wall" || currentTool === "gate" || currentTool === "erase") {
+  if (currentView === "surface" && (currentTool === "harvest" || currentTool === "forbid" || currentTool === "wall" || currentTool === "erase")) {
     const tile = pointerToTile(event);
     if (tile) {
       isPainting = true;
@@ -2171,7 +2199,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  if (currentTool !== "select" && currentTool !== "post" && currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") {
+  if (currentTool !== "select" && currentTool !== "post" && currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol" && currentTool !== "gate") {
     return;
   }
 
@@ -2191,7 +2219,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
   clampCamera(latestWorld);
 });
 
-pixi.canvas.addEventListener("pointerleave", () => { hoverScreen = null; buildGhost.visible = false; });
+pixi.canvas.addEventListener("pointerleave", () => { hoverScreen = null; buildGhost.visible = false; if (!isPainting) fencePreview.visible = false; });
 pixi.canvas.addEventListener("pointerup", (event) => {
   pointerDown = false;
   pixi.canvas.releasePointerCapture(event.pointerId);
@@ -2208,7 +2236,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (
-    (currentTool !== "select" && currentTool !== "post" && currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") ||
+    (currentTool !== "select" && currentTool !== "post" && currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol" && currentTool !== "gate") ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||
@@ -2225,6 +2253,14 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
+  if (currentTool === "gate") {
+    const owner = latestWorld.colonies[currentColonyIndex]?.id ?? latestWorld.colony.id;
+    const pos = snapFencePosition(tile), reason = gatePlacement(latestWorld.surface, owner, pos, gateAxis);
+    if (reason) { if (toolHint) toolHint.textContent = reason; return; }
+    socket.send(JSON.stringify({ type: "placeGate", x: pos.x, y: pos.y, axis: gateAxis, colony: currentColonyIndex }));
+    if (!event.shiftKey) setTool("select");
+    return;
+  }
   if (currentTool === "post") {
     if (isWaterAt(tile.x, tile.y)) { if (toolHint) toolHint.textContent = "Пост нужен на сухом берегу или у ворот"; return; }
     socket.send(JSON.stringify({ type: "setDefensePost", colony: currentColonyIndex, x: tile.x, y: tile.y }));
@@ -2556,15 +2592,17 @@ socket.addEventListener("message", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") setTool("select");
-  if (event.key === "Shift" && isPainting && (dragTool === "wall" || dragTool === "gate")) {
+  if (event.target instanceof HTMLElement && event.target.closest("input,textarea,select,[contenteditable=true]")) return;
+  if ((event.key.toLowerCase() === "r" || event.code === "KeyR") && currentTool === "gate" && !event.repeat) { gateAxis = gateAxis === "horizontal" ? "vertical" : "horizontal"; event.preventDefault(); updateBuildGhost(); }
+  if (event.key === "Escape") { setTool("select"); updateBuildGhost(); }
+  if (event.key === "Shift" && isPainting && dragTool === "wall") {
     updateDragEnd(true);
     updateDragPreview();
   }
 });
 
 window.addEventListener("keyup", (event) => {
-  if (event.key === "Shift" && isPainting && (dragTool === "wall" || dragTool === "gate")) {
+  if (event.key === "Shift" && isPainting && dragTool === "wall") {
     updateDragEnd(false);
     updateDragPreview();
   }
