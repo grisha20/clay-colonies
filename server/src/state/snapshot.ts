@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename, copyFile } from "node:fs/promises";
 import path from "node:path";
 import { CONFIG } from "../config";
 import type { GenomeState } from "../ai/genome";
@@ -11,19 +11,16 @@ export async function loadWorldSnapshot(
   spiderGenomeState: SpiderGenomeState,
   genomeStateB: GenomeState = genomeState
 ): Promise<World | null> {
-  try {
-    const raw = await readFile(CONFIG.snapshotFile, "utf8");
-    const snapshot = JSON.parse(raw) as WorldSnapshot;
-    return worldFromSnapshot(snapshot, genomeState, spiderGenomeState, genomeStateB);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      return null;
+  for (const file of [CONFIG.snapshotFile, `${CONFIG.snapshotFile}.bak`]) {
+    try {
+      const raw = await readFile(file, "utf8");
+      const snapshot = JSON.parse(raw) as WorldSnapshot;
+      return worldFromSnapshot(snapshot, genomeState, spiderGenomeState, genomeStateB);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") console.warn(`Could not load ${file}: ${(error as Error).message}`);
     }
-
-    console.warn(`Could not load snapshot, starting fresh: ${(error as Error).message}`);
-    return null;
   }
+  return null;
 }
 
 let isSaving = false;
@@ -35,7 +32,11 @@ export async function saveWorldSnapshot(world: World): Promise<void> {
   isSaving = true;
   try {
     await mkdir(path.dirname(CONFIG.snapshotFile), { recursive: true });
-    await writeFile(CONFIG.snapshotFile, JSON.stringify(toDurableSnapshot(world)), "utf8");
+    const temp = `${CONFIG.snapshotFile}.tmp`;
+    await writeFile(temp, JSON.stringify(toDurableSnapshot(world)), "utf8");
+    try { await copyFile(CONFIG.snapshotFile, `${CONFIG.snapshotFile}.bak`); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    await rename(temp, CONFIG.snapshotFile);
   } finally {
     isSaving = false;
   }

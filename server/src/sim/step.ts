@@ -27,10 +27,12 @@ import {
   type World
 } from "./world";
 import { consumeFoodStock } from "./foodStock";
+import { updateRaids, updateOutcome, announceDusk } from "./session";
+import { updateWildlife } from "./wildlife";
 
 let scentOffsets: { dx: number; dy: number; falloff: number }[] | null = null;
 type ToolKind = "axe" | "pick" | "rod";
-const toolCraftProgress = new Map<string, { ticks: number; next: ToolKind }>();
+const toolCraftProgress = new WeakMap<ColonyRuntime["colony"], { ticks: number; next: ToolKind }>();
 
 function getScentOffsets(radius: number): { dx: number; dy: number; falloff: number }[] {
   if (scentOffsets) {
@@ -74,9 +76,10 @@ function removeDeadAndSyncSurface(world: World, colony: ColonyRuntime): void {
   for (const ant of colony.ants) {
     if (ant.state === "dead") {
       const scoped = colonyWorldView(world, colony);
-      addAntCorpse(scoped, ant);
+      if ((ant.dissolved ?? 0) < 1) addAntCorpse(scoped, ant);
       addClayRemains(scoped, ant);
       triggerPanicAround(scoped, ant.pos);
+      world.session.stats.lost += 1;
     }
   }
   colony.ants = colony.ants.filter((ant) => ant.state !== "dead");
@@ -103,16 +106,16 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     (building) => building.colonyId === colony.id && building.type === "workshop" && building.stage === "built"
   ).length;
   if (workshopCount <= 0) {
-    toolCraftProgress.delete(colony.id);
+    toolCraftProgress.delete(colony.colony);
     return;
   }
-  const progress = toolCraftProgress.get(colony.id) ?? { ticks: 0, next: colony.colony.axes <= 0 ? "axe" : colony.colony.picks <= 0 ? "pick" : "rod" };
+  const progress = toolCraftProgress.get(colony.colony) ?? { ticks: 0, next: colony.colony.axes <= 0 ? "axe" : colony.colony.picks <= 0 ? "pick" : "rod" };
   const wantsAxe = colony.colony.axes < CONFIG.maxAxes;
   const wantsPick = colony.colony.picks < CONFIG.maxPicks;
   const wantsRod = colony.colony.rods < CONFIG.maxRods;
   if (!wantsAxe && !wantsPick && !wantsRod) {
     progress.ticks = 0;
-    toolCraftProgress.set(colony.id, progress);
+    toolCraftProgress.set(colony.colony, progress);
     return;
   }
   const order: ToolKind[] = ["axe", "pick", "rod"];
@@ -125,7 +128,7 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
   if (colony.colony.wood < cost.wood || colony.colony.stone < cost.stone) {
     progress.next = next;
     progress.ticks = 0;
-    toolCraftProgress.set(colony.id, progress);
+    toolCraftProgress.set(colony.colony, progress);
     return;
   }
   progress.ticks += workshopCount;
@@ -145,7 +148,7 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     }
     progress.ticks = 0;
   }
-  toolCraftProgress.set(colony.id, progress);
+  toolCraftProgress.set(colony.colony, progress);
 }
 
 function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
@@ -153,7 +156,7 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
   colony.colony.queenStress = 0;
   colony.colony.princesses = 0;
 
-  if (!colony.colony.queenAlive) {
+  if (!colony.colony.queenAlive || colony.colony.growthPaused || colony.colony.alarm || colony.ants.length === 0) {
     return;
   }
 
@@ -173,7 +176,7 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
     return;
   }
   // «Глина — это всё»: нового жителя лепят из глины.
-  if (colony.colony.clay < CONFIG.newResidentClayCost) {
+  if (colony.colony.clay < CONFIG.newResidentClayCost + (colony.colony.clayReserve ?? 0)) {
     return;
   }
 
@@ -189,10 +192,14 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
     y: colony.surfaceEntrance.y + (Math.random() - 0.5) * CONFIG.campSpawnRadius
   };
   colony.ants.push(ant);
+  world.session.stats.born += 1;
 }
 
 export function step(world: World): void {
+  if (world.session.status !== "playing") return;
   world.tick += 1;
+  announceDusk(world);
+  updateRaids(world);
 
   profiler.measure("phase.weather", () => updateWeather(world));
   profiler.measure("phase.resources", () => {
@@ -215,10 +222,13 @@ export function step(world: World): void {
       }
       colony.directives = computeDirectives(scopedWorld, colony.genomeState.current);
       assignForageRoles(scopedWorld);
-      assignHarvestJobs(scopedWorld);
-      assignBuildJobs(scopedWorld);
-      assignGuardJobs(scopedWorld);
-      assignFishingJobs(scopedWorld);
+      // Shelter suspends work; don't replace assignments while everyone waits.
+      if (world.weather.state === "clear") {
+        assignHarvestJobs(scopedWorld);
+        assignBuildJobs(scopedWorld);
+        assignGuardJobs(scopedWorld);
+        assignFishingJobs(scopedWorld);
+      }
       updateTickCache(scopedWorld);
       profiler.measure("stepAnt", () => {
         for (const ant of colony.ants) {
@@ -231,6 +241,7 @@ export function step(world: World): void {
   syncWorldLegacyFields(world);
   profiler.measure("phase.updateWorldSurfaceCache", () => updateWorldSurfaceCache(world));
   profiler.measure("phase.updateEnemies", () => updateEnemies(world));
+  updateWildlife(world);
 
   profiler.measure("phase.colonies.after", () => {
     for (const colony of world.colonies) {
@@ -260,6 +271,7 @@ export function step(world: World): void {
   if (world.tick % 10 === 0) {
     updateObjectives(world);
   }
+  updateOutcome(world);
 
   if (world.tick % 500 === 0) {
     const activeIds = new Set(world.ants.map((ant) => ant.id));

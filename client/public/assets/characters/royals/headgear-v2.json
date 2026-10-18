@@ -1,0 +1,50 @@
+{
+  "imageWidth": 1536,
+  "imageHeight": 1024,
+  "columns": 3,
+  "rows": 2,
+  "frames": [
+    {
+      "x": 49,
+      "y": 152,
+      "width": 437,
+      "height": 252,
+      "anchorX": 0.473684
+    },
+    {
+      "x": 562,
+      "y": 148,
+      "width": 418,
+      "height": 257,
+      "anchorX": 0.492823
+    },
+    {
+      "x": 1054,
+      "y": 135,
+      "width": 439,
+      "height": 277,
+      "anchorX": 0.514806
+    },
+    {
+      "x": 60,
+      "y": 661,
+      "width": 424,
+      "height": 202,
+      "anchorX": 0.462264
+    },
+    {
+      "x": 568,
+      "y": 632,
+      "width": 420,
+      "height": 240,
+      "anchorX": 0.47619
+    },
+    {
+      "x": 1059,
+      "y": 628,
+      "width": 439,
+      "height": 257,
+      "anchorX": 0.503417
+    }
+  ]
+}

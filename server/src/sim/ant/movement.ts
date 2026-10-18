@@ -12,6 +12,8 @@ import { zoneCellCenter, zoneIndexAt } from "../zones";
 import { isSurfaceBlockedAt, isWallBlockedAt } from "../building";
 import { isSheltered } from "../weather";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { insideHearth } from "../../../../shared/campGeometry";
+import { buildingRouteTarget } from "../../../../shared/buildingGeometry";
 import { addFoodStock, consumeFoodStock, normalizedCarryFoodKind } from "../foodStock";
 
 export type CachedPath = {
@@ -29,6 +31,8 @@ type SurfacePath = {
 // Surface routes only exist when a straight line meets water. Kept separate from
 // underground paths because lake shore remains stable while walls can change often.
 const surfacePaths = new Map<string, SurfacePath>();
+const buildingWaypoints = new Map<string, { target: Vec2; point: Vec2 }>();
+let buildingWaypointTick = -1;
 const SURFACE_PATH_CELL_SIZE = 4;
 const surfaceQueryScratch: Ant[] = [];
 const speedQueryScratch: Ant[] = [];
@@ -61,6 +65,7 @@ lakeClearanceCache.set(
 );
 
 export function clearDeadAntPaths(activeIds: Set<string>): void {
+  for (const id of buildingWaypoints.keys()) if (!activeIds.has(id)) buildingWaypoints.delete(id);
   for (const antId of antPaths.keys()) {
     if (!activeIds.has(antId)) {
       antPaths.delete(antId);
@@ -322,7 +327,7 @@ export function applyForbidZones(world: World, ant: Ant, desired: Vec2): Vec2 {
 
 // Обход стен без поиска пути: если впереди стена, идём вдоль неё
 // (сторона выбирается по чётности id — толпа расходится в обе стороны к проходам).
-export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 {
+export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2, stepSize: number = CONFIG.workerSurfaceSpeed): Vec2 {
   // Порыв блуждания перекрывает цель (работает и без стен: давка, углы).
   const burst = wanderBurstDirection(world, ant);
   if (burst) {
@@ -335,6 +340,10 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 
   if (!isSurfaceBlockedAt(world, ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead, ant.colonyId)) {
     return desired;
   }
+  // The hearth is smaller than the delivery radius. Long wall look-ahead
+  // otherwise makes returning workers orbit outside the drop-off area.
+  if (world.surface.entrances.some(camp => insideHearth(ant.pos.x + desired.x * lookAhead, ant.pos.y + desired.y * lookAhead, camp)) &&
+      !isSurfaceBlockedAt(world, ant.pos.x + desired.x * stepSize, ant.pos.y + desired.y * stepSize, ant.colonyId)) return desired;
   const sign = numericAntId(ant.id) % 2 === 0 ? 1 : -1;
   const along = { x: -desired.y * sign, y: desired.x * sign };
   if (!isSurfaceBlockedAt(world, ant.pos.x + along.x * lookAhead, ant.pos.y + along.y * lookAhead, ant.colonyId)) {
@@ -349,8 +358,16 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2): Vec2 
 }
 
 export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpiders: boolean, allowSeparation = true): void {
+  if (world.tick < buildingWaypointTick) buildingWaypoints.clear();
+  buildingWaypointTick = world.tick;
   const speed = surfaceMoveSpeed(world, ant);
-  const routeTarget = surfaceRouteTarget(world, ant, target);
+  const surfaceTarget = surfaceRouteTarget(world, ant, target);
+  let waypoint = buildingWaypoints.get(ant.id);
+  if (waypoint && (distance(waypoint.target, surfaceTarget) > 0.2 || distance(ant.pos, waypoint.point) < 1.2 || isSurfaceBlockedAt(world, waypoint.point.x, waypoint.point.y, ant.colonyId))) {
+    buildingWaypoints.delete(ant.id); waypoint = undefined;
+  }
+  const routeTarget = waypoint?.point ?? buildingRouteTarget(world.surface.buildings, ant.pos, surfaceTarget);
+  if (!waypoint && distance(routeTarget, surfaceTarget) > 0.1 && distance(routeTarget, ant.pos) > 0.1) buildingWaypoints.set(ant.id, { target: { ...surfaceTarget }, point: routeTarget });
   let desired = normalize({ x: routeTarget.x - ant.pos.x, y: routeTarget.y - ant.pos.y });
 
   if (avoidSpiders) {
@@ -360,7 +377,7 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
   desired = applyForbidZones(world, ant, desired);
   const beforeAvoidX = desired.x;
   const beforeAvoidY = desired.y;
-  desired = applyWallAvoidance(world, ant, desired);
+  desired = applyWallAvoidance(world, ant, desired, speed);
   // Обход стены/порыв должен поворачивать резко, иначе житель прижимается к стене.
   const avoidanceTurn = beforeAvoidX * desired.x + beforeAvoidY * desired.y < 0.9;
 

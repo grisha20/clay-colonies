@@ -439,6 +439,15 @@ export function getClayfolkTexture(carrying: boolean, color: AntColor = "dark"):
   return makeTexture(key, carrying ? [...spriteMaps.clayfolkCarry] : [...spriteMaps.clayfolk], palette);
 }
 
+export function getWorkerToolTexture(tool: "axe" | "pick" | "hammer"): Texture {
+  const patterns = {
+    axe: [".....sss...", "....sSSss..", "....wwSSss.", "....wwsss..", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....dd....."],
+    pick: ["..sssssss..", ".sSSwwSSSs.", "sS..ww...Ss", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....dd....."],
+    hammer: ["..sssssss..", "..sSSSSSs..", "..sssssss..", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....ww.....", "....dd....."]
+  };
+  return makeTexture(`worker-tool-${tool}`, patterns[tool], { s: 0x5b6061, S: 0xb9c2bc, w: 0xb1814c, d: 0x654329 });
+}
+
 export function getQueenTexture(color: AntColor = "dark"): Texture {
   const key = `queen_${color}`;
   const palette = color === "red" ? spritePalettes.queenRed : spritePalettes.queen;
@@ -455,6 +464,27 @@ export function getLarvaTexture(): Texture {
 
 export function getSpiderTexture(): Texture {
   return makeTexture("spider", [...spriteMaps.spider], spritePalettes.spider);
+}
+
+export function getLakeMonsterTexture(): Texture {
+  return makeTexture("lake-monster-v1", [
+    "...dd......dd...", "..dggd....dggd..", ".dggggddddggggd.", "dggGggggggGggggd",
+    "dgWkgGggGgkWggd.", ".dggggggggggggd.", "..dgddddddddgd..", ".dggwwwwwwwwggd.",
+    "dgggdwwwwwwdgggd", ".dgggddddddgggd.", "..ddggggggggdd..", ".dggd......dggd.",
+    "dggd........dggd", ".dd..........dd."
+  ], { d: 0x194e4c, g: 0x39857c, G: 0x6cb59a, W: 0xffd873, k: 0x1b2427, w: 0xf0e3b6 });
+}
+
+export function getBeetleTexture(): Texture {
+  return makeTexture("night-beetle-v1", [
+    "...d......d...", "....d.ww.d....", "...dddddddd...", "..dBBddBBBd...",
+    ".ddBBddBBBBdd.", "d.dBBddBBBBd.d", "..dBBddBBBBd..", "dddBBddBBBBddd",
+    "..dBBddBBBBd..", "d.dBBddBBBBd.d", ".ddBBddBBBBdd.", "..dddddddddd..", "...d......d...", "..d........d.."
+  ], { d: 0x24202b, B: 0x665078, w: 0xf5c765 });
+}
+
+export function getWaterWeaponTexture(): Texture {
+  return makeTexture("water-weapon-v1", ["..bb...", ".bWWb..", ".bWWbgg", ".bWWb..", "..bb...", "..gg...", "..gg..."], { b: 0x285571, W: 0x7ddbe8, g: 0x825336 });
 }
 
 export function getSpiderLairTexture(): Texture {

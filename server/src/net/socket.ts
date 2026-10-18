@@ -3,6 +3,11 @@ import type { NetworkViewState, NetworkWorldSnapshot, ZoneType } from "../../../
 import { CONFIG } from "../config";
 
 export type ClientCommand =
+  | { type: "setAlarm"; colonyIndex: number; value: boolean }
+  | { type: "setDefensePost"; colonyIndex: number; x: number; y: number }
+  | { type: "trainWaterWeapons"; colonyIndex: number }
+  | { type: "setGrowth"; colonyIndex: number; paused: boolean; reserve: number }
+  | { type: "setSandbox"; value: boolean; colonyIndex: number }
   | {
       type: "dropFood";
       x: number;
@@ -70,7 +75,7 @@ export type SocketHub = {
 
 const MAX_BUFFERED_BYTES = 2 * 1024 * 1024;
 
-function parseCommand(raw: string): ClientCommand | null {
+export function parseCommand(raw: string): ClientCommand | null {
   try {
     const value = JSON.parse(raw) as unknown;
     if (!value || typeof value !== "object") {
@@ -83,6 +88,15 @@ function parseCommand(raw: string): ClientCommand | null {
       typeof command.colony === "number" && Number.isFinite(command.colony)
         ? Math.max(0, Math.min(1, Math.floor(command.colony)))
         : 0;
+    if (command.type === "setAlarm" && typeof command.value === "boolean") return { type: "setAlarm", colonyIndex, value: command.value };
+    if (command.type === "setSandbox" && typeof command.value === "boolean") return { type: "setSandbox", value: command.value, colonyIndex };
+    if (command.type === "trainWaterWeapons") return { type: "trainWaterWeapons", colonyIndex };
+    if (command.type === "setGrowth" && typeof command.paused === "boolean" && typeof command.reserve === "number" && Number.isFinite(command.reserve)) {
+      return { type: "setGrowth", colonyIndex, paused: command.paused, reserve: Math.max(0, Math.min(100, Math.floor(command.reserve))) };
+    }
+    if (command.type === "setDefensePost" && typeof command.x === "number" && typeof command.y === "number" && Number.isFinite(command.x) && Number.isFinite(command.y) && command.x >= 0 && command.y >= 0 && command.x < CONFIG.mapWidth && command.y < CONFIG.mapHeight) {
+      return { type: "setDefensePost", colonyIndex, x: command.x, y: command.y };
+    }
     if (command.type === "setSpeed" && typeof command.value === "number" && Number.isFinite(command.value)) {
       return {
         type: "setSpeed",

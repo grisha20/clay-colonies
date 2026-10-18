@@ -3,13 +3,14 @@
 // мира племени A; done защёлкивается и не откатывается (запас можно потратить).
 import type { Objective } from "../../../shared/types";
 import type { World } from "./world";
+import { CONFIG } from "../config";
 
 export function createObjectives(): Objective[] {
   return [
     // Пути победы: достаточно одного, у каждого своё «послевкусие».
     { id: "win-spider", text: "Одолеть паука (военная)", target: 1, progress: 0, done: false, victory: true },
     { id: "win-bigrain", text: "Пережить Большой дождь с костром", target: 1, progress: 0, done: false, victory: true },
-    { id: "win-idol", text: "Слепить Идола (хитрая)", target: 1, progress: 0, done: false, victory: true },
+    { id: "win-idol", text: "Завершить ритуал Идола у живого костра", target: CONFIG.idolRitualTicks, progress: 0, done: false, victory: true },
     // Обучение: ведёт новичка по петле.
     { id: "clay-40", text: "Запасти 40 глины", target: 40, progress: 0, done: false },
     { id: "stone-25", text: "Запасти 25 камня", target: 25, progress: 0, done: false },
@@ -67,9 +68,7 @@ function currentValue(world: World, id: string): number {
     case "win-spider":
       return colony.fitness.spidersKilled;
     case "win-idol":
-      return world.surface.buildings.filter(
-        (building) => building.colonyId === colony.id && building.type === "idol" && building.stage === "built"
-      ).length;
+      return world.session.idolProgress;
     case "win-bigrain":
       return world.weather.bigRainDone && world.weather.bigRainSurvived ? 1 : 0;
     default:

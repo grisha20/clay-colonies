@@ -38,6 +38,9 @@ const genome = await loadGenome();
 const genomeB = await loadGenome(process.env.GENOME_FILE_B);
 const spiderGenome = await loadSpiderGenome();
 const world = createWorld(genome, spiderGenome, genomeB);
+// This suite isolates the economy and terrain. Threats/outcomes have their own scenarios.
+world.session.mode = "sandbox";
+world.session.dangersEnabled = false;
 const colonyA = world.colonies[0];
 const entrance = colonyA.surfaceEntrance;
 
@@ -227,10 +230,17 @@ if (fisher) {
 }
 
 // --- Фаза 2: экономика глины и дерева ---
+const clayBeforeProduction = colonyA.colony.clay;
+const knownResidents = new Set(colonyA.ants.map(ant => ant.id));
+let residentsCreatedDuringProduction = 0;
 for (let i = 0; i < 6000; i += 1) {
   step(world);
+  for (const ant of colonyA.ants) if (!knownResidents.has(ant.id)) { knownResidents.add(ant.id); residentsCreatedDuringProduction++; }
 }
-check("Фаза 2: глина добывается", colonyA.colony.clay > 4, `clay=${colonyA.colony.clay.toFixed(1)}`);
+// Stock alone is not production: new residents immediately consume the clay.
+// This phase has no construction sites, so births are its only clay expense.
+const clayProduced = colonyA.colony.clay - clayBeforeProduction + residentsCreatedDuringProduction * CONFIG.newResidentClayCost;
+check("Фаза 2: глина добывается", clayProduced > 4, `produced=${clayProduced.toFixed(1)}, stock=${colonyA.colony.clay.toFixed(1)}`);
 check("Фаза 2: дерево добывается", colonyA.colony.wood > 4, `wood=${colonyA.colony.wood.toFixed(1)}`);
 check("Фаза 4: камень добывается", colonyA.colony.stone > 4, `stone=${colonyA.colony.stone.toFixed(1)}`);
 check("Фаза 2: еда не пострадала", colonyA.colony.food > 100, `food=${colonyA.colony.food.toFixed(0)}`);
@@ -332,24 +342,35 @@ for (const building of world.surface.buildings) {
   }
 }
 let crossings = 0;
-const wasAbove = new Map<string, boolean>();
-for (const ant of world.ants) {
-  wasAbove.set(ant.id, ant.pos.y < wallY - 1);
-}
+// Deterministic regression: both endpoints are free, but the diagonal segment
+// enters the upper-left corner of a solid cell before emerging above it.
+const cornerCell = wallCells[0];
+const cornerX = (cornerCell % Math.ceil(CONFIG.mapWidth / 2)) * 2;
+const cornerY = Math.floor(cornerCell / Math.ceil(CONFIG.mapWidth / 2)) * 2;
+const diagonal = { x: cornerX + 0.4, y: cornerY - 0.2 };
+resolveSurfaceCollision(world, diagonal, cornerX - 0.2, cornerY + 0.4, colonyA.id);
+check("Стены: диагональный шаг не срезает сплошной угол", diagonal.x <= cornerX || diagonal.y >= cornerY);
+// Check actual solid cells along each movement segment. The old y=wallY-1
+// threshold counted turning around in FRONT of the wall as a crossing and
+// failed randomly; rain may also legitimately open a gap during this run.
 for (let i = 0; i < 1500; i += 1) {
+  const previous = new Map(colonyA.ants.map(ant => [ant.id, { ...ant.pos }]));
   step(world);
   for (const ant of colonyA.ants) {
-    const above = ant.pos.y < wallY - 1;
-    const prev = wasAbove.get(ant.id);
-    if (prev !== undefined && prev !== above) {
-      if (ant.pos.x > entrance.x - 30 && ant.pos.x < entrance.x + 30) {
+    const prev = previous.get(ant.id);
+    if (!prev || isWallBlockedAt(world, prev.x, prev.y, ant.colonyId)) continue;
+    const length = Math.hypot(ant.pos.x - prev.x, ant.pos.y - prev.y);
+    const samples = Math.max(1, Math.ceil(length / 0.4));
+    for (let sample = 1; sample <= samples; sample++) {
+      const t = sample / samples;
+      if (isWallBlockedAt(world, prev.x + (ant.pos.x - prev.x) * t, prev.y + (ant.pos.y - prev.y) * t, ant.colonyId)) {
         crossings += 1;
+        break;
       }
     }
-    wasAbove.set(ant.id, above);
   }
 }
-check("Фаза 4: стена почти непроходима", crossings <= 50, `пересечений=${crossings}`);
+check("Фаза 4: жители не проходят через достроенные стены", crossings === 0, `пересечений=${crossings}`);
 
 // --- Ворота: свои проходят, чужие и паук — нет ---
 const gateX = entrance.x;

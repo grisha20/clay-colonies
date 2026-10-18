@@ -7,8 +7,9 @@ import { createSocketHub } from "./net/socket";
 import { loadWorldSnapshot, saveWorldSnapshot } from "./state/snapshot";
 import { addFoodSource, createWorld, restartColony, toNetworkSnapshot } from "./sim/world";
 import { eraseColonyZone, paintColonyZone } from "./sim/zones";
-import { eraseBuildCells, paintWallCells, placePointBuilding } from "./sim/building";
+import { eraseBuildCells, paintWallCells, placePointBuilding, isSurfaceBlockedAt } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
+import { trainWaterWeapons, prepareSandboxGuard } from "./sim/session";
 
 const genomeState = await loadGenome();
 const genomeStateB = await loadGenome(CONFIG.genomeFileB);
@@ -18,8 +19,26 @@ const world = loadedWorld ?? createWorld(genomeState, spiderGenomeState, genomeS
 
 let loop: LoopController;
 const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetworkSnapshot(world, includePheromones, view), (command) => {
+  if (world.session.status !== "playing" && command.type !== "newGame" && command.type !== "setSpeed" && command.type !== "setView") return;
+  if (command.type === "setSandbox") {
+    world.session.mode = command.value ? "sandbox" : "match";
+    if (command.value) prepareSandboxGuard(world, command.colonyIndex);
+  }
+  if (command.type === "setAlarm") {
+    const c = world.colonies[command.colonyIndex];
+    if (c) c.colony.alarm = command.value;
+  }
+  if (command.type === "setDefensePost" && !isSurfaceBlockedAt(world, command.x, command.y, world.colonies[command.colonyIndex]?.id)) {
+    const c = world.colonies[command.colonyIndex];
+    if (c) c.colony.defensePost = { x: command.x, y: command.y };
+  }
+  if (command.type === "trainWaterWeapons") trainWaterWeapons(world, command.colonyIndex);
+  if (command.type === "setGrowth") {
+    const c = world.colonies[command.colonyIndex];
+    if (c) { c.colony.growthPaused = command.paused; c.colony.clayReserve = command.reserve; }
+  }
   if (command.type === "dropFood") {
-    addFoodSource(world, command.x, command.y, CONFIG.playerFoodAmount);
+    if (world.session.mode === "sandbox") addFoodSource(world, command.x, command.y, CONFIG.playerFoodAmount);
   }
   if (command.type === "paintZone") {
     paintColonyZone(world, command.colonyIndex, command.zone, command.cells);
@@ -48,6 +67,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
   if (command.type === "newGame") {
     // Новая партия: свежий мир на месте, геномы и обучение сохраняются.
     restartColony(world);
+    loop.setSpeed(1);
   }
   if (command.type === "setSpeed") {
     // 0 = пауза; 1..50 = скорость симуляции.

@@ -276,7 +276,8 @@ export function drawSurfaceGround(
   spriteRoot: Container,
   world: WorldSnapshot,
   cell: number,
-  bounds: ViewBounds
+  bounds: ViewBounds,
+  decorate = true
 ): void {
   const width = world.surface.width;
   const height = world.surface.height;
@@ -374,7 +375,7 @@ export function drawSurfaceGround(
     }
   }
   shadowRoot.addChild(dirtEdge);
-  drawLakeBanks(shadowRoot, spriteRoot, cell, width, height, props.rockSmall, props.grassTuft);
+  if (decorate) drawLakeBanks(shadowRoot, spriteRoot, cell, width, height, props.rockSmall, props.grassTuft);
 
   const ground = new Graphics();
   for (let y = top; y < bottom; y += 1) {
@@ -402,12 +403,12 @@ export function drawSurfaceGround(
 
   shadowRoot.addChild(ground);
 
-  for (const entrance of entrances) {
+  for (const entrance of decorate ? entrances : []) {
     const x = entrance.x * cell;
     const y = entrance.y * cell;
     addAssetProp(shadowRoot, spriteRoot, props.bushRound, x - 154, y + 96, 0.52, 0, 0xf4ffd8);
     addAssetProp(shadowRoot, spriteRoot, props.bushRound, x + 154, y + 92, 0.5, 0, 0xf4ffd8);
   }
 
-  drawForestBorder(shadowRoot, spriteRoot, world, cell);
+  if (decorate) drawForestBorder(shadowRoot, spriteRoot, world, cell);
 }

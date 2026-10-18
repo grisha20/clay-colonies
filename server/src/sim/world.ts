@@ -24,7 +24,7 @@ import type { GenomeState } from "../ai/genome";
 import type { SpiderGenomeState } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
 import { createColony, syncColonyStats } from "./colony";
-import { createSpider, syncEnemyIdCounter } from "./enemy";
+import { syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
 import { createZoneSets, rebuildZoneSetsFromColony, type ZoneSets } from "./zones";
 import { completeBuilding, placePointBuilding, rebuildWallBlocked, syncBuildingIdCounter } from "./building";
@@ -33,6 +33,11 @@ import { createObjectives, restoreObjectives } from "./objectives";
 import { createWeather } from "./weather";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 import { createInitialFishPopulation } from "./fishing";
+import { createSession } from "./session";
+import { clearDeadAntPaths } from "./ant/movement";
+import { clearDeadPanic } from "./ant/combat";
+import { resetEnemyRuntime } from "./enemy";
+import { resetBuilderRuntime } from "./ant/build";
 
 export type ColonyRuntime = {
   id: string;
@@ -505,6 +510,8 @@ export function respawnCarrion(world: World): void {
 
 // «Глина — это всё»: павший оставляет ком глины (перелепить или пустить на стену).
 export function addClayRemains(world: World, ant: Ant): void {
+  const amount = CONFIG.deadClayAmount * Math.max(0, 1 - (ant.dissolved ?? 0));
+  if (amount <= 0.001) return;
   // Сливаем с ближайшим комом, чтобы поле боя не превращалось в сотню крошек.
   for (const node of world.surface.resourceNodes) {
     if (node.kind !== "clay") {
@@ -513,12 +520,13 @@ export function addClayRemains(world: World, ant: Ant): void {
     const dx = node.pos.x - ant.pos.x;
     const dy = node.pos.y - ant.pos.y;
     if (dx * dx + dy * dy <= 4 * 4) {
-      node.amount += CONFIG.deadClayAmount;
+      node.amount += amount;
+      node.maxAmount = Math.max(node.maxAmount, node.amount);
       return;
     }
   }
   world.surface.resourceNodes.push({
-    ...createResourceNode("clay", { x: ant.pos.x, y: ant.pos.y }, CONFIG.deadClayAmount)
+    ...createResourceNode("clay", { x: ant.pos.x, y: ant.pos.y }, amount)
   });
 }
 
@@ -772,7 +780,7 @@ export function createWorld(
     buildings: [],
     fish: createInitialFishPopulation()
   };
-  const enemies = [createSpider()];
+  const enemies: Enemy[] = [];
   const colonies = [
     createColonyRuntime("colony-1", "dark", CONFIG.surfaceEntrance, genomeState, spiderGenomeState),
     createColonyRuntime("colony-2", "red", CONFIG.surfaceEntranceB, genomeStateB, spiderGenomeState)
@@ -780,6 +788,7 @@ export function createWorld(
 
   const world: World = {
     tick: 0,
+    session: createSession(),
     surface,
     underground: colonies[0].underground,
     colony: colonies[0].colony,
@@ -956,7 +965,7 @@ export function worldFromSnapshot(
         state: ant.state === "dead" ? "dead" : ant.carrying > 0 ? "carry" : "search",
         colonyId: colonySnapshot.id,
         strength: ant.strength ?? 1,
-        job: "forage",
+        job: (["forage", "idle", "harvest", "build", "guard", "fish"] as Array<Ant["job"]>).includes(ant.job) ? ant.job : "forage",
         preferredTask: undefined,
         broodId: undefined,
         carryingBrood: undefined,
@@ -984,6 +993,7 @@ export function worldFromSnapshot(
 
   const world: World = {
     ...snapshot,
+    session: snapshot.session ?? createSession(snapshot.tick),
     surface: {
       ...snapshot.surface,
       foodSources,
@@ -1024,6 +1034,10 @@ export function worldFromSnapshot(
 }
 
 export function restartColony(world: World): void {
+  clearDeadAntPaths(new Set());
+  clearDeadPanic(new Set());
+  resetEnemyRuntime();
+  resetBuilderRuntime();
   const freshWorld = createWorld(
     world.colonies[0]?.genomeState ?? world.genomeState,
     world.spiderGenomeState,
@@ -1117,6 +1131,7 @@ export function toSnapshot(world: World, includePheromones = true): WorldSnapsho
     snapshotVersion: CURRENT_SNAPSHOT_VERSION,
     protocolVersion: CURRENT_PROTOCOL_VERSION,
     tick: world.tick,
+    session: world.session,
     surface: world.surface,
     underground: world.underground,
     colony: world.colony,

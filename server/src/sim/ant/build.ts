@@ -11,6 +11,7 @@ import { isWithinRadius } from "./utils";
 import { consumeFoodStock } from "../foodStock";
 
 const builderWaitTicks = new Map<string, number>();
+export function resetBuilderRuntime(): void { builderWaitTicks.clear(); }
 
 export function releaseBuilder(ant: Ant): void {
   ant.job = "forage";

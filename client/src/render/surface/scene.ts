@@ -1,15 +1,11 @@
-import { Container, Graphics, RenderTexture, Sprite, Renderer, TilingSprite } from "pixi.js";
+import { Container, Graphics, RenderTexture, Sprite, Renderer, TilingSprite, Texture } from "pixi.js";
 import { WALL_CELL_SIZE, ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
-import { isDeepWaterAt, isWaterAt, SURFACE_TERRAIN_CELL_SIZE } from "../../../../shared/surfaceTerrain";
+import { lakeFieldAt, isWaterAt, SURFACE_TERRAIN_CELL_SIZE } from "../../../../shared/surfaceTerrain";
 import { createSpritePool } from "../spritePool";
 import type { Camera, SurfaceScene, ViewBounds } from "../types";
 import { SURFACE_TILE_SIZE } from "../types";
 import {
-  createClayfolkSprite,
-  createCarrionSprite,
-  createFoodSprite,
-  createSpiderLairSprite,
-  createSpiderSprite
+  createSpiderLairSprite
 } from "../../sprites";
 import { drawSurfaceGround } from "./ground";
 import { drawSurfacePheromones } from "./pheromones";
@@ -18,6 +14,15 @@ import { getEnvironmentTextures } from "./environment";
 import { updateSurfaceFood, updateSurfaceResources, updateSurfaceCarrion, updateSurfaceLairs, updateSurfaceEnemies, updateSurfaceAnts, updateSurfaceFish, updateFishingEffects, updateSurfaceWebs, updateSurfaceShadows } from "./entities";
 import { offsetSettings } from "./editor";
 import { updateAndDrawParticles } from "./particles";
+import { drawGameplay } from "./gameplay";
+import { actorMotion } from "./motion";
+import { HEARTH_RADIUS_Y } from "../../../../shared/campGeometry";
+import { surfaceLighting } from "./lighting";
+import { getBuildingArt } from "./buildingArt";
+import { buildingFootprint } from "../../../../shared/buildingGeometry";
+import { campStockSprites } from "./campStock";
+import { royalWalk } from "./royals";
+import { drawBuildingGround } from "./buildingGround";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
   return (
@@ -45,6 +50,8 @@ export function createSurfaceScene(): SurfaceScene {
   const waterLayer = new Container();
   const fishLayer = new Container();
   const shadowLayer = new Graphics();
+  const campGround = new Container();
+  const buildingGround = new Graphics();
   const dynamicLayer = new Container();
   const fireGlow = new Graphics();
   const zonesOverlay = new Graphics();
@@ -53,6 +60,9 @@ export function createSurfaceScene(): SurfaceScene {
   const selectionGraphics = new Graphics();
   const particleGraphics = new Graphics();
   const fishingGraphics = new Graphics();
+  const gameplayGraphics = new Graphics();
+  gameplayGraphics.zIndex = 8995;
+  const nightVeil = new Sprite();
 
   staticLayer.label = "staticLayer";
   waterLayer.label = "waterLayer";
@@ -72,8 +82,8 @@ export function createSurfaceScene(): SurfaceScene {
   fishingGraphics.zIndex = 8990;
 
   // Собираем слои в корень сцены
-  root.addChild(staticLayer, waterLayer, fishLayer, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, fireGlow);
-  dynamicLayer.addChild(selectionGraphics, particleGraphics, fishingGraphics);
+  root.addChild(staticLayer, waterLayer, fishLayer, campGround, buildingGround, fireGlow, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, nightVeil);
+  dynamicLayer.addChild(selectionGraphics, particleGraphics, fishingGraphics, gameplayGraphics);
 
   if (typeof window !== "undefined") {
     (window as any).printLayers = () => {
@@ -87,6 +97,8 @@ export function createSurfaceScene(): SurfaceScene {
     waterLayer,
     fishLayer,
     shadowLayer,
+    campGround,
+    buildingGround,
     dynamicLayer,
     fireGlow,
     zonesOverlay,
@@ -95,21 +107,23 @@ export function createSurfaceScene(): SurfaceScene {
     selectionGraphics,
     particleGraphics,
     fishingGraphics,
+    gameplayGraphics,
+    nightVeil,
     buildingGraphics: [],
     buildingSprites: [],
     entranceGraphics: [],
     entranceSprites: [],
-    foodPool: createSpritePool(dynamicLayer, () => createFoodSprite(2.2)),
+    foodPool: createSpritePool(dynamicLayer, () => new Sprite()),
     resourcePool: createSpritePool(dynamicLayer, () => {
       const sprite = new Sprite();
       sprite.anchor.set(0.5, 1);
       return sprite;
     }),
-    carrionPool: createSpritePool(dynamicLayer, () => createCarrionSprite(2.6)),
+    carrionPool: createSpritePool(dynamicLayer, () => new Sprite()),
     lairPool: createSpritePool(dynamicLayer, () => createSpiderLairSprite(3.4)),
-    carriedCarrionPool: createSpritePool(dynamicLayer, () => createCarrionSprite(1.7)),
-    enemyPool: createSpritePool(dynamicLayer, () => createSpiderSprite(4)),
-    antPool: createSpritePool(dynamicLayer, () => createClayfolkSprite(false, 2.85)),
+    carriedCarrionPool: createSpritePool(dynamicLayer, () => new Sprite()),
+    enemyPool: createSpritePool(dynamicLayer, () => new Sprite()),
+    antPool: createSpritePool(dynamicLayer, () => new Sprite()),
     carriedItemsPool: createSpritePool(dynamicLayer, () => new Sprite()),
     fishPool: createSpritePool(fishLayer, () => new Sprite()),
     staticKey: "",
@@ -127,7 +141,9 @@ function rebuildSurfaceStatic(
   staticKey: string
 ): void {
   scene.staticLayer.removeChildren();
-  scene.waterLayer.removeChildren();
+  for (const child of scene.waterLayer.removeChildren()) child.destroy({ children: true });
+  scene.waterDepthTexture?.destroy(true);
+  scene.waterDepthTexture = undefined;
   scene.waterSprites = [];
   scene.waterFrames = undefined;
   scene.waterFrame = undefined;
@@ -206,7 +222,6 @@ function buildLakeWaterLayer(scene: SurfaceScene, world: WorldSnapshot, cell: nu
   const widthPx = world.surface.width * cell;
   const heightPx = world.surface.height * cell;
   const shallowMask = new Graphics();
-  const deepMask = new Graphics();
   const shoreTiles: Sprite[] = [];
   const terrainCell = SURFACE_TERRAIN_CELL_SIZE;
   const tilePx = terrainCell * cell;
@@ -318,21 +333,35 @@ function buildLakeWaterLayer(scene: SurfaceScene, world: WorldSnapshot, cell: nu
       }
     }
   }
-  // Depth transition uses a finer visual grid than collision/shore autotiles.
-  // This keeps large deep-water masses organic without changing straight banks.
-  const depthCell = 2;
-  for (let y = 0; y < world.surface.height; y += depthCell) {
-    for (let x = 0; x < world.surface.width; x += depthCell) {
-      if (isDeepWaterAt(x + depthCell / 2, y + depthCell / 2)) {
-        deepMask.rect(x * cell, y * cell, depthCell * cell, depthCell * cell).fill(0xffffff);
-      }
+  // A small, bilinearly sampled alpha mask blends depth without changing the
+  // collision/shore cells. It replaces thousands of hard-edged stencil squares.
+  const depthCanvas = document.createElement("canvas");
+  depthCanvas.width = Math.ceil(world.surface.width / 2);
+  depthCanvas.height = Math.ceil(world.surface.height / 2);
+  const depthContext = depthCanvas.getContext("2d")!;
+  const pixels = depthContext.createImageData(depthCanvas.width, depthCanvas.height);
+  for (let y = 0; y < depthCanvas.height; y++) {
+    for (let x = 0; x < depthCanvas.width; x++) {
+      const field = lakeFieldAt(x * 2 + 1, y * 2 + 1);
+      const t = Math.max(0, Math.min(1, (field - 0.08) / 0.75)), alpha = t * t * (3 - 2 * t);
+      const index = (y * depthCanvas.width + x) * 4;
+      pixels.data[index] = pixels.data[index + 1] = pixels.data[index + 2] = 255;
+      pixels.data[index + 3] = Math.round(alpha * 255);
     }
   }
+  depthContext.putImageData(pixels, 0, 0);
+  const depthTexture = Texture.from(depthCanvas);
+  depthTexture.source.scaleMode = "linear";
+  scene.waterDepthTexture = depthTexture;
+  const deepMask = new Sprite(depthTexture);
+  deepMask.width = widthPx; deepMask.height = heightPx;
 
   const shallow = TilingSprite.from(frames.lakeShallowFrames[0], { width: widthPx, height: heightPx });
   const deep = TilingSprite.from(frames.lakeDeepFrames[0], { width: widthPx, height: heightPx });
   shallow.mask = shallowMask;
   deep.mask = deepMask;
+  shallow.tint = deep.tint = 0xb3c7ad;
+  for (const tile of shoreTiles) tile.tint = 0xb3c7ad;
   shallow.tilePosition.set(7, 11);
   deep.tilePosition.set(19, 3);
   scene.waterLayer.addChild(shallow, deep, ...shoreTiles, shallowMask, deepMask);
@@ -347,7 +376,7 @@ function updateLakeWater(scene: SurfaceScene): void {
   if (!scene.waterSprites || !scene.waterFrames) {
     return;
   }
-  const frame = Math.floor(Date.now() / 145) % scene.waterFrames.shallow.length;
+  const frame = Math.floor(actorMotion.time / 0.145) % scene.waterFrames.shallow.length;
   if (scene.waterFrame === frame) {
     return;
   }
@@ -358,7 +387,29 @@ function updateLakeWater(scene: SurfaceScene): void {
   }
 }
 
-function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell: number, entranceKey: string): void {
+function drawColdHearth(x: number, y: number): Graphics {
+  const g = new Graphics();
+  g.ellipse(x, y, 23, 11).fill({ color: 0x443b31 });
+  g.moveTo(x - 13, y - 3).lineTo(x + 12, y + 4).stroke({ color: 0x493629, width: 6 });
+  g.moveTo(x - 11, y + 5).lineTo(x + 11, y - 4).stroke({ color: 0x645040, width: 5 });
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * Math.PI * 2, px = x + Math.cos(a) * 22, py = y + Math.sin(a) * 10;
+    g.ellipse(px, py, 5.5, 4.6).fill(0x61594c);
+    g.ellipse(px - 0.5, py - 1, 4.2, 3.2).fill(0x8d8371);
+  }
+  return g;
+}
+
+export function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell: number, entranceKey: string): void {
+  const campfireFrames = getEnvironmentTextures().props.campfireFrames;
+  const campfireFrame = campfireFrames[Math.floor(actorMotion.time * 10) % campfireFrames.length];
+  const fires = world.colonies.map(c => c.colony.fire > 0.05);
+  const key = `${entranceKey}:${fires}:${JSON.stringify(offsetSettings.chiefs)}:${JSON.stringify(offsetSettings.campPiles)}`;
+  if (scene.entranceKey === key) {
+    for (const sprite of scene.entranceSprites ?? []) if (sprite.label.startsWith("campfire_") && sprite.visible) sprite.texture = campfireFrame;
+    return;
+  }
+  scene.entranceKey = key;
   // Сначала удаляем старые Graphics входов
   for (const g of scene.entranceGraphics ?? []) {
     g.destroy();
@@ -368,9 +419,8 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
     sprite.destroy();
   }
   scene.entranceSprites = [];
+  for (const child of scene.campGround.removeChildren()) child.destroy();
 
-  const campfireFrames = getEnvironmentTextures().props.campfireFrames;
-  const campfireFrame = campfireFrames[Math.floor(world.tick / 8) % campfireFrames.length];
   const entrances = world.surface.entrances ?? [world.surface.entrance];
   entrances.forEach((entrance, index) => {
     const colony = world.colonies?.[index];
@@ -379,36 +429,30 @@ function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot, cell:
 
     const g = new Graphics();
     g.label = `entrance_${index}`;
-    // Точка опоры костра базы (под костром)
-    g.zIndex = y + 24;
-
-    drawSurfaceEntranceAt(
-      g,
-      entrance,
-      cell,
-      index === 1 ? "red" : "dark",
-      colony?.colony.food ?? world.colony.food,
-      colony?.colony.clay ?? 0,
-      colony?.colony.wood ?? 0,
-      colony?.colony.stone ?? 0
-    );
-
-    scene.dynamicLayer.addChild(g);
-    scene.entranceGraphics?.push(g);
+    scene.campGround.addChild(g);
+    drawSurfaceEntranceAt(g, entrance, cell, index === 1 ? "red" : "dark");
+    for (const stock of campStockSprites(colony?.colony ?? world.colony, x, y)) {
+      scene.dynamicLayer.addChild(stock); scene.entranceSprites?.push(stock);
+    }
 
     const campfire = new Sprite(campfireFrame);
-    campfire.anchor.set(0.5, 1);
-    campfire.position.set(x, y + 29);
+    // Pixel row 105 is the centre of the stone ring, not the PNG's bottom.
+    campfire.anchor.set(0.5, 105 / 128);
+    campfire.position.set(x, y);
     campfire.scale.set(0.46);
-    campfire.zIndex = y + 18;
+    campfire.zIndex = y + HEARTH_RADIUS_Y * cell;
+    campfire.visible = fires[index];
     campfire.label = `campfire_${index}`;
     scene.dynamicLayer.addChild(campfire);
     scene.entranceSprites?.push(campfire);
+    const cold = drawColdHearth(x, y);
+    cold.zIndex = campfire.zIndex; cold.visible = !fires[index];
+    cold.label = `cold_hearth_${index}`; scene.dynamicLayer.addChild(cold); scene.entranceGraphics?.push(cold);
   });
 }
 
 // Постройки: площадка (контур) -> стройка (полупрозрачно) -> готово (плотный цвет глины).
-function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
+export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
   const buildings = world.surface.buildings ?? [];
   const buildingKey = buildings.map((building) => [
     building.id,
@@ -426,6 +470,7 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
     return;
   }
   scene.buildingKey = buildingKey;
+  drawBuildingGround(scene.buildingGround, world, cell);
 
   // Сначала удаляем старые Graphics зданий
   for (const g of scene.buildingGraphics ?? []) {
@@ -451,6 +496,16 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
     const darkColor = isRed ? 0x692018 : 0x5b281c;
     const x = building.pos.x * cell;
     const y = building.pos.y * cell;
+
+    const foundation = buildingFootprint(building);
+    if (foundation) {
+      const art = getBuildingArt(building.type, foundation.rx * 2 * cell * 1.12);
+      const sprite = new Sprite(art.texture); sprite.anchor.set(art.anchorX, 1); sprite.scale.set(art.scale);
+      sprite.position.set(x, (foundation.y + foundation.ry) * cell); sprite.zIndex = sprite.y;
+      sprite.label = `${building.type}_${building.id}`;
+      scene.dynamicLayer.addChild(sprite); scene.buildingSprites?.push(sprite);
+      continue;
+    }
 
     const g = new Graphics();
     g.label = `building_${building.type}_${building.id}`;
@@ -481,12 +536,6 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         const xLeft = hasLeft ? x - half : x - half - 1;
         const xRight = hasRight ? x + half : x + half + 1;
         const width = xRight - xLeft;
-
-        // 1. Рисуем тень (только если нет соседа снизу)
-        if (!hasDown) {
-          // Тень падает вниз от стены (к камере)
-          g.rect(xLeft, y + half, width, 4).fill({ color: 0x1d120b, alpha: 0.24 });
-        }
 
         // 2. Отрисовка геометрии стены
         if (hasDown) {
@@ -530,12 +579,10 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0x8a5429, alpha: 0.35 + building.progress * 0.5 });
         g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: 0x4f2f16, alpha: 0.8 });
       } else {
-        // Тень смещена еще выше под основание строения
-        g.ellipse(x + 3, y + half * 0.65, half * 1.25, half * 0.34).fill({ color: 0x1d120b, alpha: 0.24 });
-
         const storage = new Sprite(getEnvironmentTextures().props.storage);
         storage.anchor.set(0.5, 1);
         storage.position.set(Math.round(x), Math.round(y + half * 0.92));
+        g.zIndex = storage.y;
         storage.scale.set((half * 2.65) / Math.max(1, storage.texture.width));
         storage.zIndex = g.zIndex + 0.1;
         storage.label = `storage_${building.id}`;
@@ -557,12 +604,10 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - half, y - half, half * 2, half * 2).fill({ color: 0xbc6240, alpha: 0.3 + building.progress * 0.42 });
         g.rect(x - half, y - half, half * 2, half * 2).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        // Тень смещена еще выше под основание строения
-        g.ellipse(x + 4, y + half * 0.75, half * 1.6, half * 0.42).fill({ color: 0x1d120b, alpha: 0.24 });
-
         const workshop = new Sprite(getEnvironmentTextures().props.workshop);
         workshop.anchor.set(0.5, 1);
         workshop.position.set(Math.round(x), Math.round(y + half * 1.08));
+        g.zIndex = workshop.y;
         workshop.scale.set((half * 4.0) / Math.max(1, workshop.texture.width));
         workshop.zIndex = g.zIndex + 0.1;
         workshop.label = `workshop_${building.id}`;
@@ -586,8 +631,6 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.rect(x - 3, y - poleH * building.progress, 6, poleH * building.progress).fill({ color: clayColor, alpha: 0.7 });
         g.circle(x, y, 2.2 * cell).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        // Тень смещена еще выше под основание идола
-        g.ellipse(x + 2, y - 6, 2.4 * cell, 0.7 * cell).fill({ color: 0x1d120b, alpha: 0.24 });
         g.rect(x - 3, y - poleH, 6, poleH + 2).fill({ color: 0x8a5429, alpha: 1 });
         g.rect(x - 8, y - poleH * 0.55, 16, 3).fill({ color: 0x8a5429, alpha: 1 });
         g.circle(x, y - poleH, maskR).fill({ color: clayColor, alpha: 1 });
@@ -615,12 +658,10 @@ function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell: number
         g.circle(x, y, radius).fill({ color: clayColor, alpha: 0.35 + building.progress * 0.5 });
         g.circle(x, y, radius).stroke({ width: 1.6, color: darkColor, alpha: 0.8 });
       } else {
-        // Тень смещена еще выше под основание хижины
-        g.ellipse(x + 3, y + radius * 0.5, radius * 1.18, radius * 0.34).fill({ color: 0x1d120b, alpha: 0.24 });
-
         const hut = new Sprite(getEnvironmentTextures().props.hut);
         hut.anchor.set(0.5, 1);
         hut.position.set(Math.round(x), Math.round(y + radius * 0.72));
+        g.zIndex = hut.y;
         hut.scale.set((radius * 2.45) / Math.max(1, hut.texture.width));
         hut.zIndex = g.zIndex + 0.1;
         hut.label = `hut_${building.id}`;
@@ -669,23 +710,22 @@ function updateZonesOverlay(scene: SurfaceScene, world: WorldSnapshot, cell: num
   });
 }
 
-function updateFireGlow(glow: Graphics, world: WorldSnapshot, cell: number): void {
+export function updateFireGlow(glow: Graphics, world: WorldSnapshot, cell: number): void {
   glow.clear();
   const entrances = world.surface.entrances ?? [world.surface.entrance];
-  const t = world.tick;
+  const t = actorMotion.time * 10;
   const config = offsetSettings.fireGlow;
+  const darkness = surfaceLighting(world, cell).darkness;
 
   for (let index = 0; index < entrances.length; index += 1) {
     const entrance = entrances[index];
     // Уровень огня (colony.fire 0..1): без дров костёр гаснет — пламя меньше и тусклее.
     const fire = world.colonies?.[index]?.colony.fire ?? 1;
     const x = Math.round(entrance.x * cell);
-    const y = Math.round(entrance.y * cell) + 6;
+    const y = Math.round(entrance.y * cell);
 
     if (fire <= 0.05) {
       // Потух: угольки и струйка дыма.
-      glow.circle(x, y, 4).fill({ color: 0x5a3a28, alpha: 0.5 });
-      glow.circle(x + Math.sin(t * 0.3 + index) * 2, y - 8 - (t % 24) * 0.4, 2.5).fill({ color: 0x9a9a94, alpha: 0.18 });
       continue;
     }
 
@@ -694,20 +734,21 @@ function updateFireGlow(glow: Graphics, world: WorldSnapshot, cell: number): voi
     const flicker = 0.5 + 0.5 * Math.sin(t * config.pulseSpeed * 8.18 + index * 2.1) * Math.sin(t * config.pulseSpeed * 3.36 + index);
     const pulseOffset = flicker * config.pulseAmp * cell * fireScale;
 
-    // Внешний круг мягкого рассеивания
-    glow.circle(x, y, config.outerRadius * cell * 0.5 * fireScale + pulseOffset).fill({
-      color: 0xff7a00,
-      alpha: (config.outerAlpha + flicker * config.pulseAmp * 0.5) * fireBright
-    });
-
-    // Внутренний круг яркого центра
-    glow.circle(x + Math.sin(t * 0.7 + index) * 1.5, y - 2, config.innerRadius * cell * 0.5 * fireScale + pulseOffset * 0.6).fill({
-      color: 0xffe07a,
-      alpha: (config.innerAlpha + flicker * config.pulseAmp) * fireBright
-    });
+    const strength = (0.25 + darkness * 0.75) * fireBright;
+    // Nested low-opacity ellipses form a floor light, below feet and stones.
+    const radius = config.outerRadius * cell * 0.5 * fireScale + pulseOffset;
+    for (let band = 8; band >= 1; band--) {
+      const r = radius * band / 8;
+      glow.ellipse(x, y, r, r * 0.6).fill({ color: 0xffb657, alpha: (config.outerAlpha + 0.006) * strength });
+    }
+    for (let band = 5; band >= 1; band--) {
+      const r = (config.innerRadius * cell * 0.5 * fireScale + pulseOffset * 0.6) * band / 5;
+      glow.ellipse(x, y, r, r * 0.55).fill({ color: 0xffcc78, alpha: config.innerAlpha * 0.14 * strength });
+    }
   }
 }
 
+const trampleStates = new WeakMap<SurfaceScene, { texture: RenderTexture; tick: number; positions: Map<string, Vec2> }>();
 function updateTrample(scene: SurfaceScene, renderer: Renderer, world: WorldSnapshot): void {
   if (!scene.trampleTexture || !scene.trampleSprite) {
     return;
@@ -716,16 +757,33 @@ function updateTrample(scene: SurfaceScene, renderer: Renderer, world: WorldSnap
   if (!scene.trailPainter) {
     scene.trailPainter = new Graphics();
   }
+  let state = trampleStates.get(scene);
+  if (!state || state.texture !== scene.trampleTexture) {
+    state = { texture: scene.trampleTexture, tick: -1, positions: new Map() };
+    trampleStates.set(scene, state);
+  }
+  if (world.tick < state.tick) {
+    state.positions.clear(); state.tick = -1;
+    scene.trailPainter.clear();
+    renderer.render({ container: scene.trailPainter, target: scene.trampleTexture, clear: true });
+  }
+  if (world.session.speed === 0 || world.session.status !== "playing" || world.tick === state.tick) return;
+  state.tick = world.tick;
 
   const trailPainter = scene.trailPainter;
   trailPainter.clear();
 
   let hasSurfaceEntities = false;
+  const seen = new Set<string>();
+  const moved = (id: string, pos: Vec2) => {
+    seen.add(id); const before = state!.positions.get(id); state!.positions.set(id, { ...pos });
+    return !!before && Math.hypot(pos.x - before.x, pos.y - before.y) > 0.05;
+  };
 
   const ants = world.ants ?? [];
   for (let i = 0; i < ants.length; i++) {
     const ant = ants[i];
-    if (ant.layer === "surface") {
+    if (ant.layer === "surface" && !ant.capturedBy && ant.state !== "dead" && moved(ant.id, ant.pos)) {
       hasSurfaceEntities = true;
       trailPainter.circle(ant.pos.x, ant.pos.y, 0.9).fill({ color: 0xffffff, alpha: 0.08 });
     }
@@ -734,9 +792,11 @@ function updateTrample(scene: SurfaceScene, renderer: Renderer, world: WorldSnap
   const enemies = world.enemies ?? [];
   for (let i = 0; i < enemies.length; i++) {
     const enemy = enemies[i];
+    if (enemy.hp <= 0 || !moved(enemy.id, enemy.pos)) continue;
     hasSurfaceEntities = true;
     trailPainter.circle(enemy.pos.x, enemy.pos.y, 1.8).fill({ color: 0xffffff, alpha: 0.12 });
   }
+  for (const id of state.positions.keys()) if (!seen.has(id)) state.positions.delete(id);
 
   if (hasSurfaceEntities) {
     renderer.render({
@@ -781,14 +841,20 @@ export function renderSurface(
   scene.root.addChild(scene.staticLayer);
   scene.root.addChild(scene.waterLayer);
   scene.root.addChild(scene.fishLayer);
+  scene.root.addChild(scene.campGround);
+  scene.root.addChild(scene.buildingGround);
+  scene.root.addChild(scene.fireGlow);
   scene.root.addChild(scene.shadowLayer);
   scene.root.addChild(scene.zonesOverlay);
   scene.root.addChild(scene.pheromones);
   scene.root.addChild(scene.webs);
   scene.root.addChild(scene.dynamicLayer);
-  scene.root.addChild(scene.fireGlow);
+  scene.root.addChild(scene.nightVeil);
 
   const cell = SURFACE_TILE_SIZE;
+  const now = performance.now();
+  world = { ...world, ants: [...world.ants, ...royalWalk.update(world, now)] };
+  actorMotion.update(world, now);
   const bounds = visibleSurfaceBounds(camera, viewportWidth, viewportHeight);
   const staticKey = [
     world.surface.width,
@@ -811,10 +877,12 @@ export function renderSurface(
 
   const storageLevels = world.colonies?.map((c) =>
     [
-      Math.floor((c.colony.food ?? 0) / 10),
-      Math.floor((c.colony.clay ?? 0) / 8),
-      Math.floor((c.colony.wood ?? 0) / 8),
-      Math.floor((c.colony.stone ?? 0) / 8)
+      Math.ceil((c.colony.foodStock?.fruit ?? c.colony.food ?? 0) / 12),
+      Math.ceil((c.colony.foodStock?.fish ?? 0) / 12),
+      Math.ceil((c.colony.foodStock?.meat ?? 0) / 12),
+      Math.ceil((c.colony.clay ?? 0) / 12),
+      Math.ceil((c.colony.wood ?? 0) / 12),
+      Math.ceil((c.colony.stone ?? 0) / 12)
     ].join("-")
   ) ?? [Math.floor((world.colony.food ?? 0) / 10)];
   const entranceKey = [
@@ -836,5 +904,6 @@ export function renderSurface(
   updateSurfaceEnemies(scene.enemyPool, scene.carriedCarrionPool, world, cell, bounds);
   updateFishingEffects(scene.fishingGraphics, world, cell, bounds);
   updateSurfaceAnts(scene.antPool, scene.carriedItemsPool, scene.selectionGraphics, world, cell, bounds);
+  drawGameplay(scene, world, cell);
   updateAndDrawParticles(scene.particleGraphics, world, cell, camera, viewportWidth, viewportHeight);
 }

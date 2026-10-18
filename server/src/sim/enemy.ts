@@ -1,5 +1,5 @@
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
-import { applyMode, chooseMode, hasAvailableCarrion, isSpiderFastMode, type SpiderMode } from "../ai/spiderBrain";
+import { applyMode, chooseMode, hasAvailableCarrion, isSpiderFastMode, resetSpiderBrainRuntime, type SpiderMode } from "../ai/spiderBrain";
 import { recordAndEvolveSpider, saveSpiderGenome } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
 import { isWaterAt } from "../../../shared/surfaceTerrain";
@@ -7,6 +7,8 @@ import { tickCache } from "./cache";
 import { isWithinRadius } from "./ant/utils";
 import { resolveSurfaceCollision } from "./building";
 import { addFoodSource, type World } from "./world";
+import { moveCreature } from "./wildlife";
+import { markMelee } from "./melee";
 
 const enemyQueryScratch: Ant[] = [];
 
@@ -15,6 +17,11 @@ let spiderRespawnTick: number | null = null;
 const spiderHeadings = new Map<string, Vec2>();
 const spiderModes = new Map<string, { mode: SpiderMode; repickAt: number }>();
 const spiderStarveTicks = new Map<string, number>();
+export function resetEnemyRuntime(): void {
+  spiderRespawnTick = null;
+  spiderHeadings.clear(); spiderModes.clear(); spiderStarveTicks.clear();
+  resetSpiderBrainRuntime();
+}
 
 function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -264,6 +271,7 @@ export function syncEnemyIdCounter(enemies: Enemy[], tick: number): void {
   nextEnemyId = Math.max(nextEnemyId, maxEnemyId + 1);
   spiderRespawnTick = enemies.some((enemy) => enemy.type === "spider") ? null : tick + CONFIG.spiderRespawnTicks;
   for (const enemy of enemies) {
+    if (enemy.type !== "spider") continue;
     if (!spiderHeadings.has(enemy.id)) {
       spiderHeadings.set(enemy.id, randomHeading());
     }
@@ -327,6 +335,7 @@ function updateSpiderStarvation(enemy: Enemy): boolean {
 
 function creditSpiderKill(world: World, enemy: Enemy): void {
   const creditedColonies = new Set<string>();
+  if (enemy.lastHitColonyId) creditedColonies.add(enemy.lastHitColonyId);
   const defRad = CONFIG.defenseRadius;
   const nearby = tickCache.worldSurfaceAntGrid.queryInto(enemy.pos, defRad, enemyQueryScratch);
   for (const ant of nearby) {
@@ -390,16 +399,7 @@ function removeHoardLoot(world: World, enemy: Enemy, dropAtLair: boolean): void 
 }
 
 export function updateEnemies(world: World): void {
-  if (world.enemies.length === 0) {
-    if (spiderRespawnTick === null) {
-      spiderRespawnTick = world.tick + CONFIG.spiderRespawnTicks;
-    }
-    if (world.tick >= spiderRespawnTick) {
-      world.enemies.push(createSpider());
-      spiderRespawnTick = null;
-    }
-    return;
-  }
+  if (!world.enemies.some(e => e.type === "spider")) return;
 
   const deadEnemies = new Set<string>();
 
@@ -416,17 +416,20 @@ export function updateEnemies(world: World): void {
     }
     const prevSpiderX = enemy.pos.x;
     const prevSpiderY = enemy.pos.y;
-    moveSpider(world, enemy, liveAntsCount);
+    if (enemy.raid) {
+      const home = world.colonies.find(c => c.id === enemy.targetColonyId)?.surfaceEntrance ?? world.surface.entrance;
+      moveCreature(world, enemy, home, CONFIG.spiderSpeed, true);
+    } else moveSpider(world, enemy, liveAntsCount);
     resolveSurfaceCollision(world, enemy.pos, prevSpiderX, prevSpiderY);
     const hungry = enemy.hunger >= CONFIG.spiderHungryThreshold;
     const attackRadius = hungry ? CONFIG.spiderHungryAttackRadius : CONFIG.spiderAttackRadius;
     const damage = hungry ? CONFIG.spiderHungryDamage : CONFIG.spiderDamagePerTick;
 
-    const isStartPeriod = liveAntsCount <= 10;
+    const isStartPeriod = !enemy.raid && liveAntsCount <= 10;
 
     const attackCandidates = tickCache.worldSurfaceAntGrid.queryInto(enemy.pos, attackRadius, enemyQueryScratch);
     for (const ant of attackCandidates) {
-      if (!isStartPeriod && isWithinRadius(ant.pos, enemy.pos, attackRadius)) {
+      if (enemy.hp > 0 && ant.state !== "dead" && !ant.capturedBy && !isStartPeriod && isWithinRadius(ant.pos, enemy.pos, attackRadius)) {
         const hadEnergy = ant.energy > 0;
         ant.energy -= damage;
         if (ant.energy <= 0) {
@@ -439,6 +442,8 @@ export function updateEnemies(world: World): void {
 
         if (ant.state === "fight") {
           enemy.hp -= CONFIG.antDamagePerTick * ant.strength;
+          markMelee(ant, enemy.pos, world.tick);
+          enemy.lastHitColonyId = ant.colonyId;
         }
       }
     }

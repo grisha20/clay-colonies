@@ -7,15 +7,27 @@ import {
   resourceNodeYield,
   type Ant,
   type Fish,
+  type Enemy,
   type NetworkWorldSnapshot,
   type WorldSnapshot
 } from "../../shared/types";
 import { isWaterAt } from "../../shared/surfaceTerrain";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
+import { preloadCharacterArt } from "./render/surface/characterArt";
+import { actorMotion, residentScale, RESIDENT_HEIGHT, positionDiscontinuity } from "./render/surface/motion";
+import { preloadCreatureArt } from "./render/surface/creatureArt";
+import { preloadBuildingArt } from "./render/surface/buildingArt";
+import { preloadEquipmentArt } from "./render/surface/equipmentArt";
+import { residentPlacement } from "./render/surface/residentLayout";
+import { setAtlasIcon } from "./render/surface/atlasIcon";
+import { getEquipmentArt } from "./render/surface/equipmentArt";
+import { getResidentArt } from "./render/surface/characterArt";
+import { preloadFishArt, getFishArt, fishAtlasUrl } from "./render/surface/fishArt";
 import { spriteIconDataUrl } from "./sprites";
 import { drawMinimap, minimapClickToWorld } from "./render/minimap";
 import { setSelectedAntId } from "./render/surface/entities";
+import { createGameplayPanel } from "./ui/gameplay";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) {
@@ -74,7 +86,8 @@ appRoot.innerHTML = `
       </div>
     </section>
     <section class="panel toolDock" aria-label="Инструмент">
-      <button class="active" data-tool="food" type="button">Еда</button>
+      <button class="active" data-tool="select" type="button">Выбор</button>
+      <button data-tool="food" type="button" hidden>Еда</button>
       <button data-tool="harvest" type="button">Добыча</button>
       <button data-tool="forbid" type="button">Запрет</button>
       <button data-tool="erase" type="button">Ластик</button>
@@ -159,7 +172,7 @@ appRoot.innerHTML = `
       <button class="buildCard" data-tool="idol" type="button">
         <span class="bname">Идол</span>
         <span class="bcost" id="cost-idol">25 глины + 5 камня</span>
-        <span class="bnote">хитрая победа</span>
+        <span class="bnote">ритуал: 3 минуты у костра</span>
       </button>
     </section>
     <aside class="panel prioPanel" id="prio-panel">
@@ -185,7 +198,7 @@ appRoot.innerHTML = `
     </aside>
     <footer class="panel status collapsed" id="status-panel">
       <span id="status">Подключение к ws://localhost:8787</span>
-      <span id="tool-hint">Клик по карте - подкинуть еду</span>
+      <span id="tool-hint">Клик — выбрать жителя. Перетаскивание — камера</span>
       <span id="weather-label"></span>
       <div class="perfRow">
         <span class="perfStat">FPS <strong id="fps">0</strong></span>
@@ -334,7 +347,7 @@ style.textContent = `
 
   .toolDock {
     left: 14px;
-    bottom: 14px;
+    bottom: 130px;
     padding: 6px;
     display: flex;
     gap: 6px;
@@ -453,14 +466,15 @@ style.textContent = `
   }
 
   .resourceBar {
-    left: 50%;
-    transform: translateX(-50%);
+    left: 160px;
+    right: 168px;
     top: 14px;
     min-height: 46px;
     padding: 6px 14px;
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 10px;
+    overflow-x: auto;
     white-space: nowrap;
   }
 
@@ -478,7 +492,7 @@ style.textContent = `
 
   .resourceBar strong {
     color: #3a2a18;
-    font-size: 16px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -486,7 +500,7 @@ style.textContent = `
     font-style: normal;
     font-size: 12px;
     color: #4e8a2f;
-    min-width: 30px;
+    min-width: 0;
   }
 
   .resourceBar em.negative {
@@ -626,12 +640,13 @@ style.textContent = `
   }
 
   .buildBar {
-    left: 50%;
-    transform: translateX(-50%);
+    left: 14px;
+    right: 206px;
     bottom: 14px;
     padding: 8px;
     display: flex;
     gap: 8px;
+    overflow-x: auto;
   }
 
   .buildCard {
@@ -644,7 +659,8 @@ style.textContent = `
     display: grid;
     gap: 2px;
     text-align: left;
-    min-width: 128px;
+    min-width: 112px;
+    flex: 1;
   }
 
   .buildCard .bname {
@@ -732,7 +748,8 @@ style.textContent = `
     grid-template-columns: 56px 24px 14px 24px 1fr 32px;
     align-items: center;
     gap: 4px;
-    height: 30px;
+    min-height: 30px;
+    padding: 4px 0;
     font-size: 13px;
     color: #4a3520;
     border-bottom: 1px solid rgb(138 106 68 / 0.15);
@@ -1096,7 +1113,7 @@ function updatePriorityPanel(world: WorldSnapshot): void {
 
   const key =
     currentColonyIndex + "|" + PRIO_KEYS.map((k) => `${priorities[k]}:${counts[k]}:${nodesAlive[k] ? 1 : 0}`).join("|") +
-    `|${freeForPlus}|${counts.food}|${population}|${colony.axes ?? 0}|${colony.picks ?? 0}|${colony.rods ?? 0}`;
+    `|${freeForPlus}|${counts.food}|${population}|${colony.axes ?? 0}|${colony.picks ?? 0}|${colony.rods ?? 0}|${colony.food < 30}|${colony.food < 15}|${colony.alarm}`;
   if (key === lastPrioKey) {
     return;
   }
@@ -1106,6 +1123,17 @@ function updatePriorityPanel(world: WorldSnapshot): void {
     const target = priorities[k] ?? 0;
     // Цель есть, людей нет и источник иссяк — честно показываем причину.
     const short = (k === "clay" || k === "wood" || k === "stone" || k === "fish") && target > counts[k] && !nodesAlive[k];
+    let reason = "";
+    if (target > counts[k]) {
+      if (colony.alarm && k !== "guard") reason = "Тревога: рабочие у костра";
+      else if (short) reason = "Источник иссяк";
+      else if ((k === "clay" || k === "wood" || k === "stone") && population < 8) reason = "Для добычи нужно 8 жителей";
+      else if ((k === "clay" || k === "wood" || k === "stone") && colony.food < 30) reason = "Добыча ждёт запаса 30 еды";
+      else if (k === "build" && colony.food < 15) reason = "Стройка ждёт запаса 15 еды";
+      else if (k === "fish" && colony.rods < target) reason = "Не хватает удочек";
+      else if (k === "stone" && colony.picks === 0 && !world.surface.resourceNodes.some(n => n.kind === "loose-stone" && n.amount > 0)) reason = "Нужна кирка из мастерской";
+      else reason = k === "build" ? "Нет доступного фронта работ или свободных жителей" : "Ждёт свободного жителя или сдачи груза";
+    }
     
     let toolHtml = "";
     if (k === "wood") {
@@ -1126,6 +1154,7 @@ function updatePriorityPanel(world: WorldSnapshot): void {
       `<button data-prio="${k}" data-delta="1" type="button"${freeForPlus <= 0 ? " disabled" : ""}>+</button>` +
       `<span class="pcount${short ? " short" : ""}" ${short ? 'title="Источник иссяк — люди пока на еде"' : ""}>${counts[k]}</span>` +
       `${toolHtml}` +
+      (reason ? `<small style="grid-column:1/-1;color:#8f532d;font-size:10px">${reason}</small>` : "") +
       `</div>`
     );
   }).join("");
@@ -1163,11 +1192,14 @@ function antName(id: string): string {
 }
 
 function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): string {
+  if (ant.capturedBy) return "Похищен! Нужна помощь стражи";
+  const c = world.colonies.find(c => c.id === ant.colonyId)?.colony ?? world.colony;
+  if (c.alarm && ant.job !== "guard") return "Тревога: возвращается к костру";
   if (ant.state === "fight") {
     return "Дерётся!";
   }
   if (ant.job === "guard") {
-    return "Охраняет лагерь";
+    return c.waterWeapons ? (ant.waterAmmo ?? 0) <= 0 ? "Идёт пополнить воду у озера" : `Водомёт: ${ant.waterAmmo}/8 зарядов` : "Держит пост обороны";
   }
   if (ant.job === "fish") {
     if (ant.carrying > 0 && ant.carryKind === "fish") {
@@ -1352,21 +1384,23 @@ const antsCount = document.querySelector<HTMLElement>("#ants-count");
 let trampleEnabled = true;
 
 // Инструменты игрока: клик-еда, кисть зон, постройки.
-type PlayerTool = "food" | "harvest" | "forbid" | "hut" | "storage" | "workshop" | "idol" | "wall" | "gate" | "erase";
-let currentTool: PlayerTool = "food";
+type PlayerTool = "select" | "post" | "food" | "harvest" | "forbid" | "hut" | "storage" | "workshop" | "idol" | "wall" | "gate" | "erase";
+let currentTool: PlayerTool = "select";
 let isPainting = false;
 let dragTool: "harvest" | "forbid" | "wall" | "gate" | "erase" | null = null;
 let dragStart: { x: number; y: number } | null = null;
 let dragEnd: { x: number; y: number } | null = null;
 
 const TOOL_HINTS: Record<PlayerTool, string> = {
+  select: "Клик — выбрать жителя. Перетаскивание — камера",
+  post: "Клик по суше — пост обороны. Стража будет держать эту точку",
   food: "Клик по карте - подкинуть еду",
   harvest: "Растяни прямоугольник зоны добычи (ЛКМ)",
   forbid: "Растяни прямоугольник зоны запрета (ЛКМ)",
   hut: "Клик - хижина (8 глины + 5 дерева, +4 к лимиту). Shift - ставить несколько",
   storage: "Клик - склад (6 дерева + 4 камня, точка сдачи). Shift - ставить несколько",
   workshop: "Клик - мастерская (8 глины + 4 дерева, делает топоры и кирки). Shift - ставить несколько",
-  idol: "Клик - Идол (25 глины + 5 камня). Достроишь - хитрая победа партии",
+  idol: "Клик — Идол (25 глины + 5 камня). Ритуал: 3 минуты у живого костра",
   wall: "Растяни линию стены (ЛКМ), 2 глины за сегмент",
   gate: "Растяни линию ворот (ЛКМ): 2 глины + 1 дерево за сегмент, проходят только свои",
   erase: "Растяни прямоугольник - сотрёт зоны, свои стены и ворота"
@@ -1437,6 +1471,7 @@ type AntInterp = {
   currY: number;
   currAngle: number;
   layer: string;
+  capturedBy?: string;
 };
 type FishInterp = Omit<AntInterp, "layer"> & { state: Fish["state"] };
 
@@ -1446,14 +1481,16 @@ let cameraMode: CameraMode = "follow";
 let currentSpeed = 1;
 let camera: Camera = { x: 50, y: 50, zoom: DEFAULT_SURFACE_ZOOM };
 let latestWorld: NetworkWorldSnapshot | null = null;
+let connectionLive = false;
 let interpolatedWorld: NetworkWorldSnapshot | null = null;
 const interpolatedAnts: Ant[] = [];
 const interpolatedAntById = new Map<string, Ant>();
 const interpolatedFish: Fish[] = [];
 const interpolatedFishById = new Map<string, Fish>();
+const interpolatedEnemies: Enemy[] = [];
+const enemyInterp = new Map<string, { prevX: number; prevY: number; currX: number; currY: number }>();
 let lastPanelUpdateAt = 0;
 let lastMinimapUpdateAt = 0;
-let lastRenderAt = 0;
 let lastPacketTime = 0;
 let lastPheromones: WorldSnapshot["pheromones"] | null = null;
 const pheromoneBuffers: Array<{ food: Float32Array; home: Float32Array }> = [];
@@ -1520,7 +1557,15 @@ await pixi.init({
   resizeTo: window,
   antialias: false
 });
-await preloadEnvironmentAssets();
+await Promise.all([preloadEnvironmentAssets(), preloadCharacterArt(), preloadCreatureArt(), preloadEquipmentArt(), preloadFishArt(), preloadBuildingArt()]);
+for (const [name, kind] of [["food", "tomato"], ["fruit", "tomato"], ["fish", "fish"], ["meat", "meat"], ["clay", "clay"], ["wood", "wood"], ["stone", "stone"]] as const) {
+  const icon = document.querySelector<HTMLImageElement>(`#icon-${name}`);
+  if (icon) setAtlasIcon(icon, kind === "fish" ? getFishArt("blue", 0, true).texture : getEquipmentArt(kind, 20).texture, 20, kind === "fish" ? fishAtlasUrl : "/assets/characters/equipment/equipment-atlas.png");
+}
+for (const id of ["brand-icon", "icon-pop"]) {
+  const icon = document.querySelector<HTMLImageElement>(`#${id}`);
+  if (icon) setAtlasIcon(icon, getResidentArt("front", 1).texture, id === "brand-icon" ? 28 : 23, "/assets/characters/clayfolk/resident-atlas.png");
+}
 canvasHost.appendChild(pixi.canvas);
 
 let lastTasksKey = "";
@@ -1537,7 +1582,7 @@ function updateTasks(world: WorldSnapshot): void {
     return;
   }
   const objectives = world.objectives ?? [];
-  const key = objectives.map((o) => `${o.id}:${Math.floor(o.progress)}:${o.done}`).join("|");
+  const key = objectives.map((o) => `${o.id}:${Math.floor(o.progress)}:${o.done}`).join("|") + world.session.status;
   if (key === lastTasksKey) {
     return;
   }
@@ -1643,6 +1688,13 @@ function draw(interpT: number): void {
     fish.heading.y = Math.sin(angle);
   }
 
+  for (const enemy of interpolatedEnemies) {
+    const ip = enemyInterp.get(enemy.id);
+    if (ip) {
+      enemy.pos.x = ip.prevX + (ip.currX - ip.prevX) * interpT;
+      enemy.pos.y = ip.prevY + (ip.currY - ip.prevY) * interpT;
+    }
+  }
   const renderStart = performance.now();
   renderWorld(
     pixi.stage,
@@ -1670,7 +1722,7 @@ function setTool(tool: PlayerTool): void {
 
 for (const button of toolButtons) {
   button.addEventListener("click", () => {
-    setTool((button.dataset.tool as PlayerTool) ?? "food");
+    setTool((button.dataset.tool as PlayerTool) ?? "select");
   });
 }
 
@@ -1842,8 +1894,13 @@ const dragPreview = new Graphics();
 
 // Дождь: затемнение + косые штрихи в экранных координатах.
 const rainOverlay = new Graphics();
+let rainAnimationTime = 0;
+let lastRainFrameAt = performance.now();
 
 function updateRainOverlay(): void {
+  const now = performance.now();
+  if (connectionLive && latestWorld?.session.speed && latestWorld.session.status === "playing") rainAnimationTime += Math.min(50, now - lastRainFrameAt);
+  lastRainFrameAt = now;
   rainOverlay.clear();
   const state = latestWorld?.weather?.state ?? "clear";
   if (state === "clear") {
@@ -1859,7 +1916,7 @@ function updateRainOverlay(): void {
     return;
   }
   rainOverlay.rect(0, 0, width, height).fill({ color: 0x24384a, alpha: 0.16 });
-  const t = performance.now() * 0.4;
+  const t = rainAnimationTime * 0.4;
   const drops = 70;
   for (let index = 0; index < drops; index += 1) {
     const seed = index * 97.13;
@@ -1950,9 +2007,10 @@ for (const button of cameraButtons) {
   });
 }
 
+pixi.ticker.maxFPS = 60;
 pixi.ticker.add(() => {
   const now = performance.now();
-  if (now - lastRenderAt < 1000 / 30 || !latestWorld) {
+  if (!latestWorld) {
     return;
   }
 
@@ -1966,11 +2024,16 @@ pixi.ticker.add(() => {
     lastFpsUpdateAt = now;
     updatePerfHud(latestWorld);
   }
-  lastRenderAt = now;
 });
 
 const wsHost = window.location.hostname || "localhost";
 const socket = new WebSocket(`ws://${wsHost}:8787`);
+const gameplayPanel = createGameplayPanel(appRoot, {
+  send: command => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(command)); },
+  getColony: () => currentColonyIndex,
+  choosePost: () => setTool("post"),
+  focus: pos => { setCameraMode("free"); camera.x = pos.x; camera.y = pos.y; }
+});
 (window as any).socket = socket;
 
 function requestNetworkView(): void {
@@ -2082,7 +2145,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  if (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") {
+  if (currentTool !== "select" && currentTool !== "post" && currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") {
     return;
   }
 
@@ -2118,7 +2181,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
   }
 
   if (
-    (currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") ||
+    (currentTool !== "select" && currentTool !== "post" && currentTool !== "food" && currentTool !== "hut" && currentTool !== "storage" && currentTool !== "workshop" && currentTool !== "idol") ||
     isDragging ||
     currentView !== "surface" ||
     !latestWorld ||
@@ -2135,6 +2198,13 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
+  if (currentTool === "post") {
+    if (isWaterAt(tile.x, tile.y)) { if (toolHint) toolHint.textContent = "Пост нужен на сухом берегу или у ворот"; return; }
+    socket.send(JSON.stringify({ type: "setDefensePost", colony: currentColonyIndex, x: tile.x, y: tile.y }));
+    setTool("select");
+    return;
+  }
+
   if (currentTool === "hut" || currentTool === "storage" || currentTool === "workshop" || currentTool === "idol") {
     if (isWaterAt(tile.x, tile.y)) {
       if (toolHint) {
@@ -2144,18 +2214,24 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     }
     socket.send(JSON.stringify({ type: "placeBuilding", building: currentTool, x: tile.x, y: tile.y, colony: currentColonyIndex }));
     if (!event.shiftKey) {
-      setTool("food"); // одиночная постройка: режим снимается, Shift — серия
+      setTool("select"); // одиночная постройка: режим снимается, Shift — серия
     }
     return;
   }
 
   // Клик по жителю — выбор; клик по пустому месту — еда (и сброс выбора).
   let nearest: { id: string; distanceSq: number } | null = null;
-  for (const ant of latestWorld.ants) {
-    const dx = ant.pos.x - tile.x;
-    const dy = ant.pos.y - tile.y;
+  for (const ant of interpolatedAnts) {
+    if (ant.layer !== "surface") continue;
+    const scale = residentScale(ant);
+    const body = residentPlacement(interpolatedWorld ?? latestWorld, ant, SURFACE_TILE_SIZE);
+    const height = RESIDENT_HEIGHT * scale;
+    const px = tile.x * SURFACE_TILE_SIZE - body.x, py = tile.y * SURFACE_TILE_SIZE - body.y;
+    const localX = px * Math.cos(body.rotation) + py * Math.sin(body.rotation);
+    const localY = -px * Math.sin(body.rotation) + py * Math.cos(body.rotation);
+    const dx = localX / SURFACE_TILE_SIZE, dy = (localY + height * 0.5) / SURFACE_TILE_SIZE;
     const distanceSq = dx * dx + dy * dy;
-    if (distanceSq < 2.5 * 2.5 && (!nearest || distanceSq < nearest.distanceSq)) {
+    if (Math.abs(localX) < 9 * scale && Math.abs(localY + height * 0.5) < height * 0.55 && (!nearest || distanceSq < nearest.distanceSq)) {
       nearest = { id: ant.id, distanceSq };
     }
   }
@@ -2173,7 +2249,7 @@ pixi.canvas.addEventListener("pointerup", (event) => {
     updateUnitPanel(latestWorld);
     return;
   }
-  socket.send(JSON.stringify({ type: "dropFood", x: tile.x, y: tile.y }));
+  if (currentTool === "food" && latestWorld.session.mode === "sandbox") socket.send(JSON.stringify({ type: "dropFood", x: tile.x, y: tile.y }));
 });
 
 pixi.canvas.addEventListener("wheel", (event) => {
@@ -2211,12 +2287,14 @@ minimapCanvas?.addEventListener("pointerdown", (event) => {
 });
 
 socket.addEventListener("open", () => {
+  connectionLive = true;
   statusNode.textContent = "Подключено";
-  setSpeed(currentSpeed);
   requestNetworkView();
 });
 
 socket.addEventListener("close", () => {
+  connectionLive = false;
+  if (interpolatedWorld) interpolatedWorld.session = { ...interpolatedWorld.session, speed: 0 };
   statusNode.textContent = "Соединение закрыто";
 });
 
@@ -2258,6 +2336,12 @@ socket.addEventListener("message", (event) => {
     warnedProtocolVersion = true;
   }
 
+  if (latestWorld && snap.tick < latestWorld.tick) {
+    antInterp.clear(); fishInterp.clear(); enemyInterp.clear();
+    interpolatedAntById.clear(); interpolatedFishById.clear();
+    lastPheromones = null;
+    actorMotion.reset();
+  }
   const hasNewPheromones = snap.pheromones && snap.pheromones.food && snap.pheromones.food.i && snap.pheromones.food.i.length > 0;
   if (hasNewPheromones) {
     const size = snap.pheromones.width * snap.pheromones.height;
@@ -2279,11 +2363,13 @@ socket.addEventListener("message", (event) => {
   }
 
   const seen = new Set<string>();
+  const tickDelta = latestWorld ? Math.max(0, snap.tick - latestWorld.tick) : 0;
   for (const ant of snap.ants) {
     seen.add(ant.id);
     const angle = Math.atan2(ant.heading.y, ant.heading.x);
     const existing = antInterp.get(ant.id);
-    if (existing && existing.layer === ant.layer) {
+    const teleport = existing && positionDiscontinuity(Math.hypot(ant.pos.x - existing.currX, ant.pos.y - existing.currY), tickDelta, 1.8);
+    if (existing && existing.layer === ant.layer && !teleport && existing.capturedBy === ant.capturedBy) {
       existing.prevX = existing.currX;
       existing.prevY = existing.currY;
       existing.prevAngle = existing.currAngle;
@@ -2298,7 +2384,8 @@ socket.addEventListener("message", (event) => {
         currX: ant.pos.x,
         currY: ant.pos.y,
         currAngle: angle,
-        layer: ant.layer
+        layer: ant.layer,
+        capturedBy: ant.capturedBy
       });
     }
   }
@@ -2317,6 +2404,7 @@ socket.addEventListener("message", (event) => {
     } else {
       const pos = renderAnt.pos;
       const heading = renderAnt.heading;
+      for (const key of Object.keys(renderAnt) as Array<keyof Ant>) if (!(key in ant)) delete renderAnt[key];
       Object.assign(renderAnt, ant);
       renderAnt.pos = pos;
       renderAnt.heading = heading;
@@ -2334,7 +2422,7 @@ socket.addEventListener("message", (event) => {
     seenFish.add(fish.id);
     const angle = Math.atan2(fish.heading.y, fish.heading.x);
     const existing = fishInterp.get(fish.id);
-    const teleported = existing && Math.hypot(fish.pos.x - existing.currX, fish.pos.y - existing.currY) > 8;
+    const teleported = existing && positionDiscontinuity(Math.hypot(fish.pos.x - existing.currX, fish.pos.y - existing.currY), tickDelta, 0.2);
     if (existing && existing.state === fish.state && !teleported) {
       existing.prevX = existing.currX;
       existing.prevY = existing.currY;
@@ -2361,6 +2449,7 @@ socket.addEventListener("message", (event) => {
     } else {
       const pos = renderFish.pos;
       const heading = renderFish.heading;
+      for (const key of Object.keys(renderFish) as Array<keyof Fish>) if (!(key in fish)) delete renderFish[key];
       Object.assign(renderFish, fish);
       renderFish.pos = pos;
       renderFish.heading = heading;
@@ -2374,11 +2463,33 @@ socket.addEventListener("message", (event) => {
     }
   }
 
+  interpolatedEnemies.length = 0;
+  const seenEnemies = new Set<string>();
+  for (const enemy of snap.enemies) {
+    seenEnemies.add(enemy.id);
+    const existing = enemyInterp.get(enemy.id);
+    if (existing && !positionDiscontinuity(Math.hypot(enemy.pos.x - existing.currX, enemy.pos.y - existing.currY), tickDelta, 3.6)) {
+      existing.prevX = existing.currX; existing.prevY = existing.currY;
+      existing.currX = enemy.pos.x; existing.currY = enemy.pos.y;
+    } else {
+      enemyInterp.set(enemy.id, { prevX: enemy.pos.x, prevY: enemy.pos.y, currX: enemy.pos.x, currY: enemy.pos.y });
+    }
+    interpolatedEnemies.push({ ...enemy, pos: { ...enemy.pos } });
+  }
+  for (const id of enemyInterp.keys()) if (!seenEnemies.has(id)) enemyInterp.delete(id);
   latestWorld = snap;
+  if (snap.session.speed !== undefined && snap.session.speed !== currentSpeed) {
+    currentSpeed = snap.session.speed;
+    if (currentSpeed > 0) lastRunSpeed = currentSpeed;
+    for (const button of speedButtons) button.classList.toggle("active", Number(button.dataset.speed) === currentSpeed);
+    updateQuickButtons();
+  }
+  if (currentTool === "food" && snap.session.mode !== "sandbox") setTool("select");
   interpolatedWorld = {
     ...snap,
     surface: { ...snap.surface, fish: interpolatedFish },
-    ants: interpolatedAnts
+    ants: interpolatedAnts,
+    enemies: interpolatedEnemies
   };
   if (now - lastPanelUpdateAt >= 250) {
     updateHud(snap);
@@ -2387,6 +2498,7 @@ socket.addEventListener("message", (event) => {
     updateBuildCards(snap);
     updateUnitPanel(snap);
     updatePriorityPanel(snap);
+    gameplayPanel.update(snap);
     updateWeatherLabel();
     lastPanelUpdateAt = now;
   }
@@ -2401,6 +2513,7 @@ socket.addEventListener("message", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") setTool("select");
   if (event.key === "Shift" && isPainting && (dragTool === "wall" || dragTool === "gate")) {
     updateDragEnd(true);
     updateDragPreview();

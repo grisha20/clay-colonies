@@ -1,6 +1,8 @@
 import { Graphics } from "pixi.js";
 import { resourceNodeYield, type WorldSnapshot } from "../../../../shared/types";
 import { playHarvestSound } from "./audio";
+import { actorMotion, canWork } from "./motion";
+import { visualIndex } from "./visualIndex";
 
 interface Particle {
   x: number;
@@ -21,16 +23,22 @@ interface Particle {
 }
 
 let activeParticles: Particle[] = [];
+let lastParticleFrame = 0;
+let lastParticleTick = -1;
 
 // Храним последнее известное количество ударов для каждого муравья (чтобы ловить момент удара)
 const lastKnownHarvestHits = new Map<string, number>();
 // Храним последнее известное количество еды, которую несёт фуражир (чтобы ловить момент подбора)
 const lastKnownForagerCarry = new Map<string, number>();
+const strikingWorkers = new Set<string>();
 
 export function clearParticles(): void {
   activeParticles = [];
   lastKnownHarvestHits.clear();
   lastKnownForagerCarry.clear();
+  strikingWorkers.clear();
+  lastParticleFrame = 0;
+  lastParticleTick = -1;
 }
 
 /**
@@ -146,13 +154,21 @@ export function updateAndDrawParticles(
   viewportWidth: number,
   viewportHeight: number
 ): void {
+  const now = performance.now();
+  if (world.tick < lastParticleTick) { clearParticles(); graphics.clear(); }
+  lastParticleTick = world.tick;
+  if (world.session.speed === 0 || world.session.status !== "playing") { lastParticleFrame = now; return; }
+  // Particle velocities/lifetimes were authored at 30 Hz. Keep that cadence
+  // while the actor renderer runs independently at up to 60 Hz.
+  if (now - lastParticleFrame < 1000 / 30) return;
+  lastParticleFrame = now;
   graphics.clear();
 
   const currentHarvesters = new Set<string>();
 
   // 1. Проверяем добывающих жителей и спавним частицы при ударах
   for (const ant of world.ants) {
-    if (ant.layer !== "surface") {
+    if (ant.layer !== "surface" || ant.capturedBy) {
       continue;
     }
 
@@ -160,7 +176,7 @@ export function updateAndDrawParticles(
       currentHarvesters.add(ant.id);
 
       // Находим узел ресурса, который добывает житель
-      const node = world.surface.resourceNodes?.find((n) => n.id === ant.harvestNodeId);
+      const node = visualIndex(world).nodes.get(ant.harvestNodeId ?? "");
 
       // Нет узла — нет частиц. Житель может идти к узлу или узел уже исчерпан.
       if (!node) {
@@ -173,6 +189,9 @@ export function updateAndDrawParticles(
 
       const yieldKind = resourceNodeYield(node.kind);
       const currentHits = ant.harvestHits ?? 0;
+      if (!canWork(world, ant)) {
+        lastKnownHarvestHits.set(ant.id, currentHits); strikingWorkers.delete(ant.id); continue;
+      }
 
       // Первая встреча с этим добытчиком — запоминаем без спавна,
       // чтобы не создавать ложный взрыв частиц из-за уже накопленных ударов.
@@ -181,7 +200,6 @@ export function updateAndDrawParticles(
         continue;
       }
 
-      const lastHits = lastKnownHarvestHits.get(ant.id)!;
       lastKnownHarvestHits.set(ant.id, currentHits);
 
       // Рассчитываем координаты контакта для спавна частиц
@@ -191,23 +209,21 @@ export function updateAndDrawParticles(
       // Поднимаем по Y на уровень рук/замаха (чуть выше уровня ног)
       const spawnY = (ant.pos.y * (1 - t) + node.pos.y * t) * cell - 12;
 
-      // Если количество ударов изменилось (был совершен удар), спавним взрыв частиц и играем звук
-      if (currentHits !== lastHits && currentHits > 0) {
+      // Emit at the visible strike, rather than on every progress-counter tick.
+      const strike = actorMotion.resident(ant).work > 0.65;
+      if (strike && !strikingWorkers.has(ant.id)) {
         spawnBurst(spawnX, spawnY, yieldKind, 5 + Math.floor(Math.random() * 4));
         playHarvestSound(ant.pos.x, ant.pos.y, yieldKind, camera, viewportWidth, viewportHeight);
       }
 
-      // С небольшой вероятностью спавним одиночную частицу/пыль в каждом кадре добычи
-      if (currentHits > 0 && Math.random() < 0.12) {
-        spawnBurst(spawnX, spawnY, yieldKind, 1);
-      }
+      if (strike) strikingWorkers.add(ant.id); else strikingWorkers.delete(ant.id);
     }
   }
 
   // 1b. Проверяем фуражиров — спавним частицы при подборе еды
   const currentForagers = new Set<string>();
   for (const ant of world.ants) {
-    if (ant.layer !== "surface") continue;
+    if (ant.layer !== "surface" || ant.capturedBy) continue;
 
     // Отслеживаем всех фуражиров, чтобы поймать момент 0 → >0
     if (ant.job === "forage") {
@@ -257,6 +273,7 @@ export function updateAndDrawParticles(
   for (const id of lastKnownHarvestHits.keys()) {
     if (!currentHarvesters.has(id)) {
       lastKnownHarvestHits.delete(id);
+      strikingWorkers.delete(id);
     }
   }
 

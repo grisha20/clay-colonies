@@ -67,7 +67,7 @@ export function isSheltered(world: World, pos: { x: number; y: number }): boolea
   const entrance = world.surface.entrance;
   const dxE = pos.x - entrance.x;
   const dyE = pos.y - entrance.y;
-  if (dxE * dxE + dyE * dyE <= CONFIG.rainShelterFireRadius * CONFIG.rainShelterFireRadius) {
+  if ((world.colony.fire ?? 0) > 0.05 && dxE * dxE + dyE * dyE <= CONFIG.rainShelterFireRadius * CONFIG.rainShelterFireRadius) {
     return true;
   }
   for (const building of world.surface.buildings) {

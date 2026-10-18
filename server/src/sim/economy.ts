@@ -67,7 +67,7 @@ function priorityCount(world: World, key: "clay" | "wood" | "stone" | "build" | 
 function foragersLeft(world: World): number {
   let count = 0;
   for (const ant of world.ants) {
-    if (ant.state !== "dead" && ant.job === "forage" && ant.forageRole !== "scout") {
+    if (ant.state !== "dead" && !ant.capturedBy && ant.job === "forage" && ant.forageRole !== "scout") {
       count += 1;
     }
   }
@@ -106,7 +106,7 @@ function nodeById(world: World, id?: string): ResourceNode | undefined {
 }
 
 export function assignHarvestJobs(world: World): void {
-  const live = world.ants.filter((ant) => ant.state !== "dead");
+  const live = world.ants.filter((ant) => ant.state !== "dead" && !ant.capturedBy);
   const economyReady =
     live.length >= CONFIG.harvestMinWorkers && world.colony.food >= CONFIG.harvestMinFood;
 
@@ -123,7 +123,7 @@ export function assignHarvestJobs(world: World): void {
         : ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone"
           ? ant.carryKind
           : undefined;
-    const stillWanted = kind ? colonyWantsResource(world, kind) : false;
+    const stillWanted = kind ? counts[kind] < priorityCount(world, kind) : false;
 
     if ((!economyReady || !stillWanted || (!node && ant.carrying <= 0)) && ant.carrying <= 0) {
       ant.job = "forage";
@@ -182,6 +182,7 @@ export function assignHarvestJobs(world: World): void {
       let best: ResourceNode | null = null;
       let bestDistanceSq = Number.POSITIVE_INFINITY;
       for (const node of nodes) {
+        if (!canAssignNode(world, node, toolUsers)) continue;
         const dx = node.pos.x - ant.pos.x;
         const dy = node.pos.y - ant.pos.y;
         const distanceSq = dx * dx + dy * dy;
@@ -209,7 +210,7 @@ export function assignHarvestJobs(world: World): void {
 
 // Стража: пока жив паук и племя достаточно большое, двое дежурят у лагеря.
 export function assignGuardJobs(world: World): void {
-  const live = world.ants.filter((ant) => ant.state !== "dead");
+  const live = world.ants.filter((ant) => ant.state !== "dead" && !ant.capturedBy);
   // Стражи ровно столько, сколько назначил игрок.
   const wantGuards = priorityCount(world, "guard");
 
@@ -251,6 +252,7 @@ export function assignGuardJobs(world: World): void {
 function isFreeForAssignment(ant: Ant): boolean {
   return (
     ant.job === "forage" &&
+    !ant.capturedBy &&
     ant.forageRole !== "scout" &&
     ant.carrying <= 0 &&
     ant.state !== "fight" &&
@@ -281,7 +283,7 @@ function siteNeededKind(building: Building): ResourceKind | null {
 
 // Назначение строителей: до maxBuildersPerSite на площадку, maxActiveBuilders всего.
 export function assignBuildJobs(world: World): void {
-  const live = world.ants.filter((ant) => ant.state !== "dead");
+  const live = world.ants.filter((ant) => ant.state !== "dead" && !ant.capturedBy);
   const entrance = world.surface.entrance;
   // Приоритет: точечные постройки (хижина/склад) раньше стен; ближние раньше дальних.
   const sites = world.surface.buildings
@@ -314,7 +316,7 @@ export function assignBuildJobs(world: World): void {
       continue;
     }
     const site = sites.find((building) => building.id === ant.buildTargetId);
-    if (!site || !buildReady) {
+    if (!site || !buildReady || totalBuilders >= priorityCount(world, "build")) {
       if (ant.carrying <= 0) {
         ant.job = "forage";
         ant.buildTargetId = undefined;

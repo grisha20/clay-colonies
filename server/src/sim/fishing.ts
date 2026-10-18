@@ -240,6 +240,7 @@ function foragersLeft(world: World): number {
 function validSpot(world: World, spot: FishingSpot): boolean {
   return (
     !isSurfaceBlockedAt(world, spot.stand.x, spot.stand.y, world.colony.id) &&
+    !world.enemies.some(e => e.hp > 0 && Math.hypot(e.pos.x - spot.stand.x, e.pos.y - spot.stand.y) < 14) &&
     !world.zoneSets?.forbid.has(zoneIndexAt(spot.stand.x, spot.stand.y))
   );
 }
@@ -281,7 +282,7 @@ function assignTarget(world: World, ant: Ant, fish: Fish): boolean {
 export function assignFishingJobs(world: World): void {
   const wanted = Math.max(0, Math.min(40, Math.floor(world.colony.priorities?.fish ?? 0)));
   const cap = Math.min(wanted, world.colony.rods ?? 0);
-  const active = world.ants.filter((ant) => ant.state !== "dead" && ant.job === "fish");
+  const active = world.ants.filter((ant) => ant.state !== "dead" && !ant.capturedBy && ant.job === "fish");
   let retained = 0;
   for (const ant of active) {
     if (ant.carryKind === "fish" && ant.carrying > 0) {
@@ -309,7 +310,7 @@ export function assignFishingJobs(world: World): void {
   }
   const candidates = world.ants.filter(
     (ant) =>
-      ant.state !== "dead" && ant.job === "forage" && ant.forageRole !== "scout" && ant.carrying <= 0 &&
+      ant.state !== "dead" && !ant.capturedBy && ant.job === "forage" && ant.forageRole !== "scout" && ant.carrying <= 0 &&
       ant.state !== "fight" && ant.state !== "return"
   );
   for (const ant of candidates) {

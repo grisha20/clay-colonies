@@ -9,6 +9,7 @@ export type SpiderMode = "ambush" | "stalk" | "chase" | "retreat" | "feed" | "st
 
 const wanderTargets = new Map<string, Vec2>();
 const retreatTargets = new Map<string, Vec2>();
+export function resetSpiderBrainRuntime(): void { wanderTargets.clear(); retreatTargets.clear(); }
 const spiderBrainQueryScratch: Ant[] = [];
 
 function distance(a: Vec2, b: Vec2): number {

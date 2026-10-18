@@ -22,7 +22,7 @@ export function simulationSlice(simSpeed: number): { targetTickMs: number; steps
 }
 
 export function startLoop(world: World, onSnapshot: (includePheromones: boolean) => void): LoopController {
-  let simSpeed = 1;
+  let simSpeed = world.session.speed ?? 1;
   let lastPheromoneSentAt = 0;
   let lastBroadcastAt = 0;
   let lastSaveAt = Date.now();
@@ -76,6 +76,7 @@ export function startLoop(world: World, onSnapshot: (includePheromones: boolean)
     setSpeed(speed: number) {
       if (Number.isFinite(speed)) {
         simSpeed = Math.max(0, Math.floor(speed));
+        world.session.speed = simSpeed;
       }
     },
     getSpeed() {

@@ -8,6 +8,8 @@ dist/
 
 # Локальные сохранения мира и обучения (у каждого свои, в репо не нужны)
 snapshot.json
+snapshot.json.tmp
+snapshot.json.bak
 genome.json
 spider_genome.json
 

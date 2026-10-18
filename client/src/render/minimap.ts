@@ -97,7 +97,7 @@ export function drawMinimap(
   // Паук.
   for (const enemy of world.enemies) {
     if (enemy.hp > 0) {
-      context.fillStyle = "#1c1210";
+      context.fillStyle = enemy.type === "lakeMonster" ? "#61ede0" : enemy.type === "beetle" ? "#ae7cce" : "#1c1210";
       context.fillRect(toX(enemy.pos.x) - 2, toY(enemy.pos.y) - 2, 4, 4);
     }
   }

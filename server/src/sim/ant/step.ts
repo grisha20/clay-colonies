@@ -19,23 +19,31 @@ import {
 import { moveFishing } from "../fishing";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { consumeFoodStock } from "../foodStock";
+import { dissolveAnt } from "../water";
+import { moveDefending, moveToSafety } from "./defense";
+import { moveToRainShelter } from "./shelter";
+import { isSheltered } from "../weather";
 
 export { clearDeadAntPaths } from "./movement";
 
-export function updateWaterExposure(ant: Ant): boolean {
+export function updateWaterExposure(ant: Ant, world?: World): boolean {
   if (isWaterAt(ant.pos.x, ant.pos.y)) {
-    ant.waterExposure = (ant.waterExposure ?? 0) + CONFIG.waterExposurePerTick;
-    if (ant.waterExposure >= CONFIG.waterExposureDeathTicks) {
-      ant.state = "dead";
-      return true;
-    }
-    return false;
+    dissolveAnt(ant, CONFIG.waterExposurePerTick, world);
+    return ant.state === "dead";
   }
-  ant.waterExposure = Math.max(0, (ant.waterExposure ?? 0) - CONFIG.waterDryingPerTick);
+  if (world?.weather.state === "rain" && !isSheltered(world, ant.pos)) {
+    ant.waterExposure = Math.min(CONFIG.waterExposureDeathTicks, (ant.waterExposure ?? 0) + CONFIG.rainExposurePerTick);
+    if (ant.waterExposure >= CONFIG.rainErosionWetness) dissolveAnt(ant, CONFIG.rainErosionPerTick, world);
+    return ant.state === "dead";
+  }
+  const byFire = world && (world.colony.fire ?? 0) > 0.05 && Math.hypot(ant.pos.x - world.surface.entrance.x, ant.pos.y - world.surface.entrance.y) <= CONFIG.rainShelterFireRadius;
+  const drying = world?.weather.state === "rain" && !byFire ? CONFIG.rainHutDryingPerTick : CONFIG.waterDryingPerTick;
+  ant.waterExposure = Math.max(0, (ant.waterExposure ?? 0) - drying);
   return false;
 }
 
 export function stepSurface(world: World, ant: Ant): void {
+  if (moveToSafety(world, ant) || moveToRainShelter(world, ant) || moveDefending(world, ant)) return;
   if (
     (ant.forageRole === "scout" || (ant.forageRole === "forager" && !!world.colony.activeFoodTargetId)) &&
     ant.state === "return" &&
@@ -122,6 +130,7 @@ export function stepAnt(world: World, ant: Ant): void {
   }
 
   ant.layer = "surface";
+  if (ant.capturedBy) { updateWaterExposure(ant, world); return; }
   ant.energy -= CONFIG.energyDrainPerTick;
 
   if (ant.energy <= 0) {
@@ -140,7 +149,7 @@ export function stepAnt(world: World, ant: Ant): void {
   stepSurface(world, ant);
   // Достроенные стены непроходимы: скольжение вдоль стены или откат.
   resolveSurfaceCollision(world, ant.pos, prevX, prevY, ant.colonyId);
-  if (updateWaterExposure(ant)) {
+  if (updateWaterExposure(ant, world)) {
     return;
   }
   updateStuckTracking(world, ant);

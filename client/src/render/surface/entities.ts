@@ -1,43 +1,57 @@
 import { Graphics } from "pixi.js";
 import type { WorldSnapshot } from "../../../../shared/types";
-import { acquireSprite, antRotation, beginPool, deterministicOffset, endPool, placeSprite } from "../spritePool";
+import { acquireSprite, beginPool, deterministicOffset, endPool, placeSprite } from "../spritePool";
 import type { SpritePool, ViewBounds } from "../types";
 import { isInBounds } from "./scene";
-import {
-  getClayfolkTexture,
-  getClayTexture,
-  getWoodTexture,
-  getStoneTexture,
-  getSpearTexture,
-  getFishingRodTexture,
-  getCarrionTexture,
-  getFoodTexture
-} from "../../sprites";
 import { getEnvironmentTextures } from "./environment";
+import { actorMotion, animationSeed, residentScale } from "./motion";
+import { creatureDimensions, getCreatureArt } from "./creatureArt";
+import { getEquipmentArt } from "./equipmentArt";
+import { fishingRodMount, residentPlacement } from "./residentLayout";
+import { getFishArt } from "./fishArt";
+import { surfaceLighting, drawGroundShadow } from "./lighting";
+import { campPileRoots } from "./entrance";
 import { offsetSettings } from "./editor";
+import { buildingFootprint } from "../../../../shared/buildingGeometry";
 
-// Выбранный житель (панель юнита): подсветка кольцом.
-let selectedAntId: string | null = null;
 const webDrawKeys = new WeakMap<Graphics, string>();
 
-export function setSelectedAntId(id: string | null): void {
-  selectedAntId = id;
-}
-
-function drawSoftShadow(graphics: Graphics, x: number, y: number, rx: number, ry: number, alpha: number): void {
-  graphics.ellipse(x + rx * 0.08, y + ry * 0.18, rx, ry).fill({ color: 0x1e130c, alpha });
-  graphics.ellipse(x, y, rx * 0.62, ry * 0.58).fill({ color: 0x1e130c, alpha: alpha * 0.34 });
-}
 
 export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   graphics.clear();
+  const lighting = surfaceLighting(world, cell);
+  graphics.position.set(0, 0);
+  graphics.alpha = 1;
+
+  for (const [index, camp] of world.surface.entrances.entries()) {
+    const x = camp.x * cell, y = camp.y * cell;
+    drawGroundShadow(graphics, lighting, x, y + 1, 24, 9, 0, 1.25);
+    for (const kind of Object.keys(campPileRoots) as Array<keyof typeof campPileRoots>) {
+      if ((world.colonies[index]?.colony[kind] ?? 0) <= 0.5) continue;
+      const root = campPileRoots[kind];
+      drawGroundShadow(graphics, lighting, x + root.x, y + root.y - 3, kind === "food" ? 19 : 15, 4, 8, 0.7);
+    }
+  }
+
+  for (const building of world.surface.buildings) {
+    if (building.stage !== "built" || !isInBounds(building.pos, bounds, 12)) continue;
+    const wall = building.type === "wall" || building.type === "gate";
+    const f = buildingFootprint(building);
+    const y = f ? (f.y + f.ry * 0.25) * cell : building.pos.y * cell + cell;
+    drawGroundShadow(graphics, lighting, building.pos.x * cell, y, f ? f.rx * cell : cell, f ? f.ry * cell * 0.85 : 3, wall ? 22 : building.type === "idol" ? 30 : 48);
+  }
+  for (const node of world.surface.resourceNodes) {
+    if (node.amount <= 0 || !isInBounds(node.pos, bounds, 10)) continue;
+    if (node.kind === "tree") drawGroundShadow(graphics, lighting, node.pos.x * cell, node.pos.y * cell, 18, 6, 54);
+    else if (!node.id.startsWith("wash-")) drawGroundShadow(graphics, lighting, node.pos.x * cell, node.pos.y * cell + 7, node.kind === "loose-stone" ? 7 : 16, 5, 8, 0.7);
+  }
 
   for (const source of world.surface.foodSources) {
     if (source.amount <= 0 || !isInBounds(source.pos, bounds, 6)) {
       continue;
     }
     const size = Math.min(20, 7 + Math.sqrt(source.amount) * 1.8);
-    drawSoftShadow(graphics, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.42, 0.16);
+    drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.3, 18, 0.8);
   }
 
   for (const source of world.surface.carrion) {
@@ -45,18 +59,16 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
       continue;
     }
     const size = Math.min(18, 8 + Math.sqrt(source.amount) * 1.4);
-    drawSoftShadow(graphics, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.4, 0.18);
+    drawGroundShadow(graphics, lighting, source.pos.x * cell, source.pos.y * cell + 4, size, size * 0.35, 0, 0.85);
   }
 
   for (const enemy of world.enemies) {
-    if (enemy.type !== "spider") {
-      continue;
-    }
-    if (isInBounds(enemy.lair, bounds, 5)) {
-      drawSoftShadow(graphics, enemy.lair.x * cell, enemy.lair.y * cell + 7, 20, 8, 0.2);
+    if (enemy.type === "spider" && isInBounds(enemy.lair, bounds, 5)) {
+      drawGroundShadow(graphics, lighting, enemy.lair.x * cell, enemy.lair.y * cell + 7, 20, 8, 15);
     }
     if (enemy.hp > 0 && isInBounds(enemy.pos, bounds, 5)) {
-      drawSoftShadow(graphics, enemy.pos.x * cell, enemy.pos.y * cell + 6, 18, 7, 0.22);
+      const shape = creatureDimensions(enemy.type);
+      drawGroundShadow(graphics, lighting, enemy.pos.x * cell, enemy.pos.y * cell + 3, shape.shadowX, shape.shadowY, shape.height * 0.6, enemy.type === "lakeMonster" ? 0.6 : 1);
     }
   }
 
@@ -64,8 +76,9 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     if (ant.layer !== "surface" || !isInBounds(ant.pos, bounds, 7)) {
       continue;
     }
-    const carrying = ant.state === "carry" || ant.carrying > 0;
-    drawSoftShadow(graphics, ant.pos.x * cell, ant.pos.y * cell + 22, carrying ? 18 : 16, carrying ? 6.5 : 5.8, 0.24);
+    const scale = residentScale(ant) / 1.85;
+    const body = residentPlacement(world, ant, cell);
+    drawGroundShadow(graphics, lighting, body.x, body.groundY + 1, 8 * scale, 3 * scale, 30 * scale, ant.capturedBy ? 0.5 : 1);
   }
 }
 
@@ -142,20 +155,22 @@ export function updateSurfaceFood(pool: SpritePool, world: WorldSnapshot, cell: 
 
 export function updateSurfaceFish(pool: SpritePool, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool);
-  const textures = getEnvironmentTextures().props.fish.swim;
   for (const fish of world.surface.fish ?? []) {
     if (fish.state === "respawning" || !isInBounds(fish.pos, bounds, 4)) {
       continue;
     }
     const sprite = acquireSprite(pool);
-    sprite.texture = textures[fish.species];
-    sprite.anchor.set(0.5);
-    const pulse = Math.sin(world.tick * 0.12 + fish.id.length) * 0.025;
-    sprite.scale.set(0.3 + pulse, 0.3 - pulse * 0.5);
+    const time = actorMotion.time, seed = animationSeed(fish.id);
+    const art = getFishArt(fish.species, Math.floor(time * 7 + seed));
+    sprite.texture = art.texture;
+    sprite.anchor.set(art.anchorX, art.anchorY);
+    const pulse = Math.sin(time * 5.5 + seed) * 0.018;
+    sprite.scale.set(art.scale * (1 + pulse), art.scale * (1 - pulse * 0.5));
     sprite.alpha = fish.state === "lured" ? 0.95 : 0.82;
     sprite.tint = fish.state === "lured" ? 0xffffff : 0xe6fbff;
     const rotation = Math.atan2(fish.heading.y, fish.heading.x) + Math.PI / 2;
-    placeSprite(sprite, fish.pos.x * cell, fish.pos.y * cell + Math.sin(world.tick * 0.08 + fish.pos.x) * 1.2, rotation);
+    sprite.position.set(fish.pos.x * cell, fish.pos.y * cell + Math.sin(time * 2.8 + seed) * 0.8);
+    sprite.rotation = rotation + Math.sin(time * 5.5 + seed) * 0.035;
     sprite.zIndex = fish.pos.y * cell;
   }
   endPool(pool);
@@ -167,13 +182,12 @@ export function updateFishingEffects(graphics: Graphics, world: WorldSnapshot, c
     if (ant.layer !== "surface" || ant.job !== "fish" || !ant.fishingLurePos || (ant.fishingTicks ?? 0) <= 0 || !isInBounds(ant.pos, bounds, 7)) {
       continue;
     }
-    const startX = ant.pos.x * cell + ant.heading.x * 13;
-    const startY = ant.pos.y * cell - 16;
+    const tip = fishingRodMount(residentPlacement(world, ant, cell), ant).tip;
     const lureX = ant.fishingLurePos.x * cell;
     const lureY = ant.fishingLurePos.y * cell;
-    graphics.moveTo(startX, startY).lineTo(lureX, lureY).stroke({ width: 1.2, color: 0xe8dfc4, alpha: 0.9 });
+    graphics.moveTo(tip.x, tip.y).quadraticCurveTo((tip.x + lureX) / 2, Math.max(tip.y, lureY) + 3, lureX, lureY).stroke({ width: 1, color: 0xe8dfc4, alpha: 0.85 });
     graphics.circle(lureX, lureY, 2.4).fill({ color: 0xd24b2e, alpha: 0.95 });
-    graphics.circle(lureX, lureY, 4.5 + Math.sin(world.tick * 0.16) * 1.2).stroke({ width: 1, color: 0xd9ffff, alpha: 0.5 });
+    graphics.circle(lureX, lureY, 4.5 + Math.sin(actorMotion.time * 4) * 1.2).stroke({ width: 1, color: 0xd9ffff, alpha: 0.5 });
   }
 }
 
@@ -190,6 +204,12 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
     const x = node.pos.x * cell;
     const y = node.pos.y * cell;
     const ratio = Math.max(0.12, Math.min(1, node.amount / Math.max(0.1, node.maxAmount ?? node.amount)));
+    if (node.kind === "clay" && node.id.startsWith("wash-")) {
+      const sprite = acquireSprite(pool), clay = getEquipmentArt("clay", Math.min(12, 3 + Math.sqrt(node.amount) * 6));
+      sprite.texture = clay.texture; sprite.anchor.set(0.5); sprite.scale.set(clay.scale, clay.scale * 0.35);
+      sprite.position.set(x, y); sprite.rotation = 0; sprite.tint = 0xc6a391; sprite.alpha = 0.75; sprite.zIndex = y - 1;
+      continue;
+    }
     if (node.kind === "tree") {
       const sprite = acquireSprite(pool);
       const textures = [props.treeTall, props.treeRound, props.treeWide];
@@ -210,9 +230,10 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
       for (let index = 0; index < chunks; index += 1) {
         const sprite = acquireSprite(pool);
         const offset = deterministicOffset(index * 5 + node.id.length, 9);
-        sprite.texture = props.log;
+        const log = getEquipmentArt("wood", 18 + ratio * 5);
+        sprite.texture = log.texture;
         sprite.anchor.set(0.5, 1);
-        sprite.scale.set(0.28 + ratio * 0.08);
+        sprite.scale.set(log.scale);
         sprite.tint = index % 2 === 0 ? 0xffffff : 0xe8c18a;
         sprite.alpha = 0.9;
         const feetY = y + offset.y + 7;
@@ -233,14 +254,14 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
       const spread = index === 0 ? 0 : node.kind === "clay" ? 8 + index * 1.5 : 12 + index * 2;
       const offset = deterministicOffset(index * 3 + node.id.length, spread);
 
-      const rockTextures = [props.rockLarge, props.rockRound, props.rockSmall];
       const large = index === 0 || index % 3 !== 2;
-      sprite.texture = rockTextures[index % rockTextures.length];
+      const material = getEquipmentArt(node.kind === "clay" ? "clay" : "stone", node.kind === "loose-stone" ? 12 : large ? 23 : 16);
+      sprite.texture = material.texture;
       sprite.anchor.set(0.5, 1);
-      sprite.scale.set(node.kind === "clay" ? (large ? 1.42 : 1.55) : node.kind === "loose-stone" ? 0.72 : large ? 1.15 : 1.28);
+      sprite.scale.set(material.scale);
       sprite.alpha = 0.58 + ratio * 0.42;
       if (node.kind === "clay") {
-        const clayTints = [0xe76f34, 0xc84f2a, 0xf08a4f];
+        const clayTints = [0xffffff, 0xe7b7a0, 0xffddc0];
         sprite.tint = ratio < 0.35 ? 0xd59b78 : clayTints[index % clayTints.length];
       } else {
         sprite.tint = node.kind === "loose-stone" ? 0xc8c4b8 : index % 2 === 0 ? 0xd8d5c8 : 0xb7b3a9;
@@ -266,7 +287,8 @@ export function updateSurfaceCarrion(pool: SpritePool, world: WorldSnapshot, cel
     for (let index = 0; index < chunks; index += 1) {
       const sprite = acquireSprite(pool);
       const offset = deterministicOffset(index + source.id.length * 3, 11);
-      sprite.scale.set(2.6);
+      const food = getEquipmentArt("meat", 10 + Math.min(5, Math.sqrt(source.amount)));
+      sprite.texture = food.texture; sprite.anchor.set(0.5); sprite.scale.set(food.scale); sprite.alpha = 1; sprite.tint = 0xffffff;
       const feetY = source.pos.y * cell + offset.y;
       placeSprite(sprite, source.pos.x * cell + offset.x, feetY, (index % 5) * 0.27);
       sprite.zIndex = feetY;
@@ -359,25 +381,29 @@ export function updateSurfaceEnemies(
   beginPool(carriedCarrionPool);
 
   for (const enemy of world.enemies) {
-    if (enemy.type !== "spider") {
-      continue;
-    }
-    if (!isInBounds(enemy.pos, bounds, 4)) {
+    if (enemy.hp <= 0 || !isInBounds(enemy.pos, bounds, 8)) {
       continue;
     }
 
     const sprite = acquireSprite(pool);
+    const pose = actorMotion.enemy(enemy), art = getCreatureArt(enemy, pose);
+    sprite.texture = art.texture;
+    sprite.anchor.set(art.anchorX, art.anchorY);
     const hpRatio = enemy.maxHp > 0 ? Math.max(0.2, Math.min(1, enemy.hp / enemy.maxHp)) : 1;
-    sprite.scale.set(4.2);
-    sprite.alpha = 0.45 + hpRatio * 0.55;
-    const feetY = enemy.pos.y * cell + 22; // Низ лапок паука при масштабе 4.2
-    placeSprite(sprite, enemy.pos.x * cell, enemy.pos.y * cell, 0);
+    sprite.scale.set(art.scale * (art.mirror ? -1 : 1) * (2 - pose.stretch), art.scale * pose.stretch);
+    sprite.alpha = 1; sprite.tint = hpRatio < 0.3 ? 0xffd3bd : 0xffffff;
+    if (world.ants.some(a => a.melee && actorMotion.resident(a).attack > 0.7 && Math.hypot(a.melee.to.x - enemy.pos.x, a.melee.to.y - enemy.pos.y) < 4)) sprite.tint = 0xffb88d;
+    const feetY = enemy.pos.y * cell + creatureDimensions(enemy.type).height * 0.22;
+    sprite.position.set(enemy.pos.x * cell, enemy.pos.y * cell + pose.bob);
+    sprite.rotation = pose.lean;
     sprite.zIndex = feetY;
 
     if (enemy.carrying > 0) {
       const cargo = acquireSprite(carriedCarrionPool);
-      cargo.scale.set(1.9);
-      placeSprite(cargo, enemy.pos.x * cell + 11, enemy.pos.y * cell - 11, 0.25);
+      const food = getEquipmentArt("meat", 12);
+      cargo.texture = food.texture; cargo.anchor.set(0.5); cargo.scale.set(food.scale);
+      cargo.position.set(enemy.pos.x * cell + Math.cos(pose.angle) * 23, enemy.pos.y * cell + Math.sin(pose.angle) * 17 - 5 + pose.bob);
+      cargo.rotation = pose.lean; cargo.alpha = 1; cargo.tint = 0xffffff;
       cargo.zIndex = feetY + 0.01;
     }
   }
@@ -389,128 +415,4 @@ export function updateSurfaceEnemies(
   endPool(carriedCarrionPool);
 }
 
-export function updateSurfaceAnts(
-  pool: SpritePool,
-  carriedItemsPool: SpritePool,
-  selectionGraphics: Graphics,
-  world: WorldSnapshot,
-  cell: number,
-  bounds: ViewBounds
-): void {
-  beginPool(pool);
-  beginPool(carriedItemsPool);
-  selectionGraphics.clear();
-  const props = getEnvironmentTextures().props;
-
-  for (const ant of world.ants) {
-    if (ant.layer !== "surface") {
-      continue;
-    }
-    if (!isInBounds(ant.pos, bounds, 7)) {
-      continue;
-    }
-
-    const carrying = ant.state === "carry" || ant.carrying > 0;
-    const color = ant.colonyId === "colony-2" ? "red" : "dark";
-    const sprite = acquireSprite(pool);
-    sprite.texture = getClayfolkTexture(carrying, color);
-    sprite.anchor.set(0.5); // Всегда сбрасываем якорь тела человечка в центр
-    const spriteScale = 2.85;
-    const facing = ant.heading.x < -0.05 ? -1 : 1;
-    sprite.scale.set(spriteScale * facing, spriteScale);
-    sprite.tint = 0xffffff;
-    const headingAngle = antRotation(ant);
-    const harvestSwing = ant.job === "harvest" && ant.carrying <= 0 ? Math.sin(world.tick * 0.45 + (ant.harvestHits ?? 0) * 0.8) * 0.16 : 0;
-    const rot = Math.max(-0.24, Math.min(0.24, ant.heading.x * 0.12 + harvestSwing));
-    const cx = ant.pos.x * cell;
-    const cy = ant.pos.y * cell;
-    const feetY = cy + 9.5 * spriteScale; // Точка контакта ног человечка с землей
-    placeSprite(sprite, cx, cy, rot);
-    sprite.zIndex = feetY;
-
-    // Если переносится стандартный ресурс (глина, дерево, камень, еда)
-    if (carrying && ant.carrying > 0) {
-      const itemSprite = acquireSprite(carriedItemsPool);
-      let itemTexture = props.tomato;
-      const kind = ant.carryKind ?? "food";
-      const settingsKind = kind === "fruit" || kind === "meat" ? "food" : kind;
-      const settings = settingsKind === "fish" ? offsetSettings.fish : offsetSettings[settingsKind] ?? offsetSettings.food;
-
-      if (kind === "clay") {
-        itemTexture = getClayTexture();
-      } else if (kind === "wood") {
-        itemTexture = getWoodTexture();
-      } else if (kind === "stone") {
-        itemTexture = getStoneTexture();
-      } else if (kind === "food") {
-        itemTexture = props.tomato;
-      } else if (kind === "fish") {
-        itemTexture = props.fish.carry[ant.caughtFishSpecies ?? "blue"];
-      } else if (kind === "meat") {
-        itemTexture = getCarrionTexture();
-      }
-
-      itemSprite.texture = itemTexture;
-      itemSprite.anchor.set(0.5);
-      itemSprite.scale.set(settings.scale * facing, settings.scale);
-      itemSprite.tint = 0xffffff;
-      itemSprite.alpha = 0.95;
-
-      // Рассчитываем покачивание при движении
-      const swingSpeed = offsetSettings.swing.swingSpeed;
-      const swingAmpY = offsetSettings.swing.swingAmpY;
-      const swingAmpRot = offsetSettings.swing.swingAmpRot;
-
-      const swingY = Math.sin(world.tick * swingSpeed) * swingAmpY * spriteScale;
-      const swingRot = Math.cos(world.tick * swingSpeed) * swingAmpRot;
-
-      // Локальные координаты рук относительно центра человечка с учетом покачивания
-      const itemLocalX = settings.offsetX * facing * spriteScale;
-      const itemLocalY = (settings.offsetY * spriteScale) + swingY;
-
-      // Применяем вращение корпуса человечка к координатам предмета в руках
-      const cosR = Math.cos(rot + swingRot);
-      const sinR = Math.sin(rot + swingRot);
-      const rotatedX = itemLocalX * cosR - itemLocalY * sinR;
-      const rotatedY = itemLocalX * sinR + itemLocalY * cosR;
-
-      placeSprite(itemSprite, cx + rotatedX, cy + rotatedY, rot + swingRot);
-      itemSprite.zIndex = feetY + 0.01;
-    }
-
-    if (ant.id === selectedAntId) {
-      const sx = ant.pos.x * cell;
-      const sy = ant.pos.y * cell;
-      selectionGraphics.circle(sx, sy + 4, 11).stroke({ width: 1.8, color: 0xfff3c4, alpha: 0.9 });
-      selectionGraphics.circle(sx, sy + 4, 13.5).stroke({ width: 1, color: 0xfff3c4, alpha: 0.35 });
-    }
-
-    if (ant.job === "guard") {
-      const spearSprite = acquireSprite(carriedItemsPool);
-      spearSprite.texture = getSpearTexture();
-      const settings = offsetSettings.spear;
-      spearSprite.anchor.set(settings.anchorX, settings.anchorY);
-      spearSprite.scale.set(settings.scale * facing, settings.scale);
-      spearSprite.tint = 0xffffff;
-      spearSprite.alpha = 0.96;
-      // Позиционируем копьё справа от человечка, наклоненным вверх/вправо
-      placeSprite(spearSprite, cx + settings.offsetX * facing, cy + settings.offsetY, rot + (facing > 0 ? settings.rotation : -settings.rotation));
-      spearSprite.zIndex = feetY + 0.01;
-    }
-
-    if (ant.job === "fish") {
-      const rod = acquireSprite(carriedItemsPool);
-      const settings = offsetSettings.fishingRod;
-      rod.texture = getFishingRodTexture();
-      rod.anchor.set(settings.anchorX, settings.anchorY);
-      rod.scale.set(settings.scale * facing, settings.scale);
-      rod.tint = 0xffffff;
-      rod.alpha = 0.98;
-      placeSprite(rod, cx + settings.offsetX * facing, cy + settings.offsetY, rot + (facing > 0 ? settings.rotation : -settings.rotation));
-      rod.zIndex = feetY + 0.02;
-    }
-  }
-
-  endPool(pool);
-  endPool(carriedItemsPool);
-}
+export { updateSurfaceResidents as updateSurfaceAnts, setSelectedAntId } from "./residents";

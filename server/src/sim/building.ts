@@ -4,6 +4,8 @@
 import { WALL_CELL_SIZE, type Building, type BuildingType, type Vec2 } from "../../../shared/types";
 import { isWaterAt, lakeFieldAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
+import { insideHearth, crossesHearth, outsideHearth } from "../../../shared/campGeometry";
+import { buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding, buildingServicePoint } from "../../../shared/buildingGeometry";
 import type { World } from "./world";
 
 let nextBuildingId = 1;
@@ -105,12 +107,13 @@ export function nearestDropPoint(world: World, pos: Vec2): Vec2 {
     if (building.type !== "storage" || building.stage !== "built" || building.colonyId !== world.colony.id) {
       continue;
     }
-    const dx = pos.x - building.pos.x;
-    const dy = pos.y - building.pos.y;
+    const service = buildingServicePoint(building);
+    const dx = pos.x - service.x;
+    const dy = pos.y - service.y;
     const distanceSq = dx * dx + dy * dy;
     if (distanceSq < bestDistanceSq) {
       bestDistanceSq = distanceSq;
-      best = building.pos;
+      best = service;
     }
   }
   return best;
@@ -295,7 +298,9 @@ export function isSurfaceBlockedAt(world: World, x: number, y: number, colonyId?
   if (x < 0 || y < 0 || x >= CONFIG.mapWidth || y >= CONFIG.mapHeight) {
     return true;
   }
-  return isWaterAt(x, y) || isWallBlockedAt(world, x, y, colonyId);
+  return isWaterAt(x, y) || isWallBlockedAt(world, x, y, colonyId) ||
+    world.surface.entrances.some(camp => insideHearth(x, y, camp)) ||
+    world.surface.buildings.some(b => { const f = buildingFootprint(b); return f && insideBuilding(x, y, f); });
 }
 
 // Разрешение столкновения со стеной: откат на свободную ось (скольжение вдоль стены).
@@ -325,6 +330,31 @@ export function resolveWallCollision(
   pos.y = prevY;
 }
 
+// Traverse every crossed 2x2 cell, including short diagonal corner cuts.
+// Endpoint-only collision lets actors cross a solid corner and emerge in a
+// free cell within a single step. Water boundaries use the same aligned grid.
+function surfaceSegmentClear(world: World, fromX: number, fromY: number, toX: number, toY: number, colonyId?: string): boolean {
+  if (isSurfaceBlockedAt(world, toX, toY, colonyId)) return false;
+  if (world.surface.entrances.some(camp => crossesHearth(fromX, fromY, toX, toY, camp))) return false;
+  if (world.surface.buildings.some(b => { const f = buildingFootprint(b); return f && crossesBuilding({ x: fromX, y: fromY }, { x: toX, y: toY }, f); })) return false;
+  let x = Math.floor(fromX / WALL_CELL_SIZE), y = Math.floor(fromY / WALL_CELL_SIZE);
+  const endX = Math.floor(toX / WALL_CELL_SIZE), endY = Math.floor(toY / WALL_CELL_SIZE);
+  const dx = toX - fromX, dy = toY - fromY, stepX = Math.sign(dx), stepY = Math.sign(dy);
+  const deltaX = dx ? WALL_CELL_SIZE / Math.abs(dx) : Infinity;
+  const deltaY = dy ? WALL_CELL_SIZE / Math.abs(dy) : Infinity;
+  let crossX = dx ? ((x + Number(dx > 0)) * WALL_CELL_SIZE - fromX) / dx : Infinity;
+  let crossY = dy ? ((y + Number(dy > 0)) * WALL_CELL_SIZE - fromY) / dy : Infinity;
+  while (x !== endX || y !== endY) {
+    if (crossX < crossY) { x += stepX; crossX += deltaX; }
+    else if (crossY < crossX) { y += stepY; crossY += deltaY; }
+    else { x += stepX; y += stepY; crossX += deltaX; crossY += deltaY; }
+    // Hearths have exact elliptical footprints, not the wall grid's cells.
+    const cx = (x + 0.5) * WALL_CELL_SIZE, cy = (y + 0.5) * WALL_CELL_SIZE;
+    if (isWaterAt(cx, cy) || isWallBlockedAt(world, cx, cy, colonyId)) return false;
+  }
+  return true;
+}
+
 export function resolveSurfaceCollision(
   world: World,
   pos: Vec2,
@@ -332,25 +362,39 @@ export function resolveSurfaceCollision(
   prevY: number,
   colonyId?: string
 ): void {
-  if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId)) {
+  const foundation = world.surface.buildings.map(buildingFootprint).find(f => f && insideBuilding(prevX, prevY, f));
+  if (foundation) {
+    if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId)) return;
+    const exit = outsideBuilding(pos, foundation);
+    if (!isSurfaceBlockedAt(world, exit.x, exit.y, colonyId)) { pos.x = exit.x; pos.y = exit.y; }
+    return;
+  }
+  const hearth = world.surface.entrances.find(camp => insideHearth(prevX, prevY, camp));
+  if (hearth) {
+    if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId)) return;
+    // Existing saves and freshly spawned residents can start inside the old
+    // walkable centre. Place them just outside, preserving cargo and jobs.
+    const exit = outsideHearth(pos, hearth);
+    if (!isSurfaceBlockedAt(world, exit.x, exit.y, colonyId)) { pos.x = exit.x; pos.y = exit.y; }
     return;
   }
   // Old snapshots can place an actor in a cell that later became water. Let it
   // move only toward shallower water; the previous rule allowed unrestricted
   // movement once an actor had crossed the shoreline by even one pixel.
   if (isSurfaceBlockedAt(world, prevX, prevY, colonyId)) {
-    if (isWaterAt(prevX, prevY) && lakeFieldAt(pos.x, pos.y) < lakeFieldAt(prevX, prevY)) {
+    if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId) || (isWaterAt(prevX, prevY) && lakeFieldAt(pos.x, pos.y) < lakeFieldAt(prevX, prevY))) {
       return;
     }
     pos.x = prevX;
     pos.y = prevY;
     return;
   }
-  if (!isSurfaceBlockedAt(world, pos.x, prevY, colonyId)) {
+  if (surfaceSegmentClear(world, prevX, prevY, pos.x, pos.y, colonyId)) return;
+  if (surfaceSegmentClear(world, prevX, prevY, pos.x, prevY, colonyId)) {
     pos.y = prevY;
     return;
   }
-  if (!isSurfaceBlockedAt(world, prevX, pos.y, colonyId)) {
+  if (surfaceSegmentClear(world, prevX, prevY, prevX, pos.y, colonyId)) {
     pos.x = prevX;
     return;
   }

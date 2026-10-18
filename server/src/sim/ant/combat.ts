@@ -15,6 +15,7 @@ import {
   tryCrossLayer
 } from "./movement";
 import { isColonyStarving, isColonyWarHungry } from "./colony-state";
+import { markMelee, settleMeleePosition } from "../melee";
 
 const combatQueryScratch: Ant[] = [];
 
@@ -259,6 +260,7 @@ export function handleEnemyColonyCombat(world: World, ant: Ant): boolean {
     ant.state = "fight";
     ant.heading = normalize({ x: nearest.ant.pos.x - ant.pos.x, y: nearest.ant.pos.y - ant.pos.y });
     nearest.ant.energy -= CONFIG.antVsAntDamage * ant.strength;
+    markMelee(ant, nearest.ant.pos, world.tick);
     ant.energy -= CONFIG.antVsAntDamage * 0.55 * nearest.ant.strength;
     if (nearest.ant.energy <= 0) {
       nearest.ant.state = "dead";
@@ -333,7 +335,7 @@ export function moveFighting(world: World, ant: Ant): boolean {
   }
 
   const liveAntsCount = tickCache.liveAntsCount;
-  const isStartPeriod = liveAntsCount <= 10;
+  const isStartPeriod = liveAntsCount <= 10 && !world.enemies[nearest.index].raid;
 
   if (isStartPeriod) {
     const alertNearSpider = ant.carrying <= 0 && nearest.distance <= CONFIG.antAlertRange;
@@ -371,6 +373,7 @@ export function moveFighting(world: World, ant: Ant): boolean {
 
   const enemy = world.enemies[nearest.index];
   if (nearest.distance <= CONFIG.spiderAttackRadius) {
+    settleMeleePosition(world, ant, enemy.pos, CONFIG.spiderAttackRadius);
     dropCarriedFood(world, ant);
     ant.state = "fight";
     ant.heading = normalize({ x: enemy.pos.x - ant.pos.x, y: enemy.pos.y - ant.pos.y });

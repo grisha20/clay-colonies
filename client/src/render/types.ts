@@ -33,6 +33,8 @@ export type SurfaceScene = {
   waterLayer: Container;
   fishLayer: Container;
   shadowLayer: Graphics;
+  campGround: Container;
+  buildingGround: Graphics;
   dynamicLayer: Container;
   fireGlow: Graphics;
   zonesOverlay: Graphics;
@@ -41,6 +43,8 @@ export type SurfaceScene = {
   selectionGraphics: Graphics;
   particleGraphics: Graphics;
   fishingGraphics: Graphics;
+  gameplayGraphics: Graphics;
+  nightVeil: Sprite;
   buildingGraphics?: Graphics[];
   buildingSprites?: Sprite[];
   entranceGraphics?: Graphics[];
@@ -66,6 +70,7 @@ export type SurfaceScene = {
   waterSprites?: Array<{ sprite: TilingSprite; depth: "shallow" | "deep"; phase: number }>;
   waterFrames?: { shallow: Texture[]; deep: Texture[] };
   waterFrame?: number;
+  waterDepthTexture?: Texture;
 };
 
 export type UndergroundScene = {

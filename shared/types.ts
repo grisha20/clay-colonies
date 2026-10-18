@@ -2,9 +2,9 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-// v14: persistent lake fish, fishing jobs and rods are part of snapshots/protocol.
-export const CURRENT_SNAPSHOT_VERSION = 14;
-export const CURRENT_PROTOCOL_VERSION = 14;
+// v16: observable melee strikes; v13-v15 saves keep their existing worlds.
+export const CURRENT_SNAPSHOT_VERSION = 16;
+export const CURRENT_PROTOCOL_VERSION = 16;
 
 export type Vec2 = {
   x: number;
@@ -163,6 +163,16 @@ export type Ant = {
   energy: number;
   /** Ticks of accumulated water damage; dries back toward zero on land. */
   waterExposure?: number;
+  /** Permanent body mass lost to water, 0..1. */
+  dissolved?: number;
+  capturedBy?: string;
+  rescuedUntil?: number;
+  waterAmmo?: number;
+  nextShotAt?: number;
+  shot?: { from: Vec2; to: Vec2; until: number };
+  melee?: { to: Vec2; until: number };
+  refillPos?: Vec2;
+  waterRefillTicks?: number;
   carrying: number;
   heading: Vec2;
   broodId?: string;
@@ -237,6 +247,11 @@ export type Colony = {
   axes: number;
   picks: number;
   rods: number;
+  alarm?: boolean;
+  defensePost?: Vec2;
+  waterWeapons?: boolean;
+  growthPaused?: boolean;
+  clayReserve?: number;
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).
   // «+» берёт человека из свободных, «−» возвращает. Свободные — на еде.
   priorities: {
@@ -299,7 +314,7 @@ export type Fish = {
 
 export type Enemy = {
   id: string;
-  type: "spider";
+  type: "spider" | "lakeMonster" | "beetle";
   pos: Vec2;
   hp: number;
   maxHp: number;
@@ -309,6 +324,28 @@ export type Enemy = {
   hoard: number;
   sprintLeft: number;
   tiredLeft: number;
+  lakeId?: "north" | "south";
+  captiveId?: string;
+  nextGrabAt?: number;
+  raid?: boolean;
+  targetColonyId?: string;
+  lastHitColonyId?: string;
+};
+
+export type SessionState = {
+  mode: "match" | "sandbox";
+  speed?: number;
+  status: "playing" | "victory" | "defeat";
+  reason: string;
+  endedAt?: number;
+  dangersEnabled: boolean;
+  raid: { phase: "peace" | "warning" | "attack"; at: number; until: number; count: number; targetColonyId: string };
+  lakes: Record<"north" | "south", { swallowed: number; nextSpawnAt: number }>;
+  nextBeetlesAt: number;
+  nextCreatureId: number;
+  idolProgress: number;
+  stats: { born: number; lost: number; rescued: number; raidsSurvived: number };
+  events: Array<{ tick: number; text: string; pos?: Vec2 }>;
 };
 
 export type Surface = {
@@ -379,6 +416,7 @@ export type WorldSnapshot = {
   pheromones: PheromoneSnapshot;
   objectives: Objective[];
   weather: Weather;
+  session: SessionState;
 };
 
 export type DurableWorldSnapshot = WorldSnapshot;
