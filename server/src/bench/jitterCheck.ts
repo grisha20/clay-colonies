@@ -15,6 +15,8 @@ const { moveToSafety } = await import("../sim/ant/defense");
 const { createSpider, updateEnemies } = await import("../sim/enemy");
 const { CONFIG } = await import("../config");
 const { taskMotionReport } = await import("../sim/taskProgress");
+const { assignForageRoles } = await import("../sim/foodMemory");
+const { step } = await import("../sim/step");
 const distance = (a: {x:number;y:number}, b: {x:number;y:number}) => Math.hypot(a.x-b.x,a.y-b.y);
 function fresh() {
   const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
@@ -29,6 +31,20 @@ let seed = 181541;
 Math.random = () => { seed = (Math.imul(seed,1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 function check(name: string, run: () => void) { run(); passed++; console.log(`PASS  ${name}`); }
 try {
+  check("Резервные рабочие A и Б не получают маршрут сборщика без назначения роли",()=>{
+    for(const index of [0,1]) {
+      const w=fresh(),c=w.colonies[index],camp=c.surfaceEntrance,base=c.ants[0];
+      c.ants=Array.from({length:28},(_,i)=>({...structuredClone(base),id:`ant-${100+i}`,colonyId:c.id,pos:{x:camp.x+7.8,y:camp.y},heading:{x:1,y:0},job:"forage",state:"search",carrying:0,forageRole:undefined,knownActiveFoodTargetId:undefined}));
+      const a=c.ants.at(-1)!,seed=127+(index===1?23:0),search=620+seed%360,cycle=search+150+seed*7%120;
+      w.tick=search+20+cycle*10-seed*41;
+      const food={id:"distant-food",kind:"food" as const,amount:100,pos:{x:camp.x+(index===0?80:-80),y:camp.y}};
+      w.surface.foodSources.push(food);c.colony.activeFoodTargetId=food.id;
+      const view=colonyWorldView(w,c);let flips=0,delta={x:0,y:0};
+      for(let t=0;t<100;t++){w.tick++;view.tick=w.tick;assignForageRoles(view);assert.equal(a.forageRole,undefined);updateWorldSurfaceCache(w);updateTickCache(view);const prev={...a.pos};stepAnt(view,a);const d={x:a.pos.x-prev.x,y:a.pos.y-prev.y};if(d.x*delta.x+d.y*delta.y<-.1)flips++;delta=d;}
+      assert.ok(flips<4,`${c.id}: ${flips} reversals`);
+      assert.equal(a.knownActiveFoodTargetId,undefined,"reserve never borrows and loses a forager's order");
+    }
+  });
   check("Разведчик у края карты возвращается в лагерь, не пересекает границу возврата туда-сюда", () => {
     const w=fresh(),c=w.colonies[0],a=c.ants[0],view=colonyWorldView(w,c);
     a.pos={x:9,y:240};a.heading={x:-1,y:0};a.job="forage";a.forageRole="scout";a.carrying=0;
@@ -78,7 +94,7 @@ try {
     const restored=worldFromSnapshot(JSON.parse(JSON.stringify(toSnapshot(w,false))),w.genomeState,w.spiderGenomeState,w.colonies[1].genomeState);
     assert.equal(restored.surface.foodSources.find(f=>f.kind==="spiderCarcass")?.amount,10);
   });
-  if(process.argv[2]) {
+  if(process.argv[2] && process.argv[2]!=="--scan") {
     const saved=JSON.parse(await readFile(path.resolve(process.argv[2]),"utf8")) as WorldSnapshot;
     for(const c of saved.colonies)if(!c.ants.length)c.ants=saved.ants.filter(a=>a.colonyId===c.id);
     check("Копия партии: разведчики перестают колебаться на границе дальности",()=>{
@@ -88,6 +104,24 @@ try {
       const metrics=new Map(tracked.map(a=>[a.id,{flips:0,delta:{x:0,y:0},start:{...a.pos}}]));
       for(let t=0;t<120;t++){w.tick++;updateWorldSurfaceCache(w);for(const view of views){view.tick=w.tick;updateTickCache(view);for(const a of view.ants){const prev={...a.pos};stepAnt(view,a);if(process.env.JITTER_TRACE&&a.id===process.env.JITTER_TRACE&&t>=30&&t<40)console.log(JSON.stringify({t,pos:a.pos,role:a.forageRole,state:a.state,job:a.job,energy:a.energy,cargo:a.carrying,kind:a.carryKind,known:a.knownActiveFoodTargetId,motion:taskMotionReport(a)}));const m=metrics.get(a.id);if(m){const d={x:a.pos.x-prev.x,y:a.pos.y-prev.y};if(d.x*m.delta.x+d.y*m.delta.y<-.1)m.flips++;m.delta=d;}}}}
       for(const a of tracked){const m=metrics.get(a.id)!;console.log(`  ${a.id}: flips=${m.flips}, offset=${distance(a.pos,m.start).toFixed(1)}`);assert.ok(m.flips<8,`${a.id}: ${m.flips} flips`);}
+    });
+  }
+  if(process.argv[2]==="--scan") {
+    const saved=JSON.parse(await readFile(path.resolve(process.argv[3]),"utf8")) as WorldSnapshot;
+    for(const c of saved.colonies)if(!c.ants.length)c.ants=saved.ants.filter(a=>a.colonyId===c.id);
+    check("Полная симуляция копии партии: назначения обоих племён не создают двухточечных циклов",()=>{
+      const base=fresh(),w=worldFromSnapshot(saved,base.genomeState,base.spiderGenomeState,base.colonies[1].genomeState);
+      const tracks=new Map<string,{prev:{x:number;y:number};before:{x:number;y:number};chain:number;max:number;cycles:number}>();
+      for(let t=0;t<1000;t++) {
+        step(w);
+        for(const a of w.ants){let m=tracks.get(a.id);if(!m){tracks.set(a.id,{prev:{...a.pos},before:{...a.pos},chain:0,max:0,cycles:0});continue;}
+          const cycle=distance(a.pos,m.before)<.12&&distance(a.pos,m.prev)>.3;
+          m.chain=cycle?m.chain+1:0;m.max=Math.max(m.max,m.chain);m.cycles+=Number(cycle);m.before=m.prev;m.prev={...a.pos};
+        }
+      }
+      assert.equal(w.tick,saved.tick+1000,"replay must actually advance the complete simulation");
+      console.log(JSON.stringify({tick:w.tick,ants:w.ants.length,worst:[...tracks].sort((a,b)=>b[1].max-a[1].max).slice(0,8).map(([id,m])=>({id,maxConsecutive:m.max,cycles:m.cycles}))}));
+      for(const [id,m]of tracks)assert.ok(m.max<12,`${id}: ${m.max} consecutive oscillations`);
     });
   }
   console.log(`${passed} jitter scenarios passed.`);

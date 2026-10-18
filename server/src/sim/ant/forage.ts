@@ -406,7 +406,10 @@ export function moveSearching(world: World, ant: Ant): void {
   ant.job = "forage";
   world.pheromones.home.add(ant.pos.x, ant.pos.y, CONFIG.homePheromoneDeposit);
 
-  if (ant.forageRole === "scout") {
+  // Reserve workers have no assigned food order. Sending them down the
+  // forager branch borrowed an order at the camp, then lost it during the
+  // next assignment pass, alternating food/home goals at the 8-unit edge.
+  if (ant.forageRole !== "forager") {
     moveScoutSearching(world, ant);
     return;
   }
