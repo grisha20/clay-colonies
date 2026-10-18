@@ -26,6 +26,15 @@ Math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; retu
 function fresh() { const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }; return createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); }
 function check(name: string, run: () => void) { run(); passed++; console.log(`PASS  ${name}`); }
 try {
+  check("Соперник: занятые старые позиции не останавливают поиск места для мастерской",()=>{
+    const w=fresh(),c=w.colonies[1],camp=c.surfaceEntrance;
+    w.surface.buildings=w.surface.buildings.filter(b=>b.colonyId!==c.id);w.enemies=[];w.weather.state="clear";w.tick=100;
+    const offsets=[[-0,-19],[-23,-8],[23,-8],[-15,14],[15,14],[0,24],[-23,7],[23,7],[-12,-22],[12,-22]];
+    for(const [i,[x,y]] of offsets.entries())w.surface.buildings.push({id:`occupied-${i}`,colonyId:c.id,type:"hut",stage:"built",pos:{x:camp.x+x,y:camp.y+y},cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,progress:1});
+    updateSettlementAI(w);
+    const workshop=w.surface.buildings.find(b=>b.colonyId===c.id&&b.type==="workshop");assert.ok(workshop);
+    assert.ok(!offsets.some(([x,y])=>camp.x+x===workshop.pos.x&&camp.y+y===workshop.pos.y));
+  });
   check("Стройка: остаток материала меньше 0.5 доставляется и не блокирует хижину", () => {
     const w = fresh(), c = w.colonies[0], a = c.ants[0], scoped = colonyWorldView(w, c);
     assert.ok(placePointBuilding(w, 0, "hut", c.surfaceEntrance.x - 23, c.surfaceEntrance.y - 8));

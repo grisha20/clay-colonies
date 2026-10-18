@@ -1,10 +1,34 @@
-import type { BuildingType, Vec2 } from "../../../shared/types";
+import type { Building, BuildingType, Vec2 } from "../../../shared/types";
 import { isWaterAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
-import { placePointBuilding, paintWallCells, wallCellIndexAt } from "./building";
+import { placePointBuilding, placeGate, paintWallCells, wallCellIndexAt, isSurfaceBlockedAt } from "./building";
 import type { World } from "./world";
 import { trainWaterWeapons } from "./session";
 import { fenceCellCenters } from "../../../shared/fenceGeometry";
+import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
+import { buildingServicePoint } from "../../../shared/buildingGeometry";
+import { placementAccessWarning } from "../../../shared/placementAccess";
+import { taskApproach } from "./taskAccess";
+import { colonyWorldView } from "./world";
+
+function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop"|"idol"):Vec2[] {
+  const runtime=world.colonies[index],camp=runtime.surfaceEntrance,scoped=colonyWorldView(world,runtime),rival=world.colonies[world.session.playerColonyIndex??0]?.surfaceEntrance;
+  const candidates:Vec2[]=[];
+  for(const radius of [18,26,34,42,50])for(let i=0;i<16;i++){
+    const angle=i*Math.PI/8+(index%2)*Math.PI/16,pos={x:Math.round(camp.x+Math.cos(angle)*radius),y:Math.round(camp.y+Math.sin(angle)*radius)};
+    if(pointBuildingPlacement(world.surface,runtime.id,type,pos))continue;
+    if(world.surface.resourceNodes.some(n=>n.amount>0&&Math.hypot(n.pos.x-pos.x,n.pos.y-pos.y)<5))continue;
+    const plan={type,pos,colonyId:runtime.id,id:"ai-plan",stage:"built"} as Building;
+    if(!taskApproach(scoped,buildingServicePoint(plan),2))continue;
+    candidates.push(pos);
+  }
+  const score=(p:Vec2)=>{
+    const enemyDistance=rival?Math.hypot(p.x-rival.x,p.y-rival.y):0;
+    const useful=type==="storage"?Math.min(60,...world.surface.resourceNodes.filter(n=>n.amount>0).map(n=>Math.hypot(n.pos.x-p.x,n.pos.y-p.y))):0;
+    return Math.hypot(p.x-camp.x,p.y-camp.y)+useful*.4-enemyDistance*.025;
+  };
+  return candidates.sort((a,b)=>score(a)-score(b));
+}
 
 /** One settlement-level planner. It pays normal costs through normal workers. */
 export function updateSettlementAI(world: World): void {
@@ -32,7 +56,9 @@ export function updateSettlementAI(world: World): void {
     // Choose an unobstructed front; post is inside the fort and not in water.
     const rival = world.colonies[world.session.playerColonyIndex ?? 0]?.surfaceEntrance;
     const sign = rival && rival.x < camp.x ? -1 : 1;
-    c.defensePost = { x: camp.x + sign * 9, y: camp.y + 5 };
+    const scoped=colonyWorldView(world,runtime);
+    const postCandidates=[{x:camp.x+sign*9,y:camp.y+5},...buildings.filter(b=>b.type==="gate"&&b.stage==="built").map(b=>({x:b.pos.x,y:b.pos.y+(b.pos.y<camp.y?4:-4)})),{x:camp.x,y:camp.y+5}];
+    c.defensePost=postCandidates.find(p=>!isSurfaceBlockedAt(world,p.x,p.y,runtime.id)&&taskApproach(scoped,p))??c.defensePost;
     if (buildings.some(b => b.stage !== "built" && b.type !== "wall" && b.type !== "gate")) continue;
     let type: "hut" | "storage" | "workshop" | "idol" | undefined;
     if (!built("workshop")) type = "workshop";
@@ -40,8 +66,7 @@ export function updateSettlementAI(world: World): void {
     else if (built("storage") < 2 && population >= 20 && world.tick > 6000) type = "storage";
     else if (!built("idol") && world.tick > CONFIG.matchMinTicks / 2 && c.clay > 35 && c.stone > 10) type = "idol";
     if (type) {
-      const offsets: Vec2[] = [{ x: 0, y: -19 }, { x: -23, y: -8 }, { x: 23, y: -8 }, { x: -15, y: 14 }, { x: 15, y: 14 }, { x: 0, y: 24 }, { x: -23, y: 7 }, { x: 23, y: 7 }, { x: -12, y: -22 }, { x: 12, y: -22 }];
-      for (const p of offsets) if (placePointBuilding(world, index, type, camp.x + p.x, camp.y + p.y)) break;
+      for (const p of settlementSites(world,index,type)) if (!placementAccessWarning(world.surface,runtime.id,[{type,pos:p,colonyId:runtime.id,id:"ai-plan",stage:"built"} as Building])&&placePointBuilding(world, index, type, p.x, p.y)) break;
       continue;
     }
     if (world.tick < 6000 || c.clay < 10 || buildings.filter(b => b.stage !== "built").length >= 4) continue;
@@ -55,8 +80,11 @@ export function updateSettlementAI(world: World): void {
       }
     }
     const occupied = new Set(buildings.filter(b => b.type === "wall" || b.type === "gate").flatMap(fenceCellCenters).map(p => wallCellIndexAt(p.x, p.y)));
-    const gates = gateCells.filter(cell => !occupied.has(cell)).slice(0, 2);
-    if (gates.length) paintWallCells(world, index, gates, "gate");
-    else paintWallCells(world, index, wallCells.filter(cell => !occupied.has(cell)).slice(0, 2));
+    let plannedGate=false;
+    for(const dy of [-26,28]) {
+      const pos={x:camp.x,y:camp.y+dy};
+      if(!buildings.some(b=>b.type==="gate"&&Math.hypot(b.pos.x-pos.x,b.pos.y-pos.y)<5)&&placeGate(world,index,pos.x,pos.y,"horizontal")){plannedGate=true;break;}
+    }
+    if(!plannedGate)paintWallCells(world,index,wallCells.filter(cell=>!occupied.has(cell)).slice(0,2));
   }
 }
