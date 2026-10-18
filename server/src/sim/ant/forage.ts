@@ -26,6 +26,7 @@ import {
 import { hasDugRoom } from "./brood";
 import { addFoodStock, foodKindForSource, isFoodCarryKind } from "../foodStock";
 import { nearestDropPoint } from "../building";
+import { surfacePointOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
 
 export type SurfaceFoodTarget = {
   source: { id: string; pos: Vec2; amount: number; kind?: "food" | "carrion" | "antCorpse" | "spiderCarcass" };
@@ -312,6 +313,7 @@ function nearestVisibleFood(world: World, ant: Ant): SurfaceFoodTarget | null {
   return nearest;
 }
 
+const scoutGoals = new WeakMap<Ant, { pos: Vec2; until: number }>();
 function moveScoutSearching(world: World, ant: Ant): void {
   const food = nearestVisibleFood(world, ant);
   if (food && pickupFoodIfReached(world, ant, food)) {
@@ -320,34 +322,31 @@ function moveScoutSearching(world: World, ant: Ant): void {
   }
 
   if (food) {
+    scoutGoals.delete(ant);
     ant.state = "search";
     moveSurfaceToward(world, ant, food.source.pos, !isColonyStarving(world));
     return;
   }
 
-  const speed = surfaceMoveSpeed(world, ant);
-  const jitter = randomHeading();
-  const scout = scoutDirection(world, ant);
-  const desired = normalize({
-    x: scout.x * 1.35 + jitter.x * world.directives.forageWander,
-    y: scout.y * 1.35 + jitter.y * world.directives.forageWander
-  });
-  const safeDesired = isColonyStarving(world)
-    ? desired
-    : profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
-  const zonedDesired = applyWallAvoidance(world, ant, applyForbidZones(world, ant, safeDesired));
-  const finalDesired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, zonedDesired));
-  const finalDirection = normalize({
-    x: ant.heading.x * 0.82 + finalDesired.x * 0.18,
-    y: ant.heading.y * 0.82 + finalDesired.y * 0.18
-  });
-
-  profiler.measure("stepAnt.surface.move", () => {
-    ant.heading = finalDirection;
-    ant.pos.x += finalDirection.x * speed;
-    ant.pos.y += finalDirection.y * speed;
-    clampToSurface(ant, world);
-  });
+  if (shouldReturnToNestDuringSearch(world, ant)) {
+    scoutGoals.delete(ant);
+    moveSurfaceToward(world, ant, world.surface.entrance, !isColonyStarving(world));
+    rememberScoutTrail(world, ant); return;
+  }
+  let goal = scoutGoals.get(ant);
+  if (!goal || world.tick >= goal.until || world.tick < goal.until - 300 || distance(ant.pos, goal.pos) < 2 || !surfacePointOpen(world.surface, goal.pos, ant.colonyId)) {
+    scoutGoals.delete(ant); goal = undefined;
+    const direction = scoutDirection(world, ant), angle = Math.atan2(direction.y, direction.x);
+    // Stable survey points use the same gate/corner/water rules as jobs.
+    // Try a small fan only when choosing a point, never a new search each tick.
+    for (const turn of [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, Math.PI]) {
+      const pos = { x: Math.max(2, Math.min(world.surface.width - 2, ant.pos.x + Math.cos(angle + turn) * 36)), y: Math.max(2, Math.min(world.surface.height - 2, ant.pos.y + Math.sin(angle + turn) * 36)) };
+      if (distance(ant.pos, pos) > 8 && surfacePointOpen(world.surface, pos, ant.colonyId) && surfaceRoute(world.surface, ant.pos, pos, ant.colonyId)) {
+        goal = { pos, until: world.tick + 300 }; scoutGoals.set(ant, goal); break;
+      }
+    }
+  }
+  if (goal) moveSurfaceToward(world, ant, goal.pos, !isColonyStarving(world));
   rememberScoutTrail(world, ant);
 }
 

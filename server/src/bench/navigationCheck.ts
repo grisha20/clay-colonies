@@ -14,6 +14,7 @@ const { updateWorldSurfaceCache, updateTickCache } = await import("../sim/cache"
 const { surfaceRoute, surfaceLineOpen } = await import("../../../shared/surfaceNavigation");
 const { CONFIG } = await import("../config");
 const { stepAnt } = await import("../sim/ant/step");
+const { moveSearching } = await import("../sim/ant/forage");
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x-b.x,a.y-b.y);
 function fence(x:number,y:number,type:Building["type"]="wall"):Building {
   return {id:`fence-${x}-${y}`,type,colonyId:"colony-1",pos:{x,y},stage:"built",progress:1,cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,...(type==="gate"?{gateSpan:3,gateAxis:"horizontal" as const}:{})};
@@ -45,6 +46,13 @@ function travel(w:ReturnType<typeof fresh>, a:Ant, goal:Vec2, budget:number, str
 let failures=0,passed=0;
 function check(name:string,run:()=>void) { try {run();passed++;console.log(`PASS  ${name}`);}catch(e){failures++;console.error(`FAIL  ${name}: ${(e as Error).message}`);} }
 try {
+  check("Разведчик без видимой еды выходит из огороженного лагеря через общий маршрут",()=>{
+    const w=fresh(),c=w.colonies[0],a=c.ants[0],scoped=colonyWorldView(w,c);
+    w.surface.foodSources=[];w.surface.carrion=[];a.pos={x:120,y:240};a.state="search";a.job="forage";a.forageRole="scout";a.carrying=0;
+    let outside=false;
+    for(let t=0;t<240;t++) {w.tick++;scoped.tick=w.tick;updateWorldSurfaceCache(w);updateTickCache(scoped);const prev={...a.pos};moveSearching(scoped,a);resolveSurfaceCollision(scoped,a.pos,prev.x,prev.y,a.colonyId);assert.equal(isWallBlockedAt(w,a.pos.x,a.pos.y,a.colonyId),false);if(a.pos.x<90||a.pos.x>152||a.pos.y<214||a.pos.y>266){outside=true;break;}}
+    assert.ok(outside,JSON.stringify(a.pos));
+  });
   if(process.argv[2]) {
     const snapshot=JSON.parse(await readFile(path.resolve(process.argv[2]),"utf8")) as WorldSnapshot;
     // Network captures keep actors at the top level, durable saves per colony.
