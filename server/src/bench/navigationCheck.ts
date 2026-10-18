@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { Ant, Building, Vec2 } from "../../../shared/types";
+import type { Ant, Building, Vec2, WorldSnapshot } from "../../../shared/types";
 const temp = await mkdtemp(path.join(os.tmpdir(), "clayfolk-navigation-"));
 for (const key of ["SNAPSHOT_FILE", "GENOME_FILE", "GENOME_FILE_B", "SPIDER_GENOME_FILE"]) process.env[key] = path.join(temp, key + ".json");
-const { createWorld, colonyWorldView } = await import("../sim/world");
+const { createWorld, colonyWorldView, worldFromSnapshot } = await import("../sim/world");
 const { randomGenome } = await import("../ai/genome");
 const { randomSpiderGenome } = await import("../ai/spiderGenome");
 const { moveSurfaceToward, updateStuckTracking, clearDeadAntPaths } = await import("../sim/ant/movement");
@@ -13,6 +13,7 @@ const { rebuildWallBlocked, resolveSurfaceCollision, isWallBlockedAt, completeBu
 const { updateWorldSurfaceCache, updateTickCache } = await import("../sim/cache");
 const { surfaceRoute, surfaceLineOpen } = await import("../../../shared/surfaceNavigation");
 const { CONFIG } = await import("../config");
+const { stepAnt } = await import("../sim/ant/step");
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x-b.x,a.y-b.y);
 function fence(x:number,y:number,type:Building["type"]="wall"):Building {
   return {id:`fence-${x}-${y}`,type,colonyId:"colony-1",pos:{x,y},stage:"built",progress:1,cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,...(type==="gate"?{gateSpan:3,gateAxis:"horizontal" as const}:{})};
@@ -44,6 +45,43 @@ function travel(w:ReturnType<typeof fresh>, a:Ant, goal:Vec2, budget:number, str
 let failures=0,passed=0;
 function check(name:string,run:()=>void) { try {run();passed++;console.log(`PASS  ${name}`);}catch(e){failures++;console.error(`FAIL  ${name}: ${(e as Error).message}`);} }
 try {
+  if(process.argv[2]) {
+    const snapshot=JSON.parse(await readFile(path.resolve(process.argv[2]),"utf8")) as WorldSnapshot;
+    // Network captures keep actors at the top level, durable saves per colony.
+    for(const c of snapshot.colonies) if(!c.ants.length)c.ants=snapshot.ants.filter(a=>a.colonyId===c.id);
+    check("Копия живой партии: реальные застрявшие носильщики сдают груз, рыбак уходит от ограды",()=>{
+      const base=fresh(),w=worldFromSnapshot(snapshot,base.genomeState,base.spiderGenomeState,base.colonies[1].genomeState),c=w.colonies[0];
+      const scoped=colonyWorldView(w,c),tracked=c.ants.filter(a=>["ant-422","ant-452","ant-463","ant-486","ant-500","ant-504","ant-515"].includes(a.id));
+      assert.equal(tracked.length,7);
+      const stats=new Map(tracked.map(a=>[a.id,{start:{...a.pos},cargo:a.carrying,delivered:false,maxOffset:0}]));
+      for(let t=0;t<240;t++) {
+        w.tick++;scoped.tick=w.tick;updateWorldSurfaceCache(w);updateTickCache(scoped);
+        for(const a of c.ants)stepAnt(scoped,a);
+        for(const a of tracked) {const s=stats.get(a.id)!;s.maxOffset=Math.max(s.maxOffset,dist(a.pos,s.start));if(a.carrying<s.cargo)s.delivered=true;}
+      }
+      for(const a of tracked) {
+        const s=stats.get(a.id)!;console.log(`  ${a.id}: offset=${s.maxOffset.toFixed(1)}, delivered=${s.delivered}, job=${a.job}`);
+        assert.ok(s.maxOffset>4,`${a.id} still oscillates`);
+        if(s.cargo>0)assert.ok(s.delivered,`${a.id} failed to unload cargo`);
+      }
+    });
+  }
+  check("Ступенчатая ограда из партии: носильщики и рыбак не ходят между двумя точками у угла",()=>{
+    const coords = [[147,255],[147,253],[147,251],[147,249],[147,247],[145,255],[145,257],[143,257],[143,259],[141,259],[139,261],[137,261],[137,263],[127,263],[125,263],[123,263],[121,263],[119,263],[117,263],[111,263],[109,263],[107,263],[105,263],[103,263],[101,263],[101,261],[99,261],[97,261],[95,259],[95,223],[95,221],[97,221],[99,221],[101,221],[103,219],[105,219],[107,219],[109,219],[111,217],[113,217],[121,217],[121,219],[123,219],[125,219],[127,219],[127,221],[129,221],[131,221],[133,223],[135,223],[137,223],[139,225],[141,225],[143,225],[143,227],[145,227],[147,227],[147,229],[149,229],[149,231],[149,233],[151,237],[151,239],[151,241],[151,243],[149,245],[147,245]];
+    const cases = [
+      {pos:{x:141,y:261},heading:{x:-0.4028573608125523,y:0.9152627747478563},goal:{x:120,y:252}},
+      {pos:{x:151,y:245},heading:{x:0.7071067811862217,y:0.7071067811868734},goal:{x:120,y:240}},
+      {pos:{x:109,y:217},heading:{x:-0.7071067811865767,y:-0.7071067811865185},goal:{x:120,y:240}},
+      {pos:{x:136.34351324442682,y:224.18053362499916},heading:{x:-0.6252254814982655,y:-0.7804441666674574},goal:{x:182,y:161.12}}
+    ];
+    for(const sample of cases) {
+      const w=fresh(),a=w.colonies[0].ants[0];w.surface.buildings=coords.map(([x,y])=>fence(x,y));
+      for(const x of [129,131,133,135]){const gate=fence(x,263,"gate");delete gate.gateSpan;delete gate.gateAxis;w.surface.buildings.push(gate);}
+      w.surface.buildings.push(fence(117,217,"gate"));rebuildWallBlocked(w);
+      a.pos={...sample.pos};a.heading={...sample.heading};a.state="carry";a.carrying=1;a.carryKind="wood";
+      const result=travel(w,a,sample.goal,240);assert.ok(result.distance<0.7,JSON.stringify({sample,...result}));
+    }
+  });
   check("Вход и выход через широкие ворота: путь достигается без долгого блуждания у углов",()=>{
     for(const [from,to] of [[{x:95,y:219},{x:85,y:211}],[{x:145,y:219},{x:159,y:223}],[{x:109,y:221},{x:109,y:205}],[{x:119,y:259},{x:119,y:277}]] as [Vec2,Vec2][]) for(const reverse of [false,true]) {
       const w=fresh(),a=w.colonies[0].ants[0]; a.pos={...(reverse?to:from)}; const goal=reverse?from:to; a.heading={x:-1,y:0}; a.state="carry";a.carrying=1;a.carryKind="wood";
