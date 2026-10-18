@@ -7,7 +7,7 @@ import { isWaterAt } from "../../../shared/surfaceTerrain";
 
 export function createSession(tick = 0): SessionState {
   return {
-    mode: "match", speed: 1, status: "playing", reason: "", dangersEnabled: true,
+    mode: "match", speed: 1, status: "playing", reason: "", dangersEnabled: true, playerColonyIndex: 0, startedAt: tick,
     raid: { phase: "peace", at: tick + CONFIG.raidFirstAt, until: 0, count: 0, targetColonyId: "colony-1" },
     lakes: { north: { swallowed: 0, nextSpawnAt: tick + CONFIG.lakeMonsterSpawnTicks }, south: { swallowed: 0, nextSpawnAt: tick + CONFIG.lakeMonsterSpawnTicks } },
     nextBeetlesAt: tick, nextCreatureId: 1, idolProgress: 0,
@@ -91,16 +91,19 @@ export function updateRaids(world: World): void {
 export function updateOutcome(world: World): void {
   const s = world.session;
   if (s.mode === "sandbox" || s.status !== "playing") return;
-  const primary = world.colonies[0];
+  const primary = world.colonies[s.playerColonyIndex ?? 0];
   if (!primary?.ants.some(a => a.state !== "dead")) {
-    finish(world, "defeat", "Племя A потеряло всех жителей");
+    finish(world, "defeat", `Племя ${(s.playerColonyIndex ?? 0) === 0 ? "A" : "Б"} потеряло всех жителей`);
     return;
   }
   const idol = world.surface.buildings.some(b => b.colonyId === primary.id && b.type === "idol" && b.stage === "built");
   if (idol && primary.colony.fire >= 0.35) s.idolProgress = Math.min(CONFIG.idolRitualTicks, s.idolProgress + 1);
-  if (world.objectives.some(o => o.victory && o.done)) {
+  const elapsed = world.tick - (s.startedAt ?? 0);
+  if (elapsed >= CONFIG.matchMinTicks && world.objectives.some(o => o.victory && o.done)) {
     const id = world.objectives.find(o => o.victory && o.done)!.id;
     finish(world, "victory", id === "win-idol" ? "Ритуал Идола завершён" : id === "win-spider" ? "Паук повержен" : "Племя пережило Большой дождь");
+  } else if (elapsed >= CONFIG.matchMaxTicks) {
+    finish(world, "victory", "Три часа пройдены: племя выжило и сохранило поселение");
   }
 }
 

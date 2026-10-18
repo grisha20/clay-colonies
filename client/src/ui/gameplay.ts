@@ -71,7 +71,8 @@ export function createGameplayPanel(root: HTMLElement, actions: {
     button("train").textContent = c.waterWeapons ? "Водомёты обучены" : "Обучить водомётов: 6 дерева + 4 камня";
     panel.querySelector("[data-training]")!.textContent = c.waterWeapons ? "Стража держится у поста, стреляет водой и пополняет ёмкости на берегу озера." : !workshop ? "Для обучения нужна достроенная мастерская." : "Обучение меняет оружие стражи. Новые жители тоже проходят обучение.";
     button("sandbox").textContent = s.mode === "sandbox" ? "Вернуться к партии" : "Песочница: еда и тестовый водомёт";
-    panel.querySelector("[data-lakes]")!.textContent = `Озёра · поглощено жителей: север ${s.lakes.north.swallowed}, юг ${s.lakes.south.swallowed}. Каждые 2 жертвы — ещё один монстр (до 4 на озеро).`;
+    const remaining = Math.max(0, 120 - Math.floor((world.tick - (s.startedAt ?? 0)) / 600));
+    panel.querySelector("[data-lakes]")!.textContent = `Финал: ${remaining ? `не раньше чем через ${remaining} игровых минут` : "цели победы доступны"}; предел партии — 3 часа. Соседнее племя строится самостоятельно. Озёрные монстры живут в воде и охотятся на рыбу; поглощено жителей: север ${s.lakes.north.swallowed}, юг ${s.lakes.south.swallowed}.`;
     const foodButton = root.querySelector<HTMLButtonElement>('[data-tool="food"]');
     if (foodButton) foodButton.hidden = s.mode !== "sandbox";
     const key = s.events.map(e => e.tick + e.text).join("|");

@@ -15,6 +15,7 @@ import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { insideHearth } from "../../../../shared/campGeometry";
 import { buildingRouteTarget } from "../../../../shared/buildingGeometry";
 import { addFoodStock, consumeFoodStock, normalizedCarryFoodKind } from "../foodStock";
+import { surfaceLineOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -23,57 +24,16 @@ export type CachedPath = {
 };
 
 export const antPaths = new Map<string, CachedPath>();
-type SurfacePath = {
-  targetCell: Vec2;
-  points: Vec2[];
-};
-
-// Surface routes only exist when a straight line meets water. Kept separate from
-// underground paths because lake shore remains stable while walls can change often.
-const surfacePaths = new Map<string, SurfacePath>();
 const buildingWaypoints = new Map<string, { target: Vec2; point: Vec2 }>();
 let buildingWaypointTick = -1;
-const SURFACE_PATH_CELL_SIZE = 4;
 const surfaceQueryScratch: Ant[] = [];
 const speedQueryScratch: Ant[] = [];
-const lakeClearanceCache = new Map<string, Uint8Array>();
-
-function buildLakeClearance(width: number, height: number): Uint8Array {
-  const clearance = new Uint8Array(width * height);
-  const shoreClearance = 1.35;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const center = surfaceCellCenter({ x, y });
-      clearance[y * width + x] =
-        isWaterAt(center.x, center.y) ||
-        isWaterAt(center.x - shoreClearance, center.y) ||
-        isWaterAt(center.x + shoreClearance, center.y) ||
-        isWaterAt(center.x, center.y - shoreClearance) ||
-        isWaterAt(center.x, center.y + shoreClearance)
-          ? 0
-          : 1;
-    }
-  }
-  return clearance;
-}
-
-const defaultSurfacePathWidth = Math.ceil(CONFIG.mapWidth / SURFACE_PATH_CELL_SIZE);
-const defaultSurfacePathHeight = Math.ceil(CONFIG.mapHeight / SURFACE_PATH_CELL_SIZE);
-lakeClearanceCache.set(
-  `${defaultSurfacePathWidth}x${defaultSurfacePathHeight}`,
-  buildLakeClearance(defaultSurfacePathWidth, defaultSurfacePathHeight)
-);
-
 export function clearDeadAntPaths(activeIds: Set<string>): void {
+  for (const id of safeRoutes.keys()) if (!activeIds.has(id)) safeRoutes.delete(id);
   for (const id of buildingWaypoints.keys()) if (!activeIds.has(id)) buildingWaypoints.delete(id);
   for (const antId of antPaths.keys()) {
     if (!activeIds.has(antId)) {
       antPaths.delete(antId);
-    }
-  }
-  for (const antId of surfacePaths.keys()) {
-    if (!activeIds.has(antId)) {
-      surfacePaths.delete(antId);
     }
   }
   for (const antId of stuckTracker.keys()) {
@@ -83,127 +43,27 @@ export function clearDeadAntPaths(activeIds: Set<string>): void {
   }
 }
 
-function surfaceCell(pos: Vec2): Vec2 {
-  return {
-    x: Math.floor(pos.x / SURFACE_PATH_CELL_SIZE),
-    y: Math.floor(pos.y / SURFACE_PATH_CELL_SIZE)
-  };
-}
-
-function surfaceCellCenter(cell: Vec2): Vec2 {
-  return {
-    x: (cell.x + 0.5) * SURFACE_PATH_CELL_SIZE,
-    y: (cell.y + 0.5) * SURFACE_PATH_CELL_SIZE
-  };
-}
-
-function lineCrossesWater(from: Vec2, to: Vec2): boolean {
-  const span = distance(from, to);
-  const steps = Math.max(1, Math.ceil(span / 2));
-  for (let step = 1; step < steps; step += 1) {
-    const ratio = step / steps;
-    if (isWaterAt(from.x + (to.x - from.x) * ratio, from.y + (to.y - from.y) * ratio)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/** Coarse BFS route around lakes. Every returned point is dry land. */
+/** Shared dry route around water, foundations, hearths and walls. */
 export function calculateSurfacePath(world: World, from: Vec2, to: Vec2, colonyId: string): Vec2[] | null {
-  if (!lineCrossesWater(from, to)) {
-    return [];
-  }
-  const width = Math.ceil(world.surface.width / SURFACE_PATH_CELL_SIZE);
-  const height = Math.ceil(world.surface.height / SURFACE_PATH_CELL_SIZE);
-  const cacheKey = `${width}x${height}`;
-  let lakeClearance = lakeClearanceCache.get(cacheKey);
-  if (!lakeClearance) {
-    lakeClearance = buildLakeClearance(width, height);
-    lakeClearanceCache.set(cacheKey, lakeClearance);
-  }
-  const start = surfaceCell(from);
-  const target = surfaceCell(to);
-  const isOpen = (cell: Vec2) => {
-    if (cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height) {
-      return false;
-    }
-    const index = cell.y * width + cell.x;
-    if (!lakeClearance![index]) {
-      return false;
-    }
-    const center = surfaceCellCenter(cell);
-    const shoreClearance = 1.35;
-    return !isWallBlockedAt(world, center.x, center.y, colonyId) &&
-      !isWallBlockedAt(world, center.x - shoreClearance, center.y, colonyId) &&
-      !isWallBlockedAt(world, center.x + shoreClearance, center.y, colonyId) &&
-      !isWallBlockedAt(world, center.x, center.y - shoreClearance, colonyId) &&
-      !isWallBlockedAt(world, center.x, center.y + shoreClearance, colonyId);
-  };
-  if (!isOpen(start) || !isOpen(target)) {
-    return null;
-  }
-  const startIndex = start.y * width + start.x;
-  const targetIndex = target.y * width + target.x;
-  const previous = new Int32Array(width * height);
-  previous.fill(-1);
-  const queue = new Int32Array(width * height);
-  let head = 0;
-  let tail = 0;
-  queue[tail++] = startIndex;
-  previous[startIndex] = -2;
-  const directions = [
-    { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-    { x: 1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
-  ];
-  while (head < tail && previous[targetIndex] === -1) {
-    const current = queue[head++];
-    const currentCell = { x: current % width, y: Math.floor(current / width) };
-    for (const direction of directions) {
-      const next = { x: currentCell.x + direction.x, y: currentCell.y + direction.y };
-      const nextIndex = next.y * width + next.x;
-      if (previous[nextIndex] !== -1 || !isOpen(next)) {
-        continue;
-      }
-      // Do not cut diagonally through a lake corner.
-      if (direction.x !== 0 && direction.y !== 0 && (!isOpen({ x: currentCell.x + direction.x, y: currentCell.y }) || !isOpen({ x: currentCell.x, y: currentCell.y + direction.y }))) {
-        continue;
-      }
-      previous[nextIndex] = current;
-      queue[tail++] = nextIndex;
-    }
-  }
-  if (previous[targetIndex] === -1) {
-    return null;
-  }
-  const path: Vec2[] = [];
-  for (let index = targetIndex; index !== startIndex;) {
-    path.push(surfaceCellCenter({ x: index % width, y: Math.floor(index / width) }));
-    index = previous[index];
-  }
-  path.reverse();
-  return path;
+  if (surfaceLineOpen(world.surface, from, to, colonyId)) return [];
+  return surfaceRoute(world.surface, from, to, colonyId);
 }
 
-function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
-  if (!lineCrossesWater(ant.pos, target)) {
-    surfacePaths.delete(ant.id);
-    return target;
+const safeRoutes = new Map<string, { target: Vec2; points: Vec2[]; until: number; geometry: string }>();
+export function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
+  const geometry = world.surface.buildings.filter(b => b.stage === "built").map(b => b.id).join("|");
+  let route = safeRoutes.get(ant.id);
+  if (route && (distance(route.target, target) > 0.5 || world.tick >= route.until || route.geometry !== geometry || world.tick < route.until - 300)) {
+    safeRoutes.delete(ant.id); route = undefined;
   }
-  const targetCell = surfaceCell(target);
-  let route = surfacePaths.get(ant.id);
-  if (!route || route.targetCell.x !== targetCell.x || route.targetCell.y !== targetCell.y) {
-    const points = calculateSurfacePath(world, ant.pos, target, ant.colonyId);
-    if (!points || points.length === 0) {
-      return target;
-    }
-    route = { targetCell, points };
-    surfacePaths.set(ant.id, route);
+  if (!route) {
+    if (surfaceLineOpen(world.surface, ant.pos, target, ant.colonyId)) return target;
+    const points = surfaceRoute(world.surface, ant.pos, target, ant.colonyId);
+    route = { target: { ...target }, points: points ?? [], until: world.tick + 300, geometry };
+    safeRoutes.set(ant.id, route);
   }
-  while (route.points.length > 1 && distance(ant.pos, route.points[0]) < 1.8) {
-    route.points.shift();
-  }
-  return route.points[0] ?? target;
+  while (route.points.length > 1 && distance(ant.pos, route.points[0]) < 1 && surfaceLineOpen(world.surface, ant.pos, route.points[1], ant.colonyId)) route.points.shift();
+  return route.points[0] ?? ant.pos;
 }
 
 // Анти-застревание: житель, который долго топчется на месте (карман забора,
@@ -362,6 +222,7 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
   buildingWaypointTick = world.tick;
   const speed = surfaceMoveSpeed(world, ant);
   const surfaceTarget = surfaceRouteTarget(world, ant, target);
+  if (distance(ant.pos, surfaceTarget) < 0.05) return;
   let waypoint = buildingWaypoints.get(ant.id);
   if (waypoint && (distance(waypoint.target, surfaceTarget) > 0.2 || distance(ant.pos, waypoint.point) < 1.2 || isSurfaceBlockedAt(world, waypoint.point.x, waypoint.point.y, ant.colonyId))) {
     buildingWaypoints.delete(ant.id); waypoint = undefined;

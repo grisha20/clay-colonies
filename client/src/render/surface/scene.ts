@@ -1,4 +1,4 @@
-import { Container, Graphics, RenderTexture, Sprite, Renderer, TilingSprite, Texture } from "pixi.js";
+import { Container, Graphics, MaskFilter, RenderTexture, Sprite, Renderer, TilingSprite, Texture } from "pixi.js";
 import { WALL_CELL_SIZE, ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
 import { lakeFieldAt, isWaterAt, SURFACE_TERRAIN_CELL_SIZE } from "../../../../shared/surfaceTerrain";
 import { createSpritePool } from "../spritePool";
@@ -23,6 +23,7 @@ import { buildingFootprint } from "../../../../shared/buildingGeometry";
 import { campStockSprites } from "./campStock";
 import { royalWalk } from "./royals";
 import { drawBuildingGround } from "./buildingGround";
+import { buildingGardens } from "./gardenArt";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
   return (
@@ -359,7 +360,11 @@ function buildLakeWaterLayer(scene: SurfaceScene, world: WorldSnapshot, cell: nu
   const shallow = TilingSprite.from(frames.lakeShallowFrames[0], { width: widthPx, height: heightPx });
   const deep = TilingSprite.from(frames.lakeDeepFrames[0], { width: widthPx, height: heightPx });
   shallow.mask = shallowMask;
-  deep.mask = deepMask;
+  // Keep this filter local, so rebuilding the world cannot leave Pixi's
+  // pooled alpha-mask effect pointing at a destroyed depth texture.
+  const depthFilter = new MaskFilter({ sprite: deepMask, channel: "alpha" });
+  deep.filters = [depthFilter]; deepMask.renderable = false;
+  deep.on("destroyed", () => depthFilter.destroy());
   shallow.tint = deep.tint = 0xb3c7ad;
   for (const tile of shoreTiles) tile.tint = 0xb3c7ad;
   shallow.tilePosition.set(7, 11);
@@ -471,6 +476,7 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
   }
   scene.buildingKey = buildingKey;
   drawBuildingGround(scene.buildingGround, world, cell);
+  buildingGardens(scene.dynamicLayer, world, cell);
 
   // Сначала удаляем старые Graphics зданий
   for (const g of scene.buildingGraphics ?? []) {
@@ -859,7 +865,7 @@ export function renderSurface(
   const staticKey = [
     world.surface.width,
     world.surface.height,
-    "surface-art-edge-trees-v3"
+    "surface-clay-materials-v4"
   ].join(":");
   if (scene.staticKey !== staticKey) {
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);

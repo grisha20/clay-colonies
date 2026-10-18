@@ -1,5 +1,5 @@
-import { Container, Graphics, Sprite } from "pixi.js";
-import type { Texture } from "pixi.js";
+import { Container, Graphics, MaskFilter, Sprite, TilingSprite } from "pixi.js";
+import { Texture } from "pixi.js";
 import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import { isLakeShoreAt, isWaterAt, lakeFieldAt } from "../../../../shared/surfaceTerrain";
 import type { ViewBounds } from "../types";
@@ -296,85 +296,37 @@ export function drawSurfaceGround(
   const pixelRight = Math.ceil((right * cell) / tileSize) * tileSize;
   const pixelTop = Math.floor((top * cell) / tileSize) * tileSize;
   const pixelBottom = Math.ceil((bottom * cell) / tileSize) * tileSize;
-  for (let y = pixelTop; y < pixelBottom; y += tileSize) {
-    for (let x = pixelLeft; x < pixelRight; x += tileSize) {
-      const tile = new Sprite(grassTexture);
-      tile.position.set(x, y);
-      tile.tint = 0xa0b85c;
-      shadowRoot.addChild(tile);
-    }
-  }
+  const grass = new TilingSprite({ texture: grassTexture, width: pixelRight - pixelLeft, height: pixelBottom - pixelTop });
+  grass.position.set(pixelLeft, pixelTop); grass.tileScale.set(0.26); grass.tilePosition.set(-pixelLeft, -pixelTop);
+  grass.tint = 0xe2e3c6; shadowRoot.addChild(grass);
 
   const entrances = world.surface.entrances ?? [world.surface.entrance];
-  const dirtStep = 8;
-  const dirtLeft = Math.floor((left * cell) / dirtStep) * dirtStep;
-  const dirtRight = Math.ceil((right * cell) / dirtStep) * dirtStep;
-  const dirtTop = Math.floor((top * cell) / dirtStep) * dirtStep;
-  const dirtBottom = Math.ceil((bottom * cell) / dirtStep) * dirtStep;
-  const dirtEdge = new Graphics();
-  for (let y = dirtTop; y < dirtBottom; y += dirtStep) {
-    for (let x = dirtLeft; x < dirtRight; x += dirtStep) {
-      const worldX = (x + dirtStep * 0.5) / cell;
-      const worldY = (y + dirtStep * 0.5) / cell;
-      let bestShape = Number.POSITIVE_INFINITY;
-      for (let i = 0; i < entrances.length; i += 1) {
-        const shape = campDirtShapeValue(worldX, worldY, entrances[i], i);
-        if (shape < bestShape) {
-          bestShape = shape;
-        }
-      }
-      const edgeNoise = (hash2(Math.floor(worldX * 1.8), Math.floor(worldY * 1.8), 501) - 0.5) * 0.22;
-      const shapeValue = bestShape + edgeNoise;
-      const fringe = 1 - smoothStep(0.84, 1.18, shapeValue);
-      const edgeBand = 1 - Math.min(1, Math.abs(shapeValue - 1) / 0.34);
-      const keep = shapeValue < 1.05;
-      if (!keep) {
-        if (shapeValue < 1.38 && hash2(Math.floor(worldX * 3.5), Math.floor(worldY * 3.5), 503) > 0.72) {
-          const px = x + hash2(worldX, worldY, 504) * dirtStep;
-          const py = y + hash2(worldX, worldY, 505) * dirtStep;
-          const r = 1.1 + hash2(worldX, worldY, 506) * 2.2;
-          drawPixelFleck(dirtEdge, px, py, r, 0xc99c54, 0.45);
-          if (hash2(worldX, worldY, 507) > 0.72) {
-            drawPixelFleck(dirtEdge, px + r * 1.6, py - r * 0.4, r * 0.65, 0xe2bf73, 0.36);
-          }
-        }
-        continue;
-      }
-      const tile = new Sprite(dirtTexture);
-      tile.position.set(x, y);
-      tile.scale.set(dirtStep / tileSize);
-      if (shapeValue > 0.84) {
-        tile.alpha = 0.7 + fringe * 0.3;
-      }
-      shadowRoot.addChild(tile);
-      if (shapeValue > 0.64 && edgeBand > 0 && hash2(Math.floor(worldX * 4), Math.floor(worldY * 4), 508) > 0.28 + edgeBand * 0.18) {
-        const px = x + hash2(worldX, worldY, 509) * dirtStep;
-        const py = y + hash2(worldX, worldY, 510) * dirtStep;
-        drawPixelFleck(dirtEdge, px, py, 1 + hash2(worldX, worldY, 511) * 2.2, 0x87a23e, 0.82);
-        if (edgeBand > 0.36 && hash2(worldX, worldY, 512) > 0.38) {
-          drawPixelFleck(
-            dirtEdge,
-            px + (hash2(worldX, worldY, 513) - 0.5) * 9,
-            py + (hash2(worldX, worldY, 514) - 0.5) * 9,
-            1 + hash2(worldX, worldY, 515) * 2.6,
-            hash2(worldX, worldY, 516) > 0.42 ? 0xa8c950 : 0x6f8c34,
-            0.78
-          );
-        }
-        if (edgeBand > 0.58 && hash2(worldX, worldY, 517) > 0.62) {
-          drawPixelFleck(
-            dirtEdge,
-            px + (hash2(worldX, worldY, 518) - 0.5) * 13,
-            py + (hash2(worldX, worldY, 519) - 0.5) * 13,
-            1 + hash2(worldX, worldY, 520) * 1.8,
-            0xbee264,
-            0.64
-          );
-        }
-      }
-    }
+  // One continuous material under a feathered mask. The previous 8px stamps
+  // left a square pixel fringe against the sculpted buildings.
+  const soil = new TilingSprite({ texture: dirtTexture, width: pixelRight - pixelLeft, height: pixelBottom - pixelTop });
+  soil.position.set(pixelLeft, pixelTop); soil.tileScale.set(0.26); soil.tilePosition.set(-pixelLeft, -pixelTop); soil.tint = 0xe5dfca;
+  const maskCanvas = document.createElement("canvas"), maskStep = 4;
+  maskCanvas.width = Math.ceil(soil.width / maskStep); maskCanvas.height = Math.ceil(soil.height / maskStep);
+  const context = maskCanvas.getContext("2d")!, pixels = context.createImageData(maskCanvas.width, maskCanvas.height);
+  for (let y = 0; y < maskCanvas.height; y++) for (let x = 0; x < maskCanvas.width; x++) {
+    const wx = (pixelLeft + (x + 0.5) * maskStep) / cell, wy = (pixelTop + (y + 0.5) * maskStep) / cell;
+    let value = Infinity;
+    for (let i = 0; i < entrances.length; i++) value = Math.min(value, campDirtShapeValue(wx, wy, entrances[i], i));
+    value += (hash2(Math.floor(wx * 0.8), Math.floor(wy * 0.8), 501) - 0.5) * 0.035;
+    const offset = (y * maskCanvas.width + x) * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 255;
+    pixels.data[offset + 3] = Math.round((1 - smoothStep(0.78, 1.18, value)) * 255);
   }
-  shadowRoot.addChild(dirtEdge);
+  context.putImageData(pixels, 0, 0);
+  const maskTexture = Texture.from(maskCanvas); maskTexture.source.scaleMode = "linear";
+  const soilMask = new Sprite(maskTexture); soilMask.position.copyFrom(soil.position); soilMask.width = soil.width; soilMask.height = soil.height;
+  // Own the filter: Pixi's pooled alpha-mask filter retains a destroyed source
+  // after this temporary ground container is baked, breaking the next lake mask.
+  const soilFilter = new MaskFilter({ sprite: soilMask, channel: "alpha" });
+  soil.filters = [soilFilter]; soilMask.renderable = false;
+  soil.on("destroyed", () => soilFilter.destroy());
+  soilMask.on("destroyed", () => maskTexture.destroy(true));
+  shadowRoot.addChild(soil, soilMask);
   if (decorate) drawLakeBanks(shadowRoot, spriteRoot, cell, width, height, props.rockSmall, props.grassTuft);
 
   const ground = new Graphics();
@@ -387,15 +339,15 @@ export function drawSurfaceGround(
       if (!water && (clearing > 0.04 || speckle > 0.55)) {
         const color = noise < 0.28 ? 0xc99650 : noise > 0.82 ? 0xe6c074 : 0xd8ad63;
         const size = cell * (0.18 + hash2(x, y, 13) * 0.34);
-        ground.rect((x + hash2(x, y, 14) * 0.75) * cell, (y + hash2(x, y, 15) * 0.75) * cell, size, size).fill({
+        ground.ellipse((x + hash2(x, y, 14) * 0.75) * cell, (y + hash2(x, y, 15) * 0.75) * cell, size * 0.3, size * 0.18).fill({
           color,
-          alpha: clearing > 0.04 ? 0.12 + clearing * 0.08 : 0.1
+          alpha: 0.07
         });
       }
 
-      if (!water && speckle > 0.982) {
+      if (!water && speckle > 0.998) {
         ground.rect(Math.round((x + 0.35) * cell), Math.round((y + 0.35) * cell), Math.max(1, Math.ceil(cell * 0.2)), Math.max(1, Math.ceil(cell * 0.2))).fill({ color: 0xf0d28d, alpha: 0.55 });
-      } else if (!water && speckle < 0.035) {
+      } else if (!water && speckle < 0.005) {
         ground.rect(Math.round((x + 0.45) * cell), Math.round((y + 0.45) * cell), Math.max(1, Math.ceil(cell * 0.16)), Math.max(1, Math.ceil(cell * 0.16))).fill({ color: 0x7f6135, alpha: 0.24 });
       }
     }

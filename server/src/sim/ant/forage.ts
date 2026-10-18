@@ -1,3 +1,4 @@
+import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { resourceNodeTool, resourceNodeYield, type Ant, type Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
@@ -120,7 +121,7 @@ export function nearestAvailableFood(world: World, ant: Ant): SurfaceFoodTarget 
 
   for (const list of [world.surface.foodSources, world.surface.carrion]) {
     list.forEach((source, index) => {
-      if (source.amount <= 0) {
+      if (source.amount <= 0 || isWaterAt(source.pos.x, source.pos.y)) {
         return;
       }
 
@@ -292,7 +293,7 @@ function nearestVisibleFood(world: World, ant: Ant): SurfaceFoodTarget | null {
   const starving = isColonyStarving(world);
   for (const list of [world.surface.foodSources, world.surface.carrion]) {
     list.forEach((source, index) => {
-      if (source.amount <= 0) {
+      if (source.amount <= 0 || isWaterAt(source.pos.x, source.pos.y)) {
         return;
       }
       const isSuper = source.kind === "spiderCarcass";
@@ -351,37 +352,8 @@ function moveScoutSearching(world: World, ant: Ant): void {
 }
 
 function moveAlongFoodTrail(world: World, ant: Ant, targetPos: Vec2, towardFood: boolean): void {
-  const speed = surfaceMoveSpeed(world, ant);
-  const trail = activeTrailForTarget(world, targetPos);
-  const guide = trailGuide(ant.pos, trail, towardFood);
-  const forward = guide.forward;
-  const lateral = {
-    x: guide.center.x - ant.pos.x,
-    y: guide.center.y - ant.pos.y
-  };
-  const jitter = randomHeading();
-  let desired = normalize({
-    x: forward.x * 1.55 + lateral.x * 0.35 + jitter.x * 0.025,
-    y: forward.y * 1.55 + lateral.y * 0.35 + jitter.y * 0.025
-  });
-
-  if (!isColonyStarving(world)) {
-    desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
-  }
-  desired = applyForbidZones(world, ant, desired);
-  desired = applyWallAvoidance(world, ant, desired);
-
-  const direction = normalize({
-    x: ant.heading.x * 0.55 + desired.x * 0.45,
-    y: ant.heading.y * 0.55 + desired.y * 0.45
-  });
-
-  profiler.measure("stepAnt.surface.move", () => {
-    ant.heading = direction;
-    ant.pos.x += direction.x * speed;
-    ant.pos.y += direction.y * speed;
-    clampToSurface(ant, world);
-  });
+  // Knowledge selects food; motion shares dry, obstacle-aware routes with other jobs.
+  moveSurfaceToward(world, ant, towardFood ? targetPos : world.surface.entrance, !isColonyStarving(world), false);
 }
 
 function rememberScoutTrail(world: World, ant: Ant): void {
@@ -394,66 +366,6 @@ function rememberScoutTrail(world: World, ant: Ant): void {
     trail.push({ ...ant.pos });
   }
   ant.scoutTrail = trail.slice(-80);
-}
-
-function activeTrailForTarget(world: World, targetPos: Vec2): Vec2[] {
-  const known = world.colony.knownFood.find((food) => food.id === world.colony.activeFoodTargetId);
-  const trail = known?.trail && known.trail.length >= 2
-    ? known.trail
-    : [world.surface.entrance, targetPos];
-  return trail;
-}
-
-function trailGuide(pos: Vec2, trail: Vec2[], towardFood: boolean): { center: Vec2; forward: Vec2 } {
-  if (trail.length < 2) {
-    return { center: trail[0] ?? pos, forward: { x: 1, y: 0 } };
-  }
-
-  let best = {
-    progress: 0,
-    distanceSq: Number.POSITIVE_INFINITY,
-    center: trail[0]
-  };
-  let walked = 0;
-  const segments: Array<{ a: Vec2; b: Vec2; length: number; start: number }> = [];
-  for (let i = 0; i < trail.length - 1; i += 1) {
-    const a = trail[i];
-    const b = trail[i + 1];
-    const ab = { x: b.x - a.x, y: b.y - a.y };
-    const lenSq = Math.max(0.001, ab.x * ab.x + ab.y * ab.y);
-    const length = Math.sqrt(lenSq);
-    segments.push({ a, b, length, start: walked });
-    const t = Math.max(0, Math.min(1, ((pos.x - a.x) * ab.x + (pos.y - a.y) * ab.y) / lenSq));
-    const center = { x: a.x + ab.x * t, y: a.y + ab.y * t };
-    const dsq = (pos.x - center.x) ** 2 + (pos.y - center.y) ** 2;
-    if (dsq < best.distanceSq) {
-      best = { progress: walked + length * t, distanceSq: dsq, center };
-    }
-    walked += length;
-  }
-
-  const total = Math.max(0.001, walked);
-  const lookahead = 6;
-  const targetProgress = Math.max(0, Math.min(total, best.progress + (towardFood ? lookahead : -lookahead)));
-  const next = pointAtTrailProgress(segments, targetProgress);
-  return {
-    center: best.center,
-    forward: normalize({ x: next.x - pos.x, y: next.y - pos.y })
-  };
-}
-
-function pointAtTrailProgress(segments: Array<{ a: Vec2; b: Vec2; length: number; start: number }>, progress: number): Vec2 {
-  for (const segment of segments) {
-    if (progress <= segment.start + segment.length) {
-      const t = Math.max(0, Math.min(1, (progress - segment.start) / Math.max(0.001, segment.length)));
-      return {
-        x: segment.a.x + (segment.b.x - segment.a.x) * t,
-        y: segment.a.y + (segment.b.y - segment.a.y) * t
-      };
-    }
-  }
-  const last = segments[segments.length - 1];
-  return last?.b ?? { x: 0, y: 0 };
 }
 
 function moveForagerSearching(world: World, ant: Ant): void {
@@ -602,7 +514,7 @@ export function moveHarvesting(world: World, ant: Ant): boolean {
   }
 
   const node = world.surface.resourceNodes.find(
-    (item) => item.id === ant.harvestNodeId && item.amount > 0
+    (item) => item.id === ant.harvestNodeId && item.amount > 0 && !isWaterAt(item.pos.x, item.pos.y)
   );
   if (!node) {
     ant.job = "forage";

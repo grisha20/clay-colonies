@@ -2,9 +2,9 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-// v16: observable melee strikes; v13-v15 saves keep their existing worlds.
-export const CURRENT_SNAPSHOT_VERSION = 16;
-export const CURRENT_PROTOCOL_VERSION = 16;
+// v17: long sessions and colony control; v13-v16 saves keep their worlds.
+export const CURRENT_SNAPSHOT_VERSION = 17;
+export const CURRENT_PROTOCOL_VERSION = 17;
 
 export type Vec2 = {
   x: number;
@@ -333,6 +333,8 @@ export type Enemy = {
 };
 
 export type SessionState = {
+  playerColonyIndex?: number;
+  startedAt?: number;
   mode: "match" | "sandbox";
   speed?: number;
   status: "playing" | "victory" | "defeat";

@@ -1,3 +1,4 @@
+import { lakePoints as waterPoints, lakeLineOpen as waterSegment, lakeRoute } from "../../../shared/lakeNavigation";
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { LAKE_DEFINITIONS, isWaterAt, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../shared/dayCycle";
@@ -12,6 +13,42 @@ import { buildingRouteTarget, buildingFootprint, insideBuilding, crossesBuilding
 const routes = new WeakMap<Enemy, { target: Vec2; points: Vec2[]; until: number }>();
 const foundationRoutes = new WeakMap<Enemy, { target: Vec2; point: Vec2 }>();
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
+const swimPlans = new WeakMap<Enemy, { target: Vec2; points: Vec2[] }>();
+const patrols = new WeakMap<Enemy, { target: Vec2; until: number }>();
+function swim(world: World, enemy: Enemy, target: Vec2, speed: number): void {
+  const id = enemy.lakeId!, points = waterPoints(id);
+  if (lakeIdAt(enemy.pos.x, enemy.pos.y) !== id) {
+    // Migrate legacy shore spawns back into their own lake once.
+    enemy.pos = { ...points.reduce((a, b) => dist(b, enemy.pos) < dist(a, enemy.pos) ? b : a) };
+  }
+  let goal = target;
+  if (lakeIdAt(target.x, target.y) !== id) {
+    goal = points.reduce((a, b) => dist(b, target) < dist(a, target) ? b : a);
+    const n = Math.max(1, Math.ceil(dist(target, enemy.pos) * 4));
+    for (let i = 1; i <= n; i++) {
+      const p = { x: target.x + (enemy.pos.x - target.x) * i / n, y: target.y + (enemy.pos.y - target.y) * i / n };
+      if (lakeIdAt(p.x, p.y) === id) { goal = p; break; }
+    }
+  }
+  let plan = swimPlans.get(enemy);
+  if (!plan || dist(plan.target, goal) > 3) {
+    const route = lakeRoute(id, enemy.pos, goal) ?? [];
+    plan = { target: { ...goal }, points: route }; swimPlans.set(enemy, plan);
+  }
+  while (plan.points.length > 1 && dist(enemy.pos, plan.points[0]) < 0.7) plan.points.shift();
+  const next = plan.points[0]; if (!next) return;
+  const d = dist(enemy.pos, next), amount = Math.min(d, speed);
+  if (!d) return;
+  const candidate = { x: enemy.pos.x + (next.x - enemy.pos.x) / d * amount, y: enemy.pos.y + (next.y - enemy.pos.y) / d * amount };
+  if (waterSegment(enemy.pos, candidate, id)) enemy.pos = candidate;
+}
+
+export function ensureLakeResidents(world: World): void {
+  for (const lake of LAKE_DEFINITIONS) if (!world.enemies.some(e => e.type === "lakeMonster" && e.lakeId === lake.id)) {
+    world.enemies.push(createLakeMonster(world, lake.id));
+    world.session.lakes[lake.id].nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks;
+  }
+}
 
 export function nearestDryPosition(world: World, point: Vec2): Vec2 | null {
   for (let radius = 0; radius <= 48; radius += 2) {
@@ -26,8 +63,9 @@ export function nearestDryPosition(world: World, point: Vec2): Vec2 | null {
 /** Creatures use the same lake bypass as residents and cannot pass through walls.
  * A raiding spider damages the actual obstructing segment before moving. */
 export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: number, breakWalls = false): void {
+  if (enemy.type === "lakeMonster") { swim(world, enemy, target, speed); return; }
   let next = target;
-  if (enemy.type !== "lakeMonster") {
+  if (!breakWalls) {
     let route = routes.get(enemy);
     if (!route || world.tick >= route.until || dist(route.target, target) > 4) {
       route = { target: { ...target }, points: calculateSurfacePath(world, enemy.pos, target, "enemy") ?? [], until: world.tick + 40 };
@@ -50,20 +88,16 @@ export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: nu
     const wall = world.surface.buildings.find(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && wallCellIndexAt(b.pos.x, b.pos.y) === cell);
     if (wall) { damageBuilding(world, wall, CONFIG.raidBuildingDamage); return; }
   }
-  if (enemy.type !== "lakeMonster" && isWaterAt(candidate.x, candidate.y)) return;
+  if (isWaterAt(candidate.x, candidate.y)) return;
   const before = { ...enemy.pos };
   enemy.pos.x = Math.max(1, Math.min(world.surface.width - 1, candidate.x));
   enemy.pos.y = Math.max(1, Math.min(world.surface.height - 1, candidate.y));
-  if (enemy.type === "lakeMonster") {
-    const inside = world.surface.buildings.map(buildingFootprint).find(f => f && insideBuilding(before.x, before.y, f));
-    if (inside) enemy.pos = outsideBuilding(enemy.pos, inside);
-    else if (isWallBlockedAt(world, enemy.pos.x, enemy.pos.y) || world.surface.buildings.some(b => { const f = buildingFootprint(b); return f && crossesBuilding(before, enemy.pos, f); })) enemy.pos = before;
-  } else resolveSurfaceCollision(world, enemy.pos, before.x, before.y);
+  resolveSurfaceCollision(world, enemy.pos, before.x, before.y);
 }
 
 export function createLakeMonster(world: World, lakeId: LakeId): Enemy {
   const lake = LAKE_DEFINITIONS.find(l => l.id === lakeId)!;
-  const vertex = lake.outline[(world.session.nextCreatureId * 3) % lake.outline.length];
+  const vertex = waterPoints(lakeId)[(world.session.nextCreatureId * 37) % waterPoints(lakeId).length];
   let home: Vec2 = { ...vertex };
   outer: for (let r = 2; r <= 12; r += 2) for (let i = 0; i < 16; i++) {
     const p = { x: vertex.x + Math.cos(i * Math.PI / 8) * r, y: vertex.y + Math.sin(i * Math.PI / 8) * r };
@@ -95,7 +129,6 @@ function releaseCaptive(world: World, enemy: Enemy): void {
 function targetFor(world: World, enemy: Enemy): Ant | undefined {
   const range = enemy.type === "lakeMonster" ? CONFIG.lakeMonsterRange : 38;
   return world.ants.filter(a => a.state !== "dead" && !a.capturedBy && (a.rescuedUntil ?? 0) <= world.tick && dist(a.pos, enemy.pos) <= range &&
-    (enemy.type !== "lakeMonster" || dist(a.pos, enemy.lair) <= 42) &&
     !world.colonies.some(c => c.colony.fire > 0.35 && dist(a.pos, c.surfaceEntrance) < 8))
     .sort((a, b) => dist(a.pos, enemy.pos) - dist(b.pos, enemy.pos))[0];
 }
@@ -109,8 +142,8 @@ export function updateWildlife(world: World): void {
       state.nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks;
       if (world.enemies.filter(e => e.type === "lakeMonster" && e.lakeId === lake.id && e.hp > 0).length < cap) {
         const monster = createLakeMonster(world, lake.id);
-        world.enemies.push(monster);
-        logEvent(world, `${lake.id === "north" ? "Северное" : "Южное"} озеро: у берега замечен похититель.`, monster.pos);
+        const safe = waterPoints(lake.id).filter(p => !world.ants.some(a => a.state !== "dead" && dist(a.pos, p) < 35));
+        if (safe.length) { monster.pos = { ...safe[(world.session.nextCreatureId * 19) % safe.length] }; monster.lair = { ...monster.pos }; world.enemies.push(monster); logEvent(world, "В глубине озера появилось потомство водного монстра.", monster.pos); }
       }
     }
   }
@@ -130,6 +163,7 @@ export function updateWildlife(world: World): void {
     if (enemy.hp <= 0 || (enemy.type === "beetle" && !night)) {
       releaseCaptive(world, enemy);
       if (enemy.hp <= 0) addFoodSource(world, enemy.pos.x, enemy.pos.y, 8, "carrion");
+      if (enemy.type === "lakeMonster") world.session.lakes[enemy.lakeId!].nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks * 4;
       remove.add(enemy.id);
       continue;
     }
@@ -152,7 +186,7 @@ export function updateWildlife(world: World): void {
     const target = targetFor(world, enemy);
     if (target) {
       moveCreature(world, enemy, target.pos, enemy.type === "lakeMonster" ? CONFIG.lakeMonsterSpeed : CONFIG.beetleSpeed);
-      if (dist(enemy.pos, target.pos) < 1.8 && world.tick >= (enemy.nextGrabAt ?? 0)) {
+      if (dist(enemy.pos, target.pos) < (enemy.type === "lakeMonster" ? 3 : 1.8) && world.tick >= (enemy.nextGrabAt ?? 0)) {
         // No capture through a wall, gate or shoreline obstacle.
         const mid = { x: (target.pos.x + enemy.pos.x) / 2, y: (target.pos.y + enemy.pos.y) / 2 };
         if (!isWallBlockedAt(world, mid.x, mid.y)) {
@@ -163,6 +197,23 @@ export function updateWildlife(world: World): void {
           enemy.nextGrabAt = world.tick + CONFIG.captiveKillTicks;
           logEvent(world, enemy.type === "lakeMonster" ? "Монстр тащит жителя в озеро! Стража может его спасти." : "Жук укатил жителя! Перехватите его стражей.", target.pos);
         }
+      }
+    } else if (enemy.type === "lakeMonster") {
+      enemy.hunger += 1;
+      const fish = enemy.hunger > 450 ? world.surface.fish.filter(f => f.state !== "respawning" && f.lakeId === enemy.lakeId).sort((a, b) => dist(a.pos, enemy.pos) - dist(b.pos, enemy.pos))[0] : undefined;
+      if (fish) {
+        swim(world, enemy, fish.pos, 0.22);
+        if (dist(fish.pos, enemy.pos) < 1.6) { fish.state = "respawning"; fish.respawnAt = world.tick + CONFIG.fishRespawnMinTicks; fish.targetAntId = undefined; fish.lurePos = undefined; enemy.hunger = 0; enemy.hp = Math.min(enemy.maxHp, enemy.hp + 8); }
+      } else {
+        let patrol = patrols.get(enemy);
+        if (!patrol || world.tick >= patrol.until || dist(enemy.pos, patrol.target) < 1) {
+          const all = waterPoints(enemy.lakeId!);
+          const nearShore = all.filter(p => [[4, 0], [-4, 0], [0, 4], [0, -4]].some(([dx, dy]) => !isWaterAt(p.x + dx, p.y + dy)));
+          const points = Math.floor(world.tick / 600) % 2 && nearShore.length ? nearShore : all;
+          const target = points[(Math.floor(world.tick / 10) * 13 + Number(enemy.id.replace(/\D/g, "")) * 31) % points.length];
+          patrol = { target, until: world.tick + 600 }; patrols.set(enemy, patrol);
+        }
+        swim(world, enemy, patrol.target, 0.16);
       }
     } else moveCreature(world, enemy, enemy.lair, 0.25);
   }

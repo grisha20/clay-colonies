@@ -9,6 +9,7 @@ import { isColonyStarving } from "./colony-state";
 import { moveSurfaceToward } from "./movement";
 import { isWithinRadius } from "./utils";
 import { consumeFoodStock } from "../foodStock";
+import { buildingServicePoint } from "../../../../shared/buildingGeometry";
 
 const builderWaitTicks = new Map<string, number>();
 export function resetBuilderRuntime(): void { builderWaitTicks.clear(); }
@@ -59,6 +60,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
     releaseBuilder(ant);
     return false;
   }
+  const workPoint = buildingServicePoint(building);
 
   // Голодный строитель подкрепляется у лагеря; без еды на складе — бросает стройку.
   if (ant.energy < CONFIG.lowEnergyThreshold && ant.carrying <= 0) {
@@ -79,7 +81,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
 
   // Несём материал на площадку (или глину на починку размытой стены).
   if (ant.carrying > 0 && (ant.carryKind === "clay" || ant.carryKind === "wood" || ant.carryKind === "stone")) {
-    if (isWithinRadius(ant.pos, building.pos, CONFIG.buildingDeliverRadius)) {
+    if (isWithinRadius(ant.pos, workPoint, CONFIG.buildingDeliverRadius)) {
       const kind = ant.carryKind;
       if (building.stage === "built") {
         // Починка: глина размазывается по стене сразу.
@@ -96,7 +98,7 @@ export function moveBuilding(world: World, ant: Ant): boolean {
       return true;
     }
     ant.state = "carry";
-    moveSurfaceToward(world, ant, building.pos, !isColonyStarving(world));
+    moveSurfaceToward(world, ant, workPoint, !isColonyStarving(world));
     return true;
   }
 
@@ -107,7 +109,9 @@ export function moveBuilding(world: World, ant: Ant): boolean {
       const stock =
         needed.kind === "clay" ? world.colony.clay : needed.kind === "wood" ? world.colony.wood : world.colony.stone;
       const amount = Math.min(stock, Math.max(0.5, ant.strength * 2), needed.amount);
-      if (amount >= 0.5) {
+      // Fractional worker strength leaves a final small remainder. Requiring
+      // half a unit here can leave an otherwise supplied building unfinished.
+      if (amount > 0.01) {
         if (needed.kind === "clay") {
           world.colony.clay -= amount;
         } else if (needed.kind === "wood") {

@@ -262,7 +262,11 @@ if (far) {
   for (let i = 0; i < 30; i += 1) {
     step(world);
   }
-  check("Фаза 3: зона добычи переключает цель", colonyA.colony.activeFoodTargetId === far.id);
+  // A 5×5-cell brush may contain several known sources; prefer the nearest
+  // source inside that zone, rather than assuming only the farthest is painted.
+  const expected = colonyA.colony.knownFood.filter(source => cells.includes(zoneIndexAt(source.pos.x, source.pos.y)))
+    .sort((a, b) => Math.hypot(a.pos.x - entrance.x, a.pos.y - entrance.y) - Math.hypot(b.pos.x - entrance.x, b.pos.y - entrance.y))[0];
+  check("Фаза 3: зона добычи переключает цель", Boolean(expected && colonyA.colony.activeFoodTargetId === expected.id));
 } else {
   check("Фаза 3: зона добычи переключает цель", false, "нет известной еды — нужно проверить фуражировку");
 }
@@ -376,7 +380,10 @@ check("Фаза 4: жители не проходят через дострое�
 const gateX = entrance.x;
 const gateY = wallY + 8;
 paintWallCells(world, 0, [wallCellIndexAt(gateX, gateY)], "gate");
-const gate = world.surface.buildings.find((building) => building.type === "gate");
+const gate = world.surface.buildings.find((building) =>
+  building.type === "gate" && building.colonyId === colonyA.id &&
+  wallCellIndexAt(building.pos.x, building.pos.y) === wallCellIndexAt(gateX, gateY)
+);
 if (gate) {
   gate.delivered.clay = gate.cost.clay;
   gate.delivered.wood = gate.cost.wood;

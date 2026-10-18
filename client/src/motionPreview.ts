@@ -1,6 +1,7 @@
 import { Application, Container, Sprite, Text } from "pixi.js";
 import type { Ant, Enemy, Fish, FishSpecies, WorldSnapshot } from "../../shared/types";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
+import { preloadGardenArt } from "./render/surface/gardenArt";
 import { preloadCharacterArt } from "./render/surface/characterArt";
 import { preloadCreatureArt } from "./render/surface/creatureArt";
 import { preloadEquipmentArt } from "./render/surface/equipmentArt";
@@ -19,7 +20,7 @@ import { campShelterPoints } from "../../shared/campShelter";
 
 const app = new Application();
 await app.init({ width: 1024, height: 690, background: 0x555e3b, antialias: true });
-await Promise.all([preloadEnvironmentAssets(), preloadCharacterArt(), preloadCreatureArt(), preloadEquipmentArt(), preloadFishArt(), preloadBuildingArt()]);
+await Promise.all([preloadEnvironmentAssets(), preloadCharacterArt(), preloadCreatureArt(), preloadEquipmentArt(), preloadFishArt(), preloadBuildingArt(), preloadGardenArt()]);
 document.querySelector("#preview")!.append(app.canvas);
 const campScene = createSurfaceScene();
 const shadows = campScene.shadowLayer, actors = campScene.dynamicLayer, fishLayer = campScene.fishLayer;

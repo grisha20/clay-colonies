@@ -3,6 +3,7 @@ import type { NetworkViewState, NetworkWorldSnapshot, ZoneType } from "../../../
 import { CONFIG } from "../config";
 
 export type ClientCommand =
+  | { type: "takeControl"; colonyIndex: number }
   | { type: "setAlarm"; colonyIndex: number; value: boolean }
   | { type: "setDefensePost"; colonyIndex: number; x: number; y: number }
   | { type: "trainWaterWeapons"; colonyIndex: number }
@@ -88,6 +89,7 @@ export function parseCommand(raw: string): ClientCommand | null {
       typeof command.colony === "number" && Number.isFinite(command.colony)
         ? Math.max(0, Math.min(1, Math.floor(command.colony)))
         : 0;
+    if (command.type === "takeControl") return { type: "takeControl", colonyIndex };
     if (command.type === "setAlarm" && typeof command.value === "boolean") return { type: "setAlarm", colonyIndex, value: command.value };
     if (command.type === "setSandbox" && typeof command.value === "boolean") return { type: "setSandbox", value: command.value, colonyIndex };
     if (command.type === "trainWaterWeapons") return { type: "trainWaterWeapons", colonyIndex };

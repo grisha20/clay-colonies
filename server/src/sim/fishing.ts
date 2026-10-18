@@ -17,6 +17,7 @@ type FishingSpot = { lakeId: Fish["lakeId"]; stand: Vec2; lure: Vec2 };
 
 const SPECIES: readonly FishSpecies[] = ["gold", "blue", "silver", "red"];
 const spotCache = new Map<string, FishingSpot[]>();
+const fishCourses = new WeakMap<Fish, { heading: Vec2; until: number }>();
 
 function seededUnit(seed: number): number {
   let value = seed | 0;
@@ -76,12 +77,11 @@ function moveFishToward(fish: Fish, target: Vec2, speed: number): void {
   if (distance <= 0.001) {
     return;
   }
-  const heading = { x: dx / distance, y: dy / distance };
-  const step = Math.min(distance, speed);
-  const next = { x: fish.pos.x + heading.x * step, y: fish.pos.y + heading.y * step };
+  turnFishToward(fish, { x: dx / distance, y: dy / distance }, 0.09);
+  const step = Math.min(distance * 0.16, speed);
+  const next = { x: fish.pos.x + fish.heading.x * step, y: fish.pos.y + fish.heading.y * step };
   if (lakeIdAt(next.x, next.y) === fish.lakeId && lakeFieldAt(next.x, next.y) > 0.04) {
     fish.pos = next;
-    fish.heading = heading;
   }
 }
 
@@ -97,10 +97,10 @@ function rotatedHeading(heading: Vec2, angle: number): Vec2 {
 }
 
 function turnFishToward(fish: Fish, desired: Vec2, blend: number = CONFIG.fishTurnBlend): void {
-  fish.heading = normalizedHeading(
-    fish.heading.x * (1 - blend) + desired.x * blend,
-    fish.heading.y * (1 - blend) + desired.y * blend
-  );
+  const angle = Math.atan2(fish.heading.y, fish.heading.x), target = Math.atan2(desired.y, desired.x);
+  const delta = Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
+  const next = angle + Math.max(-0.09, Math.min(0.09, delta * blend));
+  fish.heading = { x: Math.cos(next), y: Math.sin(next) };
 }
 
 function deeperWaterHeading(fish: Fish): Vec2 {
@@ -148,19 +148,23 @@ export function updateFishPopulation(world: World): void {
       continue;
     }
 
-    if ((world.tick + index * 29) % CONFIG.fishTurnEveryTicks === 0) {
+    let course = fishCourses.get(fish);
+    if (!course || world.tick >= course.until) {
       const wander = (seededUnit(world.tick + index * 997) * 2 - 1) * CONFIG.fishWanderAngle;
-      turnFishToward(fish, rotatedHeading(fish.heading, wander));
+      course = { heading: rotatedHeading(fish.heading, wander), until: world.tick + CONFIG.fishTurnEveryTicks };
+      fishCourses.set(fish, course);
     }
-    if ((world.tick + index * 7) % 10 === 0) {
+    {
       const lookAhead = {
         x: fish.pos.x + fish.heading.x * CONFIG.fishShoreLookAhead,
         y: fish.pos.y + fish.heading.y * CONFIG.fishShoreLookAhead
       };
       if (lakeIdAt(lookAhead.x, lookAhead.y) !== fish.lakeId || lakeFieldAt(lookAhead.x, lookAhead.y) < 0.14) {
-        turnFishToward(fish, deeperWaterHeading(fish));
+        course.heading = deeperWaterHeading(fish);
+        course.until = world.tick + 25;
       }
     }
+    turnFishToward(fish, course.heading, 0.065);
     const next = {
       x: fish.pos.x + fish.heading.x * CONFIG.fishSwimSpeed,
       y: fish.pos.y + fish.heading.y * CONFIG.fishSwimSpeed
@@ -168,7 +172,7 @@ export function updateFishPopulation(world: World): void {
     if (lakeIdAt(next.x, next.y) === fish.lakeId && lakeFieldAt(next.x, next.y) > 0.08) {
       fish.pos = next;
     } else {
-      turnFishToward(fish, deeperWaterHeading(fish), 0.28);
+      course.heading = deeperWaterHeading(fish);
     }
   }
 }

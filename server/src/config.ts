@@ -396,6 +396,8 @@ export const CONFIG = {
   guardPatrolRadius: 11,
   guardEngageRadius: 26,
   raidFirstAt: 7200,
+  matchMinTicks: 72000,
+  matchMaxTicks: 108000,
   raidEveryTicks: 6000,
   raidWarningTicks: 600,
   raidDurationTicks: 1000,

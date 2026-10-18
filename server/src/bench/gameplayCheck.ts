@@ -335,14 +335,14 @@ try {
   });
   scenario("Озёрный монстр хватает жителя; смерть монстра освобождает его на суше", () => {
     const w = fresh(), a = w.ants[0], e = createLakeMonster(w, "north");
-    a.pos = { x: 178, y: 140 }; e.pos = { x: 179, y: 140 }; e.lair = { x: 185, y: 140 }; w.enemies = [e];
+    a.pos = { x: 179, y: 140 }; e.pos = { x: 181, y: 140 }; e.lair = { x: 185, y: 140 }; w.enemies = [e];
     updateWildlife(w); assert.equal(a.capturedBy, e.id); assert.equal(e.captiveId, a.id);
     a.pos = { x: 185, y: 140 }; e.hp = 0;
     updateWildlife(w); assert.equal(a.capturedBy, undefined); assert.equal(isWaterAt(a.pos.x, a.pos.y), false); assert.equal(w.session.stats.rescued, 1);
   });
   scenario("Похищение доводит жителя до озера, растворение засчитывает жертву", () => {
     const w = fresh(), a = w.ants[0], e = createLakeMonster(w, "north");
-    a.pos = { x: 178, y: 140 }; e.pos = { x: 179, y: 140 }; e.lair = { x: 185, y: 140 }; w.enemies = [e];
+    a.pos = { x: 179, y: 140 }; e.pos = { x: 181, y: 140 }; e.lair = { x: 185, y: 140 }; w.enemies = [e];
     updateWildlife(w);
     for (let i = 0; i < 180; i++) { w.tick++; stepAnt(colonyWorldView(w, w.colonies[0]), a); updateWildlife(w); }
     assert.equal(a.state, "dead"); assert.equal(w.session.lakes.north.swallowed, 1);
@@ -373,7 +373,8 @@ try {
     const w = fresh(); assert.ok(placePointBuilding(w, 0, "idol", 105, 254)); completeBuilding(w, w.surface.buildings.at(-1)!);
     updateObjectives(w); updateOutcome(w); assert.equal(w.session.status, "playing");
     for (let i = 0; i < CONFIG.idolRitualTicks; i++) updateOutcome(w);
-    updateObjectives(w); updateOutcome(w); assert.equal(w.session.status, "victory");
+    updateObjectives(w); updateOutcome(w); assert.equal(w.session.status, "playing");
+    w.tick = CONFIG.matchMinTicks; updateOutcome(w); assert.equal(w.session.status, "victory");
     const tick = w.tick; step(w); assert.equal(w.tick, tick);
     restartColony(w); assert.equal(w.session.status, "playing"); assert.equal(w.session.stats.lost, 0); assert.equal(w.session.idolProgress, 0);
   });
@@ -425,7 +426,7 @@ try {
   assert.equal(upgraded.tick, w.tick); assert.equal(upgraded.ants.length, w.ants.length);
   assert.equal(upgraded.surface.buildings.length, w.surface.buildings.length);
   assert.equal(upgraded.colonies[0].ants[1].job, "guard");
-  passed++; console.log("PASS  Сохранение v15 загружается в v16 с теми же жителями и постройками");
+  passed++; console.log("PASS  Сохранение v15 загружается в актуальную версию с теми же жителями и постройками");
   console.log(`\nВсе ${passed} сценариев пройдены.`);
 } finally {
   assert.ok(path.resolve(tempDir).startsWith(path.resolve(os.tmpdir()) + path.sep + "clayfolk-gameplay-"));

@@ -2,12 +2,14 @@ import { Assets, Rectangle, Sprite, Texture } from "pixi.js";
 
 const summerBase = "/assets/environment/summer-plains/summer_plains_v1.0_standard";
 const customBase = "/assets/environment/custom";
+const clayTerrainUrl = "/assets/environment/clay-v2/terrain-soft-atlas.png";
 const fishSheetUrl = `${customBase}/fishing/fish-species.png`;
 const campfireFrameUrls = Array.from({ length: 6 }, (_, index) =>
   `${customBase}/campfire/campfire_${String(index).padStart(2, "0")}.png`
 );
 
 export const environmentAssetUrls = [
+  clayTerrainUrl,
   `${summerBase}/tiles.png`,
   `${summerBase}/assets.png`,
   "/assets/environment/grassy-topdown-cc0/topdown grassy tileset.png",
@@ -77,6 +79,14 @@ let environmentTextures: EnvironmentTextures | null = null;
 export async function preloadEnvironmentAssets(): Promise<void> {
   await Assets.load([...environmentAssetUrls]);
   buildEnvironmentTextures();
+  // Large, tactile material tiles share the clay models' scale and filtering.
+  const base = Texture.from(clayTerrainUrl), half = base.width / 2;
+  base.source.scaleMode = "linear";
+  const material = (x: number, y: number) => new Texture({ source: base.source, frame: new Rectangle(x * half, y * half, half, half) });
+  environmentTextures!.terrain.grass = material(1, 0);
+  environmentTextures!.terrain.grassDeep = material(1, 0);
+  environmentTextures!.terrain.dirt = material(1, 1);
+  environmentTextures!.terrain.dirtSoft = material(0, 0);
 }
 
 function crop(url: string, x: number, y: number, width: number, height: number): Texture {

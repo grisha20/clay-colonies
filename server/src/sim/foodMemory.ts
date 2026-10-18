@@ -1,3 +1,4 @@
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 import type { Ant, FoodSource, Vec2 } from "../../../shared/types";
 import { CONFIG } from "../config";
 import type { World } from "./world";
@@ -21,7 +22,7 @@ export function findSurfaceFoodById(world: World, id?: string): FoodTarget | nul
   }
 
   for (const list of [world.surface.foodSources, world.surface.carrion]) {
-    const index = list.findIndex((source) => source.id === id);
+    const index = list.findIndex((source) => source.id === id && !isWaterAt(source.pos.x, source.pos.y));
     if (index >= 0) {
       return { source: list[index], list, index };
     }

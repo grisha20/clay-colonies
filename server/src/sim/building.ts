@@ -168,6 +168,11 @@ export function placePointBuilding(
   if (isWaterAt(pos.x, pos.y)) {
     return false;
   }
+  const footprint = buildingFootprint({ type, pos, stage: "built" } as Building)!;
+  for (let i = 0; i < 16; i++) {
+    const a = i * Math.PI / 8;
+    if (isWaterAt(footprint.x + Math.cos(a) * (footprint.rx + 0.6), footprint.y + Math.sin(a) * (footprint.ry + 0.6))) return false;
+  }
   const sameType = world.surface.buildings.filter(
     (item) => item.colonyId === colony.id && item.type === type
   );

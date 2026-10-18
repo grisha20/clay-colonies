@@ -10,6 +10,7 @@ import { eraseColonyZone, paintColonyZone } from "./sim/zones";
 import { eraseBuildCells, paintWallCells, placePointBuilding, isSurfaceBlockedAt } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
 import { trainWaterWeapons, prepareSandboxGuard } from "./sim/session";
+import { createObjectives } from "./sim/objectives";
 
 const genomeState = await loadGenome();
 const genomeStateB = await loadGenome(CONFIG.genomeFileB);
@@ -19,7 +20,12 @@ const world = loadedWorld ?? createWorld(genomeState, spiderGenomeState, genomeS
 
 let loop: LoopController;
 const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetworkSnapshot(world, includePheromones, view), (command) => {
-  if (world.session.status !== "playing" && command.type !== "newGame" && command.type !== "setSpeed" && command.type !== "setView") return;
+  if (world.session.status !== "playing" && command.type !== "newGame" && command.type !== "setSpeed" && command.type !== "setView" && command.type !== "takeControl") return;
+  if (command.type === "takeControl" && command.colonyIndex !== (world.session.playerColonyIndex ?? 0)) {
+    world.session.playerColonyIndex = command.colonyIndex;
+    world.objectives = createObjectives();
+    world.session.idolProgress = 0;
+  }
   if (command.type === "setSandbox") {
     world.session.mode = command.value ? "sandbox" : "match";
     if (command.value) prepareSandboxGuard(world, command.colonyIndex);

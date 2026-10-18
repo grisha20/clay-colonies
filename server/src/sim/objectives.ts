@@ -8,7 +8,7 @@ import { CONFIG } from "../config";
 export function createObjectives(): Objective[] {
   return [
     // Пути победы: достаточно одного, у каждого своё «послевкусие».
-    { id: "win-spider", text: "Одолеть паука (военная)", target: 1, progress: 0, done: false, victory: true },
+    { id: "win-spider", text: "Одолеть паука (этап обороны)", target: 1, progress: 0, done: false, victory: true },
     { id: "win-bigrain", text: "Пережить Большой дождь с костром", target: 1, progress: 0, done: false, victory: true },
     { id: "win-idol", text: "Завершить ритуал Идола у живого костра", target: CONFIG.idolRitualTicks, progress: 0, done: false, victory: true },
     // Обучение: ведёт новичка по петле.
@@ -38,7 +38,7 @@ export function restoreObjectives(saved: Objective[] | undefined): Objective[] {
 }
 
 function currentValue(world: World, id: string): number {
-  const colony = world.colonies[0];
+  const colony = world.colonies[world.session.playerColonyIndex ?? 0];
   if (!colony) {
     return 0;
   }

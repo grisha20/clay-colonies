@@ -6,6 +6,7 @@ import { resourceNodeTool, resourceNodeYield, type Ant, type Building, type Reso
 import { CONFIG } from "../config";
 import type { World } from "./world";
 import { zoneIndexAt } from "./zones";
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 
 function reserveTarget(kind: ResourceKind): number {
   if (kind === "clay") {
@@ -46,6 +47,7 @@ function activeToolUsers(world: World, tool: "axe" | "pick"): number {
 }
 
 function canAssignNode(world: World, node: ResourceNode, toolUsers: { axe: number; pick: number }): boolean {
+  if (isWaterAt(node.pos.x, node.pos.y)) return false;
   if (node.kind === "tree" && node.growth === "sapling") {
     return false;
   }
@@ -102,7 +104,7 @@ function nodeById(world: World, id?: string): ResourceNode | undefined {
   if (!id) {
     return undefined;
   }
-  return world.surface.resourceNodes.find((node) => node.id === id);
+  return world.surface.resourceNodes.find((node) => node.id === id && !isWaterAt(node.pos.x, node.pos.y));
 }
 
 export function assignHarvestJobs(world: World): void {
@@ -265,7 +267,7 @@ function resourceObtainable(world: World, kind: ResourceKind): boolean {
   if (colonyStock(world, kind) >= 0.5) {
     return true;
   }
-  return world.surface.resourceNodes.some((node) => resourceNodeYield(node.kind) === kind && node.amount > 0);
+  return world.surface.resourceNodes.some((node) => resourceNodeYield(node.kind) === kind && node.amount > 0 && !isWaterAt(node.pos.x, node.pos.y));
 }
 
 // Первый недостающий ресурс площадки (дублирует ant/build.neededResource, чтобы не плодить импорт-циклы).

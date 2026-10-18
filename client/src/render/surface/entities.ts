@@ -8,7 +8,7 @@ import { actorMotion, animationSeed, residentScale } from "./motion";
 import { creatureDimensions, getCreatureArt } from "./creatureArt";
 import { getEquipmentArt } from "./equipmentArt";
 import { fishingRodMount, residentPlacement } from "./residentLayout";
-import { getFishArt } from "./fishArt";
+import { getFishArt, swimmingFishArt } from "./fishArt";
 import { surfaceLighting, drawGroundShadow } from "./lighting";
 import { campPileRoots } from "./entrance";
 import { offsetSettings } from "./editor";
@@ -161,17 +161,20 @@ export function updateSurfaceFish(pool: SpritePool, world: WorldSnapshot, cell: 
     }
     const sprite = acquireSprite(pool);
     const time = actorMotion.time, seed = animationSeed(fish.id);
-    const art = getFishArt(fish.species, Math.floor(time * 7 + seed));
-    sprite.texture = art.texture;
-    sprite.anchor.set(art.anchorX, art.anchorY);
-    const pulse = Math.sin(time * 5.5 + seed) * 0.018;
-    sprite.scale.set(art.scale * (1 + pulse), art.scale * (1 - pulse * 0.5));
+    const art = swimmingFishArt(fish.species), scale = 25 / art.height;
+    sprite.texture = art.body;
+    sprite.anchor.set(0.5, art.height * 0.5 / art.split);
+    sprite.scale.set(scale);
     sprite.alpha = fish.state === "lured" ? 0.95 : 0.82;
     sprite.tint = fish.state === "lured" ? 0xffffff : 0xe6fbff;
     const rotation = Math.atan2(fish.heading.y, fish.heading.x) + Math.PI / 2;
-    sprite.position.set(fish.pos.x * cell, fish.pos.y * cell + Math.sin(time * 2.8 + seed) * 0.8);
-    sprite.rotation = rotation + Math.sin(time * 5.5 + seed) * 0.035;
+    sprite.position.set(fish.pos.x * cell, fish.pos.y * cell);
+    sprite.rotation = rotation;
     sprite.zIndex = fish.pos.y * cell;
+    const tail = acquireSprite(pool); tail.texture = art.tail; tail.anchor.set(0.5, 2 / tail.texture.height); tail.scale.set(scale);
+    const offset = (art.split - art.height * 0.5) * scale;
+    tail.position.set(sprite.x - Math.sin(rotation) * offset, sprite.y + Math.cos(rotation) * offset);
+    tail.rotation = rotation + Math.sin(time * 4.8 + seed) * 0.13; tail.alpha = sprite.alpha; tail.tint = sprite.tint; tail.zIndex = sprite.zIndex - 0.01;
   }
   endPool(pool);
 }

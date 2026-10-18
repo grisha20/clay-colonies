@@ -12,8 +12,11 @@ import {
   type WorldSnapshot
 } from "../../shared/types";
 import { isWaterAt } from "../../shared/surfaceTerrain";
+import { surfaceRoute, surfaceLineOpen, routePoint } from "../../shared/surfaceNavigation";
+import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
 import { preloadEnvironmentAssets } from "./render/surface/environment";
+import { preloadGardenArt } from "./render/surface/gardenArt";
 import { preloadCharacterArt } from "./render/surface/characterArt";
 import { actorMotion, residentScale, RESIDENT_HEIGHT, positionDiscontinuity } from "./render/surface/motion";
 import { preloadCreatureArt } from "./render/surface/creatureArt";
@@ -957,6 +960,7 @@ let currentColonyIndex = 0;
 for (const button of tribeButtons) {
   button.addEventListener("click", () => {
     currentColonyIndex = Number(button.dataset.tribe) === 1 ? 1 : 0;
+    if (connectionLive) socket.send(JSON.stringify({ type: "takeControl", colony: currentColonyIndex }));
     for (const item of tribeButtons) {
       item.classList.toggle("active", Number(item.dataset.tribe) === currentColonyIndex);
     }
@@ -1472,6 +1476,7 @@ type AntInterp = {
   currAngle: number;
   layer: string;
   capturedBy?: string;
+  route?: { x: number; y: number }[];
 };
 type FishInterp = Omit<AntInterp, "layer"> & { state: Fish["state"] };
 
@@ -1488,7 +1493,7 @@ const interpolatedAntById = new Map<string, Ant>();
 const interpolatedFish: Fish[] = [];
 const interpolatedFishById = new Map<string, Fish>();
 const interpolatedEnemies: Enemy[] = [];
-const enemyInterp = new Map<string, { prevX: number; prevY: number; currX: number; currY: number }>();
+const enemyInterp = new Map<string, { prevX: number; prevY: number; currX: number; currY: number; route?: { x: number; y: number }[] }>();
 let lastPanelUpdateAt = 0;
 let lastMinimapUpdateAt = 0;
 let lastPacketTime = 0;
@@ -1525,8 +1530,9 @@ function clampCamera(world: WorldSnapshot): void {
 }
 
 function centerOnNest(world: WorldSnapshot): void {
-  camera.x = world.surface.entrance.x;
-  camera.y = world.surface.entrance.y;
+  const camp = world.surface.entrances[currentColonyIndex] ?? world.surface.entrance;
+  camera.x = camp.x;
+  camera.y = camp.y;
   clampCamera(world);
 }
 
@@ -1557,7 +1563,7 @@ await pixi.init({
   resizeTo: window,
   antialias: false
 });
-await Promise.all([preloadEnvironmentAssets(), preloadCharacterArt(), preloadCreatureArt(), preloadEquipmentArt(), preloadFishArt(), preloadBuildingArt()]);
+await Promise.all([preloadEnvironmentAssets(), preloadCharacterArt(), preloadCreatureArt(), preloadEquipmentArt(), preloadFishArt(), preloadBuildingArt(), preloadGardenArt()]);
 for (const [name, kind] of [["food", "tomato"], ["fruit", "tomato"], ["fish", "fish"], ["meat", "meat"], ["clay", "clay"], ["wood", "wood"], ["stone", "stone"]] as const) {
   const icon = document.querySelector<HTMLImageElement>(`#icon-${name}`);
   if (icon) setAtlasIcon(icon, kind === "fish" ? getFishArt("blue", 0, true).texture : getEquipmentArt(kind, 20).texture, 20, kind === "fish" ? fishAtlasUrl : "/assets/characters/equipment/equipment-atlas.png");
@@ -1590,10 +1596,10 @@ function updateTasks(world: WorldSnapshot): void {
 
   const victories = objectives.filter((o) => o.victory);
   const tutorial = objectives.filter((o) => !o.victory);
-  const won = victories.some((o) => o.done);
+  const won = world.session.status === "victory";
   tasksList.innerHTML =
     (won ? `<div class="victoryBanner">ПОБЕДА! Партия сыграна — начни новую!</div>` : "") +
-    `<div class="taskSection">Пути победы (достаточно одного)</div>` +
+    `<div class="taskSection">Этапы развития · победа после 2 часов</div>` +
     victories.map(taskRowHtml).join("") +
     `<div class="taskSection">Обучение</div>` +
     tutorial.map(taskRowHtml).join("") +
@@ -1670,8 +1676,8 @@ function draw(interpT: number): void {
     if (!ip) {
       continue;
     }
-    ant.pos.x = ip.prevX + (ip.currX - ip.prevX) * interpT;
-    ant.pos.y = ip.prevY + (ip.currY - ip.prevY) * interpT;
+    const p = ip.route ? routePoint({ x: ip.prevX, y: ip.prevY }, ip.route, interpT) : { x: ip.prevX + (ip.currX - ip.prevX) * interpT, y: ip.prevY + (ip.currY - ip.prevY) * interpT };
+    ant.pos.x = p.x; ant.pos.y = p.y;
     const angle = lerpAngle(ip.prevAngle, ip.currAngle, interpT);
     ant.heading.x = Math.cos(angle);
     ant.heading.y = Math.sin(angle);
@@ -1681,8 +1687,8 @@ function draw(interpT: number): void {
     if (!ip) {
       continue;
     }
-    fish.pos.x = ip.prevX + (ip.currX - ip.prevX) * interpT;
-    fish.pos.y = ip.prevY + (ip.currY - ip.prevY) * interpT;
+    const p = ip.route ? routePoint({ x: ip.prevX, y: ip.prevY }, ip.route, interpT) : { x: ip.prevX + (ip.currX - ip.prevX) * interpT, y: ip.prevY + (ip.currY - ip.prevY) * interpT };
+    fish.pos.x = p.x; fish.pos.y = p.y;
     const angle = lerpAngle(ip.prevAngle, ip.currAngle, interpT);
     fish.heading.x = Math.cos(angle);
     fish.heading.y = Math.sin(angle);
@@ -1691,8 +1697,8 @@ function draw(interpT: number): void {
   for (const enemy of interpolatedEnemies) {
     const ip = enemyInterp.get(enemy.id);
     if (ip) {
-      enemy.pos.x = ip.prevX + (ip.currX - ip.prevX) * interpT;
-      enemy.pos.y = ip.prevY + (ip.currY - ip.prevY) * interpT;
+      const p = ip.route ? routePoint({ x: ip.prevX, y: ip.prevY }, ip.route, interpT) : { x: ip.prevX + (ip.currX - ip.prevX) * interpT, y: ip.prevY + (ip.currY - ip.prevY) * interpT };
+      enemy.pos.x = p.x; enemy.pos.y = p.y;
     }
   }
   const renderStart = performance.now();
@@ -2027,7 +2033,8 @@ pixi.ticker.add(() => {
 });
 
 const wsHost = window.location.hostname || "localhost";
-const socket = new WebSocket(`ws://${wsHost}:8787`);
+const wsPort = Number(import.meta.env.VITE_WS_PORT) || 8787;
+const socket = new WebSocket(`ws://${wsHost}:${wsPort}`);
 const gameplayPanel = createGameplayPanel(appRoot, {
   send: command => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(command)); },
   getColony: () => currentColonyIndex,
@@ -2290,6 +2297,7 @@ socket.addEventListener("open", () => {
   connectionLive = true;
   statusNode.textContent = "Подключено";
   requestNetworkView();
+  socket.send(JSON.stringify({ type: "takeControl", colony: currentColonyIndex }));
 });
 
 socket.addEventListener("close", () => {
@@ -2376,6 +2384,10 @@ socket.addEventListener("message", (event) => {
       existing.currX = ant.pos.x;
       existing.currY = ant.pos.y;
       existing.currAngle = angle;
+      const from = { x: existing.prevX, y: existing.prevY };
+      existing.route = ant.layer === "surface" && !ant.capturedBy && !surfaceLineOpen(snap.surface, from, ant.pos, ant.colonyId)
+        ? surfaceRoute(snap.surface, from, ant.pos, ant.colonyId) ?? [] : undefined;
+      if (existing.route?.length === 0) { existing.prevX = existing.currX; existing.prevY = existing.currY; existing.route = undefined; }
     } else {
       antInterp.set(ant.id, {
         prevX: ant.pos.x,
@@ -2423,13 +2435,17 @@ socket.addEventListener("message", (event) => {
     const angle = Math.atan2(fish.heading.y, fish.heading.x);
     const existing = fishInterp.get(fish.id);
     const teleported = existing && positionDiscontinuity(Math.hypot(fish.pos.x - existing.currX, fish.pos.y - existing.currY), tickDelta, 0.2);
-    if (existing && existing.state === fish.state && !teleported) {
+    if (existing && (existing.state === "respawning") === (fish.state === "respawning") && !teleported) {
       existing.prevX = existing.currX;
       existing.prevY = existing.currY;
       existing.prevAngle = existing.currAngle;
       existing.currX = fish.pos.x;
       existing.currY = fish.pos.y;
       existing.currAngle = angle;
+      existing.state = fish.state;
+      const from = { x: existing.prevX, y: existing.prevY };
+      existing.route = !lakeLineOpen(from, fish.pos, fish.lakeId) ? lakeRoute(fish.lakeId, from, fish.pos) ?? [] : undefined;
+      if (existing.route?.length === 0) { existing.prevX = existing.currX; existing.prevY = existing.currY; existing.route = undefined; }
     } else {
       fishInterp.set(fish.id, {
         prevX: fish.pos.x,
@@ -2471,6 +2487,11 @@ socket.addEventListener("message", (event) => {
     if (existing && !positionDiscontinuity(Math.hypot(enemy.pos.x - existing.currX, enemy.pos.y - existing.currY), tickDelta, 3.6)) {
       existing.prevX = existing.currX; existing.prevY = existing.currY;
       existing.currX = enemy.pos.x; existing.currY = enemy.pos.y;
+      const from = { x: existing.prevX, y: existing.prevY };
+      existing.route = enemy.type === "lakeMonster" && enemy.lakeId
+        ? !lakeLineOpen(from, enemy.pos, enemy.lakeId) ? lakeRoute(enemy.lakeId, from, enemy.pos) ?? [] : undefined
+        : !surfaceLineOpen(snap.surface, from, enemy.pos) ? surfaceRoute(snap.surface, from, enemy.pos) ?? [] : undefined;
+      if (existing.route?.length === 0) { existing.prevX = existing.currX; existing.prevY = existing.currY; existing.route = undefined; }
     } else {
       enemyInterp.set(enemy.id, { prevX: enemy.pos.x, prevY: enemy.pos.y, currX: enemy.pos.x, currY: enemy.pos.y });
     }

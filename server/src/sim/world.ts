@@ -34,6 +34,7 @@ import { createWeather } from "./weather";
 import { ensureDiggableUnderground, syncBroodIdCounter } from "./underground";
 import { createInitialFishPopulation } from "./fishing";
 import { createSession } from "./session";
+import { ensureLakeResidents } from "./wildlife";
 import { clearDeadAntPaths } from "./ant/movement";
 import { clearDeadPanic } from "./ant/combat";
 import { resetEnemyRuntime } from "./enemy";
@@ -832,6 +833,7 @@ export function createWorld(
       }
     }
   }
+  ensureLakeResidents(world);
   syncWorldLegacyFields(world);
   return world;
 }
@@ -993,7 +995,7 @@ export function worldFromSnapshot(
 
   const world: World = {
     ...snapshot,
-    session: snapshot.session ?? createSession(snapshot.tick),
+    session: { ...createSession(0), ...snapshot.session },
     surface: {
       ...snapshot.surface,
       foodSources,
@@ -1029,6 +1031,7 @@ export function worldFromSnapshot(
   for (const colony of world.colonies) {
     colony.directives = computeDirectives(colonyWorldView(world, colony), colony.genomeState.current);
   }
+  if (snapshotVersion < 17) ensureLakeResidents(world);
   syncWorldLegacyFields(world);
   return world;
 }
