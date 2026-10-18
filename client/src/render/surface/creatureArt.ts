@@ -4,6 +4,7 @@ import { loadSpriteAtlas, type LoadedAtlas } from "./atlas";
 import { preloadLakeArt } from "./lakeArt";
 import { lakeMonsterResting } from "../../../../shared/lakeHabitat";
 import { Rectangle, Texture } from "pixi.js";
+import { isWaterAt } from "../../../../shared/surfaceTerrain";
 
 const definitions = {
   spider: { url: "/assets/characters/creatures/spider-atlas.png", height: 54, shadowX: 29, shadowY: 10 },
@@ -19,7 +20,7 @@ export async function preloadCreatureArt(): Promise<void> {
 }
 export function creatureDimensions(type: Enemy["type"]) { return definitions[type]; }
 export function getCreatureArt(enemy: Enemy, pose: ResidentPose, tick = 0) {
-  if (enemy.type === "lakeMonster") {
+  if (enemy.type === "lakeMonster" && isWaterAt(enemy.pos.x,enemy.pos.y)) {
     const col = pose.look === "front" ? 0 : pose.look === "back" ? 2 : pose.facing < 0 ? 3 : 1;
     const resting = lakeMonsterResting(enemy, tick), index = (resting ? 4 : 0) + col;
     const frame = swimming.data.frames[index];
@@ -37,7 +38,7 @@ export function getCreatureArt(enemy: Enemy, pose: ResidentPose, tick = 0) {
   const row = anticipation ? 3 : pose.legFrame === 1 ? 1 : pose.legFrame === 2 ? 2 : 0;
   const index = row * 4 + col, frame = atlas.data.frames[index];
   const referenceHeight = atlas.data.frames.slice(0, 4).reduce((sum, f) => sum + f.height, 0) / 4;
-  return { texture: atlas.textures[index], anchorX: frame.anchorX, anchorY: 0.78,
+  return { texture: atlas.textures[index], anchorX: frame.anchorX, anchorY: enemy.type==="lakeMonster"?1:0.78,
     scale: definitions[enemy.type].height / referenceHeight, mirror: false };
 }
 
@@ -52,7 +53,7 @@ function lakeSwimParts(column: number) {
   return parts;
 }
 export function lakeTailArt(enemy: Enemy, pose: ResidentPose, tick: number) {
-  if (enemy.type !== "lakeMonster" || pose.look !== "side" || lakeMonsterResting(enemy, tick)) return null;
+  if (enemy.type !== "lakeMonster" || !isWaterAt(enemy.pos.x,enemy.pos.y) || pose.look !== "side" || lakeMonsterResting(enemy, tick)) return null;
   const col = pose.facing < 0 ? 3 : 1;
   return { texture: lakeSwimParts(col).tail, scale: 70 / swimming.data.frames[col].width, mirror: col === 1, offsetX: 70 * 0.18 };
 }

@@ -8,6 +8,8 @@ import { lakeLilyPads, lakeMonsterResting } from "../../../shared/lakeHabitat";
 import { lakeIdAt } from "../../../shared/surfaceTerrain";
 import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
 import { MotionTracker } from "../../../client/src/render/surface/motion";
+import { lakeShorePortals, nearLakeShore } from "../../../shared/amphibianNavigation";
+import { fenceContains } from "../../../shared/fenceGeometry";
 const temp = await mkdtemp(path.join(os.tmpdir(), "clayfolk-grounding-"));
 for (const key of ["SNAPSHOT_FILE", "GENOME_FILE", "GENOME_FILE_B", "SPIDER_GENOME_FILE"]) process.env[key] = path.join(temp, key + ".json");
 const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
@@ -22,6 +24,23 @@ function fresh() {
 let count = 0;
 function check(name: string, run: () => void) { run(); count++; console.log(`PASS  ${name}`); }
 try {
+  check("Монстр выходит на берег, гуляет и возвращается в своё озеро без скачков позиции",()=>{
+    const w=fresh(),e=w.enemies.find(e=>e.lakeId==="north")!,portal=lakeShorePortals("north")[0];w.ants=[];e.pos={...portal.water};e.lair={...portal.water};e.lakeNextShoreAt=0;e.lakeNextRestAt=100000;e.hunger=0;
+    let landed=false,returned=false;
+    for(let t=0;t<750;t++){w.tick++;const prev={...e.pos};updateWildlife(w);assert.ok(Math.hypot(e.pos.x-prev.x,e.pos.y-prev.y)<=.5+1e-7,"no teleport across shoreline");assert.ok(nearLakeShore(e.pos,"north"));if(!lakeIdAt(e.pos.x,e.pos.y))landed=true;if(landed&&w.tick>360&&lakeIdAt(e.pos.x,e.pos.y)==="north"){returned=true;break;}}
+    assert.ok(landed,"went onto dry shore");assert.ok(returned,"returned by walking/swimming");
+  });
+  check("Береговой монстр не проходит через забор и возвращает пленника в воду",()=>{
+    const w=fresh(),e=w.enemies.find(e=>e.lakeId==="north")!,portal=lakeShorePortals("north")[0],a=w.ants[0];
+    e.pos={...portal.water};e.lair={...portal.water};w.ants=[];
+    const wall={...w.surface.buildings[0],id:"shore-wall",type:"wall" as const,pos:{x:(Math.floor(portal.land.x/2)+.5)*2,y:(Math.floor(portal.land.y/2)+.5)*2},stage:"built" as const};w.surface.buildings.push(wall);
+    for(let t=0;t<35;t++){w.tick++;moveCreature(w,e,portal.land,.4);assert.equal(fenceContains(wall,e.pos),false);}
+    w.surface.buildings=w.surface.buildings.filter(b=>b.id!==wall.id);
+    e.pos={...portal.land};a.pos={...e.pos};a.capturedBy=e.id;e.captiveId=a.id;w.ants=[a];
+    let wet=false;
+    for(let t=0;t<100;t++){w.tick++;const prev={...e.pos};updateWildlife(w);assert.ok(Math.hypot(prev.x-e.pos.x,prev.y-e.pos.y)<=.5);if(lakeIdAt(a.pos.x,a.pos.y)==="north"){wet=true;break;}}
+    assert.ok(wet);
+  });
   check("Следы: пять на жителя, общий предел 800, исчезновение и запрет при захвате/телепорте", () => {
     const trail = new FootprintTrail();
     for (let i = 0; i < 30; i++) for (let j = 0; j < 500; j++) trail.sample(String(j), i * 0.1, j, 0, i * Math.PI, 1, i * 0.03, true);

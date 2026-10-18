@@ -4,6 +4,7 @@ import type { WorldSnapshot } from "../../../../shared/types";
 import type { ViewBounds } from "../types";
 import { actorMotion, animationSeed } from "./motion";
 import { loadSpriteAtlas, type LoadedAtlas } from "./atlas";
+import { isWaterAt } from "../../../../shared/surfaceTerrain";
 
 let lilies: LoadedAtlas;
 export async function preloadLakeArt(): Promise<void> { lilies = await loadSpriteAtlas("/assets/environment/clay-v2/lilies-atlas.png"); }
@@ -17,7 +18,7 @@ export function updateLakeDetails(root: Container, ripples: Graphics, world: Wor
   }
   root.visible = true; ripples.clear();
   for (const enemy of world.enemies) {
-    if (enemy.type !== "lakeMonster" || enemy.hp <= 0 || enemy.pos.x < bounds.left - 10 || enemy.pos.x > bounds.right + 10 || enemy.pos.y < bounds.top - 10 || enemy.pos.y > bounds.bottom + 10) continue;
+    if (enemy.type !== "lakeMonster" || enemy.hp <= 0 || !isWaterAt(enemy.pos.x, enemy.pos.y) || enemy.pos.x < bounds.left - 10 || enemy.pos.x > bounds.right + 10 || enemy.pos.y < bounds.top - 10 || enemy.pos.y > bounds.bottom + 10) continue;
     const rest = lakeMonsterResting(enemy, world.tick), pose = actorMotion.enemy(enemy), x = enemy.pos.x * cell, y = enemy.pos.y * cell;
     if (rest) continue;
     // The submerged mass stays visible as a faint silhouette, never a ground shadow.

@@ -333,6 +333,9 @@ export type Enemy = {
   lakePadIndex?: number;
   lakeRestUntil?: number;
   lakeNextRestAt?: number;
+  lakeShoreUntil?: number;
+  lakeNextShoreAt?: number;
+  lakeShoreTarget?: Vec2;
   captiveId?: string;
   nextGrabAt?: number;
   raid?: boolean;

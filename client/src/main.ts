@@ -14,6 +14,7 @@ import {
 import { isWaterAt } from "../../shared/surfaceTerrain";
 import { surfaceRoute, surfaceLineOpen, routePoint } from "../../shared/surfaceNavigation";
 import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
+import { amphibianLineOpen, amphibianRoute } from "../../shared/amphibianNavigation";
 import { pointBuildingPlacement } from "../../shared/buildingPlacement";
 import { BuildingGhost } from "./render/surface/buildingGhost";
 import { FencePreview } from "./render/surface/fencePreview";
@@ -2573,7 +2574,7 @@ socket.addEventListener("message", (event) => {
       existing.currX = enemy.pos.x; existing.currY = enemy.pos.y;
       const from = { x: existing.prevX, y: existing.prevY };
       existing.route = enemy.type === "lakeMonster" && enemy.lakeId
-        ? !lakeLineOpen(from, enemy.pos, enemy.lakeId) ? lakeRoute(enemy.lakeId, from, enemy.pos) ?? [] : undefined
+        ? !amphibianLineOpen(snap.surface,from,enemy.pos,enemy.lakeId) ? amphibianRoute(snap.surface,from,enemy.pos,enemy.lakeId) ?? [] : undefined
         : !surfaceLineOpen(snap.surface, from, enemy.pos) ? surfaceRoute(snap.surface, from, enemy.pos) ?? [] : undefined;
       if (existing.route?.length === 0) { existing.prevX = existing.currX; existing.prevY = existing.currY; existing.route = undefined; }
     } else {

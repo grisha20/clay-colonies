@@ -19,6 +19,7 @@ const { taskApproach } = await import("../sim/taskAccess");
 const { assignBuildJobs, assignHarvestJobs } = await import("../sim/economy");
 const { watchTaskMotion } = await import("../sim/taskProgress");
 const { placementAccessWarning } = await import("../../../shared/placementAccess");
+const { updateSettlementAI } = await import("../sim/settlementAI");
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x-b.x,a.y-b.y);
 function fence(x:number,y:number,type:Building["type"]="wall"):Building {
   return {id:`fence-${x}-${y}`,type,colonyId:"colony-1",pos:{x,y},stage:"built",progress:1,cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,...(type==="gate"?{gateSpan:3,gateAxis:"horizontal" as const}:{})};
@@ -50,6 +51,19 @@ function travel(w:ReturnType<typeof fresh>, a:Ant, goal:Vec2, budget:number, str
 let failures=0,passed=0;
 function check(name:string,run:()=>void) { try {run();passed++;console.log(`PASS  ${name}`);}catch(e){failures++;console.error(`FAIL  ${name}: ${(e as Error).message}`);} }
 try {
+  check("Соперник: закрытая пустая площадка заменяется, доставленные материалы сохраняются",()=>{
+    const w=fresh(),c=w.colonies[1];c.ants=w.colonies[0].ants.map(a=>({...a,colonyId:c.id}));
+    w.surface.buildings=[];w.tick=100;
+    const site:Building={id:"sealed-plan",colonyId:c.id,type:"workshop",stage:"site",pos:{x:430,y:240},cost:{clay:8,wood:4,stone:0},delivered:{clay:0,wood:0,stone:0},hp:1,maxHp:100,progress:0};
+    const invested:Building={...site,id:"invested-plan",type:"hut",delivered:{clay:1,wood:0,stone:0}};
+    w.surface.buildings.push(site,invested);
+    for(let x=423;x<=437;x+=2)for(const y of [233,247])w.surface.buildings.push({...fence(x,y),colonyId:c.id});
+    for(let y=235;y<=245;y+=2)for(const x of [423,437])w.surface.buildings.push({...fence(x,y),colonyId:c.id});
+    rebuildWallBlocked(w);updateSettlementAI(w);
+    assert.ok(w.surface.buildings.some(b=>b.type==="workshop"&&b.id!==site.id));
+    w.tick=400;updateSettlementAI(w);
+    assert.ok(!w.surface.buildings.includes(site));assert.ok(w.surface.buildings.includes(invested));assert.equal(invested.delivered.clay,1);
+  });
   check("Предпросмотр: замыкание лагеря предупреждает, собственные ворота сохраняют выход",()=>{
     const w=fresh();w.surface.entrances=[{x:120,y:240}];
     // Seal the southern gate; the north opening is the only remaining exit.

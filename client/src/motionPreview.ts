@@ -1,4 +1,4 @@
-import { Application, Container, Sprite, Text, TilingSprite } from "pixi.js";
+import { Application, Container, Graphics, Sprite, Text, TilingSprite } from "pixi.js";
 import type { Ant, Enemy, Fish, FishSpecies, WorldSnapshot } from "../../shared/types";
 import { getEnvironmentTextures, preloadEnvironmentAssets } from "./render/surface/environment";
 import { preloadGardenArt } from "./render/surface/gardenArt";
@@ -22,6 +22,8 @@ import { updateFootprints, footprintCount } from "./render/surface/footprints";
 import { BuildingGhost } from "./render/surface/buildingGhost";
 import { FencePreview } from "./render/surface/fencePreview";
 import { campShelterPoints } from "../../shared/campShelter";
+import { lakeShorePortals } from "../../shared/amphibianNavigation";
+import { isWaterAt } from "../../shared/surfaceTerrain";
 
 const app = new Application();
 await app.init({ width: 1024, height: 690, background: 0x555e3b, antialias: true });
@@ -79,6 +81,7 @@ function loadGroup() {
   elapsed = 0; lastStatusAt = 0; actorMotion.reset(); homes.clear();
   packetSeconds = 0; packetTicks = 0;
   for (const child of campScene.staticLayer.removeChildren()) child.destroy({ children: true });
+  for (const child of campScene.waterLayer.removeChildren()) child.destroy({ children: true });
   for (const child of actors.children.filter(c => c.label === "static_prop")) child.destroy({ children: true });
   for (const child of labels.removeChildren()) child.destroy();
   const crowd = group.value.startsWith("crowd"); scale = crowd ? 1 : group.value === "royals" ? 3 : 2;
@@ -100,6 +103,10 @@ function loadGroup() {
         const root = homes.get(actor.id)!; homes.delete(actor.id); actor.id = `royal-${role}-preview-${i}`; homes.set(actor.id, root);
       }
     }
+  } else if(group.value==="shore") {
+    const portal=lakeShorePortals("north")[0];campScene.root.position.set(512-portal.water.x*cell*scale,345-portal.water.y*cell*scale);
+    const e=enemy(0,"lakeMonster","",false,{lakeId:"north",pos:{...portal.water}});homes.delete(e.id);
+    for(const child of labels.removeChildren())child.destroy();
   } else if (group.value === "lake") {
     const padIndex = 2, pad = lakeLilyPads("north")[padIndex];
     campScene.root.position.set(360 - pad.x * cell * scale, 340 - pad.y * cell * scale);
@@ -223,6 +230,13 @@ function loadGroup() {
   }
 }
 function loadGround() {
+  if(group.value==="shore"){
+    const p=lakeShorePortals("north")[0].water;
+    drawSurfaceGround(campScene.staticLayer,actors,world,cell,{left:p.x-34,right:p.x+34,top:p.y-25,bottom:p.y+25},false);
+    const mask=new Graphics(),water=new TilingSprite({texture:getEnvironmentTextures().terrain.lakeShallowFrames[0],width:480*cell,height:480*cell});
+    for(let y=Math.floor((p.y-25)/4);y<=Math.ceil((p.y+25)/4);y++)for(let x=Math.floor((p.x-34)/4);x<=Math.ceil((p.x+34)/4);x++)if(isWaterAt((x+.5)*4,(y+.5)*4))mask.rect(x*4*cell,y*4*cell,4*cell,4*cell).fill(0xffffff);
+    water.mask=mask;campScene.waterLayer.addChild(water,mask);return;
+  }
   if (campLike() || ["buildings", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) || group.value.startsWith("crowd")) {
     const terrain = { ...world, surface: { ...world.surface, entrances: world.surface.entrances.length ? world.surface.entrances : [{ x: 32, y: 24 }] } };
     drawSurfaceGround(campScene.staticLayer, actors, terrain, cell, { left: 0, right: 64, top: 0, bottom: 44 }, false);
@@ -263,6 +277,10 @@ app.ticker.add(ticker => {
     }
   }
   const guard = world.ants.find(a => a.colonyId === "water");
+  if(group.value==="shore"&&running){
+    const portal=lakeShorePortals("north")[0],t=(Math.sin(elapsed*.7)+1)/2;
+    world.enemies[0].pos={x:portal.water.x+(portal.land.x-portal.water.x)*t*2,y:portal.water.y+(portal.land.y-portal.water.y)*t*2};
+  }
   if (group.value === "combat" && running) {
     for (const [i, a] of world.ants.entries()) if ((elapsed + i * 0.15) % 1 < dt) a.melee = { to: { ...world.enemies[0].pos }, until: world.tick + 6 };
     world.enemies[0].hp = 1400 - elapsed % 12 * 65;

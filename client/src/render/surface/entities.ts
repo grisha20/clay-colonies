@@ -14,6 +14,7 @@ import { campPileRoots } from "./entrance";
 import { offsetSettings } from "./editor";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
 import { fishingCastActive } from "../../../../shared/fishingCast";
+import { isWaterAt } from "../../../../shared/surfaceTerrain";
 
 const webDrawKeys = new WeakMap<Graphics, string>();
 
@@ -76,7 +77,7 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     if (enemy.type === "spider" && isInBounds(enemy.lair, bounds, 5)) {
       drawGroundShadow(graphics, lighting, enemy.lair.x * cell, enemy.lair.y * cell + 7, 20, 8, 15);
     }
-    if (enemy.hp > 0 && enemy.type !== "lakeMonster" && isInBounds(enemy.pos, bounds, 5)) {
+    if (enemy.hp > 0 && (enemy.type !== "lakeMonster" || !isWaterAt(enemy.pos.x,enemy.pos.y)) && isInBounds(enemy.pos, bounds, 5)) {
       const shape = creatureDimensions(enemy.type);
       drawGroundShadow(graphics, lighting, enemy.pos.x * cell, enemy.pos.y * cell + 3, shape.shadowX, shape.shadowY, shape.height * 0.6);
     }
@@ -414,7 +415,7 @@ export function updateSurfaceEnemies(
     sprite.scale.set(art.scale * (art.mirror ? -1 : 1) * (2 - pose.stretch), art.scale * pose.stretch);
     sprite.alpha = 1; sprite.tint = hpRatio < 0.3 ? 0xffd3bd : 0xffffff;
     if (world.ants.some(a => a.melee && actorMotion.resident(a).attack > 0.7 && Math.hypot(a.melee.to.x - enemy.pos.x, a.melee.to.y - enemy.pos.y) < 4)) sprite.tint = 0xffb88d;
-    const feetY = enemy.pos.y * cell + creatureDimensions(enemy.type).height * 0.22;
+    const feetY = enemy.pos.y * cell + (enemy.type==="lakeMonster"&&!isWaterAt(enemy.pos.x,enemy.pos.y)?0:creatureDimensions(enemy.type).height * 0.22);
     sprite.position.set(enemy.pos.x * cell, enemy.pos.y * cell + pose.bob);
     sprite.rotation = pose.lean;
     sprite.zIndex = feetY;

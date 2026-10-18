@@ -17,6 +17,7 @@ const { updateWorldSurfaceCache } = await import("../sim/cache");
 const { buildingFootprint, insideBuilding, crossesBuilding } = await import("../../../shared/buildingGeometry");
 const { surfaceRoute, surfaceLineOpen, surfacePointOpen, routePoint } = await import("../../../shared/surfaceNavigation");
 const { lakeIdAt, isWaterAt } = await import("../../../shared/surfaceTerrain");
+const { nearLakeShore } = await import("../../../shared/amphibianNavigation");
 const { activeFoodTarget } = await import("../sim/foodMemory");
 const { CONFIG } = await import("../config");
 const { moveBuilding } = await import("../sim/ant/build");
@@ -77,8 +78,10 @@ try {
     const w = fresh(); w.ants = []; w.colonies.forEach(c => { c.ants = []; });
     assert.equal(w.enemies.filter(e => e.type === "lakeMonster").length, 2);
     const e = w.enemies.find(e => e.lakeId === "north")!, start = { ...e.pos };
-    for (let i = 0; i < 400; i++) { w.tick++; updateWildlife(w); for (const monster of w.enemies.filter(e => e.type === "lakeMonster")) assert.equal(lakeIdAt(monster.pos.x, monster.pos.y), monster.lakeId); }
+    for (let i = 0; i < 400; i++) { w.tick++; updateWildlife(w); for (const monster of w.enemies.filter(e => e.type === "lakeMonster")) assert.ok(lakeIdAt(monster.pos.x, monster.pos.y)===monster.lakeId||!isWaterAt(monster.pos.x,monster.pos.y)&&nearLakeShore(monster.pos,monster.lakeId!)); }
     assert.ok(Math.hypot(e.pos.x - start.x, e.pos.y - start.y) > 3);
+    // Feeding is a water action; the preceding patrol may now be on shore.
+    e.pos = { ...e.lair }; e.lakeShoreUntil = 0; e.lakeRestUntil = 0;
     e.hunger = 500; const f = w.surface.fish.find(f => f.lakeId === e.lakeId)!; f.pos = { ...e.pos };
     updateWildlife(w); assert.equal(f.state, "respawning"); assert.equal(e.hunger, 0);
   });

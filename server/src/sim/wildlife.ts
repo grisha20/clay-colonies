@@ -1,6 +1,9 @@
 import { lakePoints as waterPoints, lakeLineOpen as waterSegment, lakeRoute } from "../../../shared/lakeNavigation";
 import { lakeLilyPads } from "../../../shared/lakeHabitat";
 import { fenceContains } from "../../../shared/fenceGeometry";
+import { amphibianLineOpen, amphibianRoute, lakeShorePortals, nearLakeShore } from "../../../shared/amphibianNavigation";
+import { surfaceGeometryKey } from "../../../shared/surfaceAccess";
+import { surfacePointOpen } from "../../../shared/surfaceNavigation";
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { LAKE_DEFINITIONS, isWaterAt, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../shared/dayCycle";
@@ -17,11 +20,21 @@ const foundationRoutes = new WeakMap<Enemy, { target: Vec2; point: Vec2 }>();
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 const swimPlans = new WeakMap<Enemy, { target: Vec2; points: Vec2[] }>();
 const patrols = new WeakMap<Enemy, { target: Vec2; until: number }>();
+const amphibianPlans=new WeakMap<Enemy,{target:Vec2;points:Vec2[];until:number;geometry:string}>();
+function moveAmphibian(world:World,enemy:Enemy,target:Vec2,speed:number):void {
+  const id=enemy.lakeId!;let plan=amphibianPlans.get(enemy);const geometry=surfaceGeometryKey(world.surface);
+  if(!plan||dist(plan.target,target)>1||world.tick>=plan.until||plan.geometry!==geometry||plan.points[0]&&!amphibianLineOpen(world.surface,enemy.pos,plan.points[0],id)){
+    plan={target:{...target},points:amphibianRoute(world.surface,enemy.pos,target,id)??[],until:world.tick+120,geometry};amphibianPlans.set(enemy,plan);
+  }
+  while(plan.points.length>1&&dist(enemy.pos,plan.points[0])<.2&&amphibianLineOpen(world.surface,enemy.pos,plan.points[1],id))plan.points.shift();
+  const next=plan.points[0];if(!next)return;const d=dist(enemy.pos,next);if(!d)return;
+  const amount=Math.min(d,speed),candidate={x:enemy.pos.x+(next.x-enemy.pos.x)/d*amount,y:enemy.pos.y+(next.y-enemy.pos.y)/d*amount};
+  if(amphibianLineOpen(world.surface,enemy.pos,candidate,id))enemy.pos=candidate;
+}
 function swim(world: World, enemy: Enemy, target: Vec2, speed: number): void {
   const id = enemy.lakeId!, points = waterPoints(id);
   if (lakeIdAt(enemy.pos.x, enemy.pos.y) !== id) {
-    // Migrate legacy shore spawns back into their own lake once.
-    enemy.pos = { ...points.reduce((a, b) => dist(b, enemy.pos) < dist(a, enemy.pos) ? b : a) };
+    moveAmphibian(world,enemy,target,speed);return;
   }
   let goal = target;
   if (lakeIdAt(target.x, target.y) !== id) {
@@ -65,7 +78,7 @@ export function nearestDryPosition(world: World, point: Vec2): Vec2 | null {
 /** Creatures use the same lake bypass as residents and cannot pass through walls.
  * A raiding spider damages the actual obstructing segment before moving. */
 export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: number, breakWalls = false): void {
-  if (enemy.type === "lakeMonster") { swim(world, enemy, target, speed); return; }
+  if (enemy.type === "lakeMonster") { moveAmphibian(world, enemy, target, speed); return; }
   let next = target;
   if (!breakWalls) {
     let route = routes.get(enemy);
@@ -130,6 +143,7 @@ function releaseCaptive(world: World, enemy: Enemy): void {
 function targetFor(world: World, enemy: Enemy): Ant | undefined {
   const range = enemy.type === "lakeMonster" ? CONFIG.lakeMonsterRange : 38;
   return world.ants.filter(a => a.state !== "dead" && !a.capturedBy && (a.rescuedUntil ?? 0) <= world.tick && dist(a.pos, enemy.pos) <= range &&
+    (enemy.type!=="lakeMonster"||nearLakeShore(a.pos,enemy.lakeId!)) &&
     !world.colonies.some(c => c.colony.fire > 0.35 && dist(a.pos, c.surfaceEntrance) < 8))
     .sort((a, b) => dist(a.pos, enemy.pos) - dist(b.pos, enemy.pos))[0];
 }
@@ -178,7 +192,7 @@ export function updateWildlife(world: World): void {
       enemy.captiveId = undefined;
       enemy.nextGrabAt = world.tick + 200;
     } else if (captive) {
-      if (enemy.type === "lakeMonster") { enemy.lakeRestUntil = 0; enemy.lakePadIndex = undefined; }
+      if (enemy.type === "lakeMonster") { enemy.lakeRestUntil = 0; enemy.lakePadIndex = undefined; enemy.lakeShoreUntil=0;enemy.lakeShoreTarget=undefined; }
       moveCreature(world, enemy, enemy.lair, enemy.type === "lakeMonster" ? CONFIG.lakeMonsterDragSpeed : CONFIG.beetleDragSpeed);
       captive.pos = { ...enemy.pos };
       captive.heading = { x: Math.cos(world.tick * 0.4), y: Math.sin(world.tick * 0.4) };
@@ -192,7 +206,7 @@ export function updateWildlife(world: World): void {
       if (dist(enemy.pos, target.pos) < (enemy.type === "lakeMonster" ? 3 : 1.8) && world.tick >= (enemy.nextGrabAt ?? 0)) {
         // No capture through a wall, gate or shoreline obstacle.
         const mid = { x: (target.pos.x + enemy.pos.x) / 2, y: (target.pos.y + enemy.pos.y) / 2 };
-        if (!isWallBlockedAt(world, mid.x, mid.y)) {
+        if (!isWallBlockedAt(world, mid.x, mid.y) && (enemy.type!=="lakeMonster"||amphibianLineOpen(world.surface,enemy.pos,target.pos,enemy.lakeId!))) {
           dropCarriedFood(world, target);
           target.capturedBy = enemy.id;
           target.state = "idle";
@@ -204,6 +218,20 @@ export function updateWildlife(world: World): void {
     } else if (enemy.type === "lakeMonster") {
       enemy.hunger += 1;
       if ((enemy.lakeRestUntil ?? 0) > world.tick) continue;
+      enemy.lakeNextShoreAt??=world.tick+300;
+      if((enemy.lakeShoreUntil??0)>world.tick&&enemy.lakeShoreTarget){
+        if(dist(enemy.pos,enemy.lakeShoreTarget)<.7&&world.tick%60===0){
+          const nearby=lakeShorePortals(enemy.lakeId!).filter(p=>dist(p.land,enemy.pos)>5&&dist(p.land,enemy.pos)<15&&surfacePointOpen(world.surface,p.land,"enemy")&&amphibianLineOpen(world.surface,enemy.pos,p.land,enemy.lakeId!));
+          if(nearby.length)enemy.lakeShoreTarget={...nearby[Math.floor(world.tick/60)%nearby.length].land};
+        }
+        moveAmphibian(world,enemy,enemy.lakeShoreTarget,.28);continue;
+      }
+      if(!isWaterAt(enemy.pos.x,enemy.pos.y)){moveAmphibian(world,enemy,enemy.lair,CONFIG.lakeMonsterDragSpeed);continue;}
+      if(world.tick>=enemy.lakeNextShoreAt&&enemy.hunger<450){
+        const portal=lakeShorePortals(enemy.lakeId!).filter(p=>surfacePointOpen(world.surface,p.land,"enemy")&&amphibianLineOpen(world.surface,p.water,p.land,enemy.lakeId!)).sort((a,b)=>dist(a.water,enemy.pos)-dist(b.water,enemy.pos))[0];
+        enemy.lakeNextShoreAt=world.tick+960;
+        if(portal){enemy.lakeShoreUntil=world.tick+360;enemy.lakeShoreTarget={...portal.land};enemy.lakePadIndex=undefined;moveAmphibian(world,enemy,portal.land,.28);continue;}
+      }
       enemy.lakeNextRestAt ??= world.tick + 150;
       if (world.tick >= enemy.lakeNextRestAt && enemy.hunger < 450) {
         const pads = lakeLilyPads(enemy.lakeId!);

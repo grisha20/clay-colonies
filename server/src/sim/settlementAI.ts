@@ -11,6 +11,8 @@ import { placementAccessWarning } from "../../../shared/placementAccess";
 import { taskApproach } from "./taskAccess";
 import { colonyWorldView } from "./world";
 
+const inaccessibleSince = new WeakMap<Building, number>();
+
 function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop"|"idol"):Vec2[] {
   const runtime=world.colonies[index],camp=runtime.surfaceEntrance,scoped=colonyWorldView(world,runtime),rival=world.colonies[world.session.playerColonyIndex??0]?.surfaceEntrance;
   const candidates:Vec2[]=[];
@@ -36,7 +38,7 @@ export function updateSettlementAI(world: World): void {
   for (const [index, runtime] of world.colonies.entries()) {
     if (index === (world.session.playerColonyIndex ?? 0) || !runtime.ants.length) continue;
     const c = runtime.colony, camp = runtime.surfaceEntrance, population = runtime.ants.length;
-    const buildings = world.surface.buildings.filter(b => b.colonyId === c.id);
+    let buildings = world.surface.buildings.filter(b => b.colonyId === c.id);
     const built = (type: BuildingType) => buildings.filter(b => b.type === type && b.stage === "built").length;
     const threat = world.enemies.some(e => e.hp > 0 && Math.hypot(e.pos.x - camp.x, e.pos.y - camp.y) < 28);
     c.alarm = threat;
@@ -57,9 +59,25 @@ export function updateSettlementAI(world: World): void {
     const rival = world.colonies[world.session.playerColonyIndex ?? 0]?.surfaceEntrance;
     const sign = rival && rival.x < camp.x ? -1 : 1;
     const scoped=colonyWorldView(world,runtime);
+    // A sealed empty blueprint must not stop the whole settlement. Delivered
+    // resources stay on their site; only untouched plans can be safely replaced.
+    const pending = buildings.filter(b => b.stage !== "built" && b.type !== "wall" && b.type !== "gate");
+    let reachablePending = false;
+    for (const site of pending) {
+      if (taskApproach(scoped, buildingServicePoint(site), 2)) {
+        inaccessibleSince.delete(site); reachablePending = true; continue;
+      }
+      const since = inaccessibleSince.get(site) ?? world.tick;
+      inaccessibleSince.set(site, since);
+      if (world.tick - since >= 300 && site.progress === 0 && Object.values(site.delivered).every(amount => amount === 0)) {
+        world.surface.buildings = world.surface.buildings.filter(b => b !== site);
+        scoped.surface.buildings = world.surface.buildings;
+      }
+    }
+    buildings = world.surface.buildings.filter(b => b.colonyId === c.id);
     const postCandidates=[{x:camp.x+sign*9,y:camp.y+5},...buildings.filter(b=>b.type==="gate"&&b.stage==="built").map(b=>({x:b.pos.x,y:b.pos.y+(b.pos.y<camp.y?4:-4)})),{x:camp.x,y:camp.y+5}];
     c.defensePost=postCandidates.find(p=>!isSurfaceBlockedAt(world,p.x,p.y,runtime.id)&&taskApproach(scoped,p))??c.defensePost;
-    if (buildings.some(b => b.stage !== "built" && b.type !== "wall" && b.type !== "gate")) continue;
+    if (reachablePending) continue;
     let type: "hut" | "storage" | "workshop" | "idol" | undefined;
     if (!built("workshop")) type = "workshop";
     else if (built("hut") < Math.min(CONFIG.maxHutsPerColony, 3 + Math.floor(world.tick / 9000)) && (population >= 10 + built("hut") * 4 || world.tick >= 4000 && built("hut") < 3)) type = "hut";
