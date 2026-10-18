@@ -16,7 +16,7 @@ import {
   moveHungryToFood,
   moveSearching
 } from "./forage";
-import { moveFishing } from "../fishing";
+import { moveFishing, releaseFish } from "../fishing";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { consumeFoodStock } from "../foodStock";
 import { dissolveAnt } from "../water";
@@ -43,7 +43,8 @@ export function updateWaterExposure(ant: Ant, world?: World): boolean {
 }
 
 export function stepSurface(world: World, ant: Ant): void {
-  if (moveToSafety(world, ant) || moveToRainShelter(world, ant) || moveDefending(world, ant)) return;
+  const hadCast=ant.job==="fish"||!!ant.fishingTargetId;
+  if (moveToSafety(world, ant) || moveToRainShelter(world, ant) || moveDefending(world, ant)) {if(hadCast)releaseFish(world,ant);return;}
   if (
     (ant.forageRole === "scout" || (ant.forageRole === "forager" && !!world.colony.activeFoodTargetId)) &&
     ant.state === "return" &&
@@ -130,7 +131,7 @@ export function stepAnt(world: World, ant: Ant): void {
   }
 
   ant.layer = "surface";
-  if (ant.capturedBy) { updateWaterExposure(ant, world); return; }
+  if (ant.capturedBy) { if(ant.fishingTargetId)releaseFish(world,ant);updateWaterExposure(ant, world); return; }
   ant.energy -= CONFIG.energyDrainPerTick;
 
   if (ant.energy <= 0) {

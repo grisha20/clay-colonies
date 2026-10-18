@@ -4,7 +4,7 @@ import { CONFIG } from "../../config";
 import { isSurfaceBlockedAt } from "../building";
 import { isSheltered } from "../weather";
 import type { World } from "../world";
-import { moveSurfaceToward, surfaceMoveSpeed, tryCrossLayer } from "./movement";
+import { moveSurfaceToward, tryCrossLayer } from "./movement";
 
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 type Places = { key: string; points: Vec2[]; assigned: Map<string, Vec2>; tick: number };
@@ -59,7 +59,7 @@ export function moveToRainShelter(world: World, ant: Ant): boolean {
   const target = rainShelterPoint(world, ant) ?? world.surface.entrance;
   const distance = dist(ant.pos, target);
   ant.state = ant.carrying > 0 ? "carry" : "return";
-  if (distance > Math.max(0.35, surfaceMoveSpeed(world, ant))) moveSurfaceToward(world, ant, target, true, false);
+  if (distance > 0.35) moveSurfaceToward(world, ant, target, true, false);
   else {
     // Stop completely instead of orbiting or overshooting the assigned place.
     ant.state = "idle";

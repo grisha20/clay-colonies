@@ -36,6 +36,8 @@ const { dayCycle } = await import("../../../shared/dayCycle");
 const { isWaterAt } = await import("../../../shared/surfaceTerrain");
 const { moveToRainShelter, rainShelterPoint } = await import("../sim/ant/shelter");
 const { isSheltered } = await import("../sim/weather");
+const { fishingCastActive } = await import("../../../shared/fishingCast");
+const { assignFishingJobs } = await import("../sim/fishing");
 
 let passed = 0;
 function scenario(name: string, run: () => void) { run(); passed++; console.log(`PASS  ${name}`); }
@@ -46,6 +48,15 @@ function fresh() {
 }
 
 try {
+  scenario("Рыбалка: бегство разрывает заброс, освобождает рыбу и не оставляет леску через карту",()=>{
+    const w=fresh(),c=w.colonies[0],a=c.ants[0],scoped=colonyWorldView(w,c),fish=w.surface.fish[0];
+    a.job="fish";a.pos={x:182,y:161.12};a.state="idle";a.carrying=0;a.fishingStandPos={...a.pos};a.fishingLurePos={x:182,y:158.88};a.fishingTargetId=fish.id;a.fishingTicks=20;
+    fish.targetAntId=a.id;fish.state="lured";fish.lurePos={...a.fishingLurePos};assert.equal(fishingCastActive(a),true);
+    c.colony.alarm=true;scoped.enemies=[];stepAnt(scoped,a);
+    assert.equal(a.fishingLurePos,undefined);assert.equal(a.fishingTargetId,undefined);assert.equal(fish.targetAntId,undefined);assert.equal(fish.state,"swim");
+    c.colony.alarm=false;c.colony.rods=1;c.colony.priorities.fish=1;assignFishingJobs(scoped);assert.ok(a.fishingStandPos,"fishing can be assigned again after danger");assert.equal(a.fishingTicks,0);
+    a.pos={x:400,y:400};a.state="idle";a.job="fish";a.fishingTicks=20;a.fishingStandPos={x:182,y:161.12};a.fishingLurePos={x:182,y:158.88};assert.equal(fishingCastActive(a),false);
+  });
   scenario("Дождь: еда и топливо сдаются до сушки, профессии и строительный груз сохраняются", () => {
     for (const kind of ["wood", "clay", "stone", "fruit", "fish", "meat"] as const) {
       const w = fresh(), c = w.colonies[0], scoped = colonyWorldView(w, c), a = c.ants[0]; w.weather.state = "rain"; scoped.enemies = [];

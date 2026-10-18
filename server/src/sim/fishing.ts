@@ -13,6 +13,7 @@ import type { World } from "./world";
 import { moveSurfaceToward } from "./ant/movement";
 import { addFoodStock } from "./foodStock";
 import { taskApproach } from "./taskAccess";
+import { fishingCastActive } from "../../../shared/fishingCast";
 
 type FishingSpot = { lakeId: Fish["lakeId"]; stand: Vec2; lure: Vec2 };
 
@@ -67,7 +68,7 @@ function activeFisher(world: World, id: string | undefined): Ant | undefined {
     return undefined;
   }
   return world.ants.find(
-    (ant) => ant.id === id && ant.state !== "dead" && ant.job === "fish" && ant.fishingTargetId !== undefined
+    (ant) => ant.id === id && ant.state !== "dead" && !ant.capturedBy && ant.job === "fish" && ant.fishingTargetId !== undefined && ant.carrying<=0
   );
 }
 
@@ -138,6 +139,7 @@ export function updateFishPopulation(world: World): void {
     }
 
     const fisher = activeFisher(world, fish.targetAntId);
+    if(fish.state==="lured"&&fisher&&!fishingCastActive(fisher)){fish.state="swim";fish.lurePos=undefined;fisher.fishingTicks=0;}
     if (fish.targetAntId && (!fisher || fisher.fishingTargetId !== fish.id)) {
       fish.targetAntId = undefined;
       fish.lurePos = undefined;
@@ -216,7 +218,7 @@ function fishingSpots(world: World): FishingSpot[] {
   return spots;
 }
 
-function releaseFish(world: World, ant: Ant): void {
+export function releaseFish(world: World, ant: Ant): void {
   const target = world.surface.fish.find((fish) => fish.id === ant.fishingTargetId);
   if (target?.targetAntId === ant.id && target.state !== "respawning") {
     target.targetAntId = undefined;
@@ -370,6 +372,7 @@ export function moveFishing(world: World, ant: Ant): boolean {
     return false;
   }
   if (!isWithinRadius(ant.pos, ant.fishingStandPos, CONFIG.fishingStandRadius)) {
+    ant.fishingTicks=0;if(fish.state==="lured")fish.state="swim";fish.lurePos=undefined;
     ant.state = "search";
     moveSurfaceToward(world, ant, ant.fishingStandPos, true, false);
     return true;

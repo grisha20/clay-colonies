@@ -13,6 +13,7 @@ import { surfaceLighting, drawGroundShadow } from "./lighting";
 import { campPileRoots } from "./entrance";
 import { offsetSettings } from "./editor";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
+import { fishingCastActive } from "../../../../shared/fishingCast";
 
 const webDrawKeys = new WeakMap<Graphics, string>();
 
@@ -198,7 +199,7 @@ export function updateSurfaceFish(pool: SpritePool, world: WorldSnapshot, cell: 
 export function updateFishingEffects(graphics: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   graphics.clear();
   for (const ant of world.ants) {
-    if (ant.layer !== "surface" || ant.job !== "fish" || !ant.fishingLurePos || (ant.fishingTicks ?? 0) <= 0 || !isInBounds(ant.pos, bounds, 7)) {
+    if (!fishingCastActive(ant) || !ant.fishingLurePos || !isInBounds(ant.pos, bounds, 7)) {
       continue;
     }
     const tip = fishingRodMount(residentPlacement(world, ant, cell), ant).tip;
