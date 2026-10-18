@@ -24,6 +24,8 @@ import { FencePreview } from "./render/surface/fencePreview";
 import { campShelterPoints } from "../../shared/campShelter";
 import { lakeShorePortals } from "../../shared/amphibianNavigation";
 import { isWaterAt } from "../../shared/surfaceTerrain";
+import { updateDeposits } from "./render/surface/deposits";
+import { DEPOSIT_WORK_OFFSETS } from "../../shared/resourceDeposits";
 
 const app = new Application();
 await app.init({ width: 1024, height: 690, background: 0x555e3b, antialias: true });
@@ -46,7 +48,7 @@ const group = document.querySelector<HTMLSelectElement>("#group")!, direction = 
 const speed = document.querySelector<HTMLSelectElement>("#speed")!, pause = document.querySelector<HTMLButtonElement>("#pause")!;
 const light = document.querySelector<HTMLSelectElement>("#light")!;
 const campLike = () => group.value === "camp" || group.value === "drying";
-const floorGroups = ["food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
+const floorGroups = ["deposits", "food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
 const hasFloor = () => campLike() || floorGroups.includes(group.value) || group.value.startsWith("crowd");
 
 function setLight() {
@@ -95,7 +97,19 @@ function loadGroup() {
     colonies: ["colony-1", "colony-2", "water"].map(id => ({ id, colony: { alarm: false, axes: 1, picks: 1, rods: 1, food: 80, clay: 20, wood: 20, stone: 20, fire: 1, waterWeapons: id === "water" } })),
     surface: { width: 480, height: 480, entrances: [], resourceNodes: [], buildings: [], fish: [], foodSources: [], carrion: [] }
   } as unknown as WorldSnapshot;
-  if (crowd) {
+  if (group.value === "deposits") {
+    world.surface.deposits = [{ id: "pit", kind: "clay", pos: { x: 16, y: 19 }, capacity: 4800 }, { id: "quarry", kind: "stone", pos: { x: 48, y: 19 }, capacity: 7200 }];
+    for (const [index, d] of world.surface.deposits.entries()) for (const [i, offset] of DEPOSIT_WORK_OFFSETS.entries()) {
+      const pos = { x: d.pos.x + offset.x, y: d.pos.y + offset.y }, id = `${d.id}-${i}`;
+      world.surface.resourceNodes.push({ id, kind: d.kind, depositId: d.id, pos, amount: d.capacity/6, maxAmount: d.capacity/6, hitsPerUnit: d.kind === "clay" ? 2 : 6 });
+      const a = ant(index * 6 + i, "", { job: "harvest", harvestNodeId: id, harvestHits: 1, state: "idle", pos: { ...pos }, heading: { x: 0, y: -1 } });
+      homes.delete(a.id);
+    }
+    for (const child of labels.removeChildren()) child.destroy();
+    for (const [x, text] of [[256, "Глиняный карьер · 4800 глины"], [768, "Каменный карьер · 7200 камня"]] as const) {
+      const view = new Text({ text, style: { fontFamily: "system-ui", fontSize: 15, fill: 0xf4e4bd } }); view.anchor.set(.5); view.position.set(x, 480); labels.addChild(view);
+    }
+  } else if (crowd) {
     const count = group.value === "crowd500" ? 500 : 100;
     for (let i = 0; i < count; i++) ant(i, "", { colonyId: i % 2 ? "colony-1" : "colony-2", carrying: i % 3 ? 1 : 0, carryKind: ["wood", "clay", "stone"][i % 3] as Ant["carryKind"] }, true, true);
   } else if (group.value === "royals") {
@@ -282,12 +296,12 @@ app.ticker.add(ticker => {
     }
   }
   for (const actor of all) {
-    if ("heading" in actor && running && group.value !== "combat" && !campLike() && group.value !== "royals") actor.heading = { ...heading };
+    if ("heading" in actor && running && group.value !== "combat" && !campLike() && group.value !== "royals" && group.value !== "deposits") actor.heading = { ...heading };
     if ("waterExposure" in actor && group.value === "drying") actor.waterExposure = Math.max(0, 30 - elapsed % 8 * 6);
     const root = homes.get(actor.id);
     if (root?.walking && running) {
       const h = group.value === "royals" && "heading" in actor ? actor.heading : heading;
-      const pace = group.value === "royals" ? 2.2 : 6;
+      const pace = group.value === "royals" ? 2.2 : 10.5;
       actor.pos.x += h.x * dt * pace * running; actor.pos.y += h.y * dt * pace * running;
     }
   }
@@ -304,7 +318,7 @@ app.ticker.add(ticker => {
   const normalResidents = world.ants;
   if (campLike()) world.ants = [...normalResidents, ...royalWalk.update(world, start)];
   actorMotion.update(world, start);
-  for (const a of world.ants) if (!a.capturedBy && !campLike() && group.value !== "combat" && group.value !== "royals") actorMotion.setFacing(a.id, heading, "resident");
+  for (const a of world.ants) if (!a.capturedBy && !campLike() && group.value !== "combat" && group.value !== "royals" && group.value !== "deposits") actorMotion.setFacing(a.id, heading, "resident");
   for (const e of world.enemies) actorMotion.setFacing(e.id, heading, "creature");
   const positions = all.map(a => ({ ...a.pos }));
   for (const actor of all) { const root = homes.get(actor.id); if (root && group.value !== "steps" && !group.value.startsWith("crowd")) actor.pos = { x: root.x, y: root.y }; }
@@ -318,6 +332,7 @@ app.ticker.add(ticker => {
   updateBuildings(campScene, campLike() || ["buildings", "fences", "fence-stress", "fence-build", "placement"].includes(group.value) ? world : { ...world, surface: { ...world.surface, buildings: [] } }, cell);
   drawGameplay(campScene, world, cell);
   updateSurfaceFish(fishes, world, cell, bounds);
+  updateDeposits(campScene.depositGround, world, cell, bounds);
   updateSurfaceFood(sources, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);
   updateSurfaceResidents(people, props, selection, world, cell, bounds);

@@ -1,4 +1,5 @@
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { depositWorkOccupied } from "../../../../shared/resourceDeposits";
 import { resourceNodeTool, resourceNodeYield, type Ant, type Vec2 } from "../../../../shared/types";
 import { CONFIG } from "../../config";
 import { profiler } from "../../utils/profiler";
@@ -529,7 +530,7 @@ export function moveHarvesting(world: World, ant: Ant): boolean {
   const node = world.surface.resourceNodes.find(
     (item) => item.id === ant.harvestNodeId && item.amount > 0 && !isWaterAt(item.pos.x, item.pos.y)
   );
-  if (!node) {
+  if (!node || node.depositId && world.colonies.some(c => depositWorkOccupied(c.ants, node, ant))) {
     ant.job = "forage";
     ant.harvestNodeId = undefined;
     ant.harvestHits = 0;
@@ -548,7 +549,8 @@ export function moveHarvesting(world: World, ant: Ant): boolean {
     return false;
   }
 
-  if (isWithinRadius(ant.pos, node.pos, CONFIG.resourcePickupRadius)) {
+  const workRadius = node.depositId ? .35 : CONFIG.resourcePickupRadius;
+  if (isWithinRadius(ant.pos, node.pos, workRadius)) {
     ant.harvestHits = (ant.harvestHits ?? 0) + 1;
     ant.state = "idle";
     if (ant.harvestHits < CONFIG.harvestHitTicks * node.hitsPerUnit) {
@@ -565,7 +567,7 @@ export function moveHarvesting(world: World, ant: Ant): boolean {
 
   ant.state = "search";
   ant.harvestHits = 0;
-  const approach=taskApproach(world,node.pos,CONFIG.resourcePickupRadius);
+  const approach=taskApproach(world,node.pos,node.depositId ? .25 : CONFIG.resourcePickupRadius);
   if(!approach){ant.job="forage";ant.harvestNodeId=undefined;return false;}
   moveSurfaceToward(world, ant, approach, !isColonyStarving(world));
   return true;

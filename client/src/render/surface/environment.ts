@@ -1,4 +1,5 @@
 import { Assets, Rectangle, Sprite, Texture } from "pixi.js";
+import { depositArtUrls } from "./deposits";
 
 const summerBase = "/assets/environment/summer-plains/summer_plains_v1.0_standard";
 const customBase = "/assets/environment/custom";
@@ -12,6 +13,7 @@ const campfireFrameUrls = Array.from({ length: 6 }, (_, index) =>
 export const environmentAssetUrls = [
   clayTerrainUrl,
   packedEarthUrl,
+  ...depositArtUrls,
   `${summerBase}/tiles.png`,
   `${summerBase}/assets.png`,
   "/assets/environment/grassy-topdown-cc0/topdown grassy tileset.png",

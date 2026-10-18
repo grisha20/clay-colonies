@@ -4,6 +4,7 @@ import type { Vec2, WorldSnapshot } from "../../../../shared/types";
 import { isLakeShoreAt, isWaterAt, lakeFieldAt } from "../../../../shared/surfaceTerrain";
 import type { ViewBounds } from "../types";
 import { getEnvironmentTextures } from "./environment";
+import { DEPOSIT_RX, DEPOSIT_RY } from "../../../../shared/resourceDeposits";
 
 export function hash2(x: number, y: number, salt = 0): number {
   const value = Math.sin((x * 127.1 + y * 311.7 + salt * 74.7) * 0.0174533) * 43758.5453123;
@@ -309,6 +310,13 @@ export function drawSurfaceGround(
     const wx = (pixelLeft + (x + 0.5) * maskStep) / cell, wy = (pixelTop + (y + 0.5) * maskStep) / cell;
     let value = Infinity;
     for (let i = 0; i < entrances.length; i++) value = Math.min(value, campDirtShapeValue(wx, wy, entrances[i], i));
+    // Digging clears a soft, irregular apron beyond the excavation's rim.
+    for (const d of world.surface.deposits ?? []) {
+      const dx = wx - d.pos.x, dy = wy - d.pos.y;
+      if (Math.abs(dx) > 18 || Math.abs(dy) > 14) continue;
+      const angle = Math.atan2(dy, dx), edge = 1 + Math.sin(angle * 5 + d.pos.x) * .07;
+      value = Math.min(value, (dx / ((DEPOSIT_RX + 5) * edge)) ** 2 + (dy / ((DEPOSIT_RY + 5) * edge)) ** 2);
+    }
     value += (hash2(Math.floor(wx * 0.8), Math.floor(wy * 0.8), 501) - 0.5) * 0.035;
     const offset = (y * maskCanvas.width + x) * 4;
     pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 255;

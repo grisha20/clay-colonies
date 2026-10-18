@@ -224,7 +224,7 @@ export function updateSurfaceResources(pool: SpritePool, world: WorldSnapshot, c
   const props = getEnvironmentTextures().props;
 
   for (const node of world.surface.resourceNodes ?? []) {
-    if (node.amount <= 0 || submergedClay(node) || !isInBounds(node.pos, bounds, 8)) {
+    if (node.depositId || node.amount <= 0 || submergedClay(node) || !isInBounds(node.pos, bounds, 8)) {
       continue;
     }
 

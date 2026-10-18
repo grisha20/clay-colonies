@@ -1,9 +1,10 @@
-import { WALL_CELL_SIZE, type Building, type Vec2 } from "./types";
+import { WALL_CELL_SIZE, type Building, type ResourceDeposit, type Vec2 } from "./types";
+import { depositContains } from "./resourceDeposits";
 import { buildingFootprint, insideBuilding } from "./buildingGeometry";
 import { isWaterAt } from "./surfaceTerrain";
 
 export type GateAxis = "horizontal" | "vertical";
-export type FenceSurface = { width: number; height: number; entrances: Vec2[]; buildings: Building[] };
+export type FenceSurface = { width: number; height: number; entrances: Vec2[]; buildings: Building[]; deposits?: ResourceDeposit[] };
 export const GATE_SPAN = 3;
 export function fenceCellCenters(b: Pick<Building, "pos" | "type" | "gateAxis" | "gateSpan">): Vec2[] {
   const count = b.type === "gate" && b.gateSpan === GATE_SPAN ? GATE_SPAN : 1;
@@ -26,6 +27,7 @@ export function fencePlacement(surface: FenceSurface, owner: string, pos: Vec2, 
   const half = WALL_CELL_SIZE / 2;
   if (pos.x < half || pos.y < half || pos.x > surface.width - half || pos.y > surface.height - half) return "За границей карты";
   if (surface.entrances.some(e => Math.hypot(e.x - pos.x, e.y - pos.y) < entranceMargin)) return "Слишком близко к костру";
+  if (surface.deposits?.some(d => depositContains(d, pos, 1.5))) return "Рабочая площадка карьера";
   if ([-0.85, 0, 0.85].some(dx => [-0.85, 0, 0.85].some(dy => isWaterAt(pos.x + dx, pos.y + dy)))) return "Основание попадает в воду";
   for (const b of surface.buildings) {
     if (b.type === "wall" || b.type === "gate") {

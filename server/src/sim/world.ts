@@ -41,6 +41,7 @@ import { resetEnemyRuntime } from "./enemy";
 import { resetBuilderRuntime } from "./ant/build";
 import { taskMotionReport } from "./taskProgress";
 import { submergedClay, submergedCorpse } from "../../../shared/surfaceRemains";
+import { ensureResourceDeposits } from "../../../shared/resourceDeposits";
 
 export type ColonyRuntime = {
   id: string;
@@ -518,7 +519,7 @@ export function addClayRemains(world: World, ant: Ant): void {
   if (amount <= 0.001) return;
   // Сливаем с ближайшим комом, чтобы поле боя не превращалось в сотню крошек.
   for (const node of world.surface.resourceNodes) {
-    if (node.kind !== "clay") {
+    if (node.kind !== "clay" || node.depositId) {
       continue;
     }
     const dx = node.pos.x - ant.pos.x;
@@ -786,6 +787,7 @@ export function createWorld(
     buildings: [],
     fish: createInitialFishPopulation()
   };
+  ensureResourceDeposits(surface);
   const enemies: Enemy[] = [];
   const colonies = [
     createColonyRuntime("colony-1", "dark", CONFIG.surfaceEntrance, genomeState, spiderGenomeState),
@@ -1033,6 +1035,7 @@ export function worldFromSnapshot(
     }
   };
   rebuildWallBlocked(world);
+  ensureResourceDeposits(world.surface);
   for (const colony of world.colonies) {
     colony.directives = computeDirectives(colonyWorldView(world, colony), colony.genomeState.current);
   }

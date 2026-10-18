@@ -34,6 +34,7 @@ export type SurfaceScene = {
   fishLayer: Container;
   shadowLayer: Graphics;
   campGround: Container;
+  depositGround: Container;
   buildingGround: Graphics;
   footGround: Graphics;
   lakeDetails: Container;

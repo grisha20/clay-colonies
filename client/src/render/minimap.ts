@@ -4,6 +4,7 @@ import type { WorldSnapshot } from "../../../shared/types";
 import { SURFACE_TERRAIN_CELL_SIZE, isDeepWaterAt, isWaterAt } from "../../../shared/surfaceTerrain";
 import type { Camera } from "./types";
 import { SURFACE_TILE_SIZE } from "./types";
+import { depositRemaining } from "../../../shared/resourceDeposits";
 
 let staticMinimapCache: { key: string; canvas: HTMLCanvasElement } | null = null;
 
@@ -62,7 +63,7 @@ export function drawMinimap(
 
   // Узлы ресурсов.
   for (const node of world.surface.resourceNodes ?? []) {
-    if (node.amount <= 0) {
+    if (node.depositId || node.amount <= 0) {
       continue;
     }
     context.fillStyle =
@@ -74,6 +75,12 @@ export function drawMinimap(
     context.fillRect(toX(node.pos.x) - 1.5, toY(node.pos.y) - 1.5, 3, 3);
   }
 
+  // Крупные месторождения.
+  for (const d of world.surface.deposits ?? []) {
+    context.fillStyle = depositRemaining(world.surface, d.id) > 0 ? d.kind === "clay" ? "#d87842" : "#d3cdc0" : "#7d7467";
+    context.fillRect(toX(d.pos.x)-2.5, toY(d.pos.y)-2.5, 5, 5);
+    context.strokeStyle = "#493724"; context.strokeRect(toX(d.pos.x)-2.5, toY(d.pos.y)-2.5, 5, 5);
+  }
   // Еда.
   context.fillStyle = "#4f9a3c";
   for (const source of world.surface.foodSources) {

@@ -3,6 +3,7 @@
 // назначаются сборщиками (job = "harvest") на ближайшие узлы ресурсов.
 // Никакого генома: цели заданы константами конфига (позже их заменят приоритеты игрока).
 import { resourceNodeTool, resourceNodeYield, type Ant, type Building, type ResourceKind, type ResourceNode } from "../../../shared/types";
+import { depositWorkOccupied } from "../../../shared/resourceDeposits";
 import { CONFIG } from "../config";
 import type { World } from "./world";
 import { zoneIndexAt } from "./zones";
@@ -49,8 +50,9 @@ function activeToolUsers(world: World, tool: "axe" | "pick"): number {
 }
 
 function canAssignNode(world: World, node: ResourceNode, toolUsers: { axe: number; pick: number }): boolean {
+  if (node.depositId && world.colonies.some(c => depositWorkOccupied(c.ants, node))) return false;
   if (isWaterAt(node.pos.x, node.pos.y)) return false;
-  if (!taskApproach(world,node.pos,CONFIG.resourcePickupRadius)) return false;
+  if (!taskApproach(world,node.pos,node.depositId ? .25 : CONFIG.resourcePickupRadius)) return false;
   if (node.kind === "tree" && node.growth === "sapling") {
     return false;
   }

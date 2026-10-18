@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { MotionTracker, canWork, residentScale, positionDiscontinuity, WALK_PHASES } from "../../../client/src/render/surface/motion";
+import { MotionTracker, canWork, residentScale, positionDiscontinuity, WALK_PHASES, WALK_PHASE_PER_UNIT } from "../../../client/src/render/surface/motion";
 import { attachItem, itemPoint } from "../../../client/src/render/surface/attachment";
 import { surfaceLighting, castShadow, nightOpacityAt, shadowOutline } from "../../../client/src/render/surface/lighting";
 import { RoyalWalk } from "../../../client/src/render/surface/royals";
@@ -56,14 +56,29 @@ scenario("Pause freezes pose, including work and breathing", () => {
   world.session.speed = 1;
 });
 scenario("50x movement keeps a readable cadence; teleports never create a stride", () => {
+  world.session.speed = 50;
   const before = tracker.resident(ant).phase;
   frame(3);
   const delta = (tracker.resident(ant).phase - before + Math.PI * 2) % (Math.PI * 2);
-  assert.ok(delta <= 15 / 60 + 0.00001);
+  assert.ok(delta <= 18 / 60 + 0.00001);
   const phase = tracker.resident(ant).phase;
   frame(40);
   assert.equal(tracker.resident(ant).walk, 0);
   assert.equal(tracker.resident(ant).phase, phase);
+  world.session.speed = 1;
+});
+scenario("Ordinary game speed has distance-matched strides at both 30 and 60 FPS", () => {
+  for (const fps of [30, 60]) for (const speed of [2.2, 6, 10.5, 13]) {
+    const w = structuredClone(world), a = w.ants[0], motion = new MotionTracker();
+    w.session.status = "playing"; w.session.speed = 1; a.capturedBy = undefined; a.dissolved = 0; a.pos = { x: 120, y: 240 };
+    motion.update(w, 1000); let travelled = 0, phase = motion.resident(a).phase, advanced = 0;
+    for (let i = 1; i <= fps; i++) {
+      a.pos.x += speed / fps; travelled += speed / fps; w.tick++;
+      motion.update(w, 1000 + i * 1000 / fps); const next = motion.resident(a).phase;
+      advanced += (next - phase + Math.PI * 2) % (Math.PI * 2); phase = next;
+    }
+    assert.ok(Math.abs(advanced - travelled * WALK_PHASE_PER_UNIT) < 1e-6, `${fps} FPS, ${speed} u/s: gait fell behind position`);
+  }
 });
 scenario("Work only plays at an active resource, with empty hands and no alarm", () => {
   const node = world.surface.resourceNodes.find(n => n.kind === "tree")!;

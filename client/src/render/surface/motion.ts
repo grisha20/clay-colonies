@@ -5,6 +5,8 @@ import { isWaterAt } from "../../../../shared/surfaceTerrain";
 export const RESIDENT_SCALE = 1.85;
 export const RESIDENT_HEIGHT = 19;
 export const WALK_PHASES = 7;
+// 2π / 2.1 world units ≈ 24 screen px per cycle at cell=8, matching the soles.
+export const WALK_PHASE_PER_UNIT = 2.1;
 export type LookDirection = "front" | "back" | "side";
 export type ResidentPose = {
   phase: number; walk: number; facing: number; look: LookDirection;
@@ -81,7 +83,7 @@ export class MotionTracker {
       live.add(ant.id);
       const old = this.residents.get(ant.id);
       if (old && old.capturedBy !== ant.capturedBy) this.residents.delete(ant.id);
-      const motion = this.advance(this.residents, ant.id, ant.pos, ant.heading, elapsed);
+      const motion = this.advance(this.residents, ant.id, ant.pos, ant.heading, elapsed, true, world.session.speed ?? 1, residentScale(ant) / RESIDENT_SCALE);
       motion.capturedBy = ant.capturedBy;
       const shotUntil = ant.shot?.until;
       if (shotUntil !== motion.lastShotUntil) {
@@ -138,7 +140,7 @@ export class MotionTracker {
     for (const key of this.creatures.keys()) if (!enemies.has(key)) this.creatures.delete(key);
   }
 
-  private advance(map: Map<string, Motion>, id: string, pos: Vec2, heading: Vec2, dt: number, resident = true): Motion {
+  private advance(map: Map<string, Motion>, id: string, pos: Vec2, heading: Vec2, dt: number, resident = true, playback = 1, strideScale = 1): Motion {
     let m = map.get(id);
     if (!m) {
       const seed = hash(id);
@@ -157,7 +159,11 @@ export class MotionTracker {
     const target = Math.min(1, speed / (resident ? 2.2 : 5));
     m.walk += (target - m.walk) * (1 - Math.exp(-dt * 18));
     if (teleport) m.walk = 0;
-    m.phase = (m.phase + Math.min(distance * (resident ? 2.7 : 1.3), dt * (resident ? 10 : 15)) * Number(!teleport)) % (Math.PI * 2);
+    // The old 10 rad/s cap already truncated ordinary 1× movement (~10.5 u/s),
+    // so roots advanced almost three times farther than the visible strides.
+    const phasePerUnit = resident ? WALK_PHASE_PER_UNIT / strideScale : 1.3;
+    const maxRate = resident ? playback > 1 ? 18 : 32 : 15;
+    m.phase = (m.phase + Math.min(distance * phasePerUnit, dt * maxRate) * Number(!teleport)) % (Math.PI * 2);
     this.orient(m, heading);
     m.pose.walk = m.walk;
     m.pose.phase = m.phase;

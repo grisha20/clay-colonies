@@ -27,6 +27,7 @@ import { updateLakeDetails } from "./lakeArt";
 import { drawFences } from "./fenceRender";
 import { fenceCellCenters } from "../../../../shared/fenceGeometry";
 import { buildingGardens } from "./gardenArt";
+import { updateDeposits } from "./deposits";
 
 export function isInBounds(pos: Vec2, bounds: ViewBounds, padding = 0): boolean {
   return (
@@ -55,6 +56,7 @@ export function createSurfaceScene(): SurfaceScene {
   const fishLayer = new Container();
   const shadowLayer = new Graphics();
   const campGround = new Container();
+  const depositGround = new Container();
   const buildingGround = new Graphics();
   const footGround = new Graphics(), lakeDetails = new Container(), lakeRipples = new Graphics();
   const dynamicLayer = new Container();
@@ -87,7 +89,7 @@ export function createSurfaceScene(): SurfaceScene {
   fishingGraphics.zIndex = 8990;
 
   // Собираем слои в корень сцены
-  root.addChild(staticLayer, waterLayer, fishLayer, lakeDetails, lakeRipples, campGround, buildingGround, footGround, fireGlow, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, nightVeil);
+  root.addChild(staticLayer, depositGround, waterLayer, fishLayer, lakeDetails, lakeRipples, campGround, buildingGround, footGround, fireGlow, shadowLayer, zonesOverlay, pheromones, webs, dynamicLayer, nightVeil);
   dynamicLayer.addChild(selectionGraphics, particleGraphics, fishingGraphics, gameplayGraphics);
 
   if (typeof window !== "undefined") {
@@ -103,6 +105,7 @@ export function createSurfaceScene(): SurfaceScene {
     fishLayer,
     shadowLayer,
     campGround,
+    depositGround,
     buildingGround,
     footGround, lakeDetails, lakeRipples,
     dynamicLayer,
@@ -810,6 +813,7 @@ export function renderSurface(
 
   // Гарантируем правильный порядок слоев (особенно важно при HMR перезагрузках Vite)
   scene.root.addChild(scene.staticLayer);
+  scene.root.addChild(scene.depositGround);
   scene.root.addChild(scene.waterLayer);
   scene.root.addChild(scene.fishLayer);
   scene.root.addChild(scene.lakeDetails);
@@ -833,12 +837,14 @@ export function renderSurface(
   const staticKey = [
     world.surface.width,
     world.surface.height,
-    "surface-clay-materials-v5-grounded"
+    "surface-clay-materials-v6-quarries",
+    (world.surface.deposits ?? []).map(d => `${d.id},${d.pos.x},${d.pos.y}`).join(";")
   ].join(":");
   if (scene.staticKey !== staticKey) {
     rebuildSurfaceStatic(scene, renderer, world, cell, staticKey);
   }
   updateLakeWater(scene);
+  updateDeposits(scene.depositGround, world, cell, bounds);
   updateLakeDetails(scene.lakeDetails, scene.lakeRipples, world, cell, bounds);
   updateFootprints(scene.footGround, world, cell, bounds);
   updateSurfaceFish(scene.fishPool, world, cell, bounds);

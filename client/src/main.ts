@@ -12,6 +12,7 @@ import {
   type WorldSnapshot
 } from "../../shared/types";
 import { isWaterAt } from "../../shared/surfaceTerrain";
+import { depositContains, depositRemaining } from "../../shared/resourceDeposits";
 import { surfaceRoute, surfaceLineOpen, routePoint } from "../../shared/surfaceNavigation";
 import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
 import { amphibianLineOpen, amphibianRoute } from "../../shared/amphibianNavigation";
@@ -1775,6 +1776,13 @@ function pointerToTile(event: PointerEvent): { x: number; y: number } | null {
 
 function resourceNodeLabel(world: WorldSnapshot, x: number, y: number): string | null {
   const colony = world.colonies?.[currentColonyIndex]?.colony ?? world.colony;
+  const deposit = world.surface.deposits?.find(d => depositContains(d, { x, y }, 2));
+  if (deposit) {
+    const remaining = Math.floor(depositRemaining(world.surface, deposit.id));
+    const name = deposit.kind === "clay" ? "Глиняный карьер" : "Каменный карьер";
+    const work = deposit.kind === "stone" ? `Нужна кирка (есть ${colony.picks ?? 0}).` : "Добыча руками.";
+    return `${name}: ${remaining} / ${deposit.capacity}. ${remaining <= 0 ? "Истощён." : `6 рабочих мест. ${work}`}`;
+  }
   let nearest: WorldSnapshot["surface"]["resourceNodes"][number] | null = null;
   let bestDistanceSq = 3.2 * 3.2;
   for (const node of world.surface.resourceNodes ?? []) {

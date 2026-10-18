@@ -2,9 +2,9 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-// v20: task diagnostics; v13-v19 worlds keep their actors, jobs and gates.
-export const CURRENT_SNAPSHOT_VERSION = 20;
-export const CURRENT_PROTOCOL_VERSION = 20;
+// v21: finite resource deposits with distinct work sites; migrate older worlds in place.
+export const CURRENT_SNAPSHOT_VERSION = 21;
+export const CURRENT_PROTOCOL_VERSION = 21;
 
 export type Vec2 = {
   x: number;
@@ -105,6 +105,7 @@ export type ResourceNodeKind = "clay" | "tree" | "stone" | "loose-stone" | "stic
 
 // Стадии роста дерева: росток нельзя рубить, молодое и взрослое — можно.
 export type TreeGrowthStage = "sapling" | "young" | "mature";
+export type ResourceDeposit = { id: string; kind: "clay" | "stone"; pos: Vec2; capacity: number };
 
 export type ResourceNode = {
   id: string;
@@ -118,6 +119,7 @@ export type ResourceNode = {
   growth?: TreeGrowthStage;
   // Тик последнего шага роста/сева (только деревья).
   grownAt?: number;
+  depositId?: string;
 };
 
 // Какой ресурс склада даёт узел данного вида.
@@ -369,6 +371,7 @@ export type Surface = {
   foodSources: FoodSource[];
   carrion: FoodSource[];
   resourceNodes: ResourceNode[];
+  deposits?: ResourceDeposit[];
   buildings: Building[];
   fish: Fish[];
 };
