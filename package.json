@@ -18,6 +18,7 @@
     "check:world": "tsx server/src/bench/worldCheck.ts",
     "check:grounding": "tsx server/src/bench/groundingCheck.ts",
     "check:fences": "tsx server/src/bench/fenceCheck.ts",
+    "check:navigation": "tsx server/src/bench/navigationCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },
   "devDependencies": {

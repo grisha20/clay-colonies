@@ -3,6 +3,7 @@ import { buildingFootprint, crossesBuilding, insideBuilding, outsideBuilding } f
 import { crossesHearth, insideHearth } from "./campGeometry";
 import { isWaterAt } from "./surfaceTerrain";
 import { fenceContains } from "./fenceGeometry";
+import { surfaceGridLineOpen } from "./surfaceGrid";
 
 export type SurfaceObstacles = { width: number; height: number; buildings: Building[]; entrances: Vec2[] };
 const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -21,9 +22,8 @@ export function surfaceLineOpen(surface: SurfaceObstacles, a: Vec2, b: Vec2, own
   if (!surfacePointOpen(surface, b, owner)) return false;
   if (surface.entrances.some(c => crossesHearth(a.x, a.y, b.x, b.y, c))) return false;
   if (surface.buildings.some(building => { const f = buildingFootprint(building); return f && crossesBuilding(a, b, f); })) return false;
-  const samples = Math.max(1, Math.ceil(distance(a, b) / 0.7));
-  for (let i = 1; i < samples; i++) if (!surfacePointOpen(surface, { x: a.x + (b.x - a.x) * i / samples, y: a.y + (b.y - a.y) * i / samples }, owner)) return false;
-  return true;
+  const fences = surface.buildings.filter(b => b.stage === "built" && (b.type === "wall" || b.type === "gate" && b.colonyId !== owner));
+  return surfaceGridLineOpen(a, b, (x, y) => !isWaterAt(x, y) && !fences.some(b => fenceContains(b, { x, y })));
 }
 
 /** A shared route for simulation and packet interpolation. Failed routes stop,
@@ -40,7 +40,7 @@ export function surfaceRoute(surface: SurfaceObstacles, from: Vec2, target: Vec2
     if (!best) return null; goal = best;
   }
   if (surfaceLineOpen(surface, from, goal, owner)) return [{ ...goal }];
-  const step = 2, width = Math.ceil(surface.width / step), height = Math.ceil(surface.height / step), count = width * height;
+  const step = WALL_CELL_SIZE, width = Math.ceil(surface.width / step), height = Math.ceil(surface.height / step), count = width * height;
   const point = (id: number): Vec2 => ({ x: (id % width + 0.5) * step, y: (Math.floor(id / width) + 0.5) * step });
   const nearby = (p: Vec2, connectFrom: boolean) => {
     const candidates: number[] = [], cx = Math.floor(p.x / step), cy = Math.floor(p.y / step);

@@ -8,6 +8,7 @@ import { insideHearth, crossesHearth, outsideHearth } from "../../../shared/camp
 import { buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding, buildingServicePoint } from "../../../shared/buildingGeometry";
 import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
 import { fenceCellCenters, fencePlacement, gatePlacement, GATE_SPAN, snapFencePosition, type GateAxis } from "../../../shared/fenceGeometry";
+import { surfaceGridLineOpen } from "../../../shared/surfaceGrid";
 import type { World } from "./world";
 
 let nextBuildingId = 1;
@@ -327,22 +328,7 @@ function surfaceSegmentClear(world: World, fromX: number, fromY: number, toX: nu
   if (isSurfaceBlockedAt(world, toX, toY, colonyId)) return false;
   if (world.surface.entrances.some(camp => crossesHearth(fromX, fromY, toX, toY, camp))) return false;
   if (world.surface.buildings.some(b => { const f = buildingFootprint(b); return f && crossesBuilding({ x: fromX, y: fromY }, { x: toX, y: toY }, f); })) return false;
-  let x = Math.floor(fromX / WALL_CELL_SIZE), y = Math.floor(fromY / WALL_CELL_SIZE);
-  const endX = Math.floor(toX / WALL_CELL_SIZE), endY = Math.floor(toY / WALL_CELL_SIZE);
-  const dx = toX - fromX, dy = toY - fromY, stepX = Math.sign(dx), stepY = Math.sign(dy);
-  const deltaX = dx ? WALL_CELL_SIZE / Math.abs(dx) : Infinity;
-  const deltaY = dy ? WALL_CELL_SIZE / Math.abs(dy) : Infinity;
-  let crossX = dx ? ((x + Number(dx > 0)) * WALL_CELL_SIZE - fromX) / dx : Infinity;
-  let crossY = dy ? ((y + Number(dy > 0)) * WALL_CELL_SIZE - fromY) / dy : Infinity;
-  while (x !== endX || y !== endY) {
-    if (crossX < crossY) { x += stepX; crossX += deltaX; }
-    else if (crossY < crossX) { y += stepY; crossY += deltaY; }
-    else { x += stepX; y += stepY; crossX += deltaX; crossY += deltaY; }
-    // Hearths have exact elliptical footprints, not the wall grid's cells.
-    const cx = (x + 0.5) * WALL_CELL_SIZE, cy = (y + 0.5) * WALL_CELL_SIZE;
-    if (isWaterAt(cx, cy) || isWallBlockedAt(world, cx, cy, colonyId)) return false;
-  }
-  return true;
+  return surfaceGridLineOpen({ x: fromX, y: fromY }, { x: toX, y: toY }, (x, y) => !isWaterAt(x, y) && !isWallBlockedAt(world, x, y, colonyId));
 }
 
 export function resolveSurfaceCollision(
@@ -374,6 +360,22 @@ export function resolveSurfaceCollision(
   if (isSurfaceBlockedAt(world, prevX, prevY, colonyId)) {
     if (!isSurfaceBlockedAt(world, pos.x, pos.y, colonyId) || (isWaterAt(prevX, prevY) && lakeFieldAt(pos.x, pos.y) < lakeFieldAt(prevX, prevY))) {
       return;
+    }
+    if (isWallBlockedAt(world, prevX, prevY, colonyId)) {
+      // Construction may finish under a worker. A normal step cannot reach
+      // the edge of its 2x2 cell, so rejecting every step traps it forever.
+      // Project only actors already embedded in a fence to a free boundary;
+      // ordinary actors still traverse every crossed cell below.
+      const left = Math.floor(prevX / WALL_CELL_SIZE) * WALL_CELL_SIZE, top = Math.floor(prevY / WALL_CELL_SIZE) * WALL_CELL_SIZE;
+      const eps = 0.08;
+      const exits = [
+        {x:left-eps,y:prevY},{x:left+WALL_CELL_SIZE+eps,y:prevY},
+        {x:prevX,y:top-eps},{x:prevX,y:top+WALL_CELL_SIZE+eps},
+        {x:left-eps,y:top-eps},{x:left+WALL_CELL_SIZE+eps,y:top-eps},
+        {x:left-eps,y:top+WALL_CELL_SIZE+eps},{x:left+WALL_CELL_SIZE+eps,y:top+WALL_CELL_SIZE+eps}
+      ].filter(p => !isSurfaceBlockedAt(world,p.x,p.y,colonyId))
+        .sort((a,b)=>Math.hypot(a.x-prevX,a.y-prevY)-Math.hypot(b.x-prevX,b.y-prevY));
+      const exit=exits[0]; if(exit) {pos.x=exit.x;pos.y=exit.y;return;}
     }
     pos.x = prevX;
     pos.y = prevY;

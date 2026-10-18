@@ -9,11 +9,10 @@ import type { World } from "../world";
 import { randomHeading } from "../world";
 import { distance, distanceSq, fanDirection, isWithinRadius, moveToward, normalize, numericAntId, posTile } from "./utils";
 import { zoneCellCenter, zoneIndexAt } from "../zones";
-import { isSurfaceBlockedAt, isWallBlockedAt } from "../building";
+import { isSurfaceBlockedAt } from "../building";
 import { isSheltered } from "../weather";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { insideHearth } from "../../../../shared/campGeometry";
-import { buildingRouteTarget } from "../../../../shared/buildingGeometry";
 import { addFoodStock, consumeFoodStock, normalizedCarryFoodKind } from "../foodStock";
 import { surfaceLineOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
 
@@ -24,13 +23,10 @@ export type CachedPath = {
 };
 
 export const antPaths = new Map<string, CachedPath>();
-const buildingWaypoints = new Map<string, { target: Vec2; point: Vec2 }>();
-let buildingWaypointTick = -1;
 const surfaceQueryScratch: Ant[] = [];
 const speedQueryScratch: Ant[] = [];
 export function clearDeadAntPaths(activeIds: Set<string>): void {
   for (const id of safeRoutes.keys()) if (!activeIds.has(id)) safeRoutes.delete(id);
-  for (const id of buildingWaypoints.keys()) if (!activeIds.has(id)) buildingWaypoints.delete(id);
   for (const antId of antPaths.keys()) {
     if (!activeIds.has(antId)) {
       antPaths.delete(antId);
@@ -53,7 +49,8 @@ const safeRoutes = new Map<string, { target: Vec2; points: Vec2[]; until: number
 export function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
   const geometry = world.surface.buildings.filter(b => b.stage === "built").map(b => b.id).join("|");
   let route = safeRoutes.get(ant.id);
-  if (route && (distance(route.target, target) > 0.5 || world.tick >= route.until || route.geometry !== geometry || world.tick < route.until - 300)) {
+  if (route && (distance(route.target, target) > 0.5 || world.tick >= route.until || route.geometry !== geometry || world.tick < route.until - 300 ||
+      route.points.length > 0 && !surfaceLineOpen(world.surface, ant.pos, route.points[0], ant.colonyId))) {
     safeRoutes.delete(ant.id); route = undefined;
   }
   if (!route) {
@@ -218,54 +215,55 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2, stepSi
 }
 
 export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpiders: boolean, allowSeparation = true): void {
-  if (world.tick < buildingWaypointTick) buildingWaypoints.clear();
-  buildingWaypointTick = world.tick;
   const speed = surfaceMoveSpeed(world, ant);
-  const surfaceTarget = surfaceRouteTarget(world, ant, target);
-  if (distance(ant.pos, surfaceTarget) < 0.05) return;
-  let waypoint = buildingWaypoints.get(ant.id);
-  if (waypoint && (distance(waypoint.target, surfaceTarget) > 0.2 || distance(ant.pos, waypoint.point) < 1.2 || isSurfaceBlockedAt(world, waypoint.point.x, waypoint.point.y, ant.colonyId))) {
-    buildingWaypoints.delete(ant.id); waypoint = undefined;
+  const routeTarget = surfaceRouteTarget(world, ant, target);
+  const dist = distance(ant.pos, routeTarget);
+  if (dist < 0.05) {
+    // Settle the exact waypoint before rounding a grid corner. Stopping a
+    // fraction short can make the next segment clip the neighboring cell.
+    if (dist > 0 && surfaceLineOpen(world.surface, ant.pos, routeTarget, ant.colonyId)) {
+      ant.pos.x = routeTarget.x; ant.pos.y = routeTarget.y;
+    }
+    return;
   }
-  const routeTarget = waypoint?.point ?? buildingRouteTarget(world.surface.buildings, ant.pos, surfaceTarget);
-  if (!waypoint && distance(routeTarget, surfaceTarget) > 0.1 && distance(routeTarget, ant.pos) > 0.1) buildingWaypoints.set(ant.id, { target: { ...surfaceTarget }, point: routeTarget });
-  let desired = normalize({ x: routeTarget.x - ant.pos.x, y: routeTarget.y - ant.pos.y });
+  const alongRoute = normalize({ x: routeTarget.x - ant.pos.x, y: routeTarget.y - ant.pos.y });
+  let desired = alongRoute;
 
   if (avoidSpiders) {
     desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
   }
 
   desired = applyForbidZones(world, ant, desired);
-  const beforeAvoidX = desired.x;
-  const beforeAvoidY = desired.y;
-  desired = applyWallAvoidance(world, ant, desired, speed);
-  // Обход стены/порыв должен поворачивать резко, иначе житель прижимается к стене.
-  const avoidanceTurn = beforeAvoidX * desired.x + beforeAvoidY * desired.y < 0.9;
+  // Static obstacles are already in the route. The old 2.4-unit wall probe
+  // looked beyond a corner waypoint and turned away from a valid gate.
+  // Random unsticking bursts belong only to free exploration, not job routes.
 
   if (allowSeparation) {
-    const dist = distance(ant.pos, routeTarget);
     const isTargetEntrance = target.x === world.surface.entrance.x && target.y === world.surface.entrance.y;
     if (!isTargetEntrance || dist > 8.0) {
       desired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, desired));
     }
   }
 
-  const dist = distance(ant.pos, routeTarget);
   // Базовая маневренность k = 0.18. Чем ближе к цели (до 4 единиц), тем точнее маневрируем (до 1.0)
   let k = dist < 4.0 ? 0.18 + (1.0 - 0.18) * (1.0 - dist / 4.0) : 0.18;
-  if (avoidanceTurn) {
-    k = Math.max(k, 0.65);
-  }
-
-  const direction = normalize({
+  // Linear blending of opposite unit vectors otherwise keeps the old
+  // direction forever: normalizing (-0.82 + 0.18, 0) is still (-1, 0).
+  if (ant.heading.x * desired.x + ant.heading.y * desired.y < -0.5) k = Math.max(k, 0.7);
+  let direction = normalize({
     x: ant.heading.x * (1 - k) + desired.x * k,
     y: ant.heading.y * (1 - k) + desired.y * k
   });
+  const amount = Math.min(speed, dist);
+  const candidate = { x: ant.pos.x + direction.x * amount, y: ant.pos.y + direction.y * amount };
+  // Separation, avoidance and turn smoothing may bend a safe path into a
+  // post. Keep those corrections only while the actual step remains open.
+  if (!surfaceLineOpen(world.surface, ant.pos, candidate, ant.colonyId)) direction = alongRoute;
 
   profiler.measure("stepAnt.surface.move", () => {
     ant.heading = direction;
-    ant.pos.x += direction.x * speed;
-    ant.pos.y += direction.y * speed;
+    ant.pos.x += direction.x * amount;
+    ant.pos.y += direction.y * amount;
     clampToSurface(ant, world);
   });
 }
