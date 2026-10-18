@@ -17,6 +17,7 @@ const { stepAnt } = await import("../sim/ant/step");
 const { moveSearching } = await import("../sim/ant/forage");
 const { taskApproach } = await import("../sim/taskAccess");
 const { assignBuildJobs, assignHarvestJobs } = await import("../sim/economy");
+const { watchTaskMotion } = await import("../sim/taskProgress");
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x-b.x,a.y-b.y);
 function fence(x:number,y:number,type:Building["type"]="wall"):Building {
   return {id:`fence-${x}-${y}`,type,colonyId:"colony-1",pos:{x,y},stage:"built",progress:1,cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,...(type==="gate"?{gateSpan:3,gateAxis:"horizontal" as const}:{})};
@@ -48,6 +49,13 @@ function travel(w:ReturnType<typeof fresh>, a:Ant, goal:Vec2, budget:number, str
 let failures=0,passed=0;
 function check(name:string,run:()=>void) { try {run();passed++;console.log(`PASS  ${name}`);}catch(e){failures++;console.error(`FAIL  ${name}: ${(e as Error).message}`);} }
 try {
+  check("Контроль прогресса: шаг вперёд-назад запускает восстановление, затем освобождает задачу",()=>{
+    const w=fresh(),a=w.colonies[0].ants[0],target={x:170,y:240};a.job="harvest";a.harvestNodeId="test";a.carrying=1;a.pos={x:120,y:240};
+    assert.equal(watchTaskMotion(a,0,target),"normal");
+    for(let t=1;t<100;t++){a.pos.x=120+t%2;watchTaskMotion(a,t,target);}
+    assert.equal(watchTaskMotion(a,100,target),"recover");assert.equal(watchTaskMotion(a,200,target),"release");
+    a.carrying=0;assert.equal(watchTaskMotion(a,201,target),"normal");
+  });
   check("Доступность: замкнутая ограда не назначает работу снаружи; открытие ворот восстанавливает доступ",()=>{
     const w=fresh(),c=w.colonies[0],scoped=colonyWorldView(w,c);
     for(const gate of w.surface.buildings.filter(b=>b.type==="gate")){w.surface.buildings=w.surface.buildings.filter(b=>b.id!==gate.id);for(const dx of [-2,0,2])w.surface.buildings.push(fence(gate.pos.x+dx,gate.pos.y));}

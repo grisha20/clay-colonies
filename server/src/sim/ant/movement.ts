@@ -15,6 +15,9 @@ import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { insideHearth } from "../../../../shared/campGeometry";
 import { addFoodStock, consumeFoodStock, normalizedCarryFoodKind } from "../foodStock";
 import { surfaceLineOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
+import { markTaskPath, watchTaskMotion } from "../taskProgress";
+import { deferTask } from "../taskAccess";
+import { buildingServicePoint } from "../../../../shared/buildingGeometry";
 
 export type CachedPath = {
   targetTile: Vec2;
@@ -54,12 +57,13 @@ export function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
     safeRoutes.delete(ant.id); route = undefined;
   }
   if (!route) {
-    if (surfaceLineOpen(world.surface, ant.pos, target, ant.colonyId)) return target;
+    if (surfaceLineOpen(world.surface, ant.pos, target, ant.colonyId)) {markTaskPath(ant,true);return target;}
     const points = surfaceRoute(world.surface, ant.pos, target, ant.colonyId);
     route = { target: { ...target }, points: points ?? [], until: world.tick + 300, geometry };
     safeRoutes.set(ant.id, route);
   }
   while (route.points.length > 1 && distance(ant.pos, route.points[0]) < 1 && surfaceLineOpen(world.surface, ant.pos, route.points[1], ant.colonyId)) route.points.shift();
+  markTaskPath(ant,route.points.length>0);
   return route.points[0] ?? ant.pos;
 }
 
@@ -215,6 +219,16 @@ export function applyWallAvoidance(world: World, ant: Ant, desired: Vec2, stepSi
 }
 
 export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpiders: boolean, allowSeparation = true): void {
+  const recovery=watchTaskMotion(ant,world.tick,target);
+  if(recovery!=="normal")safeRoutes.delete(ant.id);
+  if(recovery==="release") {
+    const b=world.surface.buildings.find(b=>b.id===ant.buildTargetId),node=world.surface.resourceNodes.find(n=>n.id===ant.harvestNodeId);
+    const deferred=b?buildingServicePoint(b):node?.pos??ant.fishingStandPos;
+    if(deferred)deferTask(world,deferred);
+    const fish=world.surface.fish.find(f=>f.targetAntId===ant.id);if(fish){fish.targetAntId=undefined;fish.lurePos=undefined;if(fish.state!=="respawning")fish.state="swim";}
+    ant.job="forage";ant.buildTargetId=undefined;ant.harvestNodeId=undefined;ant.fishingTargetId=undefined;ant.fishingLurePos=undefined;ant.fishingStandPos=undefined;ant.fishingTicks=0;
+    ant.state=ant.carrying>0?"carry":"search";return;
+  }
   const speed = surfaceMoveSpeed(world, ant);
   const routeTarget = surfaceRouteTarget(world, ant, target);
   const dist = distance(ant.pos, routeTarget);
@@ -233,12 +247,12 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
     desired = profiler.measure("stepAnt.surface.spiderAvoid", () => applySpiderAvoidance(world, ant.pos, desired, speed));
   }
 
-  desired = applyForbidZones(world, ant, desired);
+  if(recovery==="normal")desired = applyForbidZones(world, ant, desired);
   // Static obstacles are already in the route. The old 2.4-unit wall probe
   // looked beyond a corner waypoint and turned away from a valid gate.
   // Random unsticking bursts belong only to free exploration, not job routes.
 
-  if (allowSeparation) {
+  if (allowSeparation && recovery==="normal") {
     const isTargetEntrance = target.x === world.surface.entrance.x && target.y === world.surface.entrance.y;
     if (!isTargetEntrance || dist > 8.0) {
       desired = profiler.measure("stepAnt.surface.separation", () => applySeparation(world, ant, desired));
@@ -247,6 +261,7 @@ export function moveSurfaceToward(world: World, ant: Ant, target: Vec2, avoidSpi
 
   // Базовая маневренность k = 0.18. Чем ближе к цели (до 4 единиц), тем точнее маневрируем (до 1.0)
   let k = dist < 4.0 ? 0.18 + (1.0 - 0.18) * (1.0 - dist / 4.0) : 0.18;
+  if(recovery==="recover")k=1;
   // Linear blending of opposite unit vectors otherwise keeps the old
   // direction forever: normalizing (-0.82 + 0.18, 0) is still (-1, 0).
   if (ant.heading.x * desired.x + ant.heading.y * desired.y < -0.5) k = Math.max(k, 0.7);
