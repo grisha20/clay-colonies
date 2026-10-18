@@ -17,6 +17,7 @@ import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
 import { pointBuildingPlacement } from "../../shared/buildingPlacement";
 import { BuildingGhost } from "./render/surface/buildingGhost";
 import { FencePreview } from "./render/surface/fencePreview";
+import { placementAccessWarning } from "../../shared/placementAccess";
 import { fencePlacement, gatePlacement, snapFencePosition, GATE_SPAN, type GateAxis } from "../../shared/fenceGeometry";
 import type { Building, Vec2 } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
@@ -1931,7 +1932,9 @@ function updateBuildGhost(): void {
       for (const p of plans) if (fencePlacement(latestWorld.surface, owner, p.pos)) invalid.add(p.id);
       if (toolHint) toolHint.textContent = `Ограда: ${plans.length - invalid.size} секций · ${(plans.length - invalid.size) * 2} глины. Shift — прямая/диагональ${invalid.size ? ` · ${invalid.size} недоступных клеток (красные)` : ""}`;
     }
-    fencePreview.show(plans, invalid, SURFACE_TILE_SIZE);
+    const warning=placementAccessWarning(latestWorld.surface,owner,plans.filter(p=>!invalid.has(p.id)));
+    if(warning&&toolHint)toolHint.textContent=warning;
+    fencePreview.show(plans, invalid, SURFACE_TILE_SIZE,!!warning);
     const origin = worldToScreen(0, 0); fencePreview.position.set(origin.x, origin.y); fencePreview.scale.set(camera.zoom);
     if (fencePreview.parent !== pixi.stage) pixi.stage.addChild(fencePreview);
     return;

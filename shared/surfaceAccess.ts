@@ -17,11 +17,11 @@ export class SurfaceAccess {
   private labels: Int32Array;
   private nextLabel = 0;
   private solids: NonNullable<ReturnType<typeof buildingFootprint>>[];
-  constructor(private surface: SurfaceObstacles, private owner: string) {
+  constructor(private surface: SurfaceObstacles, private owner: string, area?:{center:Vec2;radius:number}) {
     this.width=Math.ceil(surface.width/WALL_CELL_SIZE);this.height=Math.ceil(surface.height/WALL_CELL_SIZE);
     this.blocked=new Uint8Array(this.width*this.height);this.labels=new Int32Array(this.blocked.length);
     this.solids=surface.buildings.map(buildingFootprint).filter((f):f is NonNullable<typeof f>=>!!f);
-    for(let y=0;y<this.height;y++)for(let x=0;x<this.width;x++) if((x+.5)*2>=surface.width-1||(y+.5)*2>=surface.height-1||isWaterAt((x+.5)*2,(y+.5)*2))this.blocked[y*this.width+x]=1;
+    for(let y=0;y<this.height;y++)for(let x=0;x<this.width;x++) if((x+.5)*2>=surface.width-1||(y+.5)*2>=surface.height-1||area&&(Math.abs((x+.5)*2-area.center.x)>area.radius||Math.abs((y+.5)*2-area.center.y)>area.radius)||isWaterAt((x+.5)*2,(y+.5)*2))this.blocked[y*this.width+x]=1;
     for(const b of surface.buildings)if(b.stage==="built"&&(b.type==="wall"||b.type==="gate"&&b.colonyId!==owner))for(const p of fenceCellCenters(b))this.mark(p.x,p.y);
     for(const f of this.solids)this.cover(f.x-f.rx,f.y-f.ry,f.x+f.rx,f.y+f.ry,(p)=>insideBuilding(p.x,p.y,f));
     for(const c of surface.entrances)this.cover(c.x-3,c.y-2,c.x+3,c.y+2,p=>insideHearth(p.x,p.y,c));

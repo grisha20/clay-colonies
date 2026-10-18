@@ -18,6 +18,7 @@ const { moveSearching } = await import("../sim/ant/forage");
 const { taskApproach } = await import("../sim/taskAccess");
 const { assignBuildJobs, assignHarvestJobs } = await import("../sim/economy");
 const { watchTaskMotion } = await import("../sim/taskProgress");
+const { placementAccessWarning } = await import("../../../shared/placementAccess");
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x-b.x,a.y-b.y);
 function fence(x:number,y:number,type:Building["type"]="wall"):Building {
   return {id:`fence-${x}-${y}`,type,colonyId:"colony-1",pos:{x,y},stage:"built",progress:1,cost:{clay:0,wood:0,stone:0},delivered:{clay:0,wood:0,stone:0},hp:100,maxHp:100,...(type==="gate"?{gateSpan:3,gateAxis:"horizontal" as const}:{})};
@@ -49,6 +50,16 @@ function travel(w:ReturnType<typeof fresh>, a:Ant, goal:Vec2, budget:number, str
 let failures=0,passed=0;
 function check(name:string,run:()=>void) { try {run();passed++;console.log(`PASS  ${name}`);}catch(e){failures++;console.error(`FAIL  ${name}: ${(e as Error).message}`);} }
 try {
+  check("Предпросмотр: замыкание лагеря предупреждает, собственные ворота сохраняют выход",()=>{
+    const w=fresh();w.surface.entrances=[{x:120,y:240}];
+    // Seal the southern gate; the north opening is the only remaining exit.
+    w.surface.buildings=w.surface.buildings.filter(b=>b.type!=="gate"||b.pos.y!==265);
+    for(const x of [129,131,133])w.surface.buildings.push(fence(x,265));
+    const plan=[119,121,123].map(x=>fence(x,215));
+    w.surface.buildings=w.surface.buildings.filter(b=>b.type!=="gate");
+    assert.match(placementAccessWarning(w.surface,"colony-1",plan)??"",/выход/);
+    assert.equal(placementAccessWarning(w.surface,"colony-1",[fence(121,215,"gate")]),null);
+  });
   check("Контроль прогресса: шаг вперёд-назад запускает восстановление, затем освобождает задачу",()=>{
     const w=fresh(),a=w.colonies[0].ants[0],target={x:170,y:240};a.job="harvest";a.harvestNodeId="test";a.carrying=1;a.pos={x:120,y:240};
     assert.equal(watchTaskMotion(a,0,target),"normal");
