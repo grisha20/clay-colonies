@@ -39,6 +39,7 @@ import { clearDeadAntPaths } from "./ant/movement";
 import { clearDeadPanic } from "./ant/combat";
 import { resetEnemyRuntime } from "./enemy";
 import { resetBuilderRuntime } from "./ant/build";
+import { taskMotionReport } from "./taskProgress";
 
 export type ColonyRuntime = {
   id: string;
@@ -1179,7 +1180,7 @@ function normalizeNetworkView(_view?: Partial<NetworkViewState>): NetworkViewSta
 
 export function toNetworkSnapshot(world: World, includePheromones = true, view?: Partial<NetworkViewState>): NetworkWorldSnapshot {
   const networkView = normalizeNetworkView(view);
-  const ants = world.ants.filter((ant) => ant.layer === "surface");
+  const ants = world.ants.filter((ant) => ant.layer === "surface").map(ant=>({...ant,taskMotion:ant.state==="idle"?undefined:taskMotionReport(ant)}));
   const snapshot = toSnapshot(world, includePheromones);
 
   return {

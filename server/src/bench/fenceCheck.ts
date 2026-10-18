@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { Container, Texture } from "pixi.js";
-import type { Building, Vec2 } from "../../../shared/types";
+import { CURRENT_SNAPSHOT_VERSION, type Building, type Vec2 } from "../../../shared/types";
 import { fenceLayout } from "../../../client/src/render/surface/fenceLayout";
 import { drawFences } from "../../../client/src/render/surface/fenceRender";
 
@@ -135,7 +135,7 @@ try {
     const restored=worldFromSnapshot(old,w.genomeState,w.spiderGenomeState,w.colonies[1].genomeState);
     assert.equal(restored.surface.buildings.length,1); assert.equal(fenceCellCenters(restored.surface.buildings[0]).length,1);
     assert.equal(placeGate(w,0,61,41,"vertical"),true); completeBuilding(w,w.surface.buildings[1]);
-    const saved=toSnapshot(w); assert.equal(saved.snapshotVersion,19);
+    const saved=toSnapshot(w); assert.equal(saved.snapshotVersion,CURRENT_SNAPSHOT_VERSION);
     const loaded=worldFromSnapshot(saved,w.genomeState,w.spiderGenomeState,w.colonies[1].genomeState);
     const b=loaded.surface.buildings.find(b=>b.gateSpan===3)!; assert.equal(b.gateAxis,"vertical");
     for(const p of fenceCellCenters(b)) assert.equal(isWallBlockedAt(loaded,p.x,p.y,"enemy"),true);

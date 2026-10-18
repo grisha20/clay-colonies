@@ -18,6 +18,7 @@ import { pointBuildingPlacement } from "../../shared/buildingPlacement";
 import { BuildingGhost } from "./render/surface/buildingGhost";
 import { FencePreview } from "./render/surface/fencePreview";
 import { placementAccessWarning } from "../../shared/placementAccess";
+import { setHoveredGround } from "./render/surface/interaction";
 import { fencePlacement, gatePlacement, snapFencePosition, GATE_SPAN, type GateAxis } from "../../shared/fenceGeometry";
 import type { Building, Vec2 } from "../../shared/types";
 import { renderWorld, surfaceTileFromGlobal, type Camera, type ViewMode } from "./render";
@@ -147,6 +148,7 @@ appRoot.innerHTML = `
     <aside class="panel unitPanel" id="unit-panel" style="display: none;">
       <h2 id="unit-title">Житель</h2>
       <div class="unitRow"><span>Занятие</span><strong id="unit-job">-</strong></div>
+      <div class="unitRow"><span>Цель</span><strong id="unit-target">-</strong></div>
       <div class="unitRow"><span>Силы</span>
         <div class="energyBar"><div id="unit-energy"></div></div>
       </div>
@@ -1202,9 +1204,16 @@ function antName(id: string): string {
 }
 
 function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): string {
+  if(world.session.status!=="playing")return "Партия завершена — отдыхает";
   if (ant.capturedBy) return "Похищен! Нужна помощь стражи";
   const c = world.colonies.find(c => c.id === ant.colonyId)?.colony ?? world.colony;
   if (c.alarm && ant.job !== "guard") return "Тревога: возвращается к костру";
+  if(ant.job!=="guard"&&world.enemies.some(e=>e.hp>0&&Math.hypot(e.pos.x-ant.pos.x,e.pos.y-ant.pos.y)<11))return "Убегает от опасности";
+  if(ant.state==="idle"&&(ant.waterExposure??0)>0)return "Сушится после дождя или воды";
+  if(world.weather.state!=="clear"&&ant.job!=="guard")return ant.carrying>0?"Несёт груз к костру перед сушкой":"Возвращается к костру переждать дождь";
+  if(ant.state!=="idle"&&ant.taskMotion?.state==="no-path")return "Нет пути к цели — ждёт свободный проход";
+  if(ant.state!=="idle"&&ant.taskMotion?.state==="recovering")return "Восстанавливает маршрут после задержки";
+  if(ant.state!=="idle"&&ant.taskMotion?.state==="blocked")return "Задача отложена: пройти не удалось";
   if (ant.state === "fight") {
     return "Дерётся!";
   }
@@ -1221,7 +1230,14 @@ function antJobLabel(world: WorldSnapshot, ant: WorldSnapshot["ants"][number]): 
     return "Идёт на рыбалку";
   }
   if (ant.job === "build") {
-    return ant.carrying > 0 ? "Несёт материал на стройку" : "Строит";
+    const b=world.surface.buildings.find(b=>b.id===ant.buildTargetId);
+    if(ant.carrying>0)return "Несёт материал на стройку";
+    if(b){
+      const needed=(["clay","wood","stone"] as const).find(k=>b.cost[k]-b.delivered[k]>.01);
+      if(needed)return Math.hypot(ant.pos.x-(world.surface.entrances[world.colonies.findIndex(v=>v.id===ant.colonyId)]?.x??0),ant.pos.y-(world.surface.entrances[world.colonies.findIndex(v=>v.id===ant.colonyId)]?.y??0))<5&&c[needed]<.01?`Ждёт материал: ${CARGO_NAMES[needed]}`:"Идёт за строительным материалом";
+      return b.stage==="built"?"Ремонтирует постройку":ant.state==="idle"?"Строит постройку":"Идёт на строительную площадку";
+    }
+    return "Ищет доступную стройку";
   }
   if (ant.job === "harvest") {
     if (ant.carrying > 0 && ant.carryKind) {
@@ -1260,6 +1276,12 @@ function updateUnitPanel(world: WorldSnapshot): void {
   unitPanel.style.display = "block";
   unitTitle.textContent = `${antName(ant.id)} (${ant.colonyId === "colony-2" ? "племя B" : "племя A"})`;
   unitJob.textContent = antJobLabel(world, ant);
+  const targetNode=document.querySelector<HTMLElement>("#unit-target");
+  if(targetNode){
+    const target=ant.taskMotion?.target;
+    const place=ant.job==="build"?"Строительная площадка":ant.job==="harvest"&&ant.carrying<=0?"Залежь ресурса":ant.job==="fish"&&ant.carrying<=0?"Место рыбалки":ant.carrying>0?"Сдача груза":ant.forageRole==="scout"?"Обследование территории":"Текущая задача";
+    targetNode.textContent=target&&ant.state!=="idle"?`${place} · ${Math.round(target.x)}, ${Math.round(target.y)}`:"—";
+  }
   const energyFraction = Math.max(0, Math.min(1, ant.energy / 900));
   unitEnergy.style.width = `${Math.round(energyFraction * 100)}%`;
   unitEnergy.style.background = energyFraction > 0.4 ? "#7ec850" : energyFraction > 0.2 ? "#d8b74a" : "#d9534f";
@@ -2187,6 +2209,7 @@ pixi.canvas.addEventListener("pointerdown", (event) => {
 pixi.canvas.addEventListener("pointermove", (event) => {
   const rect = pixi.canvas.getBoundingClientRect();
   hoverScreen = { x: (event.clientX - rect.left) * pixi.screen.width / rect.width, y: (event.clientY - rect.top) * pixi.screen.height / rect.height };
+  setHoveredGround(latestWorld&&currentView==="surface"?surfaceTileFromGlobal(latestWorld,hoverScreen.x,hoverScreen.y):null);
   updateHoverHint(event);
   if (!pointerDown || currentView !== "surface" || !latestWorld) {
     return;
@@ -2222,7 +2245,7 @@ pixi.canvas.addEventListener("pointermove", (event) => {
   clampCamera(latestWorld);
 });
 
-pixi.canvas.addEventListener("pointerleave", () => { hoverScreen = null; buildGhost.visible = false; if (!isPainting) fencePreview.visible = false; });
+pixi.canvas.addEventListener("pointerleave", () => { hoverScreen = null; setHoveredGround(null); buildGhost.visible = false; if (!isPainting) fencePreview.visible = false; });
 pixi.canvas.addEventListener("pointerup", (event) => {
   pointerDown = false;
   pixi.canvas.releasePointerCapture(event.pointerId);

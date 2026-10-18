@@ -5,6 +5,8 @@ import { residentPlacement, waterGunMount } from "./residentLayout";
 import { creatureDimensions } from "./creatureArt";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { updateNightVeil } from "./nightLighting";
+import { getHoveredGround } from "./interaction";
+import { fenceCellCenters } from "../../../../shared/fenceGeometry";
 
 export function drawGameplay(scene: SurfaceScene, world: WorldSnapshot, cell: number): void {
   const g = scene.gameplayGraphics;
@@ -53,6 +55,8 @@ export function drawGameplay(scene: SurfaceScene, world: WorldSnapshot, cell: nu
   }
   for (const b of world.surface.buildings) {
     if (b.stage === "built" && b.hp < b.maxHp * 0.95) {
+      const hover=getHoveredGround();
+      if((b.type==="wall"||b.type==="gate")&&b.hp>=b.maxHp*.35&&!(hover&&fenceCellCenters(b).some(p=>Math.abs(p.x-hover.x)<1.5&&hover.y>=p.y-5&&hover.y<=p.y+1)))continue;
       const x = b.pos.x * cell, y = b.pos.y * cell - 35;
       g.rect(x - 12, y, 24, 3).fill({ color: 0x44241d, alpha: 0.7 });
       g.rect(x - 12, y, 24 * Math.max(0, b.hp / b.maxHp), 3).fill(b.hp < b.maxHp * 0.4 ? 0xde6346 : 0xe6b95e);

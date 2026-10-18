@@ -2,9 +2,9 @@ export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
 
-// v19: wide gatehouses; v13-v18 saves retain their worlds and legacy gate cells.
-export const CURRENT_SNAPSHOT_VERSION = 19;
-export const CURRENT_PROTOCOL_VERSION = 19;
+// v20: task diagnostics; v13-v19 worlds keep their actors, jobs and gates.
+export const CURRENT_SNAPSHOT_VERSION = 20;
+export const CURRENT_PROTOCOL_VERSION = 20;
 
 export type Vec2 = {
   x: number;
@@ -143,6 +143,8 @@ export function resourceNodeTool(kind: ResourceNodeKind): "axe" | "pick" | null 
 }
 
 export type Ant = {
+  /** Runtime movement diagnosis, sent to clients; not required in old saves. */
+  taskMotion?: { state:"moving"|"no-path"|"recovering"|"blocked"; target:Vec2 };
   id: string;
   colonyId: string;
   role: "worker";

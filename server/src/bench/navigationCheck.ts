@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Ant, Building, Vec2, WorldSnapshot } from "../../../shared/types";
 const temp = await mkdtemp(path.join(os.tmpdir(), "clayfolk-navigation-"));
 for (const key of ["SNAPSHOT_FILE", "GENOME_FILE", "GENOME_FILE_B", "SPIDER_GENOME_FILE"]) process.env[key] = path.join(temp, key + ".json");
-const { createWorld, colonyWorldView, worldFromSnapshot } = await import("../sim/world");
+const { createWorld, colonyWorldView, worldFromSnapshot, toNetworkSnapshot } = await import("../sim/world");
 const { randomGenome } = await import("../ai/genome");
 const { randomSpiderGenome } = await import("../ai/spiderGenome");
 const { moveSurfaceToward, updateStuckTracking, clearDeadAntPaths } = await import("../sim/ant/movement");
@@ -64,7 +64,9 @@ try {
     const w=fresh(),a=w.colonies[0].ants[0],target={x:170,y:240};a.job="harvest";a.harvestNodeId="test";a.carrying=1;a.pos={x:120,y:240};
     assert.equal(watchTaskMotion(a,0,target),"normal");
     for(let t=1;t<100;t++){a.pos.x=120+t%2;watchTaskMotion(a,t,target);}
-    assert.equal(watchTaskMotion(a,100,target),"recover");assert.equal(watchTaskMotion(a,200,target),"release");
+    assert.equal(watchTaskMotion(a,100,target),"recover");a.state="carry";
+    assert.equal(toNetworkSnapshot(w,false).ants.find(v=>v.id===a.id)?.taskMotion?.state,"recovering");
+    assert.equal(watchTaskMotion(a,200,target),"release");
     a.carrying=0;assert.equal(watchTaskMotion(a,201,target),"normal");
   });
   check("Доступность: замкнутая ограда не назначает работу снаружи; открытие ворот восстанавливает доступ",()=>{
