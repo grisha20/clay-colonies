@@ -174,15 +174,22 @@ function loadGroup() {
     for (let i = 0; i < 2; i++) {
       const camp = world.surface.entrances[i];
       ant(i * 3, "", { pos: { x: camp.x, y: camp.y - 3 }, carrying: 1, carryKind: "wood" });
-      ant(i * 3 + 1, "", { pos: { x: camp.x, y: camp.y + 3 }, carrying: 1, carryKind: "stone" });
+      // Real regression: this point is outside the hearth but the old front-
+      // edge depth put the whole flame over the resident, leaving only feet.
+      ant(i * 3 + 1, "", { pos: { x: camp.x + 1.4089, y: camp.y + 1.3916 }, carrying: 1, carryKind: "stone" });
       ant(i * 3 + 2, "", { pos: { x: camp.x - 3.6, y: camp.y + 0.5 } });
       const pos = { x: camp.x, y: 35 };
       world.surface.buildings.push({ id: `preview-hut-${i}`, type: "hut", colonyId: `colony-${i + 1}`, pos, stage: "built", hp: 100, maxHp: 100, progress: 1, cost: { clay: 0, wood: 0, stone: 0 }, delivered: { clay: 0, wood: 0, stone: 0 } });
       ant(6 + i, "", { pos: { x: pos.x - 3, y: pos.y + 4 } });
     }
+    if (group.value === "camp") {
+      const camp = world.surface.entrances[1];
+      const stations = campShelterPoints(camp, world.surface.buildings, world.surface.width, world.surface.height, "colony-2", 6).slice(2, 5);
+      for (let i = 0; i < stations.length; i++) Object.assign(world.ants.find(a => a.id === `preview-${3 + i}`)!, { pos: { ...stations[i] }, carrying: 0, job: "guard", colonyId: "colony-2" });
+    }
     for (const a of world.ants) homes.delete(a.id);
     for (const child of labels.removeChildren()) child.destroy();
-    for (const [x, y, text] of [[256, 420, "Перед очагом и за ним"], [768, 420, "Обход очага и куч"], [256, 660, "Проход перед хижиной"], [768, 660, "Проход за хижиной"]] as const) {
+    for (const [x, y, text] of [[256, 420, "Перед очагом и за ним"], [768, 420, "Стража ожидает снаружи очага"], [256, 660, "Проход перед хижиной"], [768, 660, "Проход за хижиной"]] as const) {
       const view = new Text({ text, style: { fontFamily: "system-ui", fontSize: 15, fill: 0xf4e4bd } }); view.anchor.set(0.5); view.position.set(x, y); labels.addChild(view);
     }
     setLight();

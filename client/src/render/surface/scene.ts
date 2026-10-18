@@ -16,7 +16,6 @@ import { offsetSettings } from "./editor";
 import { updateAndDrawParticles } from "./particles";
 import { drawGameplay } from "./gameplay";
 import { actorMotion } from "./motion";
-import { HEARTH_RADIUS_Y } from "../../../../shared/campGeometry";
 import { surfaceLighting } from "./lighting";
 import { getBuildingArt } from "./buildingArt";
 import { buildingFootprint } from "../../../../shared/buildingGeometry";
@@ -451,7 +450,9 @@ export function updateSurfaceEntrances(scene: SurfaceScene, world: WorldSnapshot
     campfire.anchor.set(0.5, 105 / 128);
     campfire.position.set(x, y);
     campfire.scale.set(0.46);
-    campfire.zIndex = y + HEARTH_RADIUS_Y * cell;
+    // A short ground object sorts at its centre. Sorting the entire flame by
+    // the front collision edge covered residents already outside that ellipse.
+    campfire.zIndex = y;
     campfire.visible = fires[index];
     campfire.label = `campfire_${index}`;
     scene.dynamicLayer.addChild(campfire);

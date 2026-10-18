@@ -17,6 +17,10 @@ const { randomGenome } = await import("../ai/genome");
 const { randomSpiderGenome } = await import("../ai/spiderGenome");
 const { updateWildlife, moveCreature } = await import("../sim/wildlife");
 const { placePointBuilding } = await import("../sim/building");
+const { stepAnt } = await import("../sim/ant/step");
+const { colonyWorldView } = await import("../sim/world");
+const { updateWorldSurfaceCache, updateTickCache } = await import("../sim/cache");
+const { crossesHearth } = await import("../../../shared/campGeometry");
 function fresh() {
   const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
   return createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g));
@@ -24,6 +28,21 @@ function fresh() {
 let count = 0;
 function check(name: string, run: () => void) { run(); count++; console.log(`PASS  ${name}`); }
 try {
+  check("Стража обоих племён не ждёт на камнях костра: старые позиции покидаются, посты раздельны",()=>{
+    for(const index of [0,1]) {
+      const w=fresh(),c=w.colonies[index],camp=c.surfaceEntrance;
+      w.enemies=[];w.weather.state="clear";c.colony.defensePost={...camp};
+      const guards=c.ants.slice(0,2);c.ants=guards;
+      guards.forEach((a,i)=>{a.job="guard";a.pos={x:camp.x+1.4089+i*.03,y:camp.y+1.3916};a.carrying=0;a.energy=1000;});
+      const view=colonyWorldView(w,c);
+      for(let t=0;t<100;t++){w.tick++;view.tick=w.tick;updateWorldSurfaceCache(w);updateTickCache(view);for(const a of guards){const prev={...a.pos};stepAnt(view,a);assert.equal(crossesHearth(prev.x,prev.y,a.pos.x,a.pos.y,camp),false);if(t>=80)assert.ok(Math.hypot(a.pos.x-prev.x,a.pos.y-prev.y)<.01,"idle guard stays still at the station");}}
+      for(const a of guards){assert.ok(Math.hypot(a.pos.x-camp.x,a.pos.y-camp.y)>4.5,JSON.stringify(a.pos));assert.equal(a.job,"guard");}
+      assert.ok(Math.hypot(guards[0].pos.x-guards[1].pos.x,guards[0].pos.y-guards[1].pos.y)>2.5);
+      c.colony.defensePost={x:camp.x+15,y:camp.y+8};
+      for(let t=0;t<100;t++){w.tick++;view.tick=w.tick;updateWorldSurfaceCache(w);updateTickCache(view);for(const a of guards)stepAnt(view,a);}
+      for(const a of guards)assert.ok(Math.hypot(a.pos.x-c.colony.defensePost.x,a.pos.y-c.colony.defensePost.y)<=2,"explicit post still obeyed");
+    }
+  });
   check("Монстр выходит на берег, гуляет и возвращается в своё озеро без скачков позиции",()=>{
     const w=fresh(),e=w.enemies.find(e=>e.lakeId==="north")!,portal=lakeShorePortals("north")[0];w.ants=[];e.pos={...portal.water};e.lair={...portal.water};e.lakeNextShoreAt=0;e.lakeNextRestAt=100000;e.hunger=0;
     let landed=false,returned=false;

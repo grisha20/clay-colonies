@@ -8,6 +8,8 @@ import { moveSurfaceToward, tryCrossLayer } from "./movement";
 import { dissolveAnt } from "../water";
 import { consumeFoodStock } from "../foodStock";
 import { markMelee, settleMeleePosition } from "../melee";
+import { campShelterPoints } from "../../../../shared/campShelter";
+import { taskApproach } from "../taskAccess";
 
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 const refuges = new WeakMap<Ant, { enemyId: string; origin: Vec2; goal: Vec2; until: number }>();
@@ -92,7 +94,19 @@ export function moveDefending(world: World, ant: Ant): boolean {
     return true;
   }
   ant.state = "idle";
-  if (dist(ant.pos, post) > 2) moveSurfaceToward(world, ant, post, true, false);
+  let idlePost = post, arrival = 2;
+  const hearth = world.surface.entrances.find(camp => dist(post, camp) < 4);
+  if (hearth) {
+    // A camp-centred order means guard the hearth, not stand at its centre.
+    // Share the spaced outer ring used for shelter; two royal places stay free.
+    const peers = world.ants.filter(a => a.job === "guard" && a.state !== "dead" && !a.capturedBy);
+    const ordinal = Math.max(0, peers.findIndex(a => a.id === ant.id));
+    const slots = campShelterPoints(hearth, world.surface.buildings, world.surface.width, world.surface.height, ant.colonyId, 6).slice(2)
+      .filter(p => !!taskApproach(world, p, .15));
+    if (!slots.length) return true;
+    idlePost = slots[ordinal % slots.length]; arrival = .15;
+  }
+  if (dist(ant.pos, idlePost) > arrival) moveSurfaceToward(world, ant, idlePost, true, false);
   return true;
 }
 
