@@ -55,6 +55,7 @@ var test_mismatch_mode: bool = false # Negative test: speed desync
 var test_elevated_mode: bool = false # Negative test: elevated above ground
 var test_penetrated_mode: bool = false # Negative test: ground penetration
 var test_neutral_bone_mode: bool = false # Negative test: simulated unweighted / frozen legs
+var test_submerged_cargo_mode: bool = false # Negative test: cargo buried inside torso
 var turnaround_in_progress: bool = false
 
 # Foot tracking indices
@@ -510,3 +511,51 @@ func get_metrics_summary() -> Dictionary:
 		"all_passed": all_stances_passed,
 		"status": current_grounding_status
 	}
+
+func set_test_submerged_cargo(enable: bool) -> void:
+	test_submerged_cargo_mode = enable
+	if cargo_prop:
+		if enable:
+			# Artificially push cargo deep inside torso (-0.25 m in socket space)
+			cargo_prop.position = Vector3(0, 0, -0.25)
+		else:
+			cargo_prop.position = Vector3.ZERO
+
+func check_cargo_clearance() -> Dictionary:
+	if not cargo_prop or not cargo_prop.visible or not skeleton:
+		return {"valid": false, "reason": "Cargo prop missing or invisible", "clearance_mm": 0.0}
+
+	var cargo_bone_idx = skeleton.find_bone("Socket_Cargo")
+	if cargo_bone_idx < 0:
+		return {"valid": false, "reason": "Socket_Cargo bone not found", "clearance_mm": 0.0}
+
+	var cargo_pose = skeleton.get_bone_global_pose(cargo_bone_idx)
+	# In Godot model space: +Z is forward, +Y is height.
+	# Torso front surface at chest level (Y ~ 0.70-0.85) is at Z ~ +0.336 m.
+	var local_cargo_z = cargo_pose.origin.z + cargo_prop.position.z
+	var torso_belly_front_z = 0.336
+	var clearance_m = local_cargo_z - torso_belly_front_z
+	var clearance_mm = clearance_m * 1000.0
+
+	var idx_hand_l = skeleton.find_bone("Hand.L")
+	var idx_hand_r = skeleton.find_bone("Hand.R")
+	var hand_l_pose = skeleton.get_bone_global_pose(idx_hand_l) if idx_hand_l >= 0 else Transform3D.IDENTITY
+	var hand_r_pose = skeleton.get_bone_global_pose(idx_hand_r) if idx_hand_r >= 0 else Transform3D.IDENTITY
+
+	var hands_flank = (hand_l_pose.origin.x < -0.10 and hand_r_pose.origin.x > 0.10)
+	var hands_in_front = (hand_l_pose.origin.z >= torso_belly_front_z and hand_r_pose.origin.z >= torso_belly_front_z)
+
+	var is_clear = (clearance_mm >= 50.0) and hands_flank and hands_in_front
+	var reason = "OK" if is_clear else ("Submerged (clearance %.1f mm)" % clearance_mm if clearance_mm < 50.0 else "Hands misaligned")
+
+	return {
+		"valid": is_clear,
+		"reason": reason,
+		"local_cargo_z": local_cargo_z,
+		"clearance_mm": clearance_mm,
+		"hand_l_x": hand_l_pose.origin.x,
+		"hand_r_x": hand_r_pose.origin.x,
+		"hand_l_z": hand_l_pose.origin.z,
+		"hand_r_z": hand_r_pose.origin.z
+	}
+

@@ -356,26 +356,38 @@ func _advance_tour(t: float) -> void:
 			set_resident_state(LabResident.AnimState.WALK_MOVE)
 			set_playback_speed(1.0)
 			_apply_camera_angle(ViewAngle.CHARACTER_BACK)
-	elif t < 26.5:
-		# Stage 7: Carry Walk with socket cargo, Left Profile, 0.25x SLOW-MOTION
+	elif t < 25.0:
+		# Stage 7: Carry Idle, Character Front view (Hands clasping cargo, no torso clipping)
+		if resident.current_state != LabResident.AnimState.CARRY_IDLE or current_view != ViewAngle.CHARACTER_FRONT or resident.speed_scale != 1.0:
+			set_resident_state(LabResident.AnimState.CARRY_IDLE)
+			set_playback_speed(1.0)
+			_apply_camera_angle(ViewAngle.CHARACTER_FRONT)
+	elif t < 28.0:
+		# Stage 8: Carry Idle, Left Profile view (Forward cargo clearance & arm profile)
+		if resident.current_state != LabResident.AnimState.CARRY_IDLE or current_view != ViewAngle.CHARACTER_LEFT_PROFILE or resident.speed_scale != 1.0:
+			set_resident_state(LabResident.AnimState.CARRY_IDLE)
+			set_playback_speed(1.0)
+			_apply_camera_angle(ViewAngle.CHARACTER_LEFT_PROFILE)
+	elif t < 32.5:
+		# Stage 9: Carry Walk with socket cargo, Left Profile, 0.25x SLOW-MOTION
 		if resident.current_state != LabResident.AnimState.CARRY_WALK or current_view != ViewAngle.CHARACTER_LEFT_PROFILE or resident.speed_scale != 0.25:
 			set_resident_state(LabResident.AnimState.CARRY_WALK)
 			set_playback_speed(0.25)
 			_apply_camera_angle(ViewAngle.CHARACTER_LEFT_PROFILE)
-	elif t < 30.5:
-		# Stage 8: Carry Walk with socket cargo, Game View, 1.0x
+	elif t < 36.5:
+		# Stage 10: Carry Walk with socket cargo, Game View, 1.0x
 		if current_view != ViewAngle.GAME_VIEW or resident.speed_scale != 1.0:
 			set_resident_state(LabResident.AnimState.CARRY_WALK)
 			set_playback_speed(1.0)
 			_apply_camera_angle(ViewAngle.GAME_VIEW)
-	elif t < 34.5:
-		# Stage 9: Work / Gather clay, Game View, 1.0x
+	elif t < 40.5:
+		# Stage 11: Work / Gather clay, Game View, 1.0x
 		if resident.current_state != LabResident.AnimState.WORK_GATHER or current_view != ViewAngle.GAME_VIEW or resident.speed_scale != 1.0:
 			set_resident_state(LabResident.AnimState.WORK_GATHER)
 			set_playback_speed(1.0)
 			_apply_camera_angle(ViewAngle.GAME_VIEW)
-	elif t < 39.5:
-		# Stage 10: Night campfire illumination with 3D flame mesh & embers
+	elif t < 45.5:
+		# Stage 12: Night campfire illumination with 3D flame mesh & embers
 		if not is_night or resident.current_state != LabResident.AnimState.IDLE or current_view != ViewAngle.GAME_VIEW or resident.speed_scale != 1.0:
 			set_resident_state(LabResident.AnimState.IDLE)
 			set_playback_speed(1.0)
@@ -532,10 +544,11 @@ func _setup_rigor_stage(stage: int) -> void:
 			set_resident_state(LabResident.AnimState.WALK_MOVE)
 			set_playback_speed(1.0)
 		7:
-			print("[RIGOR STAGE 7] Cargo Bone Socket Attachment Check...")
+			print("[RIGOR STAGE 7] Cargo Bone Socket Attachment & Forward Clearance Check...")
 			resident.set_test_elevated(false)
 			resident.set_test_penetrated(false)
 			resident.set_test_neutral_bone(false)
+			resident.set_test_submerged_cargo(false)
 			resident.position = Vector3(0, 0, 0)
 			set_resident_state(LabResident.AnimState.CARRY_WALK)
 		8:
@@ -543,12 +556,19 @@ func _setup_rigor_stage(stage: int) -> void:
 			resident.set_test_elevated(false)
 			resident.set_test_penetrated(false)
 			resident.set_test_mismatch(false)
+			resident.set_test_submerged_cargo(false)
 			resident.set_test_neutral_bone(true) # Simulate unweighted / frozen sole geometry
 			resident.position = Vector3(0, 0, 0)
 			resident.move_direction = 1.0
 			resident.reset_cumulative_metrics()
 			set_resident_state(LabResident.AnimState.WALK_MOVE)
 			set_playback_speed(1.0)
+		9:
+			print("[RIGOR STAGE 9: NEGATIVE TEST] Submerged Cargo Inside Torso Detection...")
+			resident.set_test_neutral_bone(false)
+			resident.set_test_submerged_cargo(true) # Artificially push cargo inside torso
+			resident.position = Vector3(0, 0, 0)
+			set_resident_state(LabResident.AnimState.CARRY_IDLE)
 
 func _run_rigor_test_step(_delta: float) -> void:
 	match test_rigor_stage:
@@ -632,13 +652,19 @@ func _run_rigor_test_step(_delta: float) -> void:
 			test_rigor_timer = 0.0
 			_setup_rigor_stage(7)
 		7:
+			if test_rigor_timer < 0.5:
+				return
 			var cargo_ok = (resident.cargo_prop != null and resident.cargo_prop.visible and resident.cargo_prop.get_parent() == resident.bone_attachment_cargo)
+			var cl = resident.check_cargo_clearance()
 			print("  -> Cargo prop visible: %s | Bone parent: %s" % [str(resident.cargo_prop.visible), str(resident.cargo_prop.get_parent().name)])
-			if not cargo_ok:
-				push_error("[RIGOR TEST FAILED] Stage 7 cargo attachment invalid!")
+			print("  -> Cargo forward Z: %.3f m | Clearance: +%.1f mm | Hands: L=(%.3f, %.3f), R=(%.3f, %.3f) | Status: %s" % [
+				cl["local_cargo_z"], cl["clearance_mm"], cl["hand_l_x"], cl["hand_l_z"], cl["hand_r_x"], cl["hand_r_z"], cl["reason"]
+			])
+			if not cargo_ok or not cl["valid"]:
+				push_error("[RIGOR TEST FAILED] Stage 7 cargo attachment or forward clearance invalid: %s!" % cl["reason"])
 				get_tree().quit(1)
 				return
-			print("  -> Result: RIGOR STAGE 7 PASSED (Cargo bundle firmly mounted to Socket_Cargo)!\n")
+			print("  -> Result: RIGOR STAGE 7 PASSED (Cargo bundle firmly mounted, clearance verified, hands flanking)!\n")
 			test_rigor_stage = 8
 			test_rigor_timer = 0.0
 			_setup_rigor_stage(8)
@@ -653,5 +679,20 @@ func _run_rigor_test_step(_delta: float) -> void:
 				get_tree().quit(1)
 				return
 			print("  -> Result: RIGOR STAGE 8 PASSED (Successfully caught unweighted/neutral-bone frozen feet)!\n")
-			print("=== ALL 8 RIGOR VERIFICATION STAGES PASSED WITH FLYING COLORS! ===")
+			test_rigor_stage = 9
+			test_rigor_timer = 0.0
+			_setup_rigor_stage(9)
+		9:
+			if test_rigor_timer < 0.5:
+				return
+			var cl = resident.check_cargo_clearance()
+			var detected_submerged = not cl["valid"]
+			print("  -> Artificially submerged cargo clearance: %.1f mm | Detection: %s" % [cl["clearance_mm"], cl["reason"]])
+			resident.set_test_submerged_cargo(false)
+			if not detected_submerged:
+				push_error("[RIGOR TEST FAILED] Stage 9 failed to detect cargo submerged inside torso!")
+				get_tree().quit(1)
+				return
+			print("  -> Result: RIGOR STAGE 9 PASSED (Successfully detected cargo submerged inside torso)!\n")
+			print("=== ALL 9 RIGOR VERIFICATION STAGES PASSED WITH FLYING COLORS! ===")
 			get_tree().quit(0)

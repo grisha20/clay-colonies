@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://uqm2uxfopl32"
-path="res://.godot/imported/tour_07_carry_walk_slowmo.png-f8aac57745cb9eb8e8b30d693c33dd4b.ctex"
+uid="uid://c0qlu335cxmyl"
+path="res://.godot/imported/tour_09_carry_walk_slowmo.png-22c0e358457cf19420fe10b77e0fe528.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://recordings/tour_07_carry_walk_slowmo.png"
-dest_files=["res://.godot/imported/tour_07_carry_walk_slowmo.png-f8aac57745cb9eb8e8b30d693c33dd4b.ctex"]
+source_file="res://recordings/tour_09_carry_walk_slowmo.png"
+dest_files=["res://.godot/imported/tour_09_carry_walk_slowmo.png-22c0e358457cf19420fe10b77e0fe528.ctex"]
 
 [params]
 

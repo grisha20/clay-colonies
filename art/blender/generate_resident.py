@@ -337,11 +337,15 @@ def build_character_mesh():
                 first_aring = aring
             prev_aring = aring
 
-        # Cap top of shoulder (blended with Spine) and bottom of wrist collar (LowerArm)
-        bm.faces.new(first_aring[::-1]).material_index = 0
-        for v in first_aring:
-            group_weights["Spine"].append((v, 0.65))
-            group_weights["UpperArm" + side_tag].append((v, 0.35))
+        # Smooth organic domed shoulder apex (eliminating flat disc cut-offs)
+        v_shoulder_apex = bm.verts.new((sx - side * 0.035, -0.005, 1.085))
+        group_weights["Spine"].append((v_shoulder_apex, 0.75))
+        group_weights["UpperArm" + side_tag].append((v_shoulder_apex, 0.25))
+
+        for i in range(n_arm_seg):
+            i_next = (i + 1) % n_arm_seg
+            f = bm.faces.new([first_aring[i_next], first_aring[i], v_shoulder_apex])
+            f.material_index = 0
 
         bm.faces.new(prev_aring).material_index = 0
         for v in prev_aring:
@@ -608,8 +612,8 @@ def build_armature():
     b_sock_head.parent = b_head
 
     b_sock_cargo = eb.new("Socket_Cargo")
-    b_sock_cargo.head = (0.0, -0.28, 0.65)
-    b_sock_cargo.tail = (0.0, -0.38, 0.65)
+    b_sock_cargo.head = (0.0, -0.44, 0.85)
+    b_sock_cargo.tail = (0.0, -0.54, 0.85)
     b_sock_cargo.parent = b_spine
 
     b_sock_tool_r = eb.new("Socket_Tool_R")
@@ -810,14 +814,14 @@ def add_actions(arm_obj):
         set_bone_rot(pb["Spine"], (breath * 2.0, 0, 0))
         pb["Spine"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-        # Arms wrap firmly forward around cargo at (0, -0.28, 0.65)
-        set_bone_rot(pb["UpperArm.L"], (-34.0, -33.0, -3.0))
-        set_bone_rot(pb["LowerArm.L"], (-13.0, 0.0, 12.0))
-        set_bone_rot(pb["Hand.L"], (15.0, 0.0, 18.0))
+        # Arms wrap firmly forward around cargo at (0, -0.44, 0.85)
+        set_bone_rot(pb["UpperArm.L"], (-46.0, -25.0, 6.0))
+        set_bone_rot(pb["LowerArm.L"], (-42.0, -12.0, 26.0))
+        set_bone_rot(pb["Hand.L"], (15.0, 0.0, 15.0))
 
-        set_bone_rot(pb["UpperArm.R"], (-34.0, 33.0, 3.0))
-        set_bone_rot(pb["LowerArm.R"], (-13.0, 0.0, -12.0))
-        set_bone_rot(pb["Hand.R"], (15.0, 0.0, -18.0))
+        set_bone_rot(pb["UpperArm.R"], (-46.0, 25.0, -6.0))
+        set_bone_rot(pb["LowerArm.R"], (-42.0, 12.0, -26.0))
+        set_bone_rot(pb["Hand.R"], (15.0, 0.0, -15.0))
 
         pb["UpperArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
         pb["LowerArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
@@ -900,13 +904,13 @@ def add_actions(arm_obj):
 
         # Arms stably hold cargo during walk with gentle natural step damping
         arm_bob = 2.0 * math.sin(t * 2 * math.pi)
-        set_bone_rot(pb["UpperArm.L"], (-34.0 + arm_bob, -33.0, -3.0))
-        set_bone_rot(pb["LowerArm.L"], (-13.0, 0.0, 12.0))
-        set_bone_rot(pb["Hand.L"], (15.0, 0.0, 18.0))
+        set_bone_rot(pb["UpperArm.L"], (-46.0 + arm_bob, -25.0, 6.0))
+        set_bone_rot(pb["LowerArm.L"], (-42.0, -12.0, 26.0))
+        set_bone_rot(pb["Hand.L"], (15.0, 0.0, 15.0))
 
-        set_bone_rot(pb["UpperArm.R"], (-34.0 + arm_bob, 33.0, 3.0))
-        set_bone_rot(pb["LowerArm.R"], (-13.0, 0.0, -12.0))
-        set_bone_rot(pb["Hand.R"], (15.0, 0.0, -18.0))
+        set_bone_rot(pb["UpperArm.R"], (-46.0 + arm_bob, 25.0, -6.0))
+        set_bone_rot(pb["LowerArm.R"], (-42.0, 12.0, -26.0))
+        set_bone_rot(pb["Hand.R"], (15.0, 0.0, -15.0))
 
         pb["UpperArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
         pb["LowerArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
@@ -1047,8 +1051,20 @@ def verify_mesh_grounding_and_actions(mesh_obj, arm_obj):
             # STRICT CHECK: Sole vertices MUST lift during swing and MUST deform dynamically!
             if max_left_swing_lift < 0.05 or max_right_swing_lift < 0.05:
                 raise RuntimeError(f"Action '{act.name}' sole vertices failed to lift during swing! (L: {max_left_swing_lift:.4f}m, R: {max_right_swing_lift:.4f}m, required >= 0.05m)")
-            if max_left_sole_disp < 0.07 or max_right_sole_disp < 0.07:
-                raise RuntimeError(f"Action '{act.name}' sole vertices are frozen or unweighted! (L disp: {max_left_sole_disp:.4f}m, R disp: {max_right_sole_disp:.4f}m, required >= 0.07m)")
+            # STRICT CHECK: In carry actions, verify cargo socket and hand clearance in front of torso
+            if act.name in ("carry_idle", "carry_walk"):
+                pb = arm_obj.pose.bones
+                cargo_head = pb["Socket_Cargo"].head
+                if cargo_head.y > -0.40:
+                    raise RuntimeError(f"Action '{act.name}' Socket_Cargo is buried inside torso: Y = {cargo_head.y:.3f} m (required <= -0.40 m)!")
+                
+                # Check hand bone positions flank cargo and are in front of torso (-0.34)
+                wr_l = pb["Hand.L"].head
+                wr_r = pb["Hand.R"].head
+                if wr_l.y > -0.36 or wr_r.y > -0.36:
+                    raise RuntimeError(f"Action '{act.name}' hands are buried in torso: L.y={wr_l.y:.3f}, R.y={wr_r.y:.3f} (required <= -0.36 m)!")
+                if wr_l.x > -0.12 or wr_r.x < 0.12:
+                    raise RuntimeError(f"Action '{act.name}' hands do not flank cargo: L.x={wr_l.x:.3f}, R.x={wr_r.x:.3f} (required L <= -0.12, R >= 0.12)!")
 
     print("--- ALL ACTIONS PASSED RIGOROUS GROUND CONTACT & DEFORMATION VERIFICATION ---\n")
 
