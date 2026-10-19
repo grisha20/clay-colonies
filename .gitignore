@@ -11,7 +11,16 @@ snapshot.json
 snapshot.json.tmp
 snapshot.json.bak
 genome.json
+genome-b.json
 spider_genome.json
+tmp/
+
+# Godot & Blender
+godot/.godot/
+art/blender/*.blend1
+*.tmp
+*.mp4
+*.webm
 
 # Логи и мусор
 *.log
@@ -20,3 +29,4 @@ Thumbs.db
 
 # Временные файлы check:slice
 .slice-*.json
+
