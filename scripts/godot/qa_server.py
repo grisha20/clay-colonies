@@ -14,6 +14,7 @@ import json
 import time
 import shutil
 import uuid
+import threading
 
 REPO_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 DEFAULT_QA_DIR = os.path.join(REPO_ROOT, "tmp", "qa")
@@ -239,40 +240,36 @@ def release_state_lock(lock_dir: str, token: str | None = None) -> None:
     if not lock_dir or not os.path.isdir(lock_dir):
         return
 
-    entry = _LOCK_HANDLES.pop(lock_dir, None)
-    expected_token = token
-    h_file = None
-    if entry:
-        h_file, my_token = entry
-        if expected_token is None:
-            expected_token = my_token
-
     info_file = os.path.join(lock_dir, "owner.json")
-    try:
-        if os.path.exists(info_file):
+    file_token = None
+    file_pid = None
+    if os.path.exists(info_file):
+        try:
             with open(info_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             file_token = data.get("token")
             file_pid = data.get("pid")
-            if expected_token and file_token != expected_token:
-                # Do NOT touch someone else's lock!
-                if h_file:
-                    try:
-                        _unlock_file(h_file)
-                    except Exception:
-                        pass
-                    h_file.close()
-                return
-            if file_pid != os.getpid() and expected_token is None:
-                if h_file:
-                    try:
-                        _unlock_file(h_file)
-                    except Exception:
-                        pass
-                    h_file.close()
-                return
+        except Exception:
+            pass
 
-        # Close handle before deleting directory
+    # If an alien token was provided, abort immediately and leave lock untouched
+    if token is not None and file_token is not None and file_token != token:
+        return
+
+    # If no token was provided, ensure PID matches current process
+    if token is None and file_pid is not None and file_pid != os.getpid():
+        return
+
+    entry = _LOCK_HANDLES.pop(lock_dir, None)
+    h_file = None
+    if entry:
+        h_file, my_token = entry
+        if token is not None and my_token != token:
+            # Token mismatch with our own recorded handle; restore and abort
+            _LOCK_HANDLES[lock_dir] = entry
+            return
+
+    try:
         if h_file:
             try:
                 _unlock_file(h_file)
@@ -372,6 +369,17 @@ def kill_process_tree(pid: int) -> None:
         except Exception:
             pass
 
+def request_stop(state_dir: str) -> bool:
+    """Signals an active QA server running on state_dir to stop gracefully."""
+    try:
+        real_state = validate_state_dir(state_dir)
+        stop_file = os.path.join(real_state, ".qa_server.stop")
+        with open(stop_file, "w", encoding="utf-8") as f:
+            f.write(str(time.time()))
+        return True
+    except Exception:
+        return False
+
 def start_server(
     port: int = DEFAULT_PORT,
     reset_state: bool = False,
@@ -458,12 +466,42 @@ def start_server(
         cmd = ["npx.cmd" if sys.platform == "win32" else "npx", "tsx", "server/src/index.ts"]
         proc = None
         exit_code = 0
+        stop_requested = False
+        stop_file = os.path.join(real_state_dir, ".qa_server.stop")
+        if os.path.exists(stop_file):
+            try:
+                os.remove(stop_file)
+            except Exception:
+                pass
+
+        def _stop_watcher():
+            nonlocal stop_requested
+            while proc and proc.poll() is None:
+                if os.path.exists(stop_file):
+                    stop_requested = True
+                    try:
+                        os.remove(stop_file)
+                    except Exception:
+                        pass
+                    if proc and proc.poll() is None:
+                        kill_process_tree(proc.pid)
+                    break
+                time.sleep(0.1)
+
         try:
             proc = subprocess.Popen(cmd, cwd=REPO_ROOT, env=env)
-            print(f"[qa_server] Server running (PID: {proc.pid}). Press Ctrl+C to terminate.")
-            exit_code = proc.wait()
-            if exit_code != 0:
-                print(f"[qa_server] Server process exited with code {exit_code}", file=sys.stderr)
+            print(f"[qa_server] Server running (PID: {proc.pid}). Press Ctrl+C or touch .qa_server.stop to terminate.")
+
+            watcher_thread = threading.Thread(target=_stop_watcher, daemon=True)
+            watcher_thread.start()
+
+            raw_code = proc.wait()
+            if stop_requested:
+                exit_code = 0
+            else:
+                exit_code = raw_code
+                if exit_code != 0:
+                    print(f"[qa_server] Server process exited with code {exit_code}", file=sys.stderr)
         except KeyboardInterrupt:
             print("\n[qa_server] Stopping QA server process tree...")
         except Exception as e:

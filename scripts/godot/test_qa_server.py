@@ -299,6 +299,25 @@ class TestQAServer(unittest.TestCase):
         # Clean up winner's lock
         release_state_lock(successes[0][1])
 
+    def test_negative_lock_release_with_alien_token_leaves_lock_intact(self):
+        """Releasing state directory lock with an alien token must NOT release the owner's active lock."""
+        from scripts.godot.qa_server import acquire_state_lock, release_state_lock
+
+        lock_dir = acquire_state_lock(self.state_dir, 8788)
+        self.assertTrue(os.path.isdir(lock_dir), "Lock directory must exist after acquire.")
+
+        # 1. Attempt release with alien token
+        release_state_lock(lock_dir, token="alien_token_xyz_999")
+        self.assertTrue(os.path.isdir(lock_dir), "Lock directory must NOT be deleted when alien token is provided!")
+
+        # Competing acquire must still be blocked by active OS handle
+        with self.assertRaises(RuntimeError):
+            acquire_state_lock(self.state_dir, 8789)
+
+        # 2. Release with owner's valid token/handle
+        release_state_lock(lock_dir)
+        self.assertFalse(os.path.isdir(lock_dir), "Lock directory must be deleted after legitimate release.")
+
     def test_kill_process_tree_terminates_child_and_frees_resources(self):
         """kill_process_tree must cleanly terminate the target process tree and release socket resources."""
         from scripts.godot.qa_server import kill_process_tree
@@ -348,6 +367,171 @@ class TestQAServer(unittest.TestCase):
         finally:
             if parent_proc.poll() is None:
                 parent_proc.kill()
+
+    def test_real_node_server_fixture_loading_and_lifecycle(self):
+        """Validates real Node/tsx server execution, genuine fixture loading over WebSocket, and clean lifecycle."""
+        import subprocess
+        import time
+        import base64
+        import struct
+        from scripts.godot.qa_server import kill_process_tree
+
+        # 1. Helper to read initial WebSocket frame via standard library
+        def _ws_read_single_snapshot(port: int, timeout: float = 12.0) -> dict:
+            s = socket.create_connection(("127.0.0.1", port), timeout=timeout)
+            key = base64.b64encode(os.urandom(16)).decode("ascii")
+            req = (
+                f"GET / HTTP/1.1\r\n"
+                f"Host: 127.0.0.1:{port}\r\n"
+                f"Upgrade: websocket\r\n"
+                f"Connection: Upgrade\r\n"
+                f"Sec-WebSocket-Key: {key}\r\n"
+                f"Sec-WebSocket-Version: 13\r\n\r\n"
+            )
+            s.sendall(req.encode("ascii"))
+            resp = b""
+            while b"\r\n\r\n" not in resp:
+                chunk = s.recv(4096)
+                if not chunk:
+                    raise ConnectionError("Connection closed during WebSocket handshake")
+                resp += chunk
+            header, rest = resp.split(b"\r\n\r\n", 1)
+            status_line = header.split(b"\r\n")[0]
+            if b"101" not in status_line:
+                raise ConnectionError(f"Handshake failed: {status_line}")
+
+            buf = rest
+            def read_exact(n):
+                nonlocal buf
+                while len(buf) < n:
+                    chunk = s.recv(4096)
+                    if not chunk:
+                        raise ConnectionError("Connection closed during frame read")
+                    buf += chunk
+                res = buf[:n]
+                buf = buf[n:]
+                return res
+
+            b1, b2 = struct.unpack("!BB", read_exact(2))
+            length = b2 & 0x7f
+            if length == 126:
+                length, = struct.unpack("!H", read_exact(2))
+            elif length == 127:
+                length, = struct.unpack("!Q", read_exact(8))
+            masked = bool(b2 & 0x80)
+            mask = read_exact(4) if masked else None
+            data = read_exact(length)
+            if masked:
+                data = bytes(b ^ mask[i % 4] for i, b in enumerate(data))
+            s.close()
+            return json.loads(data.decode("utf-8"))
+
+        # 2. Generate a genuine fixture snapshot using the TypeScript server code
+        fixtures_dir = os.path.join(self.temp_dir.name, "fixtures_external")
+        os.makedirs(fixtures_dir, exist_ok=True)
+        fixture_file = os.path.join(fixtures_dir, "generated_fixture.json")
+
+        npx_cmd = "npx.cmd" if sys.platform == "win32" else "npx"
+        export_script = os.path.join(REPO_ROOT, "scripts", "godot", "export_fixture.ts")
+        subprocess.run([npx_cmd, "tsx", export_script, fixture_file, "7777"], cwd=REPO_ROOT, check=True)
+
+        with open(fixture_file, "r", encoding="utf-8") as f:
+            fixture_data = json.load(f)
+
+        self.assertEqual(fixture_data.get("tick"), 7777)
+        self.assertEqual(len(fixture_data.get("colonies", [])), 2)
+        initial_ants_count = len(fixture_data.get("ants", []))
+        self.assertGreater(initial_ants_count, 0)
+
+        # Snapshot snapshot root files before start to verify they remain untouched
+        root_snap = os.path.join(REPO_ROOT, "snapshot.json")
+        root_snap_existed = os.path.exists(root_snap)
+        root_snap_mtime = os.path.getmtime(root_snap) if root_snap_existed else None
+
+        # 3. Find an available test port
+        s_probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_probe.bind(("127.0.0.1", 0))
+        test_port = s_probe.getsockname()[1]
+        s_probe.close()
+
+        qa_state_dir = os.path.join(self.temp_dir.name, "real_qa_state")
+        os.makedirs(qa_state_dir, exist_ok=True)
+
+        # 4. Launch qa_server.py as a subprocess
+        qa_cmd = [
+            sys.executable, "-B",
+            os.path.join(REPO_ROOT, "scripts", "godot", "qa_server.py"),
+            "--port", str(test_port),
+            "--state-dir", qa_state_dir,
+            "--fixture", fixture_file
+        ]
+        server_proc = subprocess.Popen(qa_cmd, cwd=REPO_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            # Wait for server to bind the port
+            port_ready = False
+            for _ in range(60):
+                time.sleep(0.25)
+                if is_port_in_use(test_port):
+                    port_ready = True
+                    break
+                if server_proc.poll() is not None:
+                    break
+            self.assertTrue(port_ready, f"QA server failed to bind port {test_port}!")
+
+            # 5. Connect and read initial network snapshot
+            received_snapshot = _ws_read_single_snapshot(test_port, timeout=10.0)
+            self.assertEqual(received_snapshot.get("snapshotVersion"), 21)
+            # Must have loaded the fixture: tick must be >= 7777 (not reset to 0!)
+            self.assertGreaterEqual(
+                received_snapshot.get("tick", 0), 7777,
+                "Server must have loaded fixture with tick >= 7777, not defaulted to 0!"
+            )
+            self.assertEqual(len(received_snapshot.get("colonies", [])), 2)
+            # Surface ants present
+            self.assertGreaterEqual(len(received_snapshot.get("ants", [])), 1)
+
+            # 6. Gracefully terminate server via request_stop and verify exit code 0 and port/lock release
+            from scripts.godot.qa_server import request_stop
+            request_stop(qa_state_dir)
+            server_proc.wait(timeout=10)
+            self.assertEqual(server_proc.poll(), 0, "Gracefully stopped server must exit with code 0!")
+
+            # Port must be freed
+            time.sleep(0.5)
+            self.assertFalse(is_port_in_use(test_port), "Port must be freed after stopping server!")
+
+            # Lock directory must be freed
+            lock_dir = os.path.join(qa_state_dir, ".qa_server.lock_dir")
+            self.assertFalse(os.path.isdir(lock_dir), "Lock directory must be freed after stopping server!")
+
+            # 7. Second launch from same state dir works cleanly without stale lock conflict
+            server_proc2 = subprocess.Popen(qa_cmd, cwd=REPO_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                port_ready2 = False
+                for _ in range(60):
+                    time.sleep(0.25)
+                    if is_port_in_use(test_port):
+                        port_ready2 = True
+                        break
+                    if server_proc2.poll() is not None:
+                        break
+                self.assertTrue(port_ready2, "Second launch from same QA folder must succeed!")
+                request_stop(qa_state_dir)
+                server_proc2.wait(timeout=10)
+                self.assertEqual(server_proc2.poll(), 0)
+            finally:
+                if server_proc2.poll() is None:
+                    kill_process_tree(server_proc2.pid)
+
+            # 8. Verify repository root files were NEVER touched or created
+            if root_snap_existed:
+                self.assertEqual(os.path.getmtime(root_snap), root_snap_mtime)
+            else:
+                self.assertFalse(os.path.exists(root_snap), "Repository root snapshot.json must NOT be created!")
+
+        finally:
+            if server_proc.poll() is None:
+                kill_process_tree(server_proc.pid)
 
 if __name__ == "__main__":
     unittest.main()
