@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dyjoyspe0g2n"
-path="res://.godot/imported/tour_06_work_gather.png-e7599deffb10ca371c2fbfbfb5f2d22e.ctex"
+uid="uid://bbt5dxmsycun8"
+path="res://.godot/imported/tour_03_walk_front_view.png-073b946ae776ec98d5a47f4776109ece.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://recordings/tour_06_work_gather.png"
-dest_files=["res://.godot/imported/tour_06_work_gather.png-e7599deffb10ca371c2fbfbfb5f2d22e.ctex"]
+source_file="res://recordings/tour_03_walk_front_view.png"
+dest_files=["res://.godot/imported/tour_03_walk_front_view.png-073b946ae776ec98d5a47f4776109ece.ctex"]
 
 [params]
 

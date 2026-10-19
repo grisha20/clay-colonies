@@ -50,7 +50,7 @@ size = Vector3(14, 0.4, 14)
 material = SubResource("StandardMaterial3D_ground")
 
 [node name="Campfire" parent="." instance=ExtResource("5_camp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0, 2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8, 0, -2.0)
 
 [node name="CampfireLight" type="OmniLight3D" parent="Campfire"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -61,7 +61,7 @@ omni_range = 6.0
 script = ExtResource("3_light")
 
 [node name="Hut" parent="." instance=ExtResource("6_hut")]
-transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, -3.0, 0, 2.0)
+transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, -3.4, 0, -2.0)
 
 [node name="Resident" type="Node3D" parent="."]
 script = ExtResource("2_res")

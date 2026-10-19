@@ -167,30 +167,40 @@ def generate_hut(output_dir, blend_dir):
 
     wall_radius = 1.3
     wall_height = 1.1
-
-    # 1. Circular clay base wall
-    wall_res = bmesh.ops.create_cone(
-        bm, cap_ends=False, segments=18,
-        radius1=wall_radius, radius2=wall_radius * 0.96, depth=wall_height,
-        matrix=Matrix.Translation(Vector((0, 0, wall_height / 2.0)))
-    )
-    for v in wall_res['verts']:
-        for f in v.link_faces:
-            f.material_index = 0
-
-    # Clay foundation lip on ground (z=0.0 to 0.14)
-    lip_res = bmesh.ops.create_cone(
-        bm, cap_ends=True, segments=18,
-        radius1=wall_radius + 0.10, radius2=wall_radius, depth=0.14,
-        matrix=Matrix.Translation(Vector((0, 0, 0.07)))
-    )
-    for v in lip_res['verts']:
-        for f in v.link_faces:
-            f.material_index = 0
-
-    # 2. Doorway: Wood jambs and lintel
     door_w = 0.52
     door_h = 0.88
+
+    # 1. Circular clay base wall with true geometric doorway opening
+    # Door faces -Y (angle -pi/2)
+    door_alpha = math.asin((door_w / 2.0) / wall_radius)
+    a_start = -math.pi / 2.0 + door_alpha
+    a_end = 3.0 * math.pi / 2.0 - door_alpha
+
+    num_seg = 20
+    ring_bottom = []
+    ring_top = []
+
+    for i in range(num_seg + 1):
+        t = i / float(num_seg)
+        ang = a_start + t * (a_end - a_start)
+        x = wall_radius * math.cos(ang)
+        y = wall_radius * math.sin(ang)
+        vb = bm.verts.new((x, y, 0.0))
+        vt = bm.verts.new((x * 0.96, y * 0.96, wall_height))
+        ring_bottom.append(vb)
+        ring_top.append(vt)
+
+    for i in range(num_seg):
+        f = bm.faces.new([ring_bottom[i], ring_bottom[i+1], ring_top[i+1], ring_top[i]])
+        f.material_index = 0
+
+    # Lintel wall section above the door (from z=door_h to z=wall_height)
+    v_door_l_bottom = bm.verts.new((ring_bottom[0].co.x, ring_bottom[0].co.y, door_h))
+    v_door_r_bottom = bm.verts.new((ring_bottom[-1].co.x, ring_bottom[-1].co.y, door_h))
+    f_lintel_wall = bm.faces.new([v_door_r_bottom, v_door_l_bottom, ring_top[0], ring_top[-1]])
+    f_lintel_wall.material_index = 0
+
+    # 2. Doorway: Wood jambs and lintel
     # Left post
     lpost = bmesh.ops.create_cube(
         bm, size=1.0,
@@ -218,14 +228,14 @@ def generate_hut(output_dir, blend_dir):
         for f in v.link_faces:
             f.material_index = 2
 
-    # 3. Recessed dark interior doorway (giving real visual depth to entrance)
-    door_interior = bmesh.ops.create_cube(
-        bm, size=1.0,
-        matrix=Matrix.Translation(Vector((0, -wall_radius + 0.12, door_h / 2.0))) @ Matrix.Scale(door_w - 0.04, 4, Vector((1,0,0))) @ Matrix.Scale(0.10, 4, Vector((0,1,0))) @ Matrix.Scale(door_h - 0.04, 4, Vector((0,0,1)))
-    )
-    for v in door_interior['verts']:
-        for f in v.link_faces:
-            f.material_index = 3
+    # 3. Recessed dark interior doorway (giving real visual and raycast depth to entrance)
+    int_depth = -wall_radius + 0.35
+    v_int_bl = bm.verts.new((-door_w / 2.0, int_depth, 0.0))
+    v_int_br = bm.verts.new((door_w / 2.0, int_depth, 0.0))
+    v_int_tr = bm.verts.new((door_w / 2.0, int_depth, door_h))
+    v_int_tl = bm.verts.new((-door_w / 2.0, int_depth, door_h))
+    f_interior = bm.faces.new([v_int_bl, v_int_br, v_int_tr, v_int_tl])
+    f_interior.material_index = 3
 
     # 4. Conical thatched roof (overhanging, height 1.1 to 2.3)
     roof_r = 1.58

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfl1iusfgj8bq"
-path="res://.godot/imported/tour_03_walk_profile.png-cdfef0f548bb82986824ff59e7f40aeb.ctex"
+uid="uid://b6gkmmcu3r3cj"
+path="res://.godot/imported/tour_05_walk_left_profile.png-9afa8f50485ec1a7d8398f129136b3c3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://recordings/tour_03_walk_profile.png"
-dest_files=["res://.godot/imported/tour_03_walk_profile.png-cdfef0f548bb82986824ff59e7f40aeb.ctex"]
+source_file="res://recordings/tour_05_walk_left_profile.png"
+dest_files=["res://.godot/imported/tour_05_walk_left_profile.png-9afa8f50485ec1a7d8398f129136b3c3.ctex"]
 
 [params]
 

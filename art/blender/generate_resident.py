@@ -5,6 +5,7 @@ Creates a genuine 3D terracotta clay villager with:
 - Seamless closed joints at shoulders, elbows, and hips (no holes or visible gaps).
 - Exact 30 FPS timing keyframed from frame 0 to 30 (duration = 1.000 s in glTF).
 - Ground-contact verification: bottom of sole never dips below Z = 0.000 m.
+- Rigorous IK solver with zero vertical floating error on stance frames.
 - Armature with Socket_Cargo, Socket_Tool_R, and Socket_Head.
 - 5 actions: idle, walk, carry_idle, carry_walk, work_gather.
 
@@ -20,13 +21,12 @@ from mathutils import Vector, Matrix, Euler
 # Geometry and IK constants
 HIP_Z = 0.49
 UPPER_LEG_LEN = 0.23
-LOWER_LEG_LEN = 0.20
-FOOT_ANKLE_Z = 0.07 # Ankle height above bottom of sole
-SOLE_Z = 0.00 # Ground plane
+LOWER_LEG_LEN = 0.21
+FOOT_ANKLE_Z = 0.05 # Ankle height above bottom of sole
+SOLE_Z = 0.00       # Ground plane
 
 def clear_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    # Configure 30 FPS playback and scene range
     scene = bpy.context.scene
     scene.render.fps = 30
     scene.render.fps_base = 1.0
@@ -36,8 +36,7 @@ def clear_scene():
 def create_pbr_material(name, base_color, roughness=0.78):
     mat = bpy.data.materials.new(name=name)
     mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    bsdf = nodes.get("Principled BSDF")
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
     if bsdf:
         bsdf.inputs["Base Color"].default_value = base_color
         bsdf.inputs["Roughness"].default_value = roughness
@@ -46,31 +45,6 @@ def create_pbr_material(name, base_color, roughness=0.78):
         elif "Specular" in bsdf.inputs:
             bsdf.inputs["Specular"].default_value = 0.22
     return mat
-
-def solve_leg_ik(target_y, target_z, hip_z=HIP_Z):
-    """Computes UpperLeg, LowerLeg, and Foot rotations in degrees to reach target ankle (y, z)."""
-    dy = target_y
-    dz = target_z - hip_z
-    R = math.sqrt(dy * dy + dz * dz)
-    R = min(R, UPPER_LEG_LEN + LOWER_LEG_LEN - 0.001)
-    R = max(R, abs(UPPER_LEG_LEN - LOWER_LEG_LEN) + 0.001)
-
-    cos_alpha = (UPPER_LEG_LEN**2 + LOWER_LEG_LEN**2 - R**2) / (2 * UPPER_LEG_LEN * LOWER_LEG_LEN)
-    cos_alpha = max(-1.0, min(1.0, cos_alpha))
-    alpha = math.acos(cos_alpha)
-    knee_bend = math.pi - alpha
-
-    base_angle = math.atan2(dy, -dz)
-    sin_beta = (LOWER_LEG_LEN * math.sin(alpha)) / R
-    sin_beta = max(-1.0, min(1.0, sin_beta))
-    beta = math.asin(sin_beta)
-
-    hip_rot = base_angle + beta
-    lower_leg_tilt = hip_rot - knee_bend
-    # Ankle rotation counteracts net leg tilt so foot stays strictly horizontal (flat on ground)
-    foot_rot = -lower_leg_tilt
-
-    return math.degrees(hip_rot), math.degrees(knee_bend), math.degrees(foot_rot)
 
 def build_character_mesh():
     mesh = bpy.data.meshes.new("ResidentMesh")
@@ -89,7 +63,6 @@ def build_character_mesh():
 
     bm = bmesh.new()
 
-    # Track vertex groups explicitly by index
     group_indices = {
         "Head": [],
         "Spine": [],
@@ -164,7 +137,6 @@ def build_character_mesh():
             f.material_index = 3
 
     # 3. Head & Face
-    # Clayfolk head (large rounded dome z=1.12 to 1.70)
     head_res = bmesh.ops.create_uvsphere(
         bm, u_segments=16, v_segments=12, radius=0.32,
         matrix=Matrix.Translation(Vector((0, -0.04, 1.40))) @ Matrix.Scale(1.05, 4, Vector((1,0,0))) @ Matrix.Scale(1.0, 4, Vector((0,1,0))) @ Matrix.Scale(0.96, 4, Vector((0,0,1)))
@@ -174,7 +146,7 @@ def build_character_mesh():
         for f in v.link_faces:
             f.material_index = 1 if v.co.y < -0.10 else 0
 
-    # Nose (stylized clay button on front -Y)
+    # Nose (clay button on front -Y)
     nose_res = bmesh.ops.create_uvsphere(
         bm, u_segments=8, v_segments=6, radius=0.06,
         matrix=Matrix.Translation(Vector((0.0, -0.38, 1.38))) @ Matrix.Scale(0.9, 4, Vector((1,0,0))) @ Matrix.Scale(1.3, 4, Vector((0,1,0)))
@@ -184,7 +156,7 @@ def build_character_mesh():
         for f in v.link_faces:
             f.material_index = 1
 
-    # Eyes (two prominent dark clay beads on front face)
+    # Eyes (two dark clay beads on front face)
     for eye_x in (-0.11, 0.11):
         eye_res = bmesh.ops.create_uvsphere(
             bm, u_segments=8, v_segments=6, radius=0.048,
@@ -195,12 +167,12 @@ def build_character_mesh():
             for f in v.link_faces:
                 f.material_index = 2
 
-    # 4. Arms (seamless shoulder spheres + tapered limbs + mitten hands)
+    # 4. Arms (shoulders + limbs + mitten hands)
     for side in (-1, 1):
         side_tag = ".R" if side > 0 else ".L"
         sx = side * 0.33
 
-        # Seamless closed shoulder cap
+        # Shoulder cap
         sh_res = bmesh.ops.create_uvsphere(
             bm, u_segments=8, v_segments=6, radius=0.10,
             matrix=Matrix.Translation(Vector((sx, 0.0, 1.04)))
@@ -210,7 +182,7 @@ def build_character_mesh():
             for f in v.link_faces:
                 f.material_index = 0
 
-        # Upper arm cylinder (1.04 down to 0.78)
+        # Upper arm cylinder
         uarm_res = bmesh.ops.create_cone(
             bm, cap_ends=True, segments=10,
             radius1=0.09, radius2=0.075, depth=0.26,
@@ -231,7 +203,7 @@ def build_character_mesh():
             for f in v.link_faces:
                 f.material_index = 0
 
-        # Forearm cylinder (0.78 down to 0.54)
+        # Forearm cylinder
         farm_res = bmesh.ops.create_cone(
             bm, cap_ends=True, segments=10,
             radius1=0.075, radius2=0.068, depth=0.24,
@@ -267,7 +239,7 @@ def build_character_mesh():
             for f in v.link_faces:
                 f.material_index = 0
 
-        # Thigh cylinder (HIP_Z down to knee at 0.26)
+        # Thigh cylinder
         thigh_res = bmesh.ops.create_cone(
             bm, cap_ends=True, segments=10,
             radius1=0.10, radius2=0.085, depth=UPPER_LEG_LEN,
@@ -288,7 +260,7 @@ def build_character_mesh():
             for f in v.link_faces:
                 f.material_index = 0
 
-        # Shin cylinder (0.26 down to ankle at 0.07)
+        # Shin cylinder
         shin_res = bmesh.ops.create_cone(
             bm, cap_ends=True, segments=10,
             radius1=0.085, radius2=0.078, depth=LOWER_LEG_LEN,
@@ -302,7 +274,7 @@ def build_character_mesh():
         # Foot: rounded solid clay sole resting strictly on Z = SOLE_Z (0.000)
         # Foot length = 0.22m (from y = +0.06 to y = -0.16)
         # Foot width = 0.14m (x from -0.07 to +0.07)
-        # Bottom of foot at z = 0.000, ankle joint at z = 0.070
+        # Bottom of foot at z = 0.000, ankle joint at z = FOOT_ANKLE_Z (0.050)
         foot_res = bmesh.ops.create_cube(
             bm, size=1.0,
             matrix=Matrix.Translation(Vector((lx, -0.05, FOOT_ANKLE_Z / 2.0))) @ Matrix.Scale(0.14, 4, Vector((1,0,0))) @ Matrix.Scale(0.22, 4, Vector((0,1,0))) @ Matrix.Scale(FOOT_ANKLE_Z, 4, Vector((0,0,1)))
@@ -321,6 +293,11 @@ def build_character_mesh():
             group_indices["Foot" + side_tag].append(v)
             for f in v.link_faces:
                 f.material_index = 0
+
+    # Ensure no vertex in rest mesh penetrates ground plane
+    for v in bm.verts:
+        if v.co.z < 0.0:
+            v.co.z = 0.0
 
     bm.verts.ensure_lookup_table()
     group_indices_int = {}
@@ -363,7 +340,7 @@ def build_armature():
     b_head.tail = (0, 0, 1.72)
     b_head.parent = b_spine
 
-    # Left Leg
+    # Left Leg: lengths match UPPER_LEG_LEN (0.23) and LOWER_LEG_LEN (0.21)
     b_upleg_l = eb.new("UpperLeg.L")
     b_upleg_l.head = (-0.20, 0.0, HIP_Z)
     b_upleg_l.tail = (-0.20, 0.0, HIP_Z - UPPER_LEG_LEN)
@@ -429,8 +406,8 @@ def build_armature():
 
     # Dedicated Sockets
     b_cargo = eb.new("Socket_Cargo")
-    b_cargo.head = (0.0, -0.28, 0.68)
-    b_cargo.tail = (0.0, -0.45, 0.68)
+    b_cargo.head = (0.0, -0.28, 0.65)
+    b_cargo.tail = (0.0, -0.45, 0.65)
     b_cargo.parent = b_spine
 
     b_tool_r = eb.new("Socket_Tool_R")
@@ -477,6 +454,32 @@ def reset_pose_transforms(arm_obj):
         pb.rotation_euler = (0, 0, 0)
         pb.scale = (1, 1, 1)
 
+def solve_exact_leg_ik(target_y, target_z, cur_hip_z, tilt_deg=0.0):
+    """Analytical 2-bone IK solver with exact zero-error stance height."""
+    dy = target_y
+    dz = target_z - cur_hip_z
+    R = math.sqrt(dy * dy + dz * dz)
+    max_reach = UPPER_LEG_LEN + LOWER_LEG_LEN - 0.0005
+    R = min(R, max_reach)
+    R = max(R, abs(UPPER_LEG_LEN - LOWER_LEG_LEN) + 0.0005)
+
+    phi = math.atan2(dy, -dz)
+    cos_alpha = (UPPER_LEG_LEN**2 + R**2 - LOWER_LEG_LEN**2) / (2.0 * UPPER_LEG_LEN * R)
+    cos_alpha = max(-1.0, min(1.0, cos_alpha))
+    alpha = math.acos(cos_alpha)
+
+    # Knee bends forward towards -Y
+    theta1 = phi - alpha
+    knee_y = UPPER_LEG_LEN * math.sin(theta1)
+    knee_z = cur_hip_z - UPPER_LEG_LEN * math.cos(theta1)
+
+    theta2 = math.atan2(target_y - knee_y, -(target_z - knee_z))
+
+    rot_up = math.degrees(theta1)
+    rot_low = math.degrees(theta2 - theta1)
+    rot_foot = tilt_deg + math.degrees(theta2)
+    return rot_up, rot_low, rot_foot
+
 def add_actions(arm_obj):
     arm_obj.animation_data_create()
     pb = arm_obj.pose.bones
@@ -484,12 +487,12 @@ def add_actions(arm_obj):
     # 1. IDLE (Frame 0 to 30, exactly 1.000 s at 30 FPS)
     reset_pose_transforms(arm_obj)
     act_idle = bpy.data.actions.new("idle")
+    act_idle.use_fake_user = True
     arm_obj.animation_data.action = act_idle
 
     for f in range(0, 31, 5):
         t = f / 30.0
-        bob = 0.008 * math.sin(t * 2 * math.pi)
-        pb["Hips"].location = (0, 0, bob)
+        pb["Hips"].location = (0, 0, 0)
         pb["Hips"].keyframe_insert(data_path="location", frame=f)
 
         spine_rot = math.sin(t * 2 * math.pi) * 1.5
@@ -515,94 +518,6 @@ def add_actions(arm_obj):
         set_bone_rot(pb["Foot.R"], (0, 0, 0))
         pb["Foot.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-    # 2. WALK (Frame 0 to 30, exactly 1.000 s, stride 0.60 m forward along -Y)
-    reset_pose_transforms(arm_obj)
-    act_walk = bpy.data.actions.new("walk")
-    arm_obj.animation_data.action = act_walk
-
-    # Stride parameters:
-    # Stance travel: ankle travels relative to body from y = -0.12 to y = +0.12 (0.24m per step)
-    # Total stride per 1.0s cycle = 0.48m (calibrated with 0.48m travel)
-    # Stance Z is constant FOOT_ANKLE_Z (0.070 m), sole is strictly at Z = 0.000 m!
-    for f in range(0, 31):
-        t = f / 30.0 # 0.0 to 1.0
-        # Hips sway and subtle bob
-        hips_sway = 0.012 * math.sin(t * 2 * math.pi)
-        pb["Hips"].location = (hips_sway, 0, 0.0)
-        pb["Hips"].keyframe_insert(data_path="location", frame=f)
-
-        set_bone_rot(pb["Spine"], (0, 0, -hips_sway * 20.0))
-        pb["Spine"].keyframe_insert(data_path="rotation_euler", frame=f)
-
-        # Left Leg: Stance phase [0.0 .. 0.5], Swing phase [0.5 .. 1.0]
-def solve_leg_trajectory(target_y, z_override=None, hip_z=HIP_Z):
-    if z_override is not None:
-        target_z = z_override
-        tilt = 0.0
-    else:
-        if target_y <= 0.02:
-            tilt_deg = 0.0
-        else:
-            tau = (target_y - 0.02) / 0.10
-            tilt_deg = -24.0 * tau
-        tilt = math.radians(tilt_deg)
-        target_z = 0.07 * math.cos(tilt) - 0.14 * math.sin(tilt)
-
-    dy = target_y
-    dz = target_z - hip_z
-    R = math.sqrt(dy * dy + dz * dz)
-    R = min(R, UPPER_LEG_LEN + LOWER_LEG_LEN - 0.001)
-    R = max(R, abs(UPPER_LEG_LEN - LOWER_LEG_LEN) + 0.001)
-
-    cos_alpha = (UPPER_LEG_LEN**2 + LOWER_LEG_LEN**2 - R**2) / (2 * UPPER_LEG_LEN * LOWER_LEG_LEN)
-    cos_alpha = max(-1.0, min(1.0, cos_alpha))
-    alpha = math.acos(cos_alpha)
-    knee_bend = math.pi - alpha
-
-    base_angle = math.atan2(dy, -dz)
-    sin_beta = (LOWER_LEG_LEN * math.sin(alpha)) / R
-    sin_beta = max(-1.0, min(1.0, sin_beta))
-    beta = math.asin(sin_beta)
-
-    hip_rot = base_angle - beta
-    lower_rot = knee_bend
-    return math.degrees(hip_rot), math.degrees(lower_rot), tilt
-
-def add_actions(arm_obj):
-    arm_obj.animation_data_create()
-    pb = arm_obj.pose.bones
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    rest_rot = {
-        ".L": arm_obj.data.bones["Foot.L"].matrix_local.to_3x3(),
-        ".R": arm_obj.data.bones["Foot.R"].matrix_local.to_3x3()
-    }
-
-    # 1. IDLE (Frame 0 to 30, exactly 1.000 s at 30 FPS)
-    reset_pose_transforms(arm_obj)
-    act_idle = bpy.data.actions.new("idle")
-    act_idle.use_fake_user = True
-    arm_obj.animation_data.action = act_idle
-
-    for f in range(0, 31, 5):
-        t = f / 30.0
-        bob = 0.008 * math.sin(t * 2 * math.pi)
-        pb["Hips"].location = (0, 0, bob)
-        pb["Hips"].keyframe_insert(data_path="location", frame=f)
-
-        spine_rot = math.sin(t * 2 * math.pi) * 1.5
-        set_bone_rot(pb["Spine"], (spine_rot, 0, 0))
-        pb["Spine"].keyframe_insert(data_path="rotation_euler", frame=f)
-
-        set_bone_rot(pb["UpperArm.L"], (-4.0, 0, 6.0))
-        pb["UpperArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
-        set_bone_rot(pb["UpperArm.R"], (-4.0, 0, -6.0))
-        pb["UpperArm.R"].keyframe_insert(data_path="rotation_euler", frame=f)
-
-        set_bone_rot(pb["Foot.L"], (0, 0, 0))
-        pb["Foot.L"].keyframe_insert(data_path="rotation_euler", frame=f)
-        set_bone_rot(pb["Foot.R"], (0, 0, 0))
-        pb["Foot.R"].keyframe_insert(data_path="rotation_euler", frame=f)
-
     # 2. WALK (Frame 0 to 30, exactly 1.000 s, stride 0.48 m forward along -Y)
     reset_pose_transforms(arm_obj)
     act_walk = bpy.data.actions.new("walk")
@@ -611,41 +526,50 @@ def add_actions(arm_obj):
 
     for f in range(0, 31):
         t = f / 30.0
-        hips_sway = 0.012 * math.sin(t * 2 * math.pi)
-        pb["Hips"].location = (hips_sway, 0, 0.0)
+        hip_drop = -0.022 + 0.016 * abs(math.sin(t * 2 * math.pi))
+        cur_hip_z = HIP_Z + hip_drop
+
+        hips_sway = 0.010 * math.sin(t * 2 * math.pi)
+        pb["Hips"].location = (hips_sway, hip_drop, 0.0)
         pb["Hips"].keyframe_insert(data_path="location", frame=f)
 
-        set_bone_rot(pb["Spine"], (0, 0, -hips_sway * 20.0))
+        set_bone_rot(pb["Spine"], (0, 0, -hips_sway * 16.0))
         pb["Spine"].keyframe_insert(data_path="rotation_euler", frame=f)
 
         if t <= 0.5:
-            tau = t / 0.5
-            y_l = -0.12 + 0.24 * tau
-            h_l, k_l, tilt_l = solve_leg_trajectory(y_l)
+            # Phase 1: Left foot is in Stance (y: -0.12 -> +0.12, Z: constant FOOT_ANKLE_Z)
+            tau_l = t / 0.5
+            y_l = -0.12 + 0.24 * tau_l
+            z_l = FOOT_ANKLE_Z
+            up_l, low_l, foot_l = solve_exact_leg_ik(y_l, z_l, cur_hip_z, tilt_deg=0.0)
+
+            # Right foot is in Swing (y: +0.12 -> -0.12, with clearance arch)
             tau_r = t / 0.5
             y_r = 0.12 - 0.24 * tau_r
-            z_r = FOOT_ANKLE_Z + 0.055 * math.sin(tau_r * math.pi)
-            h_r, k_r, _ = solve_leg_trajectory(y_r, z_override=z_r)
-            tilt_r = math.radians(12.0 * math.sin(tau_r * math.pi))
+            z_r = FOOT_ANKLE_Z + 0.048 * math.sin(tau_r * math.pi)
+            tilt_r = 10.0 * math.sin(tau_r * math.pi)
+            up_r, low_r, foot_r = solve_exact_leg_ik(y_r, z_r, cur_hip_z, tilt_deg=tilt_r)
         else:
-            tau = (t - 0.5) / 0.5
-            y_l = 0.12 - 0.24 * tau
-            z_l = FOOT_ANKLE_Z + 0.055 * math.sin(tau * math.pi)
-            h_l, k_l, _ = solve_leg_trajectory(y_l, z_override=z_l)
-            tilt_l = math.radians(12.0 * math.sin(tau * math.pi))
+            # Phase 2: Left foot is in Swing
+            tau_l = (t - 0.5) / 0.5
+            y_l = 0.12 - 0.24 * tau_l
+            z_l = FOOT_ANKLE_Z + 0.048 * math.sin(tau_l * math.pi)
+            tilt_l = 10.0 * math.sin(tau_l * math.pi)
+            up_l, low_l, foot_l = solve_exact_leg_ik(y_l, z_l, cur_hip_z, tilt_deg=tilt_l)
+
+            # Right foot is in Stance
             tau_r = (t - 0.5) / 0.5
             y_r = -0.12 + 0.24 * tau_r
-            h_r, k_r, tilt_r = solve_leg_trajectory(y_r)
+            z_r = FOOT_ANKLE_Z
+            up_r, low_r, foot_r = solve_exact_leg_ik(y_r, z_r, cur_hip_z, tilt_deg=0.0)
 
-        set_bone_rot(pb["UpperLeg.L"], (h_l, 0, 0))
-        set_bone_rot(pb["LowerLeg.L"], (k_l, 0, 0))
-        set_bone_rot(pb["UpperLeg.R"], (h_r, 0, 0))
-        set_bone_rot(pb["LowerLeg.R"], (k_r, 0, 0))
-        depsgraph.update()
+        set_bone_rot(pb["UpperLeg.L"], (up_l, 0, 0))
+        set_bone_rot(pb["LowerLeg.L"], (low_l, 0, 0))
+        set_bone_rot(pb["Foot.L"], (foot_l, 0, 0))
 
-        pb["Foot.L"].matrix = Matrix.Translation(pb["LowerLeg.L"].tail) @ (Euler((tilt_l, 0, 0)).to_matrix() @ rest_rot[".L"]).to_4x4()
-        pb["Foot.R"].matrix = Matrix.Translation(pb["LowerLeg.R"].tail) @ (Euler((tilt_r, 0, 0)).to_matrix() @ rest_rot[".R"]).to_4x4()
-        depsgraph.update()
+        set_bone_rot(pb["UpperLeg.R"], (up_r, 0, 0))
+        set_bone_rot(pb["LowerLeg.R"], (low_r, 0, 0))
+        set_bone_rot(pb["Foot.R"], (foot_r, 0, 0))
 
         pb["UpperLeg.L"].keyframe_insert(data_path="rotation_euler", frame=f)
         pb["LowerLeg.L"].keyframe_insert(data_path="rotation_euler", frame=f)
@@ -663,7 +587,7 @@ def add_actions(arm_obj):
         set_bone_rot(pb["UpperArm.R"], (arm_r_swing, 0, -6.0))
         pb["UpperArm.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-    # 3. CARRY_IDLE (Frame 0 to 30)
+    # 3. CARRY_IDLE (Frame 0 to 30) - Hands cradling cargo bundle at Socket_Cargo
     reset_pose_transforms(arm_obj)
     act_carry_idle = bpy.data.actions.new("carry_idle")
     act_carry_idle.use_fake_user = True
@@ -671,8 +595,7 @@ def add_actions(arm_obj):
 
     for f in range(0, 31, 5):
         t = f / 30.0
-        bob = 0.008 * math.sin(t * 2 * math.pi)
-        pb["Hips"].location = (0, 0, bob)
+        pb["Hips"].location = (0, 0, 0)
         pb["Hips"].keyframe_insert(data_path="location", frame=f)
 
         set_bone_rot(pb["Spine"], (0, 0, 0))
@@ -692,18 +615,18 @@ def add_actions(arm_obj):
         set_bone_rot(pb["Foot.R"], (0, 0, 0))
         pb["Foot.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-        # Both arms raised forward holding Socket_Cargo
-        set_bone_rot(pb["UpperArm.L"], (36.0, 0, -18.0))
+        # Arms raised forward holding Socket_Cargo (hands at X=+-0.157, Y=-0.276, Z=0.654)
+        set_bone_rot(pb["UpperArm.L"], (-34.0, -33.0, -3.0))
         pb["UpperArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
-        set_bone_rot(pb["LowerArm.L"], (-42.0, 0, 22.0))
+        set_bone_rot(pb["LowerArm.L"], (-13.0, 0.0, 12.0))
         pb["LowerArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-        set_bone_rot(pb["UpperArm.R"], (36.0, 0, 18.0))
+        set_bone_rot(pb["UpperArm.R"], (-34.0, 33.0, 3.0))
         pb["UpperArm.R"].keyframe_insert(data_path="rotation_euler", frame=f)
-        set_bone_rot(pb["LowerArm.R"], (-42.0, 0, -22.0))
+        set_bone_rot(pb["LowerArm.R"], (-13.0, 0.0, -12.0))
         pb["LowerArm.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-    # 4. CARRY_WALK (Frame 0 to 30)
+    # 4. CARRY_WALK (Frame 0 to 30) - Carrying cargo while walking forward
     reset_pose_transforms(arm_obj)
     act_carry_walk = bpy.data.actions.new("carry_walk")
     act_carry_walk.use_fake_user = True
@@ -711,41 +634,46 @@ def add_actions(arm_obj):
 
     for f in range(0, 31):
         t = f / 30.0
-        hips_sway = 0.012 * math.sin(t * 2 * math.pi)
-        pb["Hips"].location = (hips_sway, 0, 0.0)
+        hip_drop = -0.022 + 0.016 * abs(math.sin(t * 2 * math.pi))
+        cur_hip_z = HIP_Z + hip_drop
+
+        hips_sway = 0.010 * math.sin(t * 2 * math.pi)
+        pb["Hips"].location = (hips_sway, hip_drop, 0.0)
         pb["Hips"].keyframe_insert(data_path="location", frame=f)
 
-        set_bone_rot(pb["Spine"], (0, 0, -hips_sway * 18.0))
+        set_bone_rot(pb["Spine"], (0, 0, -hips_sway * 14.0))
         pb["Spine"].keyframe_insert(data_path="rotation_euler", frame=f)
 
         if t <= 0.5:
-            tau = t / 0.5
-            y_l = -0.12 + 0.24 * tau
-            h_l, k_l, tilt_l = solve_leg_trajectory(y_l)
+            tau_l = t / 0.5
+            y_l = -0.12 + 0.24 * tau_l
+            z_l = FOOT_ANKLE_Z
+            up_l, low_l, foot_l = solve_exact_leg_ik(y_l, z_l, cur_hip_z, tilt_deg=0.0)
+
             tau_r = t / 0.5
             y_r = 0.12 - 0.24 * tau_r
-            z_r = FOOT_ANKLE_Z + 0.055 * math.sin(tau_r * math.pi)
-            h_r, k_r, _ = solve_leg_trajectory(y_r, z_override=z_r)
-            tilt_r = math.radians(12.0 * math.sin(tau_r * math.pi))
+            z_r = FOOT_ANKLE_Z + 0.048 * math.sin(tau_r * math.pi)
+            tilt_r = 10.0 * math.sin(tau_r * math.pi)
+            up_r, low_r, foot_r = solve_exact_leg_ik(y_r, z_r, cur_hip_z, tilt_deg=tilt_r)
         else:
-            tau = (t - 0.5) / 0.5
-            y_l = 0.12 - 0.24 * tau
-            z_l = FOOT_ANKLE_Z + 0.055 * math.sin(tau * math.pi)
-            h_l, k_l, _ = solve_leg_trajectory(y_l, z_override=z_l)
-            tilt_l = math.radians(12.0 * math.sin(tau * math.pi))
+            tau_l = (t - 0.5) / 0.5
+            y_l = 0.12 - 0.24 * tau_l
+            z_l = FOOT_ANKLE_Z + 0.048 * math.sin(tau_l * math.pi)
+            tilt_l = 10.0 * math.sin(tau_l * math.pi)
+            up_l, low_l, foot_l = solve_exact_leg_ik(y_l, z_l, cur_hip_z, tilt_deg=tilt_l)
+
             tau_r = (t - 0.5) / 0.5
             y_r = -0.12 + 0.24 * tau_r
-            h_r, k_r, tilt_r = solve_leg_trajectory(y_r)
+            z_r = FOOT_ANKLE_Z
+            up_r, low_r, foot_r = solve_exact_leg_ik(y_r, z_r, cur_hip_z, tilt_deg=0.0)
 
-        set_bone_rot(pb["UpperLeg.L"], (h_l, 0, 0))
-        set_bone_rot(pb["LowerLeg.L"], (k_l, 0, 0))
-        set_bone_rot(pb["UpperLeg.R"], (h_r, 0, 0))
-        set_bone_rot(pb["LowerLeg.R"], (k_r, 0, 0))
-        depsgraph.update()
+        set_bone_rot(pb["UpperLeg.L"], (up_l, 0, 0))
+        set_bone_rot(pb["LowerLeg.L"], (low_l, 0, 0))
+        set_bone_rot(pb["Foot.L"], (foot_l, 0, 0))
 
-        pb["Foot.L"].matrix = Matrix.Translation(pb["LowerLeg.L"].tail) @ (Euler((tilt_l, 0, 0)).to_matrix() @ rest_rot[".L"]).to_4x4()
-        pb["Foot.R"].matrix = Matrix.Translation(pb["LowerLeg.R"].tail) @ (Euler((tilt_r, 0, 0)).to_matrix() @ rest_rot[".R"]).to_4x4()
-        depsgraph.update()
+        set_bone_rot(pb["UpperLeg.R"], (up_r, 0, 0))
+        set_bone_rot(pb["LowerLeg.R"], (low_r, 0, 0))
+        set_bone_rot(pb["Foot.R"], (foot_r, 0, 0))
 
         pb["UpperLeg.L"].keyframe_insert(data_path="rotation_euler", frame=f)
         pb["LowerLeg.L"].keyframe_insert(data_path="rotation_euler", frame=f)
@@ -756,14 +684,14 @@ def add_actions(arm_obj):
         pb["Foot.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
         # Arms held steady cradling cargo with subtle body sway
-        set_bone_rot(pb["UpperArm.L"], (36.0, 0, -18.0))
+        set_bone_rot(pb["UpperArm.L"], (-34.0, -33.0, -3.0))
         pb["UpperArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
-        set_bone_rot(pb["LowerArm.L"], (-42.0, 0, 22.0))
+        set_bone_rot(pb["LowerArm.L"], (-13.0, 0.0, 12.0))
         pb["LowerArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-        set_bone_rot(pb["UpperArm.R"], (36.0, 0, 18.0))
+        set_bone_rot(pb["UpperArm.R"], (-34.0, 33.0, 3.0))
         pb["UpperArm.R"].keyframe_insert(data_path="rotation_euler", frame=f)
-        set_bone_rot(pb["LowerArm.R"], (-42.0, 0, -22.0))
+        set_bone_rot(pb["LowerArm.R"], (-13.0, 0.0, -12.0))
         pb["LowerArm.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
     # 5. WORK_GATHER (Frame 0 to 30)
@@ -774,12 +702,15 @@ def add_actions(arm_obj):
 
     for f in range(0, 31, 3):
         t = f / 30.0
+        pb["Hips"].location = (0, 0, 0)
+        pb["Hips"].keyframe_insert(data_path="location", frame=f)
+
         cycle = math.sin(t * 2 * math.pi)
-        bend = 18.0 + 16.0 * max(0.0, cycle)
+        bend = 14.0 + 12.0 * max(0.0, cycle)
         set_bone_rot(pb["Spine"], (bend, 0, 0))
         pb["Spine"].keyframe_insert(data_path="rotation_euler", frame=f)
 
-        arm_reach = 20.0 + 35.0 * max(0.0, cycle)
+        arm_reach = -15.0 - 20.0 * max(0.0, cycle)
         set_bone_rot(pb["UpperArm.L"], (arm_reach, 0, -12.0))
         pb["UpperArm.L"].keyframe_insert(data_path="rotation_euler", frame=f)
         set_bone_rot(pb["UpperArm.R"], (arm_reach, 0, 12.0))
@@ -804,7 +735,8 @@ def add_actions(arm_obj):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 def verify_mesh_grounding_and_actions(mesh_obj, arm_obj):
-    """Rigorous pre-export check: verifies that no vertex dips below Z=0 on any frame of any action."""
+    """Rigorous pre-export check: verifies that no vertex dips below Z=0 on any frame of any action,
+    and that during stance phase of walk/carry_walk the sole is firmly on the ground."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     actions = [bpy.data.actions[name] for name in ["idle", "walk", "carry_idle", "carry_walk", "work_gather"]]
 
@@ -812,6 +744,8 @@ def verify_mesh_grounding_and_actions(mesh_obj, arm_obj):
     for act in actions:
         arm_obj.animation_data.action = act
         min_z_overall = 999.0
+        max_contact_z_in_stance = 0.0
+
         for f in range(0, 31):
             bpy.context.scene.frame_set(f)
             depsgraph.update()
@@ -819,12 +753,21 @@ def verify_mesh_grounding_and_actions(mesh_obj, arm_obj):
             eval_mesh = eval_obj.to_mesh()
             min_z = min(v.co.z for v in eval_mesh.vertices)
             min_z_overall = min(min_z_overall, min_z)
+
+            # Check stance contact
+            if act.name in ("walk", "carry_walk"):
+                if f in (3, 4, 5, 6, 7, 18, 19, 20, 21, 22):
+                    max_contact_z_in_stance = max(max_contact_z_in_stance, min_z)
+
             eval_obj.to_mesh_clear()
 
-        print(f"Action '{act.name:12s}': min Z = {min_z_overall:+.4f} m (threshold >= -0.002 m)")
-        if min_z_overall < -0.005:
-            raise RuntimeError(f"Action '{act.name}' has vertex penetrating ground at Z = {min_z_overall:.4f} m!")
-    print("--- ALL ACTIONS PASSED GROUND CONTACT VERIFICATION ---\n")
+        print(f"Action '{act.name:12s}': min Z = {min_z_overall:+.4f} m (stance contact Z = {max_contact_z_in_stance:.4f} m)")
+        if min_z_overall < -0.002:
+            raise RuntimeError(f"Action '{act.name}' penetrates ground: min Z = {min_z_overall:.4f} m!")
+        if act.name in ("walk", "carry_walk") and max_contact_z_in_stance > 0.0025:
+            raise RuntimeError(f"Action '{act.name}' floating in stance: max stance Z = {max_contact_z_in_stance:.4f} m!")
+
+    print("--- ALL ACTIONS PASSED RIGOROUS GROUND CONTACT VERIFICATION ---\n")
 
 def main():
     clear_scene()

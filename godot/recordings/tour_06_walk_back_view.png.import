@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://m4l8g3jv0mjd"
-path="res://.godot/imported/tour_02_walk_front.png-c491b2728e9be7e0c29bcd5b4c661b5c.ctex"
+uid="uid://c5x2g8cpvlj1v"
+path="res://.godot/imported/tour_06_walk_back_view.png-08fc7f179d86dcad8b06476b1c18b1d7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://recordings/tour_02_walk_front.png"
-dest_files=["res://.godot/imported/tour_02_walk_front.png-c491b2728e9be7e0c29bcd5b4c661b5c.ctex"]
+source_file="res://recordings/tour_06_walk_back_view.png"
+dest_files=["res://.godot/imported/tour_06_walk_back_view.png-08fc7f179d86dcad8b06476b1c18b1d7.ctex"]
 
 [params]
 
