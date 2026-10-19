@@ -15,6 +15,7 @@ parser.add_argument("--columns", type=int, default=4)
 parser.add_argument("--rows", type=int, default=4)
 parser.add_argument("--head-anchors", action="store_true", help="Record a resident head's centre, forehead seat and width (read-only alpha inspection)")
 parser.add_argument("--row-edges", help="Optional comma-separated inspected row boundaries for nonuniform generated gutters")
+parser.add_argument("--require-gutters", action="store_true", help="Reject a connected sprite touching a cell boundary (possible clipped head or feet)")
 args = parser.parse_args()
 im = Image.open(args.image).convert("RGBA")
 alpha = im.getchannel("A")
@@ -48,6 +49,8 @@ for row in range(args.rows):
         if len(largest) < 100:
             raise ValueError(f"Missing sprite at row {row}, column {col}")
         xs, ys = zip(*largest)
+        if args.require_gutters and (min(xs) == 0 or min(ys) == 0 or max(xs) == tw-1 or max(ys) == th-1):
+            raise ValueError(f"Sprite touches cell boundary at row {row}, column {col}; inspect row/column boundaries before registering")
         bx, by = max(0, min(xs)-2), max(0, min(ys)-2)
         ex, ey = min(tw, max(xs)+3), min(th, max(ys)+3)
         frame = {"x": x0+bx, "y": y0+by, "width": ex-bx, "height": ey-by,

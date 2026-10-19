@@ -2,7 +2,7 @@ import { Application, Container, Graphics, Sprite, Text, TilingSprite } from "pi
 import type { Ant, Enemy, Fish, FishSpecies, WorldSnapshot } from "../../shared/types";
 import { getEnvironmentTextures, preloadEnvironmentAssets } from "./render/surface/environment";
 import { preloadGardenArt } from "./render/surface/gardenArt";
-import { preloadCharacterArt } from "./render/surface/characterArt";
+import { getResidentArt, preloadCharacterArt } from "./render/surface/characterArt";
 import { preloadCreatureArt } from "./render/surface/creatureArt";
 import { preloadEquipmentArt } from "./render/surface/equipmentArt";
 import { preloadFishArt } from "./render/surface/fishArt";
@@ -26,17 +26,35 @@ import { lakeShorePortals } from "../../shared/amphibianNavigation";
 import { isWaterAt } from "../../shared/surfaceTerrain";
 import { updateDeposits } from "./render/surface/deposits";
 import { DEPOSIT_WORK_OFFSETS } from "../../shared/resourceDeposits";
-import { residentRigContacts } from "./render/surface/residentRig";
 
 const app = new Application();
 await app.init({ width: 1024, height: 690, background: 0x555e3b, antialias: true });
 await Promise.all([preloadEnvironmentAssets(), preloadCharacterArt(), preloadCreatureArt(), preloadEquipmentArt(), preloadFishArt(), preloadBuildingArt(), preloadGardenArt()]);
 document.querySelector("#preview")!.append(app.canvas);
+const record = document.createElement("button"), download = document.createElement("a");
+record.textContent = "Записать 8 секунд"; download.hidden = true; download.textContent = "Скачать запись";
+document.querySelector("#status")!.after(record, download);
+record.onclick = () => {
+  const stream = (app.canvas as HTMLCanvasElement).captureStream(60);
+  const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find(MediaRecorder.isTypeSupported);
+  const recorder = new MediaRecorder(stream, { mimeType }), chunks: Blob[] = [];
+  record.disabled = true; record.textContent = "Запись…"; download.hidden = true;
+  recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+  recorder.onstop = () => {
+    if (download.href.startsWith("blob:")) URL.revokeObjectURL(download.href);
+    download.href = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType }));
+    download.download = "clayfolk-sprite-walk-v4.webm"; download.hidden = false;
+    record.disabled = false; record.textContent = "Записать 8 секунд";
+    stream.getTracks().forEach(track => track.stop());
+  };
+  recorder.start(); setTimeout(() => recorder.stop(), 8000);
+};
 const campScene = createSurfaceScene();
 const shadows = campScene.shadowLayer, actors = campScene.dynamicLayer, fishLayer = campScene.fishLayer;
 const effects = campScene.fishingGraphics, selection = campScene.selectionGraphics, labels = new Container();
 actors.sortableChildren = true;
-app.stage.addChild(campScene.root, labels);
+const phaseBoard = new Container();
+app.stage.addChild(campScene.root, labels, phaseBoard);
 const people = createSpritePool(actors, () => new Sprite()), props = createSpritePool(actors, () => new Sprite());
 const enemies = createSpritePool(actors, () => new Sprite()), loot = createSpritePool(actors, () => new Sprite());
 const fishes = createSpritePool(fishLayer, () => new Sprite());
@@ -49,26 +67,8 @@ const group = document.querySelector<HTMLSelectElement>("#group")!, direction = 
 const speed = document.querySelector<HTMLSelectElement>("#speed")!, pause = document.querySelector<HTMLButtonElement>("#pause")!;
 const light = document.querySelector<HTMLSelectElement>("#light")!;
 const campLike = () => group.value === "camp" || group.value === "drying";
-const floorGroups = ["gait", "deposits", "food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
+const floorGroups = ["deposits", "food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
 const hasFloor = () => campLike() || floorGroups.includes(group.value) || group.value.startsWith("crowd");
-const contacts = new Map<string, { x:number; y:number; rootX:number; rootY:number; stamp:number; planted:boolean }>();
-let maxFootSlip=0, contactSamples=0;
-const record=document.createElement("button"), download=document.createElement("a");
-record.textContent="Записать 8 секунд";download.hidden=true;download.textContent="Скачать запись";
-document.querySelector("#status")!.after(record,download);
-record.onclick=()=>{
-  const stream=(app.canvas as HTMLCanvasElement).captureStream(60);
-  const mimeType=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(MediaRecorder.isTypeSupported);
-  const recorder=new MediaRecorder(stream,{mimeType}),chunks:Blob[]=[];
-  record.disabled=true;record.textContent="Запись…";download.hidden=true;
-  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-  recorder.onstop=()=>{
-    if(download.href.startsWith("blob:"))URL.revokeObjectURL(download.href);
-    download.href=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType}));download.download="clayfolk-footplant.webm";download.hidden=false;
-    record.disabled=false;record.textContent="Записать 8 секунд";stream.getTracks().forEach(t=>t.stop());
-  };
-  recorder.start();setTimeout(()=>recorder.stop(),8000);
-};
 
 function setLight() {
   if (!hasFloor()) return;
@@ -98,12 +98,27 @@ function enemy(index: number, type: Enemy["type"], name: string, walking = true,
   world.enemies.push(actor); label(name, index); return actor;
 }
 function loadGroup() {
+  phaseBoard.visible = group.value === "walkFrames";
+  campScene.root.visible = labels.visible = !phaseBoard.visible;
+  for (const child of phaseBoard.removeChildren()) child.destroy();
+  if (phaseBoard.visible) {
+    const names = ["Вправо", "Влево", "С грузом вправо", "С грузом влево"];
+    for (let row = 0; row < 4; row++) for (let key = 0; key < 4; key++) {
+      const art = getResidentArt("side", row % 2 ? -1 : 1, 1 + key * 2, row > 1);
+      const sprite = new Sprite(art.texture), x = 128 + key * 256, y = 150 + row * 160;
+      sprite.anchor.set(art.anchorX, art.anchorY ?? 1); sprite.scale.set(art.scale * 1.85 * 4);
+      sprite.tint = art.tint ?? 0xffffff;
+      sprite.position.set(x, y); phaseBoard.addChild(sprite);
+      const text = new Text({ text: `${names[row]} · ${["нога впереди", "опора под телом", "нога сзади", "перенос ноги"][key]}`,
+        style: { fontFamily: "system-ui", fontSize: 13, fill: 0xf4e4bd } });
+      text.anchor.set(.5); text.position.set(x, y + 22); phaseBoard.addChild(text);
+    }
+  }
   campScene.root.position.set(0, 0);
   campScene.lakeDetails.visible = group.value === "lake"; campScene.lakeRipples.clear();
   campScene.footGround.clear();
   for (const child of actors.children.filter(c => c.label === "preview_ghost")) child.destroy({ children: true });
   elapsed = 0; lastStatusAt = 0; actorMotion.reset(); homes.clear();
-  contacts.clear();maxFootSlip=0;contactSamples=0;
   packetSeconds = 0; packetTicks = 0;
   for (const child of campScene.staticLayer.removeChildren()) child.destroy({ children: true });
   for (const child of campScene.waterLayer.removeChildren()) child.destroy({ children: true });
@@ -117,15 +132,7 @@ function loadGroup() {
     colonies: ["colony-1", "colony-2", "water"].map(id => ({ id, colony: { alarm: false, axes: 1, picks: 1, rods: 1, food: 80, clay: 20, wood: 20, stone: 20, fire: 1, waterWeapons: id === "water" } })),
     surface: { width: 480, height: 480, entrances: [], resourceNodes: [], buildings: [], fish: [], foodSources: [], carrion: [] }
   } as unknown as WorldSnapshot;
-  if (group.value === "gait") {
-    const names=["Рабочий · 10.5 кл/с","Носильщик · 10.5 кл/с","Правитель · 2.2 кл/с","После дождя · малый размер"];
-    for(let i=0;i<4;i++){
-      const a=ant(i,"",{pos:{x:5,y:7+i*10},carrying:i===1?1:0,carryKind:"clay",dissolved:i===3?.6:0,heading:{x:1,y:0}},true);
-      if(i===2){const old=a.id;a.id="royal-king-gait";homes.set(a.id,homes.get(old)!);homes.delete(old);}
-    }
-    for(const child of labels.removeChildren())child.destroy();
-    names.forEach((text,i)=>{const view=new Text({text,style:{fontFamily:"system-ui",fontSize:15,fill:0x50412b}});view.position.set(24,(7+i*10)*16+20);labels.addChild(view);});
-  } else if (group.value === "deposits") {
+  if (group.value === "deposits") {
     world.surface.deposits = [{ id: "pit", kind: "clay", pos: { x: 16, y: 19 }, capacity: 4800 }, { id: "quarry", kind: "stone", pos: { x: 48, y: 19 }, capacity: 7200 }];
     for (const [index, d] of world.surface.deposits.entries()) for (const [i, offset] of DEPOSIT_WORK_OFFSETS.entries()) {
       const pos = { x: d.pos.x + offset.x, y: d.pos.y + offset.y }, id = `${d.id}-${i}`;
@@ -198,7 +205,11 @@ function loadGroup() {
     }
     for (const child of labels.removeChildren()) child.destroy();
   } else if (group.value === "steps") {
-    for (let i = 0; i < 6; i++) { const a = ant(i, "", { pos: { x: 12 + i * 7, y: 17 + i % 2 * 9 } }, true); homes.set(a.id, { ...a.pos, walking: true }); }
+    for (let i = 0; i < 6; i++) {
+      const a = ant(i, "", { pos: { x: 12 + i * 7, y: 17 + i % 2 * 9 }, carrying: i % 2,
+        carryKind: (["clay", "wood", "stone"] as const)[Math.floor(i / 2)] }, true);
+      homes.set(a.id, { ...a.pos, walking: true });
+    }
     for (const child of labels.removeChildren()) child.destroy();
   } else if (group.value === "buildings") {
     for (const [i, type] of (["hut", "storage", "workshop", "idol"] as const).entries()) {
@@ -275,7 +286,7 @@ function loadGroup() {
       world.ants.push({ id, colonyId: "colony-1", layer: "surface", state: "idle", job: "forage", carrying: 0, pos: { ...e.pos }, heading: { x: 1, y: 0 }, capturedBy: e.id } as Ant);
     }
     enemy(8, "spider", "Паук с добычей", true, { carrying: 1 }); enemy(9, "lakeMonster", "Раненый монстр", true, { hp: 15 });
-  } else {
+  } else if (group.value !== "walkFrames") {
     (["gold", "blue", "silver", "red"] as FishSpecies[]).forEach((species, i) => {
       for (let state = 0; state < 2; state++) {
         const index = i + state * 4, id = `fish-${index}`;
@@ -329,7 +340,7 @@ app.ticker.add(ticker => {
     const root = homes.get(actor.id);
     if (root?.walking && running) {
       const h = group.value === "royals" && "heading" in actor ? actor.heading : heading;
-      const pace = group.value === "royals" || actor.id === "royal-king-gait" ? 2.2 : 10.5;
+      const pace = group.value === "royals" ? 2.2 : 10.5;
       actor.pos.x += h.x * dt * pace * running; actor.pos.y += h.y * dt * pace * running;
     }
   }
@@ -349,7 +360,7 @@ app.ticker.add(ticker => {
   for (const a of world.ants) if (!a.capturedBy && !campLike() && group.value !== "combat" && group.value !== "royals" && group.value !== "deposits") actorMotion.setFacing(a.id, heading, "resident");
   for (const e of world.enemies) actorMotion.setFacing(e.id, heading, "creature");
   const positions = all.map(a => ({ ...a.pos }));
-  for (const actor of all) { const root = homes.get(actor.id); if (root && group.value !== "gait" && group.value !== "steps" && !group.value.startsWith("crowd")) actor.pos = { x: root.x, y: root.y }; }
+  for (const actor of all) { const root = homes.get(actor.id); if (root && group.value !== "steps" && !group.value.startsWith("crowd")) actor.pos = { x: root.x, y: root.y }; }
   for (const a of world.ants) if (a.capturedBy) { const captor = world.enemies.find(e => e.id === a.capturedBy); if (captor) a.pos = { ...captor.pos }; }
   if (group.value === "lake") updateLakeDetails(campScene.lakeDetails, campScene.lakeRipples, world, cell, bounds);
   if (document.querySelector<HTMLInputElement>("#footprints")!.checked) updateFootprints(campScene.footGround, world, cell, bounds);
@@ -364,29 +375,18 @@ app.ticker.add(ticker => {
   updateSurfaceFood(sources, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);
   updateSurfaceResidents(people, props, selection, world, cell, bounds);
-  if(group.value==="gait")for(const foot of residentRigContacts(people)){
-    const old=contacts.get(foot.id),delta=old?Math.hypot(foot.x-old.x,foot.y-old.y):0;
-    if(running<=1&&old?.planted&&foot.planted&&old.stamp===foot.stamp&&Math.hypot(foot.rootX-old.rootX,foot.rootY-old.rootY)<12){maxFootSlip=Math.max(maxFootSlip,delta*scale);contactSamples++;}
-    contacts.set(foot.id,{...foot});
-  }
   updatePropContacts(shadows, actors, world, cell, bounds);
   updateFishingEffects(effects, world, cell, bounds);
   if (guard?.shot && actorMotion.resident(guard).shotActive) {
     const gun = waterGunMount(residentPlacement(world, guard, cell), guard, cell);
     if (gun.target) effects.moveTo(gun.tip.x, gun.tip.y).lineTo(gun.target.x, gun.target.y).stroke({ color: 0x8de5f7, width: 2 });
   }
-  all.forEach((a, i) => {
-    a.pos = positions[i];
-    if(group.value === "steps" || group.value === "gait") {
-      if(a.pos.x>59)a.pos.x=5;else if(a.pos.x<3)a.pos.x=59;
-      if(a.pos.y>41)a.pos.y=5;else if(a.pos.y<3)a.pos.y=41;
-    }
-  });
+  all.forEach((a, i) => { a.pos = positions[i]; if (group.value === "steps" && a.pos.x > 59) a.pos.x = 5; });
   world.ants = normalResidents;
   frameCount++;
   if (start - lastFpsAt >= 1000) { measuredFps = Math.round(frameCount * 1000 / (start - lastFpsAt)); frameCount = 0; lastFpsAt = start; }
   if (start - lastStatusAt > 300) {
-    document.querySelector("#status")!.textContent = group.value==="gait" ? running>1 ? `Ускорение: частота шага ограничена · ${measuredFps} FPS` : `Опорная стопа: сдвиг ≤ ${maxFootSlip.toFixed(4)} px · ${contactSamples} замеров · ${measuredFps} FPS` : `${world.ants.length} жителей · ${world.enemies.length} существ · ${world.surface.fish.length} рыб · ${footprintCount(campScene.footGround)} следов · ${measuredFps} FPS · подготовка кадра ${(performance.now() - start).toFixed(1)} мс`;
+    document.querySelector("#status")!.textContent = `${world.ants.length} жителей · ${world.enemies.length} существ · ${world.surface.fish.length} рыб · ${footprintCount(campScene.footGround)} следов · ${measuredFps} FPS · подготовка кадра ${(performance.now() - start).toFixed(1)} мс`;
     lastStatusAt = start;
   }
 });

@@ -320,10 +320,11 @@ scenario("Crowns follow front/side/back and the current head offset, including a
   assert.ok(Math.abs(crown.x - 98.4) < 1e-9); assert.equal(crown.y, 48); assert.ok(crown.scaleX < 0);
   assert.equal(royalHeadgearMount({ ...body, facing: 1 }, head, 400, 0.5, 1).x, crown.x);
 });
-scenario("Both walking atlases contain registered phases in all directions, with stable full-body heights", () => {
-  for (const file of ["resident-walk-v2", "resident-carry-walk-v2"]) {
+scenario("Walking atlases and the extra contact pose cover every direction with registered heads and stable heights", () => {
+  for (const file of ["resident-walk-v2", "resident-carry-walk-v2", "resident-opposite-step-v3", "resident-side-walk-v4"]) {
     const data = JSON.parse(readFileSync(`client/public/assets/characters/clayfolk/${file}.json`, "utf8"));
-    assert.equal(data.rows, WALK_PHASES); assert.equal(data.columns, 4); assert.equal(data.frames.length, WALK_PHASES * 4);
+    const phases = file === "resident-side-walk-v4" ? 4 : file === "resident-opposite-step-v3" ? 2 : WALK_PHASES - 1;
+    assert.equal(data.rows, phases); assert.equal(data.columns, 4); assert.equal(data.frames.length, phases * 4);
     const heights = data.frames.map((f: { height: number }) => f.height);
     assert.ok(Math.max(...heights) / Math.min(...heights) < 1.08);
     for (const f of data.frames) {

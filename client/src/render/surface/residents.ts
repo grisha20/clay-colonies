@@ -13,7 +13,6 @@ import { visualIndex } from "./visualIndex";
 import { getFishArt } from "./fishArt";
 import { royalKind } from "./royals";
 import { getRoyalHeadgear, royalHeadgearMount } from "./royalHeadgear";
-import { drawResidentRig, hideResidentRigs } from "./residentRig";
 
 let selectedAntId: string | null = null;
 export function setSelectedAntId(id: string | null): void { selectedAntId = id; }
@@ -25,7 +24,6 @@ export function applyItemMount(sprite: Sprite, mount: ItemMount): void {
 
 export function updateSurfaceResidents(pool: SpritePool, items: SpritePool, selection: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool); beginPool(items); selection.clear();
-  hideResidentRigs(pool);
   const { nodes, colonies } = visualIndex(world);
   for (const ant of world.ants) {
     if (ant.layer !== "surface" || ant.pos.x < bounds.left - 8 || ant.pos.x > bounds.right + 8 || ant.pos.y < bounds.top - 8 || ant.pos.y > bounds.bottom + 8) continue;
@@ -52,11 +50,12 @@ export function updateSurfaceResidents(pool: SpritePool, items: SpritePool, sele
     body.scale.set(bodyScale * (2 - mount.stretch), bodyScale * mount.stretch);
     body.rotation = mount.rotation;
     const base = ant.colonyId === "colony-2" ? 0xffb8a0 : 0xffffff, wet = Math.min(1, (ant.waterExposure ?? 0) / 30);
-    body.tint = [16, 8, 0].reduce((color, shift) => color | Math.round(((base >> shift) & 255) * (1 - wet) + ((0xa9cbd4 >> shift) & 255) * wet) << shift, 0);
+    const appearanceTint = [16, 8, 0].reduce((color, shift) => color | Math.round(((base >> shift) & 255) * (1 - wet) + ((0xa9cbd4 >> shift) & 255) * wet) << shift, 0);
+    const palette = art.tint ?? 0xffffff;
+    body.tint = [16, 8, 0].reduce((color, shift) => color | Math.round(((appearanceTint >> shift) & 255) * ((palette >> shift) & 255) / 255) << shift, 0);
     body.alpha = mount.captive === "lakeMonster" ? 0.92 : 1;
     const captor = ant.capturedBy ? visualIndex(world).enemies.get(ant.capturedBy) : undefined;
     body.zIndex = mount.captive === "lakeMonster" && captor ? Math.max(groundY, captor.pos.y * cell + 14) : groundY + (mount.captive === "beetle" ? 0.2 : 0);
-    drawResidentRig(body, art, ant, mount, cell);
 
     if (!ant.capturedBy) {
       const royal = royalKind(ant);
@@ -65,7 +64,7 @@ export function updateSurfaceResidents(pool: SpritePool, items: SpritePool, sele
           const crown = acquireSprite(items); crown.texture = part.texture;
           applyItemMount(crown, royalHeadgearMount(mount, art.head ?? { x: 0, y: -14, width: 10.5 }, part.fullWidth, part.anchorX, part.anchorY));
           if (part.mirror) crown.scale.x *= -1;
-          crown.zIndex = groundY + (part.behind ? -0.05 : 0.05); crown.alpha = body.alpha; crown.tint = body.tint;
+          crown.zIndex = groundY + (part.behind ? -0.05 : 0.05); crown.alpha = body.alpha; crown.tint = appearanceTint;
         }
       }
       if (ant.forageRole === "scout" && ant.job === "forage") item("satchel", 9, -5.5, -7, 0.1, 0.5, 0.5, pose.look !== "back");

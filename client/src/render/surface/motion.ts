@@ -1,11 +1,10 @@
 import type { Ant, Enemy, Vec2, WorldSnapshot } from "../../../../shared/types";
 import { visualIndex } from "./visualIndex";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
-import { FootGait, type GaitFoot } from "./footGait";
 
 export const RESIDENT_SCALE = 1.85;
 export const RESIDENT_HEIGHT = 19;
-export const WALK_PHASES = 7;
+export const WALK_PHASES = 8;
 // 2π / 2.1 world units ≈ 24 screen px per cycle at cell=8, matching the soles.
 export const WALK_PHASE_PER_UNIT = 2.1;
 export type LookDirection = "front" | "back" | "side";
@@ -16,13 +15,11 @@ export type ResidentPose = {
   angle: number; working: number;
   shotActive: boolean;
   attack: number; attackActive: boolean;
-  feet?: [GaitFoot, GaitFoot];
 };
 type Motion = {
   x: number; y: number; phase: number; walk: number; facing: number;
   work: number; seed: number; pose: ResidentPose;
   capturedBy?: string;
-  gait?: FootGait;
   shotSampled?: boolean; lastShotUntil?: number; shotTimer?: number;
   meleeSampled?: boolean; lastMeleeUntil?: number; meleeTimer?: number;
 };
@@ -34,10 +31,6 @@ export function residentScale(ant: Ant): number {
 function hash(id: string): number {
   let value = 2166136261;
   for (let i = 0; i < id.length; i++) value = Math.imul(value ^ id.charCodeAt(i), 16777619);
-  // Adjacent numeric ids must not march almost in sync.
-  value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
-  value = Math.imul(value ^ (value >>> 15), 0x846ca68b);
-  value ^= value >>> 16;
   return (value >>> 0) / 4294967296 * Math.PI * 2;
 }
 export const animationSeed = hash;
@@ -159,7 +152,6 @@ export class MotionTracker {
       map.set(id, m);
     }
     const distance = Math.hypot(pos.x - m.x, pos.y - m.y);
-    const dx = pos.x - m.x, dy = pos.y - m.y;
     m.x = pos.x; m.y = pos.y;
     if (dt <= 0) return m;
     const teleport = distance > Math.max(12, dt * 1800);
@@ -169,22 +161,10 @@ export class MotionTracker {
     if (teleport) m.walk = 0;
     // The old 10 rad/s cap already truncated ordinary 1× movement (~10.5 u/s),
     // so roots advanced almost three times farther than the visible strides.
-    // In a front/back view the visible legs are foreshortened. Shorter steps
-    // avoid pulling a little shin into a long strip down the screen.
-    const projection = resident && distance > .0001 ? 1 + .55 * Math.abs(dy) / distance : 1;
-    const phasePerUnit = resident ? WALK_PHASE_PER_UNIT * projection / strideScale : 1.3;
-    const maxRate = resident ? playback > 1 ? 18 : 32 * projection / strideScale : 15;
+    const phasePerUnit = resident ? WALK_PHASE_PER_UNIT / strideScale : 1.3;
+    const maxRate = resident ? playback > 1 ? 18 : 32 : 15;
     m.phase = (m.phase + Math.min(distance * phasePerUnit, dt * maxRate) * Number(!teleport)) % (Math.PI * 2);
     this.orient(m, heading);
-    if (resident) {
-      if (teleport) { m.gait = undefined; m.pose.feet = undefined; }
-      else if (distance > .0001 || m.gait) {
-        m.gait ??= new FootGait();
-        const direction = distance > .0001 ? { x: dx / distance, y: dy / distance } : { x: Math.cos(m.pose.angle), y: Math.sin(m.pose.angle) };
-        m.gait.update(pos, direction, m.phase, Math.PI * 2 / phasePerUnit, strideScale, distance > .0001, dt);
-        m.pose.feet = m.gait.feet;
-      }
-    }
     m.pose.walk = m.walk;
     m.pose.phase = m.phase;
     m.pose.facing = m.facing;

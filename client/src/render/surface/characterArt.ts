@@ -1,5 +1,5 @@
 import { Assets, Rectangle, Texture } from "pixi.js";
-import type { LookDirection } from "./motion";
+import { WALK_PHASES, type LookDirection } from "./motion";
 import { loadSpriteAtlas, type LoadedAtlas } from "./atlas";
 import type { HeadSeat } from "./royalHeadgear";
 import { spriteGrounding, type GroundProfile } from "./spriteGrounding";
@@ -13,12 +13,12 @@ const frames = [
   [77,656,161,263,.49689], [395,653,165,257,.45758], [698,653,161,266,.53106], [1010,654,161,256,.54037],
   [83,966,147,254,.5034], [410,962,144,264,.42014], [707,965,150,256,.51], [1015,962,142,264,.57746]
 ] as const;
-export type CharacterArt = { texture: Texture; anchorX: number; anchorY?: number; scale: number; head?: HeadSeat; ground?: GroundProfile };
+export type CharacterArt = { texture: Texture; anchorX: number; anchorY?: number; scale: number; tint?: number; head?: HeadSeat; ground?: GroundProfile };
 const atlas: CharacterArt[] = [];
 let actions: LoadedAtlas;
 let actionScale = 1;
 let captiveHead: CharacterArt;
-let walking: LoadedAtlas, carryingWalk: LoadedAtlas;
+let walking: LoadedAtlas, carryingWalk: LoadedAtlas, oppositeStep: LoadedAtlas, sideWalk: LoadedAtlas;
 const registered = new WeakMap<CharacterArt, CharacterArt>();
 const walkFrames = new Map<LoadedAtlas, CharacterArt[]>();
 const actionFrames: CharacterArt[] = [];
@@ -40,7 +40,9 @@ function walkingArt(source: LoadedAtlas, index: number): CharacterArt {
   // Register the torso on the head centre, so toe travel doesn't shift the
   // whole body left/right between adjacent walking frames.
   const anchorX = f.head ? f.head.x / f.width : f.anchorX;
-  const art = grounded({ texture: source.textures[index], anchorX, scale,
+  // Registration also balances the full-head mean RGB between generated
+  // sheets. Sprite tint costs no additional filter or per-frame pixel reads.
+  const art = grounded({ texture: source.textures[index], anchorX, scale, tint: f.tint,
     head: f.head ? { x: 0, y: (f.head.y - f.height) * scale, width: f.head.width * scale } : undefined });
   if (!walkFrames.has(source)) walkFrames.set(source, []);
   walkFrames.get(source)![index] = art; return art;
@@ -48,9 +50,10 @@ function walkingArt(source: LoadedAtlas, index: number): CharacterArt {
 
 export async function preloadCharacterArt(): Promise<void> {
   if (atlas.length) return;
-  const [base, actionAtlas, walk, carry] = await Promise.all([Assets.load<Texture>(residentAtlasUrl), loadSpriteAtlas("/assets/characters/clayfolk/resident-actions-atlas.png"),
-    loadSpriteAtlas("/assets/characters/clayfolk/resident-walk-v2.png"), loadSpriteAtlas("/assets/characters/clayfolk/resident-carry-walk-v2.png")]);
-  walking = walk; carryingWalk = carry;
+  const [base, actionAtlas, walk, carry, opposite, side] = await Promise.all([Assets.load<Texture>(residentAtlasUrl), loadSpriteAtlas("/assets/characters/clayfolk/resident-actions-atlas.png"),
+    loadSpriteAtlas("/assets/characters/clayfolk/resident-walk-v2.png"), loadSpriteAtlas("/assets/characters/clayfolk/resident-carry-walk-v2.png"),
+    loadSpriteAtlas("/assets/characters/clayfolk/resident-opposite-step-v3.png"), loadSpriteAtlas("/assets/characters/clayfolk/resident-side-walk-v4.png")]);
+  walking = walk; carryingWalk = carry; oppositeStep = opposite; sideWalk = side;
   actions = actionAtlas;
   actionScale = 19 / (actions.data.frames.slice(0, 4).reduce((sum, f) => sum + f.height, 0) / 4);
   const source = base.source;
@@ -65,7 +68,7 @@ export async function preloadCharacterArt(): Promise<void> {
   captiveHead = { texture: new Texture({ source, frame: new Rectangle(x, y, width, Math.round(height * 0.44)) }), anchorX, scale: 19 / 258 };
   // Analyze every pose up front; no canvas reads or temporary art in the frame loop.
   for (const art of atlas) grounded(art);
-  for (const source of [walking, carryingWalk]) source.textures.forEach((_, i) => walkingArt(source, i));
+  for (const source of [walking, carryingWalk, oppositeStep, sideWalk]) source.textures.forEach((_, i) => walkingArt(source, i));
   actions.textures.forEach((texture, i) => actionFrames.push(grounded({ texture, anchorX: actions.data.frames[i].anchorX, scale: actionScale })));
 }
 
@@ -74,8 +77,20 @@ export function getResidentArt(look: LookDirection, facing: number, legFrame = 0
   const row = legFrame === 1 ? 1 : legFrame === 2 ? 2 : handsRaised ? 3 : 0;
   if (!atlas.length) throw new Error("Character art must be preloaded before rendering");
   if (working <= 0.4 && legFrame > 0) {
+    // Insert the drawn opposite contact after the first half-stride. The
+    // character remains one intact sprite: no cut-out or warped limbs.
+    const phase = (legFrame - 1) % WALK_PHASES;
     const source = handsRaised ? carryingWalk : walking;
-    return walkingArt(source, ((legFrame - 1) % source.data.rows) * 4 + column);
+    if (look === "side") {
+      const key = Math.floor(phase / 2);
+      // The old contact has the near leg BACK; new keys put it forward,
+      // under the hip, then raised. Never use the duplicate generated key 2.
+      if (key === 2) return walkingArt(source, column);
+      const sideRow = (handsRaised ? 2 : 0) + (facing < 0 ? 1 : 0);
+      return walkingArt(sideWalk, sideRow * 4 + key);
+    }
+    if (phase === 4) return walkingArt(oppositeStep, (handsRaised ? 4 : 0) + column);
+    return walkingArt(source, (phase > 4 ? phase - 1 : phase) * 4 + column);
   }
   if (working > 0.4) {
     const actionRow = working > 0.4 ? work > 0.5 ? 3 : 2 : legFrame === 2 ? 1 : 0;

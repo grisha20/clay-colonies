@@ -8,31 +8,20 @@ export type FootMark = { id: string; x: number; y: number; angle: number; size: 
 export class FootprintTrail {
   marks: FootMark[] = [];
   private steps = new Map<string, { phase: number; x: number; y: number; seen: number }>();
-  private contacts = new Map<string, { stamp: number; seen: number }>();
-  reset(): void { this.marks = []; this.steps.clear(); this.contacts.clear(); }
-  plant(id: string, leg: number, x: number, y: number, angle: number, stamp: number, size: number, time: number, enabled: boolean): void {
-    const key = `${id}:${leg}`, old = this.contacts.get(key);
-    this.contacts.set(key, { stamp, seen: time });
-    if (!enabled || !old || old.stamp === stamp) return;
-    this.append({ id, x, y, angle, size, at: time });
-  }
+  reset(): void { this.marks = []; this.steps.clear(); }
   sample(id: string, x: number, y: number, angle: number, phase: number, size: number, time: number, enabled: boolean): void {
     const step = Math.floor(phase / Math.PI), old = this.steps.get(id);
     this.steps.set(id, { phase: step, x, y, seen: time });
     if (!enabled || !old || old.phase === step || Math.hypot(x - old.x, y - old.y) > 8) return;
     const side = step % 2 ? 1 : -1;
-    this.append({ id, x: x - Math.sin(angle) * 0.3 * side * size, y: y + Math.cos(angle) * 0.3 * side * size, angle, size, at: time });
-  }
-  private append(mark: FootMark): void {
-    this.marks.push(mark);
+    this.marks.push({ id, x: x - Math.sin(angle) * 0.3 * side * size, y: y + Math.cos(angle) * 0.3 * side * size, angle, size, at: time });
     let count = 0;
-    for (let i = this.marks.length - 1; i >= 0; i--) if (this.marks[i].id === mark.id && ++count > 5) { this.marks.splice(i, 1); break; }
+    for (let i = this.marks.length - 1; i >= 0; i--) if (this.marks[i].id === id && ++count > 5) { this.marks.splice(i, 1); break; }
     if (this.marks.length > 800) this.marks.splice(0, this.marks.length - 800);
   }
   expire(time: number): void {
     this.marks = this.marks.filter(p => time - p.at < 3.5);
     for (const [id, p] of this.steps) if (time - p.seen > 4) this.steps.delete(id);
-    for (const [id, p] of this.contacts) if (time - p.seen > 4) this.contacts.delete(id);
   }
 }
 const trails = new WeakMap<Graphics, { trail: FootprintTrail; tick: number; time: number }>();
@@ -45,11 +34,6 @@ export function updateFootprints(g: Graphics, world: WorldSnapshot, cell: number
     const p = ant.pos, visible = p.x > bounds.left - 2 && p.x < bounds.right + 2 && p.y > bounds.top - 2 && p.y < bounds.bottom + 2;
     if (ant.layer !== "surface" || !visible) continue;
     const pose = actorMotion.resident(ant);
-    if (pose.feet) {
-      pose.feet.forEach((f, i) => state.trail.plant(ant.id, i, p.x + f.x, p.y + f.y, pose.angle, f.stamp, residentScale(ant) / 1.85, time,
-        f.planted && !ant.capturedBy && ant.state !== "dead" && !isWaterAt(p.x + f.x, p.y + f.y)));
-      continue;
-    }
     state.trail.sample(ant.id, p.x, p.y, pose.angle, pose.phase, residentScale(ant) / 1.85, time,
       pose.walk > 0.2 && !ant.capturedBy && ant.state !== "dead" && !isWaterAt(p.x, p.y));
   }

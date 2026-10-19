@@ -1,6 +1,6 @@
 import { Assets, Rectangle, Texture } from "pixi.js";
 
-export type AtlasFrame = { x: number; y: number; width: number; height: number; anchorX: number; head?: { x: number; y: number; width: number } };
+export type AtlasFrame = { x: number; y: number; width: number; height: number; anchorX: number; tint?: number; head?: { x: number; y: number; width: number } };
 export type AtlasData = { imageWidth: number; imageHeight: number; columns: number; rows: number; frames: AtlasFrame[] };
 export type LoadedAtlas = { data: AtlasData; textures: Texture[] };
 const pending = new Map<string, Promise<LoadedAtlas>>();
