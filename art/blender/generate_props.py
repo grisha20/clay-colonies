@@ -41,7 +41,7 @@ def create_pbr_material(name, color, roughness=0.8, emission_color=None, emissio
                 tex_node = nt.nodes.new("ShaderNodeTexImage")
                 tex_node.image = img
                 norm_node = nt.nodes.new("ShaderNodeNormalMap")
-                norm_node.inputs["Strength"].default_value = 0.85
+                norm_node.inputs["Strength"].default_value = 0.35
                 nt.links.new(tex_node.outputs["Color"], norm_node.inputs["Color"])
                 nt.links.new(norm_node.outputs["Normal"], bsdf.inputs["Normal"])
             except Exception as e:
@@ -176,7 +176,7 @@ def generate_hut(output_dir, blend_dir, tex_dir):
 
     mat_clay = create_pbr_material("HutClay", (0.72, 0.38, 0.22, 1.0), roughness=0.84, normal_map_path=clay_n_path)
     mat_thatch = create_pbr_material("HutThatch", (0.58, 0.48, 0.26, 1.0), roughness=0.92, normal_map_path=thatch_n_path)
-    mat_wood = create_pbr_material("HutWood", (0.34, 0.22, 0.14, 1.0), roughness=0.85, normal_map_path=cord_n_path)
+    mat_wood = create_pbr_material("HutWood", (0.34, 0.22, 0.14, 1.0), roughness=0.85, normal_map_path=clay_n_path)
     mat_interior = create_pbr_material("HutInterior", (0.08, 0.06, 0.05, 1.0), roughness=0.95)
 
     mesh = bpy.data.meshes.new("HutMesh")

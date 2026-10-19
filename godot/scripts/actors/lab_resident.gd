@@ -53,17 +53,43 @@ var move_bounds: float = 4.8
 var is_paused: bool = false
 var test_mismatch_mode: bool = false # Negative test: speed desync
 var test_elevated_mode: bool = false # Negative test: elevated above ground
+var test_penetrated_mode: bool = false # Negative test: ground penetration
+var test_neutral_bone_mode: bool = false # Negative test: simulated unweighted / frozen legs
 var turnaround_in_progress: bool = false
 
 # Foot tracking indices
 var left_foot_bone_idx: int = -1
 var right_foot_bone_idx: int = -1
 
-# Stance measurement state
+# Skinned mesh vertex tracking for honest multi-point contact
+var mesh_instance: MeshInstance3D
+var mesh_skin: Skin
+var mesh_rest_vertices: PackedVector3Array
+var mesh_bone_indices: PackedInt32Array
+var mesh_bone_weights: PackedFloat32Array
+var mesh_influence_count: int = 4
+
+var left_sole_indices: Array[int] = []
+var right_sole_indices: Array[int] = []
+
+var left_heel_vidx: int = -1
+var left_center_vidx: int = -1
+var left_toe_vidx: int = -1
+
+var right_heel_vidx: int = -1
+var right_center_vidx: int = -1
+var right_toe_vidx: int = -1
+
+# Stance measurement state (honest 3-point: Heel, Center, Toe)
 var left_stance_active: bool = false
 var right_stance_active: bool = false
-var left_stance_origin_xz: Vector2 = Vector2.ZERO
-var right_stance_origin_xz: Vector2 = Vector2.ZERO
+var left_heel_origin_xz: Vector2 = Vector2.ZERO
+var left_center_origin_xz: Vector2 = Vector2.ZERO
+var left_toe_origin_xz: Vector2 = Vector2.ZERO
+
+var right_heel_origin_xz: Vector2 = Vector2.ZERO
+var right_center_origin_xz: Vector2 = Vector2.ZERO
+var right_toe_origin_xz: Vector2 = Vector2.ZERO
 
 var left_stance_max_slip: float = 0.0
 var right_stance_max_slip: float = 0.0
@@ -72,11 +98,16 @@ var right_stance_max_v_err: float = 0.0
 var left_stance_max_pen: float = 0.0
 var right_stance_max_pen: float = 0.0
 
+# Dynamic swing phase tracking (verifying actual deforming mesh lift)
+var left_swing_peak_lift: float = 0.0
+var right_swing_peak_lift: float = 0.0
+
 # Current metrics (last completed stance)
 var last_completed_slip_mm: float = 0.0
 var last_completed_slip_pct: float = 0.0
 var last_completed_v_err_mm: float = 0.0
 var last_completed_pen_mm: float = 0.0
+var last_completed_swing_lift_mm: float = 0.0
 var completed_stance_count: int = 0
 var current_grounding_status: String = "N/A"
 var current_stance_name: String = "None"
@@ -86,6 +117,7 @@ var worst_slip_mm: float = 0.0
 var worst_slip_pct: float = 0.0
 var worst_v_err_mm: float = 0.0
 var worst_pen_mm: float = 0.0
+var worst_swing_lift_mm: float = 0.0
 var all_stances_passed: bool = true
 
 func _ready() -> void:
@@ -95,11 +127,56 @@ func _ready() -> void:
 	if skeleton:
 		left_foot_bone_idx = skeleton.find_bone("Foot.L")
 		right_foot_bone_idx = skeleton.find_bone("Foot.R")
+		_setup_mesh_skinning()
 		_setup_cargo_attachment()
 
 	if anim_player:
 		_setup_animations()
 		play_state(AnimState.IDLE)
+
+func _setup_mesh_skinning() -> void:
+	mesh_instance = find_child("Resident", true, false) as MeshInstance3D
+	if not mesh_instance:
+		for child in find_children("*", "MeshInstance3D", true, false):
+			if child.skin and child.mesh:
+				mesh_instance = child as MeshInstance3D
+				break
+
+	if not mesh_instance or not mesh_instance.skin or not mesh_instance.mesh:
+		push_error("LabResident: MeshInstance3D or skin not found!")
+		return
+
+	mesh_skin = mesh_instance.skin
+	var arrays = mesh_instance.mesh.surface_get_arrays(0)
+	mesh_rest_vertices = arrays[Mesh.ARRAY_VERTEX]
+	mesh_bone_indices = arrays[Mesh.ARRAY_BONES]
+	mesh_bone_weights = arrays[Mesh.ARRAY_WEIGHTS]
+	mesh_influence_count = int(mesh_bone_weights.size() / mesh_rest_vertices.size())
+
+	left_sole_indices.clear()
+	right_sole_indices.clear()
+
+	# Identify the 24 ground contact sole vertices strictly at rest pose Y = 0.000m
+	for i in mesh_rest_vertices.size():
+		if abs(mesh_rest_vertices[i].y) < 0.001:
+			if mesh_rest_vertices[i].x < 0.0:
+				left_sole_indices.append(i)
+			elif mesh_rest_vertices[i].x > 0.0:
+				right_sole_indices.append(i)
+
+	# Sort along Z: in glTF character space, -Z is front (toe), +Z is back (heel)
+	left_sole_indices.sort_custom(func(a, b): return mesh_rest_vertices[a].z < mesh_rest_vertices[b].z)
+	right_sole_indices.sort_custom(func(a, b): return mesh_rest_vertices[a].z < mesh_rest_vertices[b].z)
+
+	if left_sole_indices.size() > 0:
+		left_toe_vidx = left_sole_indices[0]
+		left_heel_vidx = left_sole_indices[left_sole_indices.size() - 1]
+		left_center_vidx = left_sole_indices[int(left_sole_indices.size() / 2)]
+
+	if right_sole_indices.size() > 0:
+		right_toe_vidx = right_sole_indices[0]
+		right_heel_vidx = right_sole_indices[right_sole_indices.size() - 1]
+		right_center_vidx = right_sole_indices[int(right_sole_indices.size() / 2)]
 
 func _setup_cargo_attachment() -> void:
 	var cargo_bone_idx = skeleton.find_bone("Socket_Cargo")
@@ -182,8 +259,44 @@ func set_test_elevated(enable: bool) -> void:
 	_reset_slip_tracking()
 
 func set_test_penetrated(enable: bool) -> void:
+	test_penetrated_mode = enable
 	position.y = -0.050 if enable else 0.00
 	_reset_slip_tracking()
+
+func set_test_neutral_bone(enable: bool) -> void:
+	test_neutral_bone_mode = enable
+	_reset_slip_tracking()
+
+func sample_deformed_world_vertex(v_idx: int) -> Vector3:
+	if test_neutral_bone_mode:
+		# Simulated negative test: vertices are unweighted or bound to neutral_bone, remaining frozen in rest pose
+		return global_transform * mesh_rest_vertices[v_idx]
+
+	if not skeleton or not mesh_skin or v_idx < 0 or v_idx >= mesh_rest_vertices.size():
+		return global_transform.origin
+
+	var v_rest = mesh_rest_vertices[v_idx]
+	var p_sk_local = Vector3.ZERO
+
+	for k in mesh_influence_count:
+		var idx = v_idx * mesh_influence_count + k
+		var w = mesh_bone_weights[idx]
+		if w <= 0.0001:
+			continue
+		var bind = mesh_bone_indices[idx]
+		var bname = mesh_skin.get_bind_name(bind)
+		if bname == &"neutral_bone":
+			p_sk_local += v_rest * w
+			continue
+		var bone_id = skeleton.find_bone(bname)
+		if bone_id < 0:
+			p_sk_local += v_rest * w
+			continue
+		var bone_pose = skeleton.get_bone_global_pose(bone_id)
+		var bind_pose = mesh_skin.get_bind_pose(bind)
+		p_sk_local += (bone_pose * bind_pose * v_rest) * w
+
+	return skeleton.global_transform * p_sk_local
 
 func _reset_slip_tracking() -> void:
 	left_stance_active = false
@@ -194,6 +307,8 @@ func _reset_slip_tracking() -> void:
 	right_stance_max_v_err = 0.0
 	left_stance_max_pen = 0.0
 	right_stance_max_pen = 0.0
+	left_swing_peak_lift = 0.0
+	right_swing_peak_lift = 0.0
 	completed_stance_count = 0
 	current_grounding_status = "N/A"
 	current_stance_name = "Transition / Reset"
@@ -203,6 +318,7 @@ func reset_cumulative_metrics() -> void:
 	worst_slip_pct = 0.0
 	worst_v_err_mm = 0.0
 	worst_pen_mm = 0.0
+	worst_swing_lift_mm = 0.0
 	all_stances_passed = true
 	_reset_slip_tracking()
 
@@ -263,84 +379,107 @@ func _measure_honest_foot_grounding() -> void:
 			current_stance_name = "Turnaround transition"
 			return
 
-	var left_foot_xf = skeleton.global_transform * skeleton.get_bone_global_pose(left_foot_bone_idx)
-	var right_foot_xf = skeleton.global_transform * skeleton.get_bone_global_pose(right_foot_bone_idx)
-
-	var left_foot_xz = Vector2(left_foot_xf.origin.x, left_foot_xf.origin.z)
-	var right_foot_xz = Vector2(right_foot_xf.origin.x, right_foot_xf.origin.z)
-
-	# Bottom of sole is at ankle.y - FOOT_ANKLE_HEIGHT
-	var left_sole_y = left_foot_xf.origin.y - FOOT_ANKLE_HEIGHT
-	var right_sole_y = right_foot_xf.origin.y - FOOT_ANKLE_HEIGHT
-
-	# 1. Left Foot Stance Tracking (Heel, Center, Toe points)
+	# 1. Left Foot Stance Tracking (Actual Deformed Skinned Vertices: Heel, Center, Toe)
 	if left_in_stance:
 		current_stance_name = "Left Sole Planted (Heel/Center/Toe)"
-		var left_heel_y = left_sole_y
-		var left_toe_y = left_sole_y
-		var v_err = max(abs(left_sole_y), max(abs(left_heel_y), abs(left_toe_y)))
-		var pen = max(0.0, -min(left_sole_y, min(left_heel_y, left_toe_y)))
+		var heel = sample_deformed_world_vertex(left_heel_vidx)
+		var center = sample_deformed_world_vertex(left_center_vidx)
+		var toe = sample_deformed_world_vertex(left_toe_vidx)
+
+		var min_y = min(heel.y, min(center.y, toe.y))
+		var v_err = max(abs(heel.y), max(abs(center.y), abs(toe.y)))
+		var pen = max(0.0, -min_y)
 
 		if not left_stance_active:
 			left_stance_active = true
-			left_stance_origin_xz = left_foot_xz
+			left_heel_origin_xz = Vector2(heel.x, heel.z)
+			left_center_origin_xz = Vector2(center.x, center.z)
+			left_toe_origin_xz = Vector2(toe.x, toe.z)
 			left_stance_max_slip = 0.0
 			left_stance_max_v_err = v_err
 			left_stance_max_pen = pen
+			right_swing_peak_lift = 0.0
 		else:
-			var slip = left_foot_xz.distance_to(left_stance_origin_xz)
+			var slip_h = Vector2(heel.x, heel.z).distance_to(left_heel_origin_xz)
+			var slip_c = Vector2(center.x, center.z).distance_to(left_center_origin_xz)
+			var slip_t = Vector2(toe.x, toe.z).distance_to(left_toe_origin_xz)
+			var slip = max(slip_h, max(slip_c, slip_t))
+
 			left_stance_max_slip = max(left_stance_max_slip, slip)
 			left_stance_max_v_err = max(left_stance_max_v_err, v_err)
 			left_stance_max_pen = max(left_stance_max_pen, pen)
+
+		# Monitor swinging Right foot to ensure sole geometry actively lifts off ground
+		for idx in right_sole_indices:
+			var pt = sample_deformed_world_vertex(idx)
+			right_swing_peak_lift = max(right_swing_peak_lift, pt.y)
 	else:
 		if left_stance_active:
 			left_stance_active = false
-			_record_completed_stance(left_stance_max_slip, left_stance_max_v_err, left_stance_max_pen)
+			_record_completed_stance(left_stance_max_slip, left_stance_max_v_err, left_stance_max_pen, right_swing_peak_lift)
 
-	# 2. Right Foot Stance Tracking (Heel, Center, Toe points)
+	# 2. Right Foot Stance Tracking (Actual Deformed Skinned Vertices: Heel, Center, Toe)
 	if right_in_stance:
 		current_stance_name = "Right Sole Planted (Heel/Center/Toe)"
-		var right_heel_y = right_sole_y
-		var right_toe_y = right_sole_y
-		var v_err = max(abs(right_sole_y), max(abs(right_heel_y), abs(right_toe_y)))
-		var pen = max(0.0, -min(right_sole_y, min(right_heel_y, right_toe_y)))
+		var heel = sample_deformed_world_vertex(right_heel_vidx)
+		var center = sample_deformed_world_vertex(right_center_vidx)
+		var toe = sample_deformed_world_vertex(right_toe_vidx)
+
+		var min_y = min(heel.y, min(center.y, toe.y))
+		var v_err = max(abs(heel.y), max(abs(center.y), abs(toe.y)))
+		var pen = max(0.0, -min_y)
 
 		if not right_stance_active:
 			right_stance_active = true
-			right_stance_origin_xz = right_foot_xz
+			right_heel_origin_xz = Vector2(heel.x, heel.z)
+			right_center_origin_xz = Vector2(center.x, center.z)
+			right_toe_origin_xz = Vector2(toe.x, toe.z)
 			right_stance_max_slip = 0.0
 			right_stance_max_v_err = v_err
 			right_stance_max_pen = pen
+			left_swing_peak_lift = 0.0
 		else:
-			var slip = right_foot_xz.distance_to(right_stance_origin_xz)
+			var slip_h = Vector2(heel.x, heel.z).distance_to(right_heel_origin_xz)
+			var slip_c = Vector2(center.x, center.z).distance_to(right_center_origin_xz)
+			var slip_t = Vector2(toe.x, toe.z).distance_to(right_toe_origin_xz)
+			var slip = max(slip_h, max(slip_c, slip_t))
+
 			right_stance_max_slip = max(right_stance_max_slip, slip)
 			right_stance_max_v_err = max(right_stance_max_v_err, v_err)
 			right_stance_max_pen = max(right_stance_max_pen, pen)
+
+		# Monitor swinging Left foot to ensure sole geometry actively lifts off ground
+		for idx in left_sole_indices:
+			var pt = sample_deformed_world_vertex(idx)
+			left_swing_peak_lift = max(left_swing_peak_lift, pt.y)
 	else:
 		if right_stance_active:
 			right_stance_active = false
-			_record_completed_stance(right_stance_max_slip, right_stance_max_v_err, right_stance_max_pen)
+			_record_completed_stance(right_stance_max_slip, right_stance_max_v_err, right_stance_max_pen, left_swing_peak_lift)
 
 	if not left_in_stance and not right_in_stance:
 		current_stance_name = "Double support / Weight transfer"
 
-func _record_completed_stance(slip_dist_m: float, v_err_m: float, pen_m: float) -> void:
+func _record_completed_stance(slip_dist_m: float, v_err_m: float, pen_m: float, swing_lift_m: float = 0.0) -> void:
 	completed_stance_count += 1
 	last_completed_slip_mm = slip_dist_m * 1000.0
 	last_completed_slip_pct = (slip_dist_m / FOOT_LENGTH) * 100.0
 	last_completed_v_err_mm = v_err_m * 1000.0
 	last_completed_pen_mm = pen_m * 1000.0
+	last_completed_swing_lift_mm = swing_lift_m * 1000.0
 
 	worst_slip_mm = max(worst_slip_mm, last_completed_slip_mm)
 	worst_slip_pct = max(worst_slip_pct, last_completed_slip_pct)
 	worst_v_err_mm = max(worst_v_err_mm, last_completed_v_err_mm)
 	worst_pen_mm = max(worst_pen_mm, last_completed_pen_mm)
+	worst_swing_lift_mm = max(worst_swing_lift_mm, last_completed_swing_lift_mm)
 
 	var slip_pass = (last_completed_slip_pct < PASS_SLIP_THRESHOLD_PCT)
 	var contact_pass = (v_err_m <= MAX_VERTICAL_CONTACT_ERR_M)
 	var pen_pass = (pen_m <= MAX_PENETRATION_M)
+	var swing_pass = (swing_lift_m >= 0.040) # Swing foot geometry MUST lift >= 40 mm
 
-	if slip_pass and contact_pass and pen_pass:
+	if slip_pass and contact_pass and pen_pass and swing_pass:
 		current_grounding_status = "PASS"
 	else:
 		all_stances_passed = false
@@ -351,6 +490,8 @@ func _record_completed_stance(slip_dist_m: float, v_err_m: float, pen_m: float) 
 			fails.append("Pen %.1fmm" % last_completed_pen_mm)
 		if not slip_pass:
 			fails.append("Slip %.1f%%" % last_completed_slip_pct)
+		if not swing_pass:
+			fails.append("No-Lift %.1fmm" % last_completed_swing_lift_mm)
 		current_grounding_status = "FAIL (" + ", ".join(fails) + ")"
 
 func get_metrics_summary() -> Dictionary:
@@ -359,10 +500,12 @@ func get_metrics_summary() -> Dictionary:
 		"last_slip_pct": last_completed_slip_pct,
 		"last_v_err_mm": last_completed_v_err_mm,
 		"last_pen_mm": last_completed_pen_mm,
+		"last_swing_lift_mm": last_completed_swing_lift_mm,
 		"worst_slip_mm": worst_slip_mm,
 		"worst_slip_pct": worst_slip_pct,
 		"worst_v_err_mm": worst_v_err_mm,
 		"worst_pen_mm": worst_pen_mm,
+		"worst_swing_lift_mm": worst_swing_lift_mm,
 		"stances_tested": completed_stance_count,
 		"all_passed": all_stances_passed,
 		"status": current_grounding_status

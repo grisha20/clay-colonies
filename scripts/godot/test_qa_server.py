@@ -95,8 +95,19 @@ class TestQAServer(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_fixture(fpath, target_snapshot_file=self.test_snap)
 
-        # 3. Invalid colonies (empty list, null, not a list, ants null, invalid colony/population object)
-        for bad_colonies in [[], None, "colony", [{"id": 0, "ants": None}], [{"id": 0, "ants": [], "colony": "not-a-dict"}], [{"id": 0, "ants": [], "colony": {"population": "not-a-dict"}}]]:
+        # 3. Invalid colonies (empty list, null, not a list, ants null, invalid/missing colony/population object, negative counts)
+        bad_col_cases = [
+            [],
+            None,
+            "colony",
+            [{"id": 0, "ants": None}],
+            [{"id": 0, "ants": []}], # missing colony object entirely
+            [{"id": 0, "ants": [], "colony": "not-a-dict"}],
+            [{"id": 0, "ants": [], "colony": {}}], # missing population object
+            [{"id": 0, "ants": [], "colony": {"population": "not-a-dict"}}],
+            [{"id": 0, "ants": [], "colony": {"population": {"workers": -1}}}] # negative count
+        ]
+        for bad_colonies in bad_col_cases:
             fpath = os.path.join(self.temp_dir.name, "bad_col.json")
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump({"snapshotVersion": 21, "tick": 10, "surface": {"width": 480, "height": 480}, "colonies": bad_colonies}, f)
@@ -188,25 +199,38 @@ class TestQAServer(unittest.TestCase):
         release_state_lock(new_lock)
 
     def test_stale_recovery_race_cannot_steal_new_lock(self):
-        """If process B decides to clear stale lock based on old dead PID, but process A acquires it first,
-        process B must NOT be able to rename or steal process A's new live lock."""
+        """Two concurrent processes trying to recover the same stale lock: exactly one succeeds, the other fails cleanly."""
         from scripts.godot.qa_server import acquire_state_lock, release_state_lock
+        import threading
 
         lock_dir = os.path.join(self.state_dir, ".qa_server.lock_dir")
         os.makedirs(lock_dir, exist_ok=True)
         with open(os.path.join(lock_dir, "owner.json"), "w", encoding="utf-8") as f:
             json.dump({"pid": 999999, "port": 8788, "token": "dead_token", "created_at": 1000.0}, f)
 
-        # Process A acquires the lock (recovering the stale lock and holding handle)
-        lock_a = acquire_state_lock(self.state_dir, 8788)
-        self.assertTrue(os.path.isdir(lock_a))
+        results = []
+        barrier = threading.Barrier(2)
 
-        # Process B attempts to acquire while A is holding it: MUST raise RuntimeError
-        with self.assertRaises(RuntimeError):
-            acquire_state_lock(self.state_dir, 8789)
+        def worker(port):
+            try:
+                barrier.wait(timeout=2.0)
+                ld = acquire_state_lock(self.state_dir, port)
+                results.append(("SUCCESS", ld))
+            except Exception as e:
+                results.append(("FAILED", str(e)))
 
-        # Process A cleanly releases its lock
-        release_state_lock(lock_a)
+        t1 = threading.Thread(target=worker, args=(8791,))
+        t2 = threading.Thread(target=worker, args=(8792,))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        successes = [r for r in results if r[0] == "SUCCESS"]
+        failures = [r for r in results if r[0] == "FAILED"]
+        self.assertEqual(len(successes), 1, "Exactly one thread must recover and acquire the stale lock!")
+        self.assertEqual(len(failures), 1, "The competing thread must fail to steal the lock!")
+        release_state_lock(successes[0][1])
 
     def test_fixture_write_failure_preserves_previous_state(self):
         """Simulated write failure during fixture staging must preserve previous snapshot without data loss."""
@@ -223,7 +247,7 @@ class TestQAServer(unittest.TestCase):
             json.dump({
                 "snapshotVersion": 21, "tick": 99,
                 "surface": {"width": 480, "height": 480},
-                "colonies": [{"id": 0, "ants": []}]
+                "colonies": [{"id": 0, "ants": [], "colony": {"population": {"workers": 5}}}]
             }, f)
 
         # Mock json.dump during staging to simulate disk full / permission error
@@ -276,18 +300,54 @@ class TestQAServer(unittest.TestCase):
         release_state_lock(successes[0][1])
 
     def test_kill_process_tree_terminates_child_and_frees_resources(self):
-        """kill_process_tree must cleanly terminate the target process tree."""
+        """kill_process_tree must cleanly terminate the target process tree and release socket resources."""
         from scripts.godot.qa_server import kill_process_tree
         import subprocess
-        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        import socket
+        import time
+
+        # Find an available port
+        s_probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_probe.bind(("127.0.0.1", 0))
+        test_port = s_probe.getsockname()[1]
+        s_probe.close()
+
+        # Launch parent that launches a child holding the TCP port
+        parent_code = (
+            f"import subprocess, sys, time\n"
+            f"child_code = 'import socket, time; s = socket.socket(); s.bind((\"127.0.0.1\", {test_port})); s.listen(1); time.sleep(60)'\n"
+            f"p = subprocess.Popen([sys.executable, '-c', child_code])\n"
+            f"while True: time.sleep(1)\n"
+        )
+        parent_proc = subprocess.Popen([sys.executable, "-c", parent_code])
         try:
-            self.assertIsNone(proc.poll())
-            kill_process_tree(proc.pid)
-            proc.wait(timeout=3)
-            self.assertIsNotNone(proc.poll(), "Process must be terminated by kill_process_tree!")
+            # Wait for child to bind the port
+            bound = False
+            for _ in range(50):
+                time.sleep(0.1)
+                try:
+                    s_test = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s_test.connect(("127.0.0.1", test_port))
+                    s_test.close()
+                    bound = True
+                    break
+                except OSError:
+                    pass
+            self.assertTrue(bound, "Child process must successfully bind TCP socket!")
+
+            # Call kill_process_tree on parent
+            kill_process_tree(parent_proc.pid)
+            parent_proc.wait(timeout=5)
+            self.assertIsNotNone(parent_proc.poll(), "Parent process must be terminated!")
+
+            # Verify TCP port is released and can be bound immediately
+            time.sleep(0.5)
+            s_rebind = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s_rebind.bind(("127.0.0.1", test_port))
+            s_rebind.close()
         finally:
-            if proc.poll() is None:
-                proc.kill()
+            if parent_proc.poll() is None:
+                parent_proc.kill()
 
 if __name__ == "__main__":
     unittest.main()

@@ -55,7 +55,7 @@ def create_pbr_material(name, base_color, roughness=0.82, normal_map_path=None):
                 tex_node = nt.nodes.new("ShaderNodeTexImage")
                 tex_node.image = img
                 norm_node = nt.nodes.new("ShaderNodeNormalMap")
-                norm_node.inputs["Strength"].default_value = 0.8
+                norm_node.inputs["Strength"].default_value = 0.35
                 nt.links.new(tex_node.outputs["Color"], norm_node.inputs["Color"])
                 nt.links.new(norm_node.outputs["Normal"], bsdf.inputs["Normal"])
             except Exception as e:
@@ -313,8 +313,14 @@ def build_character_mesh():
                 v = bm.verts.new((vx, vy, vz))
                 aring.append(v)
 
-                # Weighting along continuous limb
-                if ring_idx <= 3:
+                # Weighting along continuous limb with seamless shoulder blending to torso/Spine
+                if ring_idx == 0:
+                    group_weights["Spine"].append((v, 0.65))
+                    group_weights["UpperArm" + side_tag].append((v, 0.35))
+                elif ring_idx == 1:
+                    group_weights["Spine"].append((v, 0.25))
+                    group_weights["UpperArm" + side_tag].append((v, 0.75))
+                elif ring_idx in (2, 3):
                     group_weights["UpperArm" + side_tag].append((v, 1.0))
                 elif ring_idx == 4:
                     group_weights["UpperArm" + side_tag].append((v, 0.5))
@@ -331,9 +337,15 @@ def build_character_mesh():
                 first_aring = aring
             prev_aring = aring
 
-        # Cap top of shoulder and bottom of wrist collar
+        # Cap top of shoulder (blended with Spine) and bottom of wrist collar (LowerArm)
         bm.faces.new(first_aring[::-1]).material_index = 0
+        for v in first_aring:
+            group_weights["Spine"].append((v, 0.65))
+            group_weights["UpperArm" + side_tag].append((v, 0.35))
+
         bm.faces.new(prev_aring).material_index = 0
+        for v in prev_aring:
+            group_weights["LowerArm" + side_tag].append((v, 1.0))
 
         # Mitten hand attached smoothly to wrist
         hand_res = bmesh.ops.create_uvsphere(
@@ -386,7 +398,10 @@ def build_character_mesh():
                 v = bm.verts.new((vx, vy, vz))
                 lring.append(v)
 
-                if ring_idx <= 3:
+                if ring_idx == 0:
+                    group_weights["Hips"].append((v, 0.40))
+                    group_weights["UpperLeg" + side_tag].append((v, 0.60))
+                elif ring_idx <= 3:
                     group_weights["UpperLeg" + side_tag].append((v, 1.0))
                 elif ring_idx == 4:
                     group_weights["UpperLeg" + side_tag].append((v, 0.5))
@@ -403,8 +418,11 @@ def build_character_mesh():
                 first_lring = lring
             prev_lring = lring
 
-        # Cap top of hip
+        # Cap top of hip (blended with Hips)
         bm.faces.new(first_lring[::-1]).material_index = 0
+        for v in first_lring:
+            group_weights["Hips"].append((v, 0.40))
+            group_weights["UpperLeg" + side_tag].append((v, 0.60))
 
         # 6. SCULPTED CLAY MOCCASIN FOOT (Seamless flat sole strictly on Z = 0.000m)
         # Length = 0.22m (y from +0.06 to -0.16)
@@ -462,6 +480,7 @@ def build_character_mesh():
             v.co.z = 0.0
 
     bm.verts.ensure_lookup_table()
+    bm.verts.index_update()
 
     # Assign UV layer for PBR textures
     uv_layer = bm.loops.layers.uv.new("UVMap")
@@ -472,10 +491,15 @@ def build_character_mesh():
             wz = v.co.z / 1.8
             loop[uv_layer].uv = (u * 2.0, wz * 2.0)
 
-    # Convert group_weights to final dictionary of (vert_idx, weight)
+    # Convert group_weights to final dictionary of (vert_idx, weight) with strict index check
     final_weights = {}
     for gname, items in group_weights.items():
-        final_weights[gname] = [(item[0].index, item[1]) for item in items]
+        final_weights[gname] = []
+        for item in items:
+            v_idx = item[0].index
+            if v_idx < 0:
+                raise RuntimeError(f"FATAL: Vertex in group '{gname}' has unindexed/negative index {v_idx}!")
+            final_weights[gname].append((v_idx, item[1]))
 
     bm.to_mesh(mesh)
     bm.free()
@@ -597,10 +621,22 @@ def build_armature():
     return arm_obj
 
 def assign_vertex_weights(mesh_obj, arm_obj, group_weights):
+    vert_to_groups = {}
     for group_name, weight_list in group_weights.items():
-        vg = mesh_obj.vertex_groups.new(name=group_name)
         for v_idx, w in weight_list:
-            vg.add([v_idx], w, 'REPLACE')
+            if v_idx not in vert_to_groups:
+                vert_to_groups[v_idx] = {}
+            vert_to_groups[v_idx][group_name] = vert_to_groups[v_idx].get(group_name, 0.0) + w
+
+    created_vgs = {}
+    for group_name in group_weights.keys():
+        created_vgs[group_name] = mesh_obj.vertex_groups.new(name=group_name)
+
+    for v_idx, g_dict in vert_to_groups.items():
+        total_w = sum(g_dict.values())
+        if total_w > 0.0:
+            for group_name, w in g_dict.items():
+                created_vgs[group_name].add([v_idx], w / total_w, 'REPLACE')
 
     mod = mesh_obj.modifiers.new(name="Armature", type='ARMATURE')
     mod.object = arm_obj
@@ -660,6 +696,9 @@ def add_actions(arm_obj):
         t = f / 30.0
         breath = 0.012 * math.sin(t * 2 * math.pi)
 
+        pb["Hips"].location = (0.0, 0.0, 0.0)
+        pb["Hips"].keyframe_insert(data_path="location", frame=f)
+
         pb["Spine"].location = (0, 0, breath * 0.5)
         pb["Spine"].keyframe_insert(data_path="location", frame=f)
 
@@ -713,14 +752,14 @@ def add_actions(arm_obj):
             # Right foot is in Swing (y: +0.12 -> -0.12, with clearance arch)
             tau_r = t / 0.5
             y_r = 0.12 - 0.24 * tau_r
-            z_r = FOOT_ANKLE_Z + 0.048 * math.sin(tau_r * math.pi)
+            z_r = FOOT_ANKLE_Z + 0.065 * math.sin(tau_r * math.pi)
             tilt_r = 10.0 * math.sin(tau_r * math.pi)
             up_r, low_r, foot_r = solve_exact_leg_ik(y_r, z_r, cur_hip_z, tilt_deg=tilt_r)
         else:
             # Phase 2: Left foot is in Swing
             tau_l = (t - 0.5) / 0.5
             y_l = 0.12 - 0.24 * tau_l
-            z_l = FOOT_ANKLE_Z + 0.048 * math.sin(tau_l * math.pi)
+            z_l = FOOT_ANKLE_Z + 0.065 * math.sin(tau_l * math.pi)
             tilt_l = 10.0 * math.sin(tau_l * math.pi)
             up_l, low_l, foot_l = solve_exact_leg_ik(y_l, z_l, cur_hip_z, tilt_deg=tilt_l)
 
@@ -762,6 +801,9 @@ def add_actions(arm_obj):
     for f in range(0, 31):
         t = f / 30.0
         breath = 0.010 * math.sin(t * 2 * math.pi)
+
+        pb["Hips"].location = (0.0, 0.0, 0.0)
+        pb["Hips"].keyframe_insert(data_path="location", frame=f)
 
         pb["Spine"].location = (0, 0, breath * 0.5)
         pb["Spine"].keyframe_insert(data_path="location", frame=f)
@@ -825,13 +867,13 @@ def add_actions(arm_obj):
 
             tau_r = t / 0.5
             y_r = 0.12 - 0.24 * tau_r
-            z_r = FOOT_ANKLE_Z + 0.048 * math.sin(tau_r * math.pi)
+            z_r = FOOT_ANKLE_Z + 0.065 * math.sin(tau_r * math.pi)
             tilt_r = 10.0 * math.sin(tau_r * math.pi)
             up_r, low_r, foot_r = solve_exact_leg_ik(y_r, z_r, cur_hip_z, tilt_deg=tilt_r)
         else:
             tau_l = (t - 0.5) / 0.5
             y_l = 0.12 - 0.24 * tau_l
-            z_l = FOOT_ANKLE_Z + 0.048 * math.sin(tau_l * math.pi)
+            z_l = FOOT_ANKLE_Z + 0.065 * math.sin(tau_l * math.pi)
             tilt_l = 10.0 * math.sin(tau_l * math.pi)
             up_l, low_l, foot_l = solve_exact_leg_ik(y_l, z_l, cur_hip_z, tilt_deg=tilt_l)
 
@@ -922,36 +964,93 @@ def add_actions(arm_obj):
         pb["Foot.R"].keyframe_insert(data_path="rotation_euler", frame=f)
 
 def verify_mesh_grounding_and_actions(mesh_obj, arm_obj):
-    print("\n--- RIGOROUS PRE-EXPORT GROUND CONTACT VERIFICATION ---")
+    print("\n--- RIGOROUS PRE-EXPORT RIGGING & DEFORMATION VERIFICATION ---")
+
+    # 1. Verify 100% vertex weight coverage (zero unweighted vertices across whole mesh)
+    num_verts = len(mesh_obj.data.vertices)
+    vg_names = {vg.index: vg.name for vg in mesh_obj.vertex_groups}
+    unweighted = [v for v in mesh_obj.data.vertices if sum(g.weight for g in v.groups) < 0.001]
+    if unweighted:
+        raise RuntimeError(f"FATAL RIGGING ERROR: {len(unweighted)}/{num_verts} unweighted vertices found! Indices: {[v.index for v in unweighted[:10]]}")
+    print(f"[generate_resident] Weight verification: 0/{num_verts} unweighted vertices (100% covered).")
+
+    # 2. Verify all 6 leg groups are populated with non-zero vertices
+    leg_groups = ["UpperLeg.L", "UpperLeg.R", "LowerLeg.L", "LowerLeg.R", "Foot.L", "Foot.R"]
+    for lg in leg_groups:
+        count = sum(1 for v in mesh_obj.data.vertices for g in v.groups if vg_names.get(g.group) == lg and g.weight > 0.001)
+        if count == 0:
+            raise RuntimeError(f"FATAL RIGGING ERROR: Leg group '{lg}' has 0 weighted vertices!")
+        print(f"[generate_resident] Group '{lg}': {count} weighted vertices.")
+
+    # 3. Identify sole vertices at rest pose (strictly on Z <= 0.001)
+    sole_left = [v.index for v in mesh_obj.data.vertices if v.co.z <= 0.001 and v.co.x < 0.0]
+    sole_right = [v.index for v in mesh_obj.data.vertices if v.co.z <= 0.001 and v.co.x > 0.0]
+    if len(sole_left) == 0 or len(sole_right) == 0:
+        raise RuntimeError(f"FATAL: Ground sole vertices not found! Left={len(sole_left)}, Right={len(sole_right)}")
+    print(f"[generate_resident] Found {len(sole_left)} Left sole vertices and {len(sole_right)} Right sole vertices on Z=0.000m.")
+
+    # 4. Rigorous evaluated depsgraph animation check across all actions and frames
     depsgraph = bpy.context.evaluated_depsgraph_get()
 
     for act in bpy.data.actions:
+        reset_pose_transforms(arm_obj)
         arm_obj.animation_data.action = act
         min_z_overall = 999.0
         max_contact_z_in_stance = 0.0
+        max_left_sole_disp = 0.0
+        max_right_sole_disp = 0.0
+        max_left_swing_lift = 0.0
+        max_right_swing_lift = 0.0
 
         for f in range(0, 31):
             bpy.context.scene.frame_set(f)
             depsgraph.update()
             eval_obj = mesh_obj.evaluated_get(depsgraph)
             eval_mesh = eval_obj.to_mesh()
+
             min_z = min(v.co.z for v in eval_mesh.vertices)
             min_z_overall = min(min_z_overall, min_z)
 
-            # Check stance contact
+            # Left sole deformed metrics
+            left_z_vals = [eval_mesh.vertices[i].co.z for i in sole_left]
+            min_left_z = min(left_z_vals)
+            max_left_swing_lift = max(max_left_swing_lift, min_left_z)
+            for i in sole_left:
+                disp = (eval_mesh.vertices[i].co - mesh_obj.data.vertices[i].co).length
+                max_left_sole_disp = max(max_left_sole_disp, disp)
+
+            # Right sole deformed metrics
+            right_z_vals = [eval_mesh.vertices[i].co.z for i in sole_right]
+            min_right_z = min(right_z_vals)
+            max_right_swing_lift = max(max_right_swing_lift, min_right_z)
+            for i in sole_right:
+                disp = (eval_mesh.vertices[i].co - mesh_obj.data.vertices[i].co).length
+                max_right_sole_disp = max(max_right_sole_disp, disp)
+
+            # Stance phase contact
             if act.name in ("walk", "carry_walk"):
-                if f in (3, 4, 5, 6, 7, 18, 19, 20, 21, 22):
-                    max_contact_z_in_stance = max(max_contact_z_in_stance, min_z)
+                if f in (3, 4, 5, 6, 7): # Left foot stance
+                    max_contact_z_in_stance = max(max_contact_z_in_stance, min_left_z)
+                elif f in (18, 19, 20, 21, 22): # Right foot stance
+                    max_contact_z_in_stance = max(max_contact_z_in_stance, min_right_z)
 
             eval_obj.to_mesh_clear()
 
-        print(f"Action '{act.name:12s}': min Z = {min_z_overall:+.4f} m (stance contact Z = {max_contact_z_in_stance:.4f} m)")
+        print(f"Action '{act.name:12s}': min Z={min_z_overall:+.4f}m, stance Z={max_contact_z_in_stance:.4f}m, L-lift={max_left_swing_lift:.4f}m, R-lift={max_right_swing_lift:.4f}m, L-disp={max_left_sole_disp:.4f}m, R-disp={max_right_sole_disp:.4f}m")
+
         if min_z_overall < -0.002:
             raise RuntimeError(f"Action '{act.name}' penetrates ground: min Z = {min_z_overall:.4f} m!")
-        if act.name in ("walk", "carry_walk") and max_contact_z_in_stance > 0.0025:
-            raise RuntimeError(f"Action '{act.name}' floating in stance: max stance Z = {max_contact_z_in_stance:.4f} m!")
 
-    print("--- ALL ACTIONS PASSED RIGOROUS GROUND CONTACT VERIFICATION ---\n")
+        if act.name in ("walk", "carry_walk"):
+            if max_contact_z_in_stance > 0.0025:
+                raise RuntimeError(f"Action '{act.name}' floating in stance: max stance Z = {max_contact_z_in_stance:.4f} m!")
+            # STRICT CHECK: Sole vertices MUST lift during swing and MUST deform dynamically!
+            if max_left_swing_lift < 0.05 or max_right_swing_lift < 0.05:
+                raise RuntimeError(f"Action '{act.name}' sole vertices failed to lift during swing! (L: {max_left_swing_lift:.4f}m, R: {max_right_swing_lift:.4f}m, required >= 0.05m)")
+            if max_left_sole_disp < 0.07 or max_right_sole_disp < 0.07:
+                raise RuntimeError(f"Action '{act.name}' sole vertices are frozen or unweighted! (L disp: {max_left_sole_disp:.4f}m, R disp: {max_right_sole_disp:.4f}m, required >= 0.07m)")
+
+    print("--- ALL ACTIONS PASSED RIGOROUS GROUND CONTACT & DEFORMATION VERIFICATION ---\n")
 
 def main():
     clear_scene()

@@ -337,12 +337,15 @@ def validate_and_stage_fixture(fixture_path: str, target_state_dir: str) -> dict
         if "id" not in c or not isinstance(c.get("ants"), list):
             raise ValueError(f"Fixture '{fixture_path}' colonies[{i}] must contain 'id' and 'ants' list.")
         colony_obj = c.get("colony")
-        if colony_obj is not None:
-            if not isinstance(colony_obj, dict):
-                raise ValueError(f"Fixture '{fixture_path}' colonies[{i}].colony must be an object.")
-            pop = colony_obj.get("population")
-            if pop is not None and not isinstance(pop, dict):
-                raise ValueError(f"Fixture '{fixture_path}' colonies[{i}].colony.population must be an object.")
+        if not isinstance(colony_obj, dict):
+            raise ValueError(f"Fixture '{fixture_path}' colonies[{i}] missing or invalid 'colony' object.")
+        pop = colony_obj.get("population")
+        if not isinstance(pop, dict):
+            raise ValueError(f"Fixture '{fixture_path}' colonies[{i}].colony missing or invalid 'population' object.")
+        for pop_field in ["workers", "scouts", "nurses", "eggs", "larvae"]:
+            val = pop.get(pop_field)
+            if val is not None and (not isinstance(val, int) or isinstance(val, bool) or val < 0):
+                raise ValueError(f"Fixture '{fixture_path}' colonies[{i}].colony.population.{pop_field} must be a non-negative integer.")
 
     return data
 
