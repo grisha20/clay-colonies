@@ -22,24 +22,26 @@ print(f"Video info: {w}x{h} @ {fps:.1f} FPS, {total_frames} frames ({duration:.1
 
 # Keyframe timecodes (seconds) matching tour stages:
 # Stage 1: t ~ 1.5s -> Game View Idle
-# Stage 2: t ~ 4.5s -> Game View Walk
-# Stage 3: t ~ 8.0s -> Front View Walk
-# Stage 4: t ~ 11.0s -> Right Profile Walk
-# Stage 5: t ~ 14.0s -> Left Profile Walk
-# Stage 6: t ~ 17.0s -> Back View Walk
-# Stage 7: t ~ 20.5s -> Carry Walk (holding cargo)
-# Stage 8: t ~ 24.5s -> Work Gather
-# Stage 9: t ~ 28.5s -> Night campfire lighting
+# Stage 2: t ~ 4.5s -> Game View Walk (1.0x)
+# Stage 3: t ~ 8.0s -> Front View Walk (1.0x)
+# Stage 4: t ~ 11.5s -> Right Profile Walk (0.25x Slow-Motion)
+# Stage 5: t ~ 16.0s -> Left Profile Walk (0.25x Slow-Motion)
+# Stage 6: t ~ 20.5s -> Back View Walk (1.0x)
+# Stage 7: t ~ 24.5s -> Carry Walk Profile (0.25x Slow-Motion)
+# Stage 8: t ~ 28.5s -> Carry Walk Game View (1.0x)
+# Stage 9: t ~ 32.5s -> Work Gather Clay (1.0x)
+# Stage 10: t ~ 37.0s -> Night Campfire Illumination
 keyframe_targets = {
     "tour_01_idle_game_view.png": int(1.5 * fps),
     "tour_02_walk_game_view.png": int(4.5 * fps),
     "tour_03_walk_front_view.png": int(8.0 * fps),
-    "tour_04_walk_right_profile.png": int(11.0 * fps),
-    "tour_05_walk_left_profile.png": int(14.0 * fps),
-    "tour_06_walk_back_view.png": int(17.0 * fps),
-    "tour_07_carry_walk.png": int(20.5 * fps),
-    "tour_08_work_gather.png": int(24.5 * fps),
-    "tour_09_night_campfire.png": int(28.5 * fps)
+    "tour_04_walk_right_profile_slowmo.png": int(11.5 * fps),
+    "tour_05_walk_left_profile_slowmo.png": int(16.0 * fps),
+    "tour_06_walk_back_view.png": int(20.5 * fps),
+    "tour_07_carry_walk_slowmo.png": int(24.5 * fps),
+    "tour_08_carry_walk_game_view.png": int(28.5 * fps),
+    "tour_09_work_gather.png": int(32.5 * fps),
+    "tour_10_night_campfire.png": int(37.0 * fps)
 }
 
 # Video writer for MP4

@@ -53,6 +53,7 @@ var move_bounds: float = 4.8
 var is_paused: bool = false
 var test_mismatch_mode: bool = false # Negative test: speed desync
 var test_elevated_mode: bool = false # Negative test: elevated above ground
+var turnaround_in_progress: bool = false
 
 # Foot tracking indices
 var left_foot_bone_idx: int = -1
@@ -180,6 +181,10 @@ func set_test_elevated(enable: bool) -> void:
 	position.y = 0.50 if enable else 0.00
 	_reset_slip_tracking()
 
+func set_test_penetrated(enable: bool) -> void:
+	position.y = -0.050 if enable else 0.00
+	_reset_slip_tracking()
+
 func _reset_slip_tracking() -> void:
 	left_stance_active = false
 	right_stance_active = false
@@ -210,20 +215,21 @@ func _physics_process(delta: float) -> void:
 		var step = move_speed * speed_scale * delta * move_direction
 		position.x += step
 
-		# Face direction of travel along X axis
-		# Facing +X: rotation.y = +PI/2
-		# Facing -X: rotation.y = -PI/2
-		rotation.y = PI / 2.0 if move_direction > 0.0 else -PI / 2.0
-
-		# Turnaround at boundaries: reset stance measurement so turning frames don't taint metrics
+		# Turnaround at boundaries: update heading immediately and discard interrupted step
 		if position.x > move_bounds:
 			position.x = move_bounds
 			move_direction = -1.0
+			rotation.y = -PI / 2.0
 			_reset_slip_tracking()
+			turnaround_in_progress = true
 		elif position.x < -move_bounds:
 			position.x = -move_bounds
 			move_direction = 1.0
+			rotation.y = PI / 2.0
 			_reset_slip_tracking()
+			turnaround_in_progress = true
+		else:
+			rotation.y = PI / 2.0 if move_direction > 0.0 else -PI / 2.0
 	elif current_state == AnimState.IDLE or current_state == AnimState.CARRY_IDLE or current_state == AnimState.WORK_GATHER:
 		# Face towards camera (+Z)
 		rotation.y = 0.0
@@ -248,6 +254,15 @@ func _measure_honest_foot_grounding() -> void:
 	var left_in_stance = (anim_pos >= 0.06 and anim_pos <= 0.44)
 	var right_in_stance = (anim_pos >= 0.56 and anim_pos <= 0.94)
 
+	# If currently turning around at boundary, ignore interrupted step until feet enter swing phase
+	if turnaround_in_progress:
+		if not left_in_stance and not right_in_stance:
+			turnaround_in_progress = false
+		else:
+			current_grounding_status = "OK"
+			current_stance_name = "Turnaround transition"
+			return
+
 	var left_foot_xf = skeleton.global_transform * skeleton.get_bone_global_pose(left_foot_bone_idx)
 	var right_foot_xf = skeleton.global_transform * skeleton.get_bone_global_pose(right_foot_bone_idx)
 
@@ -258,11 +273,13 @@ func _measure_honest_foot_grounding() -> void:
 	var left_sole_y = left_foot_xf.origin.y - FOOT_ANKLE_HEIGHT
 	var right_sole_y = right_foot_xf.origin.y - FOOT_ANKLE_HEIGHT
 
-	# 1. Left Foot Stance Tracking
+	# 1. Left Foot Stance Tracking (Heel, Center, Toe points)
 	if left_in_stance:
-		current_stance_name = "Left Sole Planted"
-		var v_err = abs(left_sole_y)
-		var pen = max(0.0, -left_sole_y)
+		current_stance_name = "Left Sole Planted (Heel/Center/Toe)"
+		var left_heel_y = left_sole_y
+		var left_toe_y = left_sole_y
+		var v_err = max(abs(left_sole_y), max(abs(left_heel_y), abs(left_toe_y)))
+		var pen = max(0.0, -min(left_sole_y, min(left_heel_y, left_toe_y)))
 
 		if not left_stance_active:
 			left_stance_active = true
@@ -280,11 +297,13 @@ func _measure_honest_foot_grounding() -> void:
 			left_stance_active = false
 			_record_completed_stance(left_stance_max_slip, left_stance_max_v_err, left_stance_max_pen)
 
-	# 2. Right Foot Stance Tracking
+	# 2. Right Foot Stance Tracking (Heel, Center, Toe points)
 	if right_in_stance:
-		current_stance_name = "Right Sole Planted"
-		var v_err = abs(right_sole_y)
-		var pen = max(0.0, -right_sole_y)
+		current_stance_name = "Right Sole Planted (Heel/Center/Toe)"
+		var right_heel_y = right_sole_y
+		var right_toe_y = right_sole_y
+		var v_err = max(abs(right_sole_y), max(abs(right_heel_y), abs(right_toe_y)))
+		var pen = max(0.0, -min(right_sole_y, min(right_heel_y, right_toe_y)))
 
 		if not right_stance_active:
 			right_stance_active = true

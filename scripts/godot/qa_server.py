@@ -13,6 +13,7 @@ import argparse
 import json
 import time
 import shutil
+import uuid
 
 REPO_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 DEFAULT_QA_DIR = os.path.join(REPO_ROOT, "tmp", "qa")
@@ -98,69 +99,188 @@ def is_path_inside_dir(path: str, parent_dir: str) -> bool:
     except ValueError:
         return False
 
+_LOCK_HANDLES: dict[str, tuple[any, str]] = {}
+
+def _try_lock_file(f):
+    if sys.platform == "win32":
+        import msvcrt
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+def _unlock_file(f):
+    if sys.platform == "win32":
+        import msvcrt
+        f.seek(0)
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+    else:
+        import fcntl
+        try:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+
 def acquire_state_lock(state_dir: str, port: int) -> str:
-    """Atomically acquires an exclusive directory lock, preventing any concurrent race conditions."""
+    """Atomically acquires an exclusive directory lock with OS handle backing and unique token."""
+    import uuid
     import threading
+
     lock_dir = os.path.join(state_dir, ".qa_server.lock_dir")
+    lock_token = uuid.uuid4().hex
     unique_suffix = f"{os.getpid()}_{threading.get_ident()}_{time.time_ns()}"
     tmp_dir = os.path.join(state_dir, f".qa_server.tmp_lock.{unique_suffix}")
 
-    # Prepare candidate lock directory with complete ownership info BEFORE atomic rename
+    # Prepare candidate lock directory with complete ownership info
     os.makedirs(tmp_dir, exist_ok=True)
     info_file_tmp = os.path.join(tmp_dir, "owner.json")
     with open(info_file_tmp, "w", encoding="utf-8") as f:
-        json.dump({"pid": os.getpid(), "port": port, "created_at": time.time()}, f)
+        json.dump({"pid": os.getpid(), "port": port, "token": lock_token, "created_at": time.time()}, f)
 
-    for _ in range(2):
+    try:
+        # Atomic rename: succeeds only if lock_dir does not exist
+        os.rename(tmp_dir, lock_dir)
+        handle_path = os.path.join(lock_dir, "handle.lock")
+        h_file = open(handle_path, "a+b")
         try:
-            # os.rename on directory fails atomically if lock_dir already exists
-            os.rename(tmp_dir, lock_dir)
-            return lock_dir
-        except (FileExistsError, OSError):
-            # Target lock_dir exists: inspect current owner
-            info_file = os.path.join(lock_dir, "owner.json")
-            other_pid = None
-            other_port = None
-            if os.path.exists(info_file):
-                try:
-                    with open(info_file, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    other_pid = data.get("pid")
-                    other_port = data.get("port")
-                except Exception:
-                    pass
+            _try_lock_file(h_file)
+        except Exception as e:
+            h_file.close()
+            shutil.rmtree(lock_dir, ignore_errors=True)
+            raise RuntimeError(f"Failed to acquire file lock handle: {e}")
+        _LOCK_HANDLES[lock_dir] = (h_file, lock_token)
+        return lock_dir
+    except (FileExistsError, OSError):
+        # Target lock_dir exists. Cleanup tmp_dir
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
-            if other_pid and is_pid_running(other_pid):
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-                raise RuntimeError(
-                    f"State directory '{state_dir}' is locked by running QA server with PID {other_pid} on port {other_port}."
-                )
-
-            # Stale lock recovery: other_pid is dead or missing.
-            stale_dir = os.path.join(state_dir, f".qa_server.stale.{unique_suffix}")
+        # Inspect existing lock_dir
+        info_file = os.path.join(lock_dir, "owner.json")
+        existing_pid = None
+        existing_port = None
+        existing_token = None
+        if os.path.exists(info_file):
             try:
-                os.rename(lock_dir, stale_dir)
-                shutil.rmtree(stale_dir, ignore_errors=True)
-            except OSError:
-                # Another process beat us or lock changed, retry loop once
+                with open(info_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                existing_pid = data.get("pid")
+                existing_port = data.get("port")
+                existing_token = data.get("token")
+            except Exception:
                 pass
 
-    shutil.rmtree(tmp_dir, ignore_errors=True)
-    raise RuntimeError(f"State directory '{state_dir}' is concurrently locked by another process.")
+        # Check if existing lock is active via PID
+        if existing_pid and is_pid_running(existing_pid):
+            raise RuntimeError(
+                f"State directory '{state_dir}' is locked by running QA server with PID {existing_pid} on port {existing_port}."
+            )
 
-def release_state_lock(lock_dir: str) -> None:
-    """Releases the state directory lock only if owned by this process."""
+        # Test OS file lock on existing handle.lock
+        existing_handle_path = os.path.join(lock_dir, "handle.lock")
+        is_held_by_os = False
+        if os.path.exists(existing_handle_path):
+            try:
+                test_h = open(existing_handle_path, "a+b")
+                try:
+                    _try_lock_file(test_h)
+                    _unlock_file(test_h)
+                except Exception:
+                    is_held_by_os = True
+                finally:
+                    test_h.close()
+            except Exception:
+                is_held_by_os = True
+
+        if is_held_by_os:
+            raise RuntimeError(
+                f"State directory '{state_dir}' is locked by an active process holding OS lock handle."
+            )
+
+        # Stale lock recovery: existing PID is dead and handle is not held.
+        # Acquire OS lock on existing handle.lock FIRST to serialize recovery
+        rec_h = open(existing_handle_path, "a+b")
+        try:
+            _try_lock_file(rec_h)
+        except Exception:
+            rec_h.close()
+            raise RuntimeError(
+                f"State directory '{state_dir}' lock recovery conflict: another process acquired handle."
+            )
+
+        # Under our exclusive hold, re-verify owner.json
+        if os.path.exists(info_file):
+            try:
+                with open(info_file, "r", encoding="utf-8") as f:
+                    curr_data = json.load(f)
+                curr_pid = curr_data.get("pid")
+                curr_token = curr_data.get("token")
+                if curr_pid and is_pid_running(curr_pid) and curr_token != existing_token:
+                    _unlock_file(rec_h)
+                    rec_h.close()
+                    raise RuntimeError(
+                        f"State directory '{state_dir}' is now locked by running QA server with PID {curr_pid}."
+                    )
+            except Exception:
+                pass
+
+        # We exclusively own the lock. Overwrite owner.json with new token and PID
+        with open(info_file, "w", encoding="utf-8") as f:
+            json.dump({"pid": os.getpid(), "port": port, "token": lock_token, "created_at": time.time()}, f)
+
+        _LOCK_HANDLES[lock_dir] = (rec_h, lock_token)
+        return lock_dir
+
+def release_state_lock(lock_dir: str, token: str | None = None) -> None:
+    """Releases the state directory lock only if owned by this process with matching token."""
     if not lock_dir or not os.path.isdir(lock_dir):
         return
+
+    entry = _LOCK_HANDLES.pop(lock_dir, None)
+    expected_token = token
+    h_file = None
+    if entry:
+        h_file, my_token = entry
+        if expected_token is None:
+            expected_token = my_token
+
     info_file = os.path.join(lock_dir, "owner.json")
     try:
         if os.path.exists(info_file):
             with open(info_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if data.get("pid") == os.getpid():
-                shutil.rmtree(lock_dir, ignore_errors=True)
-        else:
-            shutil.rmtree(lock_dir, ignore_errors=True)
+            file_token = data.get("token")
+            file_pid = data.get("pid")
+            if expected_token and file_token != expected_token:
+                # Do NOT touch someone else's lock!
+                if h_file:
+                    try:
+                        _unlock_file(h_file)
+                    except Exception:
+                        pass
+                    h_file.close()
+                return
+            if file_pid != os.getpid() and expected_token is None:
+                if h_file:
+                    try:
+                        _unlock_file(h_file)
+                    except Exception:
+                        pass
+                    h_file.close()
+                return
+
+        # Close handle before deleting directory
+        if h_file:
+            try:
+                _unlock_file(h_file)
+            except Exception:
+                pass
+            h_file.close()
+
+        shutil.rmtree(lock_dir, ignore_errors=True)
     except Exception:
         pass
 
@@ -216,6 +336,13 @@ def validate_and_stage_fixture(fixture_path: str, target_state_dir: str) -> dict
             raise ValueError(f"Fixture '{fixture_path}' colonies[{i}] must be an object.")
         if "id" not in c or not isinstance(c.get("ants"), list):
             raise ValueError(f"Fixture '{fixture_path}' colonies[{i}] must contain 'id' and 'ants' list.")
+        colony_obj = c.get("colony")
+        if colony_obj is not None:
+            if not isinstance(colony_obj, dict):
+                raise ValueError(f"Fixture '{fixture_path}' colonies[{i}].colony must be an object.")
+            pop = colony_obj.get("population")
+            if pop is not None and not isinstance(pop, dict):
+                raise ValueError(f"Fixture '{fixture_path}' colonies[{i}].colony.population must be an object.")
 
     return data
 
@@ -287,16 +414,31 @@ def start_server(
 
     # 2. STATE INITIALIZATION (only after preflight succeeds and lock is held)
     try:
-        if reset_state:
+        if fixture_data is not None:
+            # Stage to temporary file in target state directory
+            staging_file = os.path.join(real_state_dir, f".snapshot_staged_{uuid.uuid4().hex}.tmp")
+            try:
+                with open(staging_file, "w", encoding="utf-8") as f:
+                    json.dump(fixture_data, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                # Atomic replace destination: old snapshot is untouched if dump/write failed
+                os.replace(staging_file, snapshot_file)
+                if reset_state:
+                    for bak in [f"{snapshot_file}.bak", f"{snapshot_file}.tmp"]:
+                        if os.path.exists(bak):
+                            os.remove(bak)
+                print(f"[qa_server] Initialized validated fixture snapshot from {fixture_snapshot}")
+            except Exception as e:
+                if os.path.exists(staging_file):
+                    os.remove(staging_file)
+                print(f"[qa_server] ERROR: Failed to stage fixture snapshot: {e}", file=sys.stderr)
+                return 1
+        elif reset_state:
             for f in [snapshot_file, f"{snapshot_file}.bak", f"{snapshot_file}.tmp"]:
                 if os.path.exists(f):
                     os.remove(f)
             print(f"[qa_server] Cleared QA snapshot files in {real_state_dir}")
-
-        if fixture_data is not None:
-            with open(snapshot_file, "w", encoding="utf-8") as f:
-                json.dump(fixture_data, f, indent=2)
-            print(f"[qa_server] Initialized validated fixture snapshot from {fixture_snapshot}")
 
         # 3. ENVIRONMENT ISOLATION
         env = os.environ.copy()

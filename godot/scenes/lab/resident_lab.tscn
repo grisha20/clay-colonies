@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://c8labclayfolk01"]
+[gd_scene load_steps=13 format=3 uid="uid://c8labclayfolk01"]
 
 [ext_resource type="Script" path="res://scripts/lab/resident_lab.gd" id="1_lab"]
 [ext_resource type="Script" path="res://scripts/actors/lab_resident.gd" id="2_res"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/campfire.glb" id="5_camp"]
 [ext_resource type="PackedScene" path="res://assets/models/hut.glb" id="6_hut"]
 [ext_resource type="PackedScene" path="res://assets/models/cargo.glb" id="7_cargo"]
+[ext_resource type="Texture2D" path="res://assets/textures/clay_normal.png" id="8_clay_norm"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.42, 0.58, 0.78, 1)
@@ -29,8 +30,12 @@ glow_enabled = true
 glow_intensity = 0.2
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
-albedo_color = Color(0.68, 0.44, 0.28, 1)
+albedo_color = Color(0.66, 0.43, 0.27, 1)
 roughness = 0.88
+normal_enabled = true
+normal_scale = 0.5
+normal_texture = ExtResource("8_clay_norm")
+uv1_scale = Vector3(14, 14, 1)
 
 [node name="ResidentLab" type="Node3D"]
 script = ExtResource("1_lab")

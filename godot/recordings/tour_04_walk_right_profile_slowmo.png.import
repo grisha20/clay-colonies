@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ba5a4702dkyb"
-path="res://.godot/imported/tour_09_night_campfire.png-09be2e5e3a4e2f6ac3e2c2c7f8f0a0fe.ctex"
+uid="uid://ckinjhnmiaj1e"
+path="res://.godot/imported/tour_04_walk_right_profile_slowmo.png-5e0c685754a61662938a37ee92891d69.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://recordings/tour_09_night_campfire.png"
-dest_files=["res://.godot/imported/tour_09_night_campfire.png-09be2e5e3a4e2f6ac3e2c2c7f8f0a0fe.ctex"]
+source_file="res://recordings/tour_04_walk_right_profile_slowmo.png"
+dest_files=["res://.godot/imported/tour_04_walk_right_profile_slowmo.png-5e0c685754a61662938a37ee92891d69.ctex"]
 
 [params]
 

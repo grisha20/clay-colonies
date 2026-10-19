@@ -95,15 +95,15 @@ class TestQAServer(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_fixture(fpath, target_snapshot_file=self.test_snap)
 
-        # 3. Invalid colonies (empty list, null, not a list, ants null)
-        for bad_colonies in [[], None, "colony", [{"id": 0, "ants": None}]]:
+        # 3. Invalid colonies (empty list, null, not a list, ants null, invalid colony/population object)
+        for bad_colonies in [[], None, "colony", [{"id": 0, "ants": None}], [{"id": 0, "ants": [], "colony": "not-a-dict"}], [{"id": 0, "ants": [], "colony": {"population": "not-a-dict"}}]]:
             fpath = os.path.join(self.temp_dir.name, "bad_col.json")
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump({"snapshotVersion": 21, "tick": 10, "surface": {"width": 480, "height": 480}, "colonies": bad_colonies}, f)
             with self.assertRaises(ValueError):
                 validate_fixture(fpath, target_snapshot_file=self.test_snap)
 
-        # 4. Valid WorldSnapshot must pass without error
+        # 4. Valid WorldSnapshot with complete colony population schema must pass without error
         valid_schema_fixture = os.path.join(self.temp_dir.name, "valid_save.json")
         with open(valid_schema_fixture, "w", encoding="utf-8") as f:
             json.dump({
@@ -121,6 +121,16 @@ class TestQAServer(unittest.TestCase):
                     {
                         "id": 0,
                         "color": "#e06030",
+                        "colony": {
+                            "population": {
+                                "workers": 8,
+                                "scouts": 2
+                            },
+                            "food": 100,
+                            "clay": 50,
+                            "wood": 30,
+                            "stone": 20
+                        },
                         "ants": []
                     }
                 ]
@@ -170,12 +180,69 @@ class TestQAServer(unittest.TestCase):
         os.mkdir(lock_dir)
         info_file = os.path.join(lock_dir, "owner.json")
         with open(info_file, "w", encoding="utf-8") as f:
-            json.dump({"pid": 999999, "port": 8788, "created_at": 1000.0}, f)
+            json.dump({"pid": 999999, "port": 8788, "token": "stale_token", "created_at": 1000.0}, f)
 
         # New acquire should recover stale lock and succeed
         new_lock = acquire_state_lock(self.state_dir, 8790)
         self.assertTrue(os.path.isdir(new_lock))
         release_state_lock(new_lock)
+
+    def test_stale_recovery_race_cannot_steal_new_lock(self):
+        """If process B decides to clear stale lock based on old dead PID, but process A acquires it first,
+        process B must NOT be able to rename or steal process A's new live lock."""
+        from scripts.godot.qa_server import acquire_state_lock, release_state_lock
+
+        lock_dir = os.path.join(self.state_dir, ".qa_server.lock_dir")
+        os.makedirs(lock_dir, exist_ok=True)
+        with open(os.path.join(lock_dir, "owner.json"), "w", encoding="utf-8") as f:
+            json.dump({"pid": 999999, "port": 8788, "token": "dead_token", "created_at": 1000.0}, f)
+
+        # Process A acquires the lock (recovering the stale lock and holding handle)
+        lock_a = acquire_state_lock(self.state_dir, 8788)
+        self.assertTrue(os.path.isdir(lock_a))
+
+        # Process B attempts to acquire while A is holding it: MUST raise RuntimeError
+        with self.assertRaises(RuntimeError):
+            acquire_state_lock(self.state_dir, 8789)
+
+        # Process A cleanly releases its lock
+        release_state_lock(lock_a)
+
+    def test_fixture_write_failure_preserves_previous_state(self):
+        """Simulated write failure during fixture staging must preserve previous snapshot without data loss."""
+        from unittest.mock import patch
+
+        # Pre-seed existing snapshot in state dir
+        initial_content = {"snapshotVersion": 21, "tick": 42, "preserved": True}
+        with open(self.test_snap, "w", encoding="utf-8") as f:
+            json.dump(initial_content, f)
+
+        # Prepare new fixture in temp_dir (outside state_dir)
+        new_fixture = os.path.join(self.temp_dir.name, "new_fixture.json")
+        with open(new_fixture, "w", encoding="utf-8") as f:
+            json.dump({
+                "snapshotVersion": 21, "tick": 99,
+                "surface": {"width": 480, "height": 480},
+                "colonies": [{"id": 0, "ants": []}]
+            }, f)
+
+        # Mock json.dump during staging to simulate disk full / permission error
+        orig_dump = json.dump
+        def failing_dump(obj, fp, *args, **kwargs):
+            if ".snapshot_staged_" in getattr(fp, "name", ""):
+                raise OSError("Simulated disk full during fixture staging")
+            return orig_dump(obj, fp, *args, **kwargs)
+
+        with patch("json.dump", side_effect=failing_dump):
+            ret = start_server(port=9998, reset_state=True, fixture_snapshot=new_fixture, state_dir=self.state_dir)
+            self.assertEqual(ret, 1)
+
+        # Verify that previous snapshot was NOT deleted or overwritten
+        self.assertTrue(os.path.exists(self.test_snap), "Old snapshot must be preserved after write failure!")
+        with open(self.test_snap, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        self.assertEqual(loaded.get("tick"), 42)
+        self.assertTrue(loaded.get("preserved"))
 
     def test_concurrent_lock_race(self):
         """Two concurrent threads competing for state lock: exactly one succeeds."""
@@ -207,6 +274,20 @@ class TestQAServer(unittest.TestCase):
 
         # Clean up winner's lock
         release_state_lock(successes[0][1])
+
+    def test_kill_process_tree_terminates_child_and_frees_resources(self):
+        """kill_process_tree must cleanly terminate the target process tree."""
+        from scripts.godot.qa_server import kill_process_tree
+        import subprocess
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        try:
+            self.assertIsNone(proc.poll())
+            kill_process_tree(proc.pid)
+            proc.wait(timeout=3)
+            self.assertIsNotNone(proc.poll(), "Process must be terminated by kill_process_tree!")
+        finally:
+            if proc.poll() is None:
+                proc.kill()
 
 if __name__ == "__main__":
     unittest.main()

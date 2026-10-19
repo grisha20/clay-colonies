@@ -2,16 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cpbf5y4le5kcl"
-path="res://.godot/imported/tour_07_carry_walk.png-38657d8a2da57c23e9631dc7926b29cf.ctex"
+uid="uid://brxya26lbvsxu"
+path="res://.godot/imported/campfire_clay_normal.png-5f03b0c7df7217730ff2a9d25511266b.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "e53b0878cfdf143b20e97ea392e750b2"
 }
 
 [deps]
 
-source_file="res://recordings/tour_07_carry_walk.png"
-dest_files=["res://.godot/imported/tour_07_carry_walk.png-38657d8a2da57c23e9631dc7926b29cf.ctex"]
+source_file="res://assets/models/campfire_clay_normal.png"
+dest_files=["res://.godot/imported/campfire_clay_normal.png-5f03b0c7df7217730ff2a9d25511266b.ctex"]
 
 [params]
 
@@ -23,7 +26,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b6gkmmcu3r3cj"
-path="res://.godot/imported/tour_05_walk_left_profile.png-9afa8f50485ec1a7d8398f129136b3c3.ctex"
+uid="uid://dgsf68sc6ku4s"
+path="res://.godot/imported/comparison_04_night_campfire.png-3aa75a016a70b1429cee4cf5436b4abb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://recordings/tour_05_walk_left_profile.png"
-dest_files=["res://.godot/imported/tour_05_walk_left_profile.png-9afa8f50485ec1a7d8398f129136b3c3.ctex"]
+source_file="res://recordings/comparisons/comparison_04_night_campfire.png"
+dest_files=["res://.godot/imported/comparison_04_night_campfire.png-3aa75a016a70b1429cee4cf5436b4abb.ctex"]
 
 [params]
 
