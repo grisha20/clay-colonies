@@ -26,6 +26,7 @@ import { lakeShorePortals } from "../../shared/amphibianNavigation";
 import { isWaterAt } from "../../shared/surfaceTerrain";
 import { updateDeposits } from "./render/surface/deposits";
 import { DEPOSIT_WORK_OFFSETS } from "../../shared/resourceDeposits";
+import { residentRigContacts } from "./render/surface/residentRig";
 
 const app = new Application();
 await app.init({ width: 1024, height: 690, background: 0x555e3b, antialias: true });
@@ -48,8 +49,26 @@ const group = document.querySelector<HTMLSelectElement>("#group")!, direction = 
 const speed = document.querySelector<HTMLSelectElement>("#speed")!, pause = document.querySelector<HTMLButtonElement>("#pause")!;
 const light = document.querySelector<HTMLSelectElement>("#light")!;
 const campLike = () => group.value === "camp" || group.value === "drying";
-const floorGroups = ["deposits", "food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
+const floorGroups = ["gait", "deposits", "food", "buildings", "creatures", "roles", "cargo", "royals", "steps", "fences", "fence-stress", "fence-build", "placement"];
 const hasFloor = () => campLike() || floorGroups.includes(group.value) || group.value.startsWith("crowd");
+const contacts = new Map<string, { x:number; y:number; rootX:number; rootY:number; stamp:number; planted:boolean }>();
+let maxFootSlip=0, contactSamples=0;
+const record=document.createElement("button"), download=document.createElement("a");
+record.textContent="Записать 8 секунд";download.hidden=true;download.textContent="Скачать запись";
+document.querySelector("#status")!.after(record,download);
+record.onclick=()=>{
+  const stream=(app.canvas as HTMLCanvasElement).captureStream(60);
+  const mimeType=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(MediaRecorder.isTypeSupported);
+  const recorder=new MediaRecorder(stream,{mimeType}),chunks:Blob[]=[];
+  record.disabled=true;record.textContent="Запись…";download.hidden=true;
+  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  recorder.onstop=()=>{
+    if(download.href.startsWith("blob:"))URL.revokeObjectURL(download.href);
+    download.href=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType}));download.download="clayfolk-footplant.webm";download.hidden=false;
+    record.disabled=false;record.textContent="Записать 8 секунд";stream.getTracks().forEach(t=>t.stop());
+  };
+  recorder.start();setTimeout(()=>recorder.stop(),8000);
+};
 
 function setLight() {
   if (!hasFloor()) return;
@@ -84,6 +103,7 @@ function loadGroup() {
   campScene.footGround.clear();
   for (const child of actors.children.filter(c => c.label === "preview_ghost")) child.destroy({ children: true });
   elapsed = 0; lastStatusAt = 0; actorMotion.reset(); homes.clear();
+  contacts.clear();maxFootSlip=0;contactSamples=0;
   packetSeconds = 0; packetTicks = 0;
   for (const child of campScene.staticLayer.removeChildren()) child.destroy({ children: true });
   for (const child of campScene.waterLayer.removeChildren()) child.destroy({ children: true });
@@ -97,7 +117,15 @@ function loadGroup() {
     colonies: ["colony-1", "colony-2", "water"].map(id => ({ id, colony: { alarm: false, axes: 1, picks: 1, rods: 1, food: 80, clay: 20, wood: 20, stone: 20, fire: 1, waterWeapons: id === "water" } })),
     surface: { width: 480, height: 480, entrances: [], resourceNodes: [], buildings: [], fish: [], foodSources: [], carrion: [] }
   } as unknown as WorldSnapshot;
-  if (group.value === "deposits") {
+  if (group.value === "gait") {
+    const names=["Рабочий · 10.5 кл/с","Носильщик · 10.5 кл/с","Правитель · 2.2 кл/с","После дождя · малый размер"];
+    for(let i=0;i<4;i++){
+      const a=ant(i,"",{pos:{x:5,y:7+i*10},carrying:i===1?1:0,carryKind:"clay",dissolved:i===3?.6:0,heading:{x:1,y:0}},true);
+      if(i===2){const old=a.id;a.id="royal-king-gait";homes.set(a.id,homes.get(old)!);homes.delete(old);}
+    }
+    for(const child of labels.removeChildren())child.destroy();
+    names.forEach((text,i)=>{const view=new Text({text,style:{fontFamily:"system-ui",fontSize:15,fill:0x50412b}});view.position.set(24,(7+i*10)*16+20);labels.addChild(view);});
+  } else if (group.value === "deposits") {
     world.surface.deposits = [{ id: "pit", kind: "clay", pos: { x: 16, y: 19 }, capacity: 4800 }, { id: "quarry", kind: "stone", pos: { x: 48, y: 19 }, capacity: 7200 }];
     for (const [index, d] of world.surface.deposits.entries()) for (const [i, offset] of DEPOSIT_WORK_OFFSETS.entries()) {
       const pos = { x: d.pos.x + offset.x, y: d.pos.y + offset.y }, id = `${d.id}-${i}`;
@@ -301,7 +329,7 @@ app.ticker.add(ticker => {
     const root = homes.get(actor.id);
     if (root?.walking && running) {
       const h = group.value === "royals" && "heading" in actor ? actor.heading : heading;
-      const pace = group.value === "royals" ? 2.2 : 10.5;
+      const pace = group.value === "royals" || actor.id === "royal-king-gait" ? 2.2 : 10.5;
       actor.pos.x += h.x * dt * pace * running; actor.pos.y += h.y * dt * pace * running;
     }
   }
@@ -321,7 +349,7 @@ app.ticker.add(ticker => {
   for (const a of world.ants) if (!a.capturedBy && !campLike() && group.value !== "combat" && group.value !== "royals" && group.value !== "deposits") actorMotion.setFacing(a.id, heading, "resident");
   for (const e of world.enemies) actorMotion.setFacing(e.id, heading, "creature");
   const positions = all.map(a => ({ ...a.pos }));
-  for (const actor of all) { const root = homes.get(actor.id); if (root && group.value !== "steps" && !group.value.startsWith("crowd")) actor.pos = { x: root.x, y: root.y }; }
+  for (const actor of all) { const root = homes.get(actor.id); if (root && group.value !== "gait" && group.value !== "steps" && !group.value.startsWith("crowd")) actor.pos = { x: root.x, y: root.y }; }
   for (const a of world.ants) if (a.capturedBy) { const captor = world.enemies.find(e => e.id === a.capturedBy); if (captor) a.pos = { ...captor.pos }; }
   if (group.value === "lake") updateLakeDetails(campScene.lakeDetails, campScene.lakeRipples, world, cell, bounds);
   if (document.querySelector<HTMLInputElement>("#footprints")!.checked) updateFootprints(campScene.footGround, world, cell, bounds);
@@ -336,18 +364,29 @@ app.ticker.add(ticker => {
   updateSurfaceFood(sources, world, cell, bounds);
   updateSurfaceEnemies(enemies, loot, world, cell, bounds);
   updateSurfaceResidents(people, props, selection, world, cell, bounds);
+  if(group.value==="gait")for(const foot of residentRigContacts(people)){
+    const old=contacts.get(foot.id),delta=old?Math.hypot(foot.x-old.x,foot.y-old.y):0;
+    if(running<=1&&old?.planted&&foot.planted&&old.stamp===foot.stamp&&Math.hypot(foot.rootX-old.rootX,foot.rootY-old.rootY)<12){maxFootSlip=Math.max(maxFootSlip,delta*scale);contactSamples++;}
+    contacts.set(foot.id,{...foot});
+  }
   updatePropContacts(shadows, actors, world, cell, bounds);
   updateFishingEffects(effects, world, cell, bounds);
   if (guard?.shot && actorMotion.resident(guard).shotActive) {
     const gun = waterGunMount(residentPlacement(world, guard, cell), guard, cell);
     if (gun.target) effects.moveTo(gun.tip.x, gun.tip.y).lineTo(gun.target.x, gun.target.y).stroke({ color: 0x8de5f7, width: 2 });
   }
-  all.forEach((a, i) => { a.pos = positions[i]; if (group.value === "steps" && a.pos.x > 59) a.pos.x = 5; });
+  all.forEach((a, i) => {
+    a.pos = positions[i];
+    if(group.value === "steps" || group.value === "gait") {
+      if(a.pos.x>59)a.pos.x=5;else if(a.pos.x<3)a.pos.x=59;
+      if(a.pos.y>41)a.pos.y=5;else if(a.pos.y<3)a.pos.y=41;
+    }
+  });
   world.ants = normalResidents;
   frameCount++;
   if (start - lastFpsAt >= 1000) { measuredFps = Math.round(frameCount * 1000 / (start - lastFpsAt)); frameCount = 0; lastFpsAt = start; }
   if (start - lastStatusAt > 300) {
-    document.querySelector("#status")!.textContent = `${world.ants.length} жителей · ${world.enemies.length} существ · ${world.surface.fish.length} рыб · ${footprintCount(campScene.footGround)} следов · ${measuredFps} FPS · подготовка кадра ${(performance.now() - start).toFixed(1)} мс`;
+    document.querySelector("#status")!.textContent = group.value==="gait" ? running>1 ? `Ускорение: частота шага ограничена · ${measuredFps} FPS` : `Опорная стопа: сдвиг ≤ ${maxFootSlip.toFixed(4)} px · ${contactSamples} замеров · ${measuredFps} FPS` : `${world.ants.length} жителей · ${world.enemies.length} существ · ${world.surface.fish.length} рыб · ${footprintCount(campScene.footGround)} следов · ${measuredFps} FPS · подготовка кадра ${(performance.now() - start).toFixed(1)} мс`;
     lastStatusAt = start;
   }
 });

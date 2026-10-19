@@ -9,7 +9,15 @@ import { plantedOffset } from "./spriteGrounding";
 
 export function residentArt(ant: Ant) {
   const pose = actorMotion.resident(ant), facing = pose.look === "side" ? pose.facing : 1;
-  return getResidentArt(pose.look, facing, pose.legFrame, ant.carrying > 0 && !ant.capturedBy, pose.attackActive ? 1 : pose.working, pose.attackActive ? pose.attack : pose.work);
+  // Walking legs are posed continuously; swapping whole generated bodies
+  // changed their silhouette without keeping either foot planted.
+  return getResidentArt(pose.look, facing, 0, ant.carrying > 0 && !ant.capturedBy, pose.attackActive ? 1 : pose.working, pose.attackActive ? pose.attack : pose.work);
+}
+
+export function residentFeet(ant: Ant, cell: number) {
+  const pose = actorMotion.resident(ant);
+  if (ant.capturedBy || pose.attackActive || pose.working > .4 || !pose.feet) return undefined;
+  return pose.feet.map(f => ({ ...f, x: (ant.pos.x + f.x) * cell, y: (ant.pos.y + f.y) * cell, lift: f.lift * cell }));
 }
 
 export function residentPlacement(world: WorldSnapshot, ant: Ant, cell: number): BodyMount & { captive: "beetle" | "lakeMonster" | null } {
@@ -25,7 +33,10 @@ export function residentPlacement(world: WorldSnapshot, ant: Ant, cell: number):
   // Tilt/breathe about a planted sole. A global upward bob detached both feet.
   const support = art?.ground ? plantedOffset(art.ground, art.anchorX, art.texture.width,
     art.scale * size * (2 - pose.stretch), art.scale * size * pose.stretch, pose.lean) : 0;
-  return { x, groundY, y: groundY + (capture === "lakeMonster" ? -6 : capture ? -2 : -support), size, facing: pose.look === "side" ? pose.facing : 1,
+  // Weight passes over each planted leg. Unlike the previous whole-sprite
+  // bob, the mesh counter-transforms the soles and leaves them on the ground.
+  const hip = pose.feet && !pose.attackActive && pose.working <= .4 ? pose.walk * (.8 - .65 * Math.sin(pose.phase) ** 2) * size / 1.85 : 0;
+  return { x, groundY, y: groundY + (capture === "lakeMonster" ? -6 : capture ? -2 : hip - support), size, facing: pose.look === "side" ? pose.facing : 1,
     rotation: capture === "lakeMonster" ? direction - Math.PI / 2 : capture ? 0 : pose.lean, stretch: capture ? 1 : pose.stretch, captive: capture };
 }
 

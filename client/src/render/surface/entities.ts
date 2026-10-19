@@ -7,7 +7,7 @@ import { getEnvironmentTextures } from "./environment";
 import { actorMotion, animationSeed, residentScale } from "./motion";
 import { creatureDimensions, getCreatureArt, getSpiderCarcassArt, lakeTailArt } from "./creatureArt";
 import { getEquipmentArt } from "./equipmentArt";
-import { fishingRodMount, residentArt, residentPlacement } from "./residentLayout";
+import { fishingRodMount, residentArt, residentPlacement, residentFeet } from "./residentLayout";
 import { getBuildingArt } from "./buildingArt";
 import { drawPlacedContact, drawSpriteContact, plantedOffset, spriteGrounding } from "./spriteGrounding";
 import { getFishArt, swimmingFishArt } from "./fishArt";
@@ -73,6 +73,14 @@ export function updateSurfaceShadows(graphics: Graphics, world: WorldSnapshot, c
     if (ant.capturedBy) continue;
     if (isWaterAt(ant.pos.x, ant.pos.y)) continue;
     drawGroundShadow(graphics, lighting, body.x, body.groundY, 5 * scale, 1.6 * scale, 27 * scale, .9, false);
+    const rigFeet = residentFeet(ant, cell);
+    if (rigFeet) {
+      for (const foot of rigFeet) {
+        const alpha = Math.max(.08, 1 - foot.lift / (5 * scale));
+        graphics.ellipse(foot.x, foot.y, 2.4 * scale, .85 * scale).fill({ color: 0x302419, alpha: .38 * alpha });
+      }
+      continue;
+    }
     const art = residentArt(ant), c = Math.cos(body.rotation), s = Math.sin(body.rotation);
     for (const foot of art.ground?.feet ?? []) {
       const fx = (foot.x - art.anchorX * art.texture.width) * art.scale * body.size * (2 - body.stretch);

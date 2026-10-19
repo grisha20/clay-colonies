@@ -15,6 +15,7 @@
     "check:slice": "tsx server/src/bench/sliceCheck.ts",
     "check:gameplay": "tsx server/src/bench/gameplayCheck.ts",
     "check:motion": "tsx server/src/bench/motionCheck.ts",
+    "check:footplant": "tsx server/src/bench/footplantCheck.ts",
     "check:world": "tsx server/src/bench/worldCheck.ts",
     "check:deposits": "tsx server/src/bench/depositsCheck.ts",
     "check:grounding": "tsx server/src/bench/groundingCheck.ts",

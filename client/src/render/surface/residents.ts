@@ -13,6 +13,7 @@ import { visualIndex } from "./visualIndex";
 import { getFishArt } from "./fishArt";
 import { royalKind } from "./royals";
 import { getRoyalHeadgear, royalHeadgearMount } from "./royalHeadgear";
+import { drawResidentRig, hideResidentRigs } from "./residentRig";
 
 let selectedAntId: string | null = null;
 export function setSelectedAntId(id: string | null): void { selectedAntId = id; }
@@ -24,6 +25,7 @@ export function applyItemMount(sprite: Sprite, mount: ItemMount): void {
 
 export function updateSurfaceResidents(pool: SpritePool, items: SpritePool, selection: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
   beginPool(pool); beginPool(items); selection.clear();
+  hideResidentRigs(pool);
   const { nodes, colonies } = visualIndex(world);
   for (const ant of world.ants) {
     if (ant.layer !== "surface" || ant.pos.x < bounds.left - 8 || ant.pos.x > bounds.right + 8 || ant.pos.y < bounds.top - 8 || ant.pos.y > bounds.bottom + 8) continue;
@@ -54,6 +56,7 @@ export function updateSurfaceResidents(pool: SpritePool, items: SpritePool, sele
     body.alpha = mount.captive === "lakeMonster" ? 0.92 : 1;
     const captor = ant.capturedBy ? visualIndex(world).enemies.get(ant.capturedBy) : undefined;
     body.zIndex = mount.captive === "lakeMonster" && captor ? Math.max(groundY, captor.pos.y * cell + 14) : groundY + (mount.captive === "beetle" ? 0.2 : 0);
+    drawResidentRig(body, art, ant, mount, cell);
 
     if (!ant.capturedBy) {
       const royal = royalKind(ant);
