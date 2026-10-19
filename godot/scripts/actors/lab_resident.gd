@@ -2,7 +2,8 @@ class_name LabResident
 extends Node3D
 
 ## Controller for Clayfolk Resident in Visual Laboratory.
-## Manages animations, calibrated forward walking, cargo attachment, and foot contact metrics.
+## Manages animations, calibrated forward walking, bone-socket cargo attachment,
+## and rigorous stance-phase foot contact measurements.
 
 enum AnimState {
 	IDLE,
@@ -20,57 +21,84 @@ enum AnimState {
 
 var current_state: AnimState = AnimState.IDLE
 var anim_player: AnimationPlayer
+var skeleton: Skeleton3D
+var bone_attachment_cargo: BoneAttachment3D
 var cargo_prop: Node3D
-var socket_cargo: Node3D
 
-# Calibrated movement parameters
-# In Blender, stride length D = 0.60 m per 1.0 sec (30 frames at 30 fps)
-const STRIDE_DISTANCE: float = 0.60 # meters per cycle
+# Calibrated movement parameters:
+# Stride travel = 0.24m per step * 2 steps = 0.48m per 1.0s cycle
+const STRIDE_DISTANCE: float = 0.48 # meters per cycle
 const CYCLE_DURATION: float = 1.0 # seconds at 1.0x speed
-const FOOT_LENGTH: float = 0.30 # meters (approx 30 cm clay sole)
+const FOOT_LENGTH: float = 0.22 # meters (22 cm clay sole)
+const PASS_THRESHOLD_PCT: float = 10.0 # < 10% sole length is PASS
 
 var move_speed: float:
 	get:
-		return STRIDE_DISTANCE / CYCLE_DURATION # 0.6 m/s
+		var base = STRIDE_DISTANCE / CYCLE_DURATION
+		if test_mismatch_mode:
+			return base * 2.2 # Artificial speed mismatch for negative test
+		return base
 
-# Movement along a line [-2.5, +2.5]
+# Movement track along X axis with unobstructed bounds
 var move_direction: float = 1.0
-var move_bounds: float = 2.4
-var path_origin_z: float = 0.0
+var move_bounds: float = 2.2
+var is_paused: bool = false
+var test_mismatch_mode: bool = false # Negative test flag
 
 # Foot tracking and slip measurement
 var left_foot_bone_idx: int = -1
 var right_foot_bone_idx: int = -1
-var skeleton: Skeleton3D
 
-var last_left_foot_world_pos: Vector3 = Vector3.ZERO
-var last_right_foot_world_pos: Vector3 = Vector3.ZERO
-var stance_slip_distance_mm: float = 0.0
-var stance_slip_percent: float = 0.0
-var current_stance_foot: String = "Left"
+# Stance measurement state
+var left_stance_active: bool = false
+var right_stance_active: bool = false
+var left_stance_origin: Vector2 = Vector2.ZERO
+var right_stance_origin: Vector2 = Vector2.ZERO
+var left_stance_max_slip: float = 0.0
+var right_stance_max_slip: float = 0.0
+
+var last_completed_slip_mm: float = 0.0
+var last_completed_slip_pct: float = 0.0
+var completed_stance_count: int = 0
+var current_grounding_status: String = "N/A" # "PASS", "FAIL", or "N/A"
+var current_stance_name: String = "None"
 
 func _ready() -> void:
-	# Find AnimationPlayer in imported GLB hierarchy
 	anim_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
-	if not anim_player:
-		push_error("LabResident: AnimationPlayer not found in resident hierarchy!")
-	else:
-		_setup_animations()
-		play_state(AnimState.IDLE)
-
 	skeleton = find_child("Skeleton3D", true, false) as Skeleton3D
+
 	if skeleton:
 		left_foot_bone_idx = skeleton.find_bone("Foot.L")
 		right_foot_bone_idx = skeleton.find_bone("Foot.R")
+		_setup_cargo_attachment()
 
-	# Find or instantiate Cargo prop
-	cargo_prop = find_child("CargoProp", true, false) as Node3D
+	if anim_player:
+		_setup_animations()
+		play_state(AnimState.IDLE)
+
+func _setup_cargo_attachment() -> void:
+	# Locate Socket_Cargo in the skeleton
+	var cargo_bone_idx = skeleton.find_bone("Socket_Cargo")
+	if cargo_bone_idx >= 0:
+		bone_attachment_cargo = BoneAttachment3D.new()
+		bone_attachment_cargo.name = "CargoBoneAttachment"
+		bone_attachment_cargo.bone_name = "Socket_Cargo"
+		skeleton.add_child(bone_attachment_cargo)
+
+		# Find existing CargoProp in resident tree and reparent into Socket_Cargo
+		cargo_prop = find_child("CargoProp", true, false) as Node3D
+		if cargo_prop:
+			cargo_prop.get_parent().remove_child(cargo_prop)
+			bone_attachment_cargo.add_child(cargo_prop)
+			# Align cargo center neatly within the hands
+			cargo_prop.position = Vector3(0, 0, 0)
+			cargo_prop.rotation = Vector3.ZERO
+	else:
+		push_warning("Socket_Cargo bone not found in Skeleton3D")
+
 	_update_cargo_visibility()
 
 func _setup_animations() -> void:
-	if not anim_player:
-		return
-	# Ensure all animation clips loop seamlessly
 	for anim_name in anim_player.get_animation_list():
 		var anim = anim_player.get_animation(anim_name)
 		if anim:
@@ -78,6 +106,8 @@ func _setup_animations() -> void:
 
 func play_state(new_state: AnimState) -> void:
 	current_state = new_state
+	_reset_slip_tracking()
+
 	if not anim_player:
 		return
 
@@ -104,61 +134,125 @@ func play_state(new_state: AnimState) -> void:
 
 func _update_anim_speed() -> void:
 	if anim_player:
-		anim_player.speed_scale = speed_scale
+		anim_player.speed_scale = 0.0 if is_paused else speed_scale
 
 func _update_cargo_visibility() -> void:
 	if cargo_prop:
 		var should_show = (current_state == AnimState.CARRY_IDLE or current_state == AnimState.CARRY_WALK)
 		cargo_prop.visible = should_show
 
+func toggle_pause() -> void:
+	is_paused = not is_paused
+	_update_anim_speed()
+	if is_paused:
+		_reset_slip_tracking()
+
+func toggle_mismatch_test() -> void:
+	test_mismatch_mode = not test_mismatch_mode
+	_reset_slip_tracking()
+
+func _reset_slip_tracking() -> void:
+	left_stance_active = false
+	right_stance_active = false
+	left_stance_max_slip = 0.0
+	right_stance_max_slip = 0.0
+	completed_stance_count = 0
+	current_grounding_status = "N/A"
+	current_stance_name = "Transition / Reset"
+
 func _physics_process(delta: float) -> void:
+	if is_paused:
+		return
+
 	var is_moving = (current_state == AnimState.WALK_MOVE or current_state == AnimState.CARRY_WALK)
 	if is_moving:
 		var step = move_speed * speed_scale * delta * move_direction
 		position.x += step
 
-		# Face direction of travel (+X is -PI/2 rad, -X is +PI/2 rad)
-		rotation.y = -PI / 2.0 if move_direction > 0.0 else PI / 2.0
+		# Face direction of travel along X axis
+		# Facing +X: rotation.y = +PI/2
+		# Facing -X: rotation.y = -PI/2
+		rotation.y = PI / 2.0 if move_direction > 0.0 else -PI / 2.0
 
-		# Turn around at bounds
+		# Turnaround at boundaries: reset stance measurement so turning frames don't taint metrics
 		if position.x > move_bounds:
 			position.x = move_bounds
 			move_direction = -1.0
+			_reset_slip_tracking()
 		elif position.x < -move_bounds:
 			position.x = -move_bounds
 			move_direction = 1.0
+			_reset_slip_tracking()
 	elif current_state == AnimState.IDLE or current_state == AnimState.CARRY_IDLE or current_state == AnimState.WORK_GATHER:
-		# Face towards South / Camera
-		rotation.y = PI
+		# Face towards camera (+Z)
+		rotation.y = 0.0
 
-	_measure_foot_slip(delta)
+	_measure_honest_foot_slip()
 
-func _measure_foot_slip(delta: float) -> void:
-	if not skeleton or left_foot_bone_idx < 0 or right_foot_bone_idx < 0 or not anim_player:
+func _measure_honest_foot_slip() -> void:
+	if not skeleton or left_foot_bone_idx < 0 or right_foot_bone_idx < 0 or not anim_player or is_paused:
 		return
 
-	var anim_pos = anim_player.current_animation_position
-	# Walk cycle is 1.0s long:
-	# Phase 0.0 - 0.5: Left foot is in stance on the ground
-	# Phase 0.5 - 1.0: Right foot is in stance on the ground
-	var phase = fmod(anim_pos, 1.0)
-	var is_left_stance = (phase < 0.5)
-	current_stance_foot = "Left (sole planted)" if is_left_stance else "Right (sole planted)"
+	var is_moving_walk = (current_state == AnimState.WALK_MOVE or current_state == AnimState.CARRY_WALK)
+	if not is_moving_walk:
+		current_grounding_status = "N/A"
+		current_stance_name = "Not moving (N/A)"
+		return
 
-	var active_bone_idx = left_foot_bone_idx if is_left_stance else right_foot_bone_idx
-	var bone_transform = skeleton.global_transform * skeleton.get_bone_global_pose(active_bone_idx)
-	var foot_pos = bone_transform.origin
+	var anim_pos = fmod(anim_player.current_animation_position, 1.0)
 
-	if delta > 0.0001:
-		var last_pos = last_left_foot_world_pos if is_left_stance else last_right_foot_world_pos
-		if last_pos != Vector3.ZERO:
-			# Horizontal displacement in world space during stance phase
-			var horizontal_slip = Vector2(foot_pos.x - last_pos.x, foot_pos.z - last_pos.z).length()
-			var slip_velocity = horizontal_slip / delta
-			# Convert to mm per 0.5s stance phase
-			var stance_phase_slip = slip_velocity * 0.5
-			stance_slip_distance_mm = stance_phase_slip * 1000.0 # to mm
-			stance_slip_percent = (stance_phase_slip / FOOT_LENGTH) * 100.0
+	# In our calibrated 30 FPS walk cycle (duration = 1.0s):
+	# Left Foot Stance window: phase in [0.06, 0.44] (fully planted sole)
+	# Right Foot Stance window: phase in [0.56, 0.94] (fully planted sole)
+	var left_in_stance = (anim_pos >= 0.06 and anim_pos <= 0.44)
+	var right_in_stance = (anim_pos >= 0.56 and anim_pos <= 0.94)
 
-	last_left_foot_world_pos = foot_pos if is_left_stance else Vector3.ZERO
-	last_right_foot_world_pos = foot_pos if not is_left_stance else Vector3.ZERO
+	var left_foot_xf = skeleton.global_transform * skeleton.get_bone_global_pose(left_foot_bone_idx)
+	var right_foot_xf = skeleton.global_transform * skeleton.get_bone_global_pose(right_foot_bone_idx)
+	var left_foot_xz = Vector2(left_foot_xf.origin.x, left_foot_xf.origin.z)
+	var right_foot_xz = Vector2(right_foot_xf.origin.x, right_foot_xf.origin.z)
+
+	# 1. Left Foot Stance Measurement
+	if left_in_stance:
+		current_stance_name = "Left Sole Planted"
+		if not left_stance_active:
+			left_stance_active = true
+			left_stance_origin = left_foot_xz
+			left_stance_max_slip = 0.0
+		else:
+			var slip = left_foot_xz.distance_to(left_stance_origin)
+			left_stance_max_slip = max(left_stance_max_slip, slip)
+	else:
+		if left_stance_active:
+			# Left stance phase has just completed cleanly
+			left_stance_active = false
+			_record_completed_stance(left_stance_max_slip)
+
+	# 2. Right Foot Stance Measurement
+	if right_in_stance:
+		current_stance_name = "Right Sole Planted"
+		if not right_stance_active:
+			right_stance_active = true
+			right_stance_origin = right_foot_xz
+			right_stance_max_slip = 0.0
+		else:
+			var slip = right_foot_xz.distance_to(right_stance_origin)
+			right_stance_max_slip = max(right_stance_max_slip, slip)
+	else:
+		if right_stance_active:
+			# Right stance phase has just completed cleanly
+			right_stance_active = false
+			_record_completed_stance(right_stance_max_slip)
+
+	if not left_in_stance and not right_in_stance:
+		current_stance_name = "Double support / Weight transfer"
+
+func _record_completed_stance(slip_dist_m: float) -> void:
+	completed_stance_count += 1
+	last_completed_slip_mm = slip_dist_m * 1000.0
+	last_completed_slip_pct = (slip_dist_m / FOOT_LENGTH) * 100.0
+
+	if last_completed_slip_pct < PASS_THRESHOLD_PCT:
+		current_grounding_status = "PASS"
+	else:
+		current_grounding_status = "FAIL"

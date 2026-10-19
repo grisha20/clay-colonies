@@ -50,7 +50,7 @@ size = Vector3(14, 0.4, 14)
 material = SubResource("StandardMaterial3D_ground")
 
 [node name="Campfire" parent="." instance=ExtResource("5_camp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0, 0.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0, 2.0)
 
 [node name="CampfireLight" type="OmniLight3D" parent="Campfire"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
@@ -61,7 +61,7 @@ omni_range = 6.0
 script = ExtResource("3_light")
 
 [node name="Hut" parent="." instance=ExtResource("6_hut")]
-transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, -3.2, 0, -1.2)
+transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, -3.0, 0, 2.0)
 
 [node name="Resident" type="Node3D" parent="."]
 script = ExtResource("2_res")
@@ -69,7 +69,6 @@ script = ExtResource("2_res")
 [node name="Model" parent="Resident" instance=ExtResource("4_model")]
 
 [node name="CargoProp" parent="Resident" instance=ExtResource("7_cargo")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.72, -0.28)
 
 [node name="CameraPivot" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.529919, 0.848048, 0, -0.848048, 0.529919, 0, 0.8, 0)
@@ -83,8 +82,8 @@ fov = 45.0
 [node name="Panel" type="PanelContainer" parent="UI"]
 offset_left = 20.0
 offset_top = 20.0
-offset_right = 520.0
-offset_bottom = 260.0
+offset_right = 540.0
+offset_bottom = 290.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/Panel"]
 layout_mode = 2
