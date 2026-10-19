@@ -26,6 +26,8 @@ art/blender/*.blend1
 *.log
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
 
 # Временные файлы check:slice
 .slice-*.json

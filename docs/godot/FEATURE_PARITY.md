@@ -2,12 +2,12 @@
 
 | Категория | Механика / Элемент | Исходная реализация (TS/Pixi) | Реализация в Godot 4 | Проверка | Статус | Примечание |
 |---|---|---|---|---|---|---|
-| **Сеть и протокол** | WebSocket транспорт | `client/src/net/socket.ts` | `godot/scripts/network/game_socket.gd` | Тест подключения к QA-серверу | In progress (M2) | ws://localhost:8788 |
-| | Декодирование NetworkWorldSnapshot v21 | `client/src/net/socket.ts`, `shared/types.ts` | `godot/scripts/network/snapshot_decoder.gd` | JSON fixture test v21 | In progress (M2) | Верхний уровень JSON |
-| | Проверка версии протокола | `CURRENT_PROTOCOL_VERSION = 21` | `protocol_version == 21` | Ошибка при несоответствии | In progress (M2) | Защита от устаревших пакетов |
-| | Отправка wire-команд | `colonyIndex` -> `colony` поле | `godot/scripts/network/command_sender.gd` | `parseCommand` валидация | In progress (M2/M3) | Wire format: `{"type": ..., "colony": 0}` |
-| | Интерполяция позиций | `client/src/render/surface/motion.ts` | `godot/scripts/world/actor_interpolator.gd` | Плавное движение без телепортов | In progress (M2) | С буфером и тиковой привязкой |
-| | Обработка паузы и скоростей | `world.session.speed` (0, 1, 5, 20, 50) | `godot/scripts/world/world_view.gd` | Заморозка анимаций при speed=0 | In progress (M2) | Частота шага ограничена на 20x/50x |
+| **Сеть и протокол** | WebSocket транспорт | `client/src/main.ts` (клиент), `server/src/net/socket.ts` (сервер) | `godot/scripts/network/game_socket.gd` | Тест подключения к QA-серверу | Planned (M2) | ws://localhost:8788 |
+| | Декодирование NetworkWorldSnapshot v21 | `client/src/main.ts`, `shared/types.ts` | `godot/scripts/network/snapshot_decoder.gd` | JSON fixture test v21 | Planned (M2) | Верхний уровень JSON |
+| | Проверка версии протокола | `CURRENT_PROTOCOL_VERSION = 21` | `protocol_version == 21` | Ошибка при несоответствии | Planned (M2) | Защита от устаревших пакетов |
+| | Отправка wire-команд | `colonyIndex` -> `colony` поле | `godot/scripts/network/command_sender.gd` | `parseCommand` валидация | Planned (M2/M3) | Wire format: `{"type": ..., "colony": 0}` |
+| | Интерполяция позиций | `client/src/render/surface/motion.ts` | `godot/scripts/world/actor_interpolator.gd` | Плавное движение без телепортов | Planned (M2) | С буфером и тиковой привязкой |
+| | Обработка паузы и скоростей | `world.session.speed` (0, 1, 5, 20, 50) | `godot/scripts/world/world_view.gd` | Заморозка анимаций при speed=0 | Planned (M2) | Частота шага ограничена на 20x/50x |
 | **Жители (Clayfolk)** | Базовая 3D-модель | `client/public/assets/characters/clayfolk/` | `art/blender/resident.blend`, `resident.glb` | Просмотр 4 ракурсов в лаборатории | In progress (M1) | Объёмный глиняный народец |
 | | Скелет и кости | Отсутствовали (были 2D спрайты) | Скелетная оснастка (Armature) | Контакт стоп, поворот конечностей | In progress (M1) | Голова, торс, руки, ноги, сокеты |
 | | Ходьба (Walk) | 8 фаз шага, чередование ног | Скелетная цикличная анимация | Чередование двух ног, скольжение < 10% | In progress (M1) | Нет растяжений и артефактов |
@@ -35,7 +35,7 @@
 | | Жук (Beetle) | 2D жук | 3D-модель жука | Блуждание, захват | Planned (M4) | Освобождение жителя |
 | | Озёрный монстр | 2D монстр, плавание и берег | 3D-модель со скелетом (вода/суша) | Плавание в глубине, выход на берег | Planned (M4) | Разные анимации вода/суша |
 | | Рыбы (4 вида) | Спрайты рыб под водой | 3D-модели рыб с вилянием хвоста | Плавные повороты под водой | Planned (M4) | Gold, blue, silver, red |
-| **Управление и UI** | Камера 3D сверху | 2D зум и сдвиг канваса | `Camera3D` с ортогональной/наклонной проекцией | Зум колесом, сдвиг WASD/мышь | In progress (M3) | Фиксированный угол 55-60° |
+| **Управление и UI** | Камера 3D сверху | `client/src/main.ts`, `client/src/render/surface/camera.ts` | `Camera3D` с наклонной проекцией 60° | Зум колесом, сдвиг WASD/мышь | Planned (M3) | Фиксированный угол 55-60° |
 | | Рисование зон | `paintZone`, `eraseZone` | Проекция луча на землю (Raycast) | Сетка 4x4 клетки | Planned (M3) | Harvest / Forbid |
 | | Строительство | `placeBuilding`, `paintWall`, `placeGate` | Полупрозрачный 3D-предпросмотр | Валидация фундамента и цены | Planned (M3) | Запрет на воде и препятствиях |
 | | Панели HUD | HTML/Canvas оверлеи | Godot Control / CanvasLayer | Шрифты, иконки, счетчики | Planned (M3) | Ресурсы, задачи, тревога |

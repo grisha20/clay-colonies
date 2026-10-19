@@ -46,14 +46,11 @@ py scripts/godot/qa_server.py --port 8788
 ### Запуск из командной строки
 
 ```powershell
-# Запуск основной сцены
-godot --path godot
-
-# Запуск тестовой визуальной лаборатории персонажа (M1)
+# Запуск визуальной лаборатории персонажа (M1)
 godot --path godot scenes/lab/resident_lab.tscn
 
-# Подключение к QA-серверу на порту 8788
-godot --path godot -- --server ws://localhost:8788
+# Запуск основной сцены с подключением к QA-серверу (планируется в M2)
+# godot --path godot -- --server ws://localhost:8788
 ```
 
 ### Headless-проверка проекта
