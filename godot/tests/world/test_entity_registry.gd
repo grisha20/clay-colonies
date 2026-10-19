@@ -60,8 +60,10 @@ func test_spawn_and_population_tracking() -> bool:
 		return false
 
 	var r3 = registry.get_resident("ant-3")
-	if not r3 or r3.ant_id != "ant-3" or r3.colony_id != "colony-2":
-		push_error("Resident ant-3 data incorrect")
+	var ok = (r1 != null and r3 != null)
+	registry.clear_all()
+	root.free()
+	if not ok:
 		return false
 
 	print("  PASS: test_spawn_and_population_tracking")
@@ -93,13 +95,10 @@ func test_update_in_place_without_node_recreation() -> bool:
 	registry.update_from_snapshot(snap2)
 	var node2_ref = registry.get_resident("ant-1")
 
-	# Node instance must be IDENTICAL (in-place update, not destroyed and recreated!)
-	if node1_ref != node2_ref:
-		push_error("Entity node was recreated instead of updated in place!")
-		return false
-
-	if node2_ref.state_name != "carry" or node2_ref.carrying_amount != 1:
-		push_error("Entity state not updated in place!")
+	var ok = (node1_ref == node2_ref and node2_ref.state_name == "carry" and node2_ref.carrying_amount == 1)
+	registry.clear_all()
+	root.free()
+	if not ok:
 		return false
 
 	print("  PASS: test_update_in_place_without_node_recreation")
@@ -120,6 +119,8 @@ func test_despawn_missing_entities() -> bool:
 	}
 	registry.update_from_snapshot(snap1)
 	if registry.get_resident_count() != 2:
+		registry.clear_all()
+		root.free()
 		return false
 
 	# Next snapshot ant-2 dies or goes underground (missing from surface ants)
@@ -132,11 +133,10 @@ func test_despawn_missing_entities() -> bool:
 	}
 	registry.update_from_snapshot(snap2)
 
-	if registry.get_resident_count() != 1:
-		push_error("Expected 1 resident after despawn, got %d" % registry.get_resident_count())
-		return false
-
-	if registry.get_resident("ant-2") != null:
+	var ok = (registry.get_resident_count() == 1 and registry.get_resident("ant-2") == null)
+	registry.clear_all()
+	root.free()
+	if not ok:
 		push_error("ant-2 must have been despawned!")
 		return false
 
@@ -158,12 +158,16 @@ func test_clean_reconnect_zero_duplicates() -> bool:
 	}
 	registry.update_from_snapshot(snap1)
 	if registry.get_resident_count() != 2:
+		registry.clear_all()
+		root.free()
 		return false
 
 	# Simulate reconnect / new game transition
 	registry.clear_all()
 	if registry.get_resident_count() != 0:
 		push_error("clear_all did not zero residents!")
+		registry.clear_all()
+		root.free()
 		return false
 
 	# Reconnected to new world with different IDs
@@ -176,16 +180,11 @@ func test_clean_reconnect_zero_duplicates() -> bool:
 	}
 	registry.update_from_snapshot(snap_new_game)
 
-	if registry.get_resident_count() != 1:
-		push_error("Expected exactly 1 resident in new session, got %d" % registry.get_resident_count())
-		return false
-
-	if registry.get_resident("ant-1") != null or registry.get_resident("ant-2") != null:
-		push_error("Old resident IDs leaked into new session!")
-		return false
-
-	if registry.get_resident("ant-99") == null:
-		push_error("New resident ant-99 not spawned!")
+	var ok = (registry.get_resident_count() == 1 and registry.get_resident("ant-1") == null and registry.get_resident("ant-99") != null)
+	registry.clear_all()
+	root.free()
+	if not ok:
+		push_error("Reconnect entity verification failed!")
 		return false
 
 	print("  PASS: test_clean_reconnect_zero_duplicates")

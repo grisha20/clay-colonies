@@ -34,19 +34,24 @@ def is_pid_running(pid: int) -> bool:
     if sys.platform == "win32":
         import ctypes
         kernel32 = ctypes.windll.kernel32
-        SYNCHRONIZE = 0x00100000
         PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-        handle = kernel32.OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if handle:
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            return False
+        try:
+            exit_code = ctypes.c_ulong()
+            if kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return exit_code.value == 259  # 259 == STILL_ACTIVE
+            return False
+        finally:
             kernel32.CloseHandle(handle)
-            return True
-        return False
     else:
         try:
             os.kill(pid, 0)
             return True
         except OSError:
             return False
+
 
 def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
     """Returns True if the port is currently bound or being listened on."""
@@ -473,17 +478,22 @@ def start_server(
                 os.remove(stop_file)
             except Exception:
                 pass
+        env["CLAYFOLK_QA_STOP_FILE"] = stop_file
 
         def _stop_watcher():
             nonlocal stop_requested
             while proc and proc.poll() is None:
                 if os.path.exists(stop_file):
                     stop_requested = True
-                    try:
-                        os.remove(stop_file)
-                    except Exception:
-                        pass
+                    # Server watches CLAYFOLK_QA_STOP_FILE directly, saves world snapshot and exits cleanly with code 0.
+                    # Wait up to 5 seconds for graceful shutdown:
+                    for _ in range(50):
+                        time.sleep(0.1)
+                        if proc and proc.poll() is not None:
+                            break
+                    # Emergency fallback kill only if graceful exit timed out:
                     if proc and proc.poll() is None:
+                        print("[qa_server] WARNING: Graceful shutdown timed out; falling back to hard process termination.", file=sys.stderr)
                         kill_process_tree(proc.pid)
                     break
                 time.sleep(0.1)

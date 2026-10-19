@@ -12,6 +12,7 @@ import socket
 import struct
 import base64
 import subprocess
+import shutil
 
 REPO_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 sys.path.insert(0, REPO_ROOT)
@@ -111,6 +112,21 @@ def run_integration_tests():
         assert len(c1_ants) > 0 and len(c2_ants) > 0, "Both tribes must have active surface residents"
         print(f"  PASS: Fresh party connected! Tick={snap1.get('tick')}, Colonies=2, Surface residents={len(ants1)} (C1: {len(c1_ants)}, C2: {len(c2_ants)})")
 
+        # Run headless Godot QA client integration test against Server 1
+        godot_bin = shutil.which("godot_console") or shutil.which("godot") or "godot_console"
+        print(f"  [Godot QA] Launching headless Godot client test against port {port1}...")
+        godot_cmd1 = [
+            godot_bin,
+            "--headless",
+            "--path", "godot",
+            "-s", "tests/integration/test_qa_network_client.gd",
+            "--",
+            "--qa-port", str(port1)
+        ]
+        godot_proc1 = subprocess.run(godot_cmd1, cwd=REPO_ROOT, check=False)
+        assert godot_proc1.returncode == 0, f"Headless Godot test failed on fresh party with code {godot_proc1.returncode}!"
+        print("  PASS: Headless Godot client completed successfully against fresh party (code 0)!")
+
         # Stop server 1 cleanly
         request_stop(state_dir1)
         proc1.wait(timeout=10)
@@ -138,6 +154,19 @@ def run_integration_tests():
     with open(fixture_file, "r", encoding="utf-8") as f:
         f_data = json.load(f)
     assert f_data.get("tick") == 12345
+
+    # Ensure at least two residents carry cargo in fixture
+    ants_fixture = f_data.get("ants", [])
+    if len(ants_fixture) > 0:
+        ants_fixture[0]["state"] = "carry"
+        ants_fixture[0]["carrying"] = 1
+        ants_fixture[0]["carryKind"] = "clay"
+    if len(ants_fixture) > 1:
+        ants_fixture[1]["state"] = "carry"
+        ants_fixture[1]["carrying"] = 2
+        ants_fixture[1]["carryKind"] = "wood"
+    with open(fixture_file, "w", encoding="utf-8") as f:
+        json.dump(f_data, f, indent=2)
 
     qa_cmd2 = [
         sys.executable, "-B",
@@ -167,18 +196,75 @@ def run_integration_tests():
         assert len(ants2) == len(f_data.get("ants", [])), "Resident count must match fixture"
         print(f"  PASS: Fixture party connected! Tick={snap2.get('tick')} (>= 12345), Colonies=2, Surface residents={len(ants2)}")
 
-        # Stop server 2 cleanly
+        # Run headless Godot QA client integration test against Server 2
+        print(f"  [Godot QA] Launching headless Godot client test against fixture on port {port2}...")
+        godot_cmd2 = [
+            godot_bin,
+            "--headless",
+            "--path", "godot",
+            "-s", "tests/integration/test_qa_network_client.gd",
+            "--",
+            "--qa-port", str(port2)
+        ]
+        godot_proc2 = subprocess.run(godot_cmd2, cwd=REPO_ROOT, check=False)
+        assert godot_proc2.returncode == 0, f"Headless Godot test failed on fixture party with code {godot_proc2.returncode}!"
+        print("  PASS: Headless Godot client completed successfully against fixture party (code 0)!")
+
+        # Stop server 2 cleanly and verify exit code 0
         request_stop(state_dir2)
         proc2.wait(timeout=10)
         assert proc2.poll() == 0, "Server 2 must exit cleanly with code 0"
         time.sleep(0.5)
         assert not is_port_in_use(port2), "Port 8789 must be freed"
         print("  PASS: Server 2 stopped and resources freed cleanly")
+
+        # 3. Verify durable snapshot persistence on graceful exit
+        saved_snap_path = os.path.join(state_dir2, "snapshot.json")
+        assert os.path.exists(saved_snap_path), "snapshot.json must exist in state directory after graceful exit"
+        with open(saved_snap_path, "r", encoding="utf-8") as f:
+            saved_snap = json.load(f)
+        saved_tick = saved_snap.get("tick", 0)
+        assert saved_tick >= 12345, f"Saved tick must be >= 12345, got {saved_tick}"
+        print(f"  PASS: Graceful shutdown persisted durable state: saved tick = {saved_tick} (>= 12345)")
+
+        # 4. Verify restart without fixture resumes from saved tick
+        print("\n=== M2 INTEGRATION RUN 3: RESTART RESUMING FROM PERSISTED STATE ===")
+        qa_cmd3 = [
+            sys.executable, "-B",
+            os.path.join(REPO_ROOT, "scripts", "godot", "qa_server.py"),
+            "--port", str(port2),
+            "--state-dir", state_dir2
+        ]
+        proc3 = subprocess.Popen(qa_cmd3, cwd=REPO_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            ready3 = False
+            for _ in range(60):
+                time.sleep(0.25)
+                if is_port_in_use(port2):
+                    ready3 = True
+                    break
+                if proc3.poll() is not None:
+                    break
+            assert ready3, f"Server restart failed to bind port {port2}!"
+
+            snap3 = ws_read_snapshot(port2)
+            assert snap3.get("tick", 0) >= saved_tick, f"Restarted server must resume from tick >= {saved_tick}, got {snap3.get('tick')}"
+            print(f"  PASS: Server resumed successfully from durable state: Tick = {snap3.get('tick')} (>= {saved_tick})")
+
+            request_stop(state_dir2)
+            proc3.wait(timeout=10)
+            assert proc3.poll() == 0
+            print("  PASS: Restarted server stopped cleanly (exit code 0)")
+        finally:
+            if proc3.poll() is None:
+                kill_process_tree(proc3.pid)
+
     finally:
         if proc2.poll() is None:
             kill_process_tree(proc2.pid)
 
-    print("\n=== ALL M2 INTEGRATION TESTS PASSED WITH FLYING COLORS! ===")
+    print("\n=== ALL M2 INTEGRATION TESTS (NODE + GODOT + PERSISTENCE) PASSED WITH FLYING COLORS! ===")
 
 if __name__ == "__main__":
     run_integration_tests()
+

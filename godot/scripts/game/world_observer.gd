@@ -169,48 +169,77 @@ func _process_tour(delta: float) -> void:
 			tour_stage = 2
 			print("[TOUR STAGE 2] Tracking resident movement & cargo carrying...")
 			_focus_on_carrying_resident()
+		else:
+			var curr = world_view.focused_target as NetworkResident
+			if not is_instance_valid(curr) or curr.carrying_amount <= 0:
+				_focus_on_carrying_resident()
 	elif tour_time < 12.0:
 		if tour_stage != 3:
 			tour_stage = 3
 			print("[TOUR STAGE 3] North Lake shoreline & obstacle terrain...")
 			world_view.focus_on_lake("north")
 	elif tour_time < 16.0:
-		if tour_stage != 4:
-			tour_stage = 4
-			print("[TOUR STAGE 4] Colony 2 Camp & resident stride alternation...")
-			world_view.focus_on_colony(1)
-	elif tour_time < 19.0:
+		if tour_time < 13.5:
+			if tour_stage != 4:
+				tour_stage = 4
+				print("[TOUR STAGE 4A] Colony 2 Camp overview...")
+				world_view.focus_on_colony(1)
+		else:
+			if tour_stage != 41:
+				tour_stage = 41
+				print("[TOUR STAGE 4B] Colony 2 resident stride close-up...")
+				_focus_on_colony_resident(1)
+	elif tour_time < 20.0:
 		if tour_stage != 5:
 			tour_stage = 5
-			print("[TOUR STAGE 5] Demonstrating simulation pause (0x)...")
-			entity_registry.current_sim_speed = 0.0
-			speed_label.text = "Speed: PAUSED (0x)"
-			entity_registry.on_network_stalled()
-	elif tour_time < 21.0:
+			print("[TOUR STAGE 5] Server simulation pause (0x) confirmed via snapshot...")
+			ws_client.send_command({"type": "setSpeed", "value": 0})
+			_focus_on_carrying_resident()
+		if entity_registry.current_sim_speed > 0.0 and tour_time > 17.5:
+			tour_time = 17.5
+
+	elif tour_time < 22.0:
 		if tour_stage != 6:
 			tour_stage = 6
 			print("[TOUR STAGE 6] Demonstrating disconnect status & stall protection...")
+			ws_client.send_command({"type": "setSpeed", "value": 1})
 			ws_client.disconnect_from_server()
-	elif tour_time < 24.0:
+	elif tour_time < 25.0:
 		if tour_stage != 7:
 			tour_stage = 7
 			print("[TOUR STAGE 7] Demonstrating reconnect & zero duplicate recovery...")
 			ws_client.connect_to_server()
+			world_view.focus_on_colony(0)
 	else:
 		print("=== M2 OBSERVER TOUR COMPLETED SUCCESSFULLY! ===")
 		get_tree().quit(0)
 
-func _focus_on_carrying_resident() -> void:
+func _focus_on_colony_resident(colony_idx: int) -> void:
+	var target_cid = "colony-%d" % (colony_idx + 1)
+	var alt_cid = str(colony_idx)
 	for r in entity_registry.residents.values():
 		if is_instance_valid(r):
-			if r.carrying_amount > 0 or r.state_name in ["carry", "return"]:
+			if r.colony_id == target_cid or r.colony_id == alt_cid:
 				world_view.focus_on_resident(r)
 				_update_inspector(r)
 				return
+
+func _focus_on_carrying_resident() -> void:
+	for r in entity_registry.residents.values():
+		if is_instance_valid(r) and r.carrying_amount > 0:
+			world_view.focus_on_resident(r)
+			_update_inspector(r)
+			return
+	for r in entity_registry.residents.values():
+		if is_instance_valid(r) and r.state_name in ["carry", "return"]:
+			world_view.focus_on_resident(r)
+			_update_inspector(r)
+			return
 	if not entity_registry.residents.is_empty():
 		var first_r = entity_registry.residents.values()[0]
 		world_view.focus_on_resident(first_r)
 		_update_inspector(first_r)
+
 
 func _on_connect_button_pressed() -> void:
 	if ws_client.current_state == WSClient.ClientState.CONNECTED:
@@ -239,6 +268,7 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 	last_snapshot_time = Time.get_ticks_msec() / 1000.0
 	entity_registry.on_network_resumed()
 	entity_registry.update_from_snapshot(snapshot)
+	world_view.update_world_entities(snapshot)
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})

@@ -1,0 +1,100 @@
+extends SceneTree
+
+## Automated Headless Unit Tests for Surface Terrain Geometry & Polygon Matching.
+## Verifies:
+## 1. Authored polygon points match shared/surfaceTerrain.ts.
+## 2. Differentiates points where circular approximations fail (e.g. (240, 170) is water, (280, 100) is dry land).
+## 3. South lake polygon detection.
+## 4. ArrayMesh triangulation generation produces valid water surfaces.
+
+const SurfaceTerrain = preload("res://scripts/world/surface_terrain.gd")
+
+func _init() -> void:
+	print("=== RUNNING SURFACE TERRAIN POLYGON TESTS ===")
+	var passed = 0
+	var total = 0
+
+	total += 1
+	if test_north_lake_polygon_points():
+		passed += 1
+
+	total += 1
+	if test_points_where_circular_approximation_fails():
+		passed += 1
+
+	total += 1
+	if test_south_lake_polygon_points():
+		passed += 1
+
+	total += 1
+	if test_procedural_lake_mesh_generation():
+		passed += 1
+
+	print("=== SURFACE TERRAIN RESULTS: %d/%d PASSED ===" % [passed, total])
+	if passed == total:
+		print("ALL SURFACE TERRAIN TESTS PASSED!")
+		quit(0)
+	else:
+		push_error("SOME SURFACE TERRAIN TESTS FAILED!")
+		quit(1)
+
+func test_north_lake_polygon_points() -> bool:
+	# Center of North lake interior: (230, 135)
+	if not SurfaceTerrain.is_water_at(230.0, 135.0):
+		push_error("North lake interior point (230, 135) was not detected as water!")
+		return false
+
+	if SurfaceTerrain.get_lake_id_at(230.0, 135.0) != "north":
+		push_error("Expected lake id 'north', got '%s'" % SurfaceTerrain.get_lake_id_at(230.0, 135.0))
+		return false
+
+	# Point clearly outside North lake: (100, 100)
+	if SurfaceTerrain.is_water_at(100.0, 100.0):
+		push_error("Point (100, 100) falsely detected as water!")
+		return false
+
+	print("  PASS: test_north_lake_polygon_points")
+	return true
+
+func test_points_where_circular_approximation_fails() -> bool:
+	# Point (255, 170): inside actual North lake polygon (y in [156, 176], x in [248, 264]),
+	# but was OUTSIDE the old circular approximation (dist = 52.2m > radius 32m).
+	if not SurfaceTerrain.is_water_at(255.0, 170.0):
+		push_error("Polygon point (255, 170) must be WATER, but is_water_at returned false!")
+		return false
+
+	# Point (280, 100): north of actual polygon (top is y=104),
+	# but was INSIDE the old circular approximation centered at (260, 118) with radius 32.
+	if SurfaceTerrain.is_water_at(280.0, 100.0):
+		push_error("Point (280, 100) must be DRY LAND, but is_water_at returned true!")
+		return false
+
+	print("  PASS: test_points_where_circular_approximation_fails (verified against shared polygon)")
+	return true
+
+func test_south_lake_polygon_points() -> bool:
+	# Point (240, 380): inside South lake polygon
+	if not SurfaceTerrain.is_water_at(240.0, 380.0):
+		push_error("South lake interior point (240, 380) was not detected as water!")
+		return false
+
+	if SurfaceTerrain.get_lake_id_at(240.0, 380.0) != "south":
+		push_error("Expected lake id 'south', got '%s'" % SurfaceTerrain.get_lake_id_at(240.0, 380.0))
+		return false
+
+	print("  PASS: test_south_lake_polygon_points")
+	return true
+
+func test_procedural_lake_mesh_generation() -> bool:
+	var north_mesh = SurfaceTerrain.generate_lake_mesh(SurfaceTerrain.NORTH_LAKE_OUTLINE)
+	if north_mesh == null or north_mesh.get_surface_count() == 0:
+		push_error("Failed to generate North lake mesh!")
+		return false
+
+	var south_mesh = SurfaceTerrain.generate_lake_mesh(SurfaceTerrain.SOUTH_LAKE_OUTLINE)
+	if south_mesh == null or south_mesh.get_surface_count() == 0:
+		push_error("Failed to generate South lake mesh!")
+		return false
+
+	print("  PASS: test_procedural_lake_mesh_generation (triangulated ArrayMesh created)")
+	return true

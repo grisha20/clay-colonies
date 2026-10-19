@@ -22,6 +22,8 @@ func _get_container() -> Node3D:
 		return residents_container
 	return self
 
+var smoothed_interval: float = 0.100
+
 func update_from_snapshot(snapshot: Dictionary) -> void:
 	var tick = int(snapshot.get("tick", -1))
 	var session = snapshot.get("session", {})
@@ -29,12 +31,18 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 	var ants = snapshot.get("ants", [])
 
 	var now = Time.get_ticks_msec() / 1000.0
-	var dt = now - last_snapshot_timestamp if last_snapshot_timestamp > 0 else 0.1
+	var packet_dt = 0.100
+	if last_snapshot_timestamp > 0.0:
+		var measured = now - last_snapshot_timestamp
+		# Handle normal delivery jitter (20ms to 350ms)
+		if measured >= 0.02 and measured <= 0.35:
+			smoothed_interval = lerpf(smoothed_interval, measured, 0.25)
+			packet_dt = smoothed_interval
+		elif measured > 0.35:
+			# Gap/stall detected, fall back to nominal 100ms broadcast
+			packet_dt = 0.100
 	last_snapshot_timestamp = now
 	last_snapshot_tick = tick
-
-	# Calculate nominal tick interval
-	var tick_interval = 0.1 / max(0.1, current_sim_speed) if current_sim_speed > 0 else 0.1
 
 	var seen_ids: Dictionary = {}
 	var col1_count = 0
@@ -63,7 +71,7 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 			residents[id] = resident
 			resident_spawned.emit(resident)
 
-		resident.update_from_ant_data(ant_data, tick_interval, current_sim_speed)
+		resident.update_from_ant_data(ant_data, packet_dt, current_sim_speed)
 
 	# Despawn entities that died, went underground, or left
 	var to_remove: Array[String] = []

@@ -152,8 +152,11 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	if Vector2(hx, hy).length_squared() > 0.001:
 		target_heading = Vector3(hx, 0.0, hy).normalized()
 
-	# If this is the initial placement or a teleport (> 8 meters), snap directly
-	if is_first_update or position.distance_to(new_target) > 8.0:
+	# If this is the initial placement or a true teleport, snap directly.
+	# At high simulation speeds (e.g. 50x), legitimate movement can exceed static 8m,
+	# so threshold scales dynamically with simulation speed and tick interval.
+	var max_legit_travel: float = maxf(12.0, 3.0 * speed_scale * maxf(0.05, tick_interval_sec))
+	if is_first_update or position.distance_to(new_target) > max_legit_travel:
 		position = new_target
 		current_pos = new_target
 		prev_pos = new_target
@@ -163,11 +166,11 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	elif not is_sim_paused:
 		prev_pos = position
 		target_pos = new_target
-		interp_duration = max(0.001, tick_interval_sec)
+		interp_duration = maxf(0.04, tick_interval_sec)
 		interp_progress = 0.0
 
 	is_network_stalled = false
-	_update_movement_and_animation(0.0 if is_sim_paused else (position.distance_to(target_pos) / max(0.001, interp_duration)))
+	_update_movement_and_animation(0.0 if is_sim_paused else (position.distance_to(target_pos) / maxf(0.001, interp_duration)))
 
 func _process(delta: float) -> void:
 	if is_network_stalled or is_sim_paused:
@@ -193,9 +196,11 @@ func _process(delta: float) -> void:
 	elif target_heading.length_squared() > 0.01:
 		current_heading = current_heading.lerp(target_heading, min(1.0, delta * 8.0))
 
-	if current_heading.length_squared() > 0.001 and is_inside_tree():
-		var look_target = global_position + current_heading
-		look_at(Vector3(look_target.x, global_position.y, look_target.z), Vector3.UP)
+	# The Blender GLB resident model has its face, chest and cargo socket oriented towards +Z.
+	# Using rotation.y = atan2(x, z) aligns local +Z with current_heading, ensuring that
+	# (global_basis * Vector3.BACK).dot(current_heading) == 1.0 (moving forward, not backward).
+	if current_heading.length_squared() > 0.001:
+		rotation.y = atan2(current_heading.x, current_heading.z)
 
 	_update_movement_and_animation(ground_speed)
 
@@ -204,8 +209,16 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 	if cargo_prop:
 		cargo_prop.visible = is_carrying
 
+	if is_sim_paused or is_network_stalled:
+		# FREEZE the active animation clip in place without changing animation state.
+		# Switching clips to IDLE during pause or stall abruptly alters bone positions
+		# (e.g. Foot.R jumping 65mm). Freezing speed_scale = 0 keeps the exact pose intact.
+		if anim_player:
+			anim_player.speed_scale = 0.0
+		return
+
 	var target_state = AnimState.IDLE
-	if is_sim_paused or is_network_stalled or ground_speed < 0.05:
+	if ground_speed < 0.05:
 		target_state = AnimState.CARRY_IDLE if is_carrying else AnimState.IDLE
 	else:
 		target_state = AnimState.CARRY_WALK if is_carrying else AnimState.WALK
@@ -215,14 +228,14 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 
 	# Synchronize animation step frequency to real ground speed
 	if anim_player:
-		if is_sim_paused or is_network_stalled:
-			anim_player.speed_scale = 0.0
-		elif ground_speed < 0.05:
+		if ground_speed < 0.05:
 			anim_player.speed_scale = 1.0
 		else:
 			# Stride distance is 0.48m per cycle: speed_scale = ground_speed / 0.48
 			var stride_rate = ground_speed / NOMINAL_SPEED
-			anim_player.speed_scale = clamp(stride_rate, 0.2, 8.0)
+			# High-speed policy: clamp visual stride playback to 8.0x max to avoid visual flicker,
+			# while positional translation remains 100% faithful and unhampered.
+			anim_player.speed_scale = clampf(stride_rate, 0.2, 8.0)
 
 func _play_anim(new_state: AnimState) -> void:
 	current_anim_state = new_state

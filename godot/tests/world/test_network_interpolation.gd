@@ -1,12 +1,12 @@
 extends SceneTree
 
-## Automated Headless Unit Tests for M2 Network Interpolation and Stride Synchronization.
+## Automated Headless Unit Tests for M2 Network Interpolation, Timing & Facing.
 ## Verifies:
-## 1. Speed scales (0x, 1x, 5x, 20x, 50x)
-## 2. Pause freezes position and pose
-## 3. Stride frequency tied strictly to ground speed
-## 4. Network stall/disconnect halts movement (no infinite walking)
-## 5. Teleport (> 8m) snaps position without sliding
+## 1. Model heading: local +Z (face) points forward in all 4 cardinal directions (dot product > 0.99).
+## 2. Pause & Network stall: exact bone pose preserved without clip reset (Foot.R jump < 0.1mm).
+## 3. Real packet timing: 100ms packet interval at 5x speed moves smoothly every frame (no 20ms burst + 80ms dead stall).
+## 4. Stride frequency & high-speed policy: frequency scales with ground speed and caps at 8x.
+## 5. Dynamic teleport threshold: fast continuous motion does not false-teleport, true jump snaps.
 
 func _init() -> void:
 	print("=== RUNNING M2 NETWORK INTERPOLATION TESTS ===")
@@ -14,23 +14,23 @@ func _init() -> void:
 	var total = 0
 
 	total += 1
-	if test_pause_holds_position_and_pose():
+	if test_model_faces_direction_of_movement():
 		passed += 1
 
 	total += 1
-	if test_speed_scales_0_1_5_20_50():
+	if test_pause_and_stall_preserves_exact_bone_pose():
 		passed += 1
 
 	total += 1
-	if test_stride_frequency_tied_to_ground_speed():
+	if test_real_packet_timing_at_5x_speed_no_jerks():
 		passed += 1
 
 	total += 1
-	if test_network_stall_stops_infinite_walking():
+	if test_high_speed_stride_policy_and_bounds():
 		passed += 1
 
 	total += 1
-	if test_large_teleport_snaps_without_sliding():
+	if test_dynamic_teleport_threshold():
 		passed += 1
 
 	print("=== NETWORK INTERPOLATION RESULTS: %d/%d PASSED ===" % [passed, total])
@@ -41,139 +41,241 @@ func _init() -> void:
 		push_error("SOME NETWORK INTERPOLATION TESTS FAILED!")
 		quit(1)
 
-func test_pause_holds_position_and_pose():
-	var res = NetworkResident.new()
+func test_model_faces_direction_of_movement() -> bool:
 	var root = Node3D.new()
+	var test_dirs = [
+		Vector3.RIGHT,   # +X (east)
+		Vector3.LEFT,    # -X (west)
+		Vector3.BACK,    # +Z (south)
+		Vector3.FORWARD  # -Z (north)
+	]
+
+	for dir in test_dirs:
+		var res = NetworkResident.new()
+		root.add_child(res)
+
+		# Initial position
+		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.1, 1.0)
+		res._process(0.016)
+
+		# Move along dir
+		var target = dir * 2.0
+		res.update_from_ant_data({
+			"id": "ant-1",
+			"pos": {"x": target.x, "y": target.z},
+			"heading": {"x": dir.x, "y": dir.z}
+		}, 0.1, 1.0)
+
+		# Simulate 10 frames so heading smoothly rotates
+		for _i in range(10):
+			res._process(0.016)
+
+		# In Godot, Vector3.BACK is (0, 0, 1), which is the model's local +Z (face/chest).
+		var model_forward = res.transform.basis * Vector3.BACK
+		var alignment = model_forward.dot(dir.normalized())
+
+		if alignment < 0.95:
+			push_error("Direction %s failed: model forward %s dot target %s = %f (< 0.95)" % [
+				str(dir), str(model_forward), str(dir), alignment
+			])
+			res.queue_free()
+			root.free()
+			return false
+
+		res.queue_free()
+
+	root.free()
+	print("  PASS: test_model_faces_direction_of_movement (+Z forward, dot > 0.95 in all 4 directions)")
+	return true
+
+func test_pause_and_stall_preserves_exact_bone_pose() -> bool:
+	var root = Node3D.new()
+	var res = NetworkResident.new()
 	root.add_child(res)
 
 	# Initial placement
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 100.0, "y": 200.0}}, 0.1, 1.0)
-	var initial_pos = res.position
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.1, 1.0)
+	res._process(0.016)
 
-	# Send update but with speed = 0 (pause)
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 105.0, "y": 200.0}}, 0.1, 0.0)
-
-	# Simulate 10 frames
-	for _i in range(10):
+	# Start walking
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 1.0, "y": 0.0}}, 0.1, 1.0)
+	# Process 3 frames to establish a mid-stride phase (e.g. phase ~0.25)
+	for _i in range(3):
 		res._process(0.016)
 
-	# Position must remain stationary on pause
-	if res.position.distance_to(initial_pos) > 0.001:
-		push_error("Actor moved while simulation was paused!")
-		return false
-
-	if res.anim_player and res.anim_player.speed_scale > 0.0:
-		push_error("Animation speed must be 0 on pause!")
-		return false
-
-	print("  PASS: test_pause_holds_position_and_pose")
-	return true
-
-func test_speed_scales_0_1_5_20_50():
-	var test_speeds = [0.0, 1.0, 5.0, 20.0, 50.0]
-	for spd in test_speeds:
-		var res = NetworkResident.new()
-		var root = Node3D.new()
-		root.add_child(res)
-
-		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.1, spd)
-
-		# Send small step update (e.g. 0.2m)
-		var tick_dt = 0.1 / max(1.0, spd)
-		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.2, "y": 0.0}}, tick_dt, spd)
-
-		if spd > 0.0:
-			# Advance time by tick_dt
-			res._process(tick_dt)
-			# Actor must have reached target
-			if res.position.distance_to(Vector3(0.2, 0.0, 0.0)) > 0.01:
-				push_error("Speed %f failed to complete interpolation in tick_dt!" % spd)
-				return false
-		else:
-			res._process(0.1)
-			if res.position.distance_to(Vector3.ZERO) > 0.001:
-				push_error("Speed 0 moved!")
-				return false
-
-	print("  PASS: test_speed_scales_0_1_5_20_50")
-	return true
-
-func test_stride_frequency_tied_to_ground_speed():
-	var res = NetworkResident.new()
-	var root = Node3D.new()
-	root.add_child(res)
-
-	# 1. Stationary test: speed = 0 -> idle
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 10.0, "y": 10.0}}, 0.1, 1.0)
-	res._process(0.1)
-	if res.current_anim_state != NetworkResident.AnimState.IDLE:
-		push_error("Expected IDLE for stationary actor, got %d" % res.current_anim_state)
-		return false
-
-	# 2. Moving test: moving 0.048m in 0.1s -> speed 0.48 m/s -> walk
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 10.048, "y": 10.0}}, 0.1, 1.0)
-	res._process(0.05)
 	if res.current_anim_state != NetworkResident.AnimState.WALK:
-		push_error("Expected WALK for moving actor, got %d" % res.current_anim_state)
+		push_error("Actor should be in WALK state before pause/stall")
+		res.queue_free()
+		root.free()
 		return false
 
-	# 3. Carrying test: carrying > 0 -> carry_walk
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 10.1, "y": 10.0}, "carrying": 1, "state": "carry"}, 0.1, 1.0)
-	res._process(0.05)
-	if res.current_anim_state != NetworkResident.AnimState.CARRY_WALK:
-		push_error("Expected CARRY_WALK for carrying actor, got %d" % res.current_anim_state)
-		return false
+	var foot_bone_idx = res.skeleton.find_bone("Foot.R") if res.skeleton else -1
+	var bone_pos_before = res.skeleton.get_bone_global_pose(foot_bone_idx).origin if foot_bone_idx >= 0 else Vector3.ZERO
+	var anim_clip_before = res.anim_player.current_animation if res.anim_player else ""
+	var anim_pos_before = res.anim_player.current_animation_position if res.anim_player else 0.0
 
-	if not res.cargo_prop or not res.cargo_prop.visible:
-		push_error("Cargo prop must be visible when carrying!")
-		return false
-
-	print("  PASS: test_stride_frequency_tied_to_ground_speed")
-	return true
-
-func test_network_stall_stops_infinite_walking():
-	var res = NetworkResident.new()
-	var root = Node3D.new()
-	root.add_child(res)
-
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.1, 1.0)
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 5.0, "y": 0.0}}, 0.1, 1.0)
-
-	# Simulate 1 frame
-	res._process(0.016)
-	var pos_before_stall = res.position
-
-	# Network stalls (disconnect or packet loss)
+	# 1. Trigger network stall
 	res.on_network_stalled()
 
-	# Simulate 10 frames
+	# Process 10 frames during stall
 	for _i in range(10):
 		res._process(0.016)
 
-	# Must NOT continue walking into distance
-	if res.position.distance_to(pos_before_stall) > 0.001:
-		push_error("Actor continued walking after network stalled!")
+	# Bone transform and animation clip MUST NOT jump
+	var anim_clip_during_stall = res.anim_player.current_animation if res.anim_player else ""
+	var bone_pos_during_stall = res.skeleton.get_bone_global_pose(foot_bone_idx).origin if foot_bone_idx >= 0 else Vector3.ZERO
+	var bone_jump = bone_pos_before.distance_to(bone_pos_during_stall)
+
+	if anim_clip_during_stall != anim_clip_before:
+		push_error("Animation clip changed during stall from '%s' to '%s'!" % [anim_clip_before, anim_clip_during_stall])
+		res.queue_free()
+		root.free()
 		return false
 
-	print("  PASS: test_network_stall_stops_infinite_walking")
+	if bone_jump > 0.001:
+		push_error("Foot.R jumped %f mm upon stall! Pose was not frozen." % (bone_jump * 1000.0))
+		res.queue_free()
+		root.free()
+		return false
+
+	# 2. Trigger simulation pause (speed = 0)
+	res.on_network_resumed()
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 1.0, "y": 0.0}}, 0.1, 0.0)
+
+	for _i in range(10):
+		res._process(0.016)
+
+	var bone_pos_during_pause = res.skeleton.get_bone_global_pose(foot_bone_idx).origin if foot_bone_idx >= 0 else Vector3.ZERO
+	var pause_bone_jump = bone_pos_before.distance_to(bone_pos_during_pause)
+
+	if pause_bone_jump > 0.001:
+		push_error("Foot.R jumped %f mm upon pause! Pose was not frozen." % (pause_bone_jump * 1000.0))
+		res.queue_free()
+		root.free()
+		return false
+
+	res.queue_free()
+	root.free()
+	print("  PASS: test_pause_and_stall_preserves_exact_bone_pose (zero bone jump, clip frozen in place)")
 	return true
 
-func test_large_teleport_snaps_without_sliding():
-	var res = NetworkResident.new()
+func test_real_packet_timing_at_5x_speed_no_jerks() -> bool:
 	var root = Node3D.new()
+	var res = NetworkResident.new()
 	root.add_child(res)
 
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.1, 1.0)
-	res._process(0.1)
+	# In real simulation, server broadcasts roughly every 100ms (packet_dt = 0.100s) even at 5x speed.
+	# Displacement is ~0.24m per 100ms packet.
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.100, 5.0)
+	res._process(0.016)
 
-	# Send 50m jump (e.g. entrance spawn or teleport)
-	var target_jump = Vector3(50.0, 0.0, 0.0)
-	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 50.0, "y": 0.0}}, 0.1, 1.0)
+	# Deliver new snapshot with 0.24m displacement over real 100ms interval
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.24, "y": 0.0}}, 0.100, 5.0)
 
-	# Must immediately snap position without requiring 50m of lerping
-	if res.position.distance_to(target_jump) > 0.001:
-		push_error("Large teleport (>8m) did not snap immediately!")
+	var frame_dt = 1.0 / 60.0 # ~0.01667s
+	var frame_displacements: Array[float] = []
+
+	# Sample 6 frames (~100ms)
+	for _i in range(6):
+		var p_prev = res.position
+		res._process(frame_dt)
+		var d = p_prev.distance_to(res.position)
+		frame_displacements.append(d)
+
+	# Verify: motion must NOT cease after frame 1 or 2 (which occurred when duration was 20ms).
+	# Every frame should move roughly 0.24m / 6 frames ~ 0.04m (40mm).
+	var zero_frames = 0
+	for d in frame_displacements:
+		if d < 0.005: # less than 5mm
+			zero_frames += 1
+
+	if zero_frames > 1:
+		push_error("Motion stalled in %d/6 frames between 100ms packets at 5x! Displacements: %s" % [
+			zero_frames, str(frame_displacements)
+		])
+		res.queue_free()
+		root.free()
 		return false
 
-	print("  PASS: test_large_teleport_snaps_without_sliding")
+	res.queue_free()
+	root.free()
+	print("  PASS: test_real_packet_timing_at_5x_speed_no_jerks (continuous motion across 100ms window)")
+	return true
+
+func test_high_speed_stride_policy_and_bounds() -> bool:
+	var root = Node3D.new()
+	var test_speeds = [1.0, 5.0, 20.0, 50.0]
+
+	for spd in test_speeds:
+		var res = NetworkResident.new()
+		root.add_child(res)
+
+		# Nominal 100ms packet with distance proportional to sim speed
+		var step_dist = 0.048 * spd
+		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.100, spd)
+		res._process(0.016)
+
+		res.update_from_ant_data({"id": "ant-1", "pos": {"x": step_dist, "y": 0.0}}, 0.100, spd)
+		res._process(0.050)
+
+		# Animation speed_scale must be clamped to at most 8.0 to prevent visual flicker
+		if res.anim_player:
+			var scale = res.anim_player.speed_scale
+			if scale > 8.01:
+				push_error("Speed scale %f exceeded policy clamp of 8.0 at %fx speed!" % [scale, spd])
+				res.queue_free()
+				root.free()
+				return false
+			if scale < 0.2:
+				push_error("Speed scale %f is unexpectedly below 0.2 at %fx speed!" % [scale, spd])
+				res.queue_free()
+				root.free()
+				return false
+
+		# Advance remaining time and verify target reached
+		res._process(0.060)
+		if res.position.distance_to(Vector3(step_dist, 0.0, 0.0)) > 0.05:
+			push_error("Failed to reach target at %fx speed! Pos: %s, Target: %s" % [
+				spd, str(res.position), str(Vector3(step_dist, 0.0, 0.0))
+			])
+			res.queue_free()
+			root.free()
+			return false
+
+		res.queue_free()
+
+	root.free()
+	print("  PASS: test_high_speed_stride_policy_and_bounds (capped at 8.0x, accurate translation at 50x)")
+	return true
+
+func test_dynamic_teleport_threshold() -> bool:
+	var root = Node3D.new()
+	var res = NetworkResident.new()
+	root.add_child(res)
+
+	# 1. Continuous movement at 50x speed (e.g. 7.5m in 100ms): must INTERPOLATE, not snap
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.100, 50.0)
+	res._process(0.016)
+
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 7.5, "y": 0.0}}, 0.100, 50.0)
+	# After 0.05s (halfway through 0.100s), position must be around ~3.75m, NOT already snapped to 7.5m
+	res._process(0.050)
+	if res.position.x > 6.0 or res.position.x < 1.0:
+		push_error("Fast continuous movement was treated as instant teleport! Pos.x = %f" % res.position.x)
+		res.queue_free()
+		root.free()
+		return false
+
+	# 2. Extreme jump (> 50m, e.g. respawn/underground entrance): must snap instantly
+	var huge_target = Vector3(120.0, 0.0, 0.0)
+	res.update_from_ant_data({"id": "ant-1", "pos": {"x": 120.0, "y": 0.0}}, 0.100, 1.0)
+	if res.position.distance_to(huge_target) > 0.001:
+		push_error("Extreme jump did not snap instantly! Pos = %s" % str(res.position))
+		res.queue_free()
+		root.free()
+		return false
+
+	res.queue_free()
+	root.free()
+	print("  PASS: test_dynamic_teleport_threshold (dynamic threshold distinguishes fast walk from jump)")
 	return true

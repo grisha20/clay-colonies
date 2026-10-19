@@ -102,7 +102,7 @@ loop = startLoop(world, (includePheromones) => {
   hub.broadcast((view) => toNetworkSnapshot(world, includePheromones, view));
 });
 
-process.on("SIGINT", () => {
+const gracefulExit = () => {
   saveWorldSnapshot(world)
     .catch((error: unknown) => {
       console.warn(`Could not save snapshot on exit: ${(error as Error).message}`);
@@ -111,4 +111,23 @@ process.on("SIGINT", () => {
       hub.close();
       process.exit(0);
     });
-});
+};
+
+process.on("SIGINT", gracefulExit);
+process.on("SIGTERM", gracefulExit);
+process.on("SIGBREAK", gracefulExit);
+
+const qaStopFile = process.env.CLAYFOLK_QA_STOP_FILE;
+if (qaStopFile) {
+  const checkStop = setInterval(() => {
+    if (fs.existsSync(qaStopFile)) {
+      clearInterval(checkStop);
+      try {
+        fs.unlinkSync(qaStopFile);
+      } catch {}
+      gracefulExit();
+    }
+  }, 100);
+  checkStop.unref();
+}
+
