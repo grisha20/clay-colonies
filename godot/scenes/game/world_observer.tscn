@@ -1,0 +1,18 @@
+[gd_scene load_steps=5 format=3 uid="uid://c8worldobserver01"]
+
+[ext_resource type="Script" path="res://scripts/game/world_observer.gd" id="1_observer"]
+[ext_resource type="Script" path="res://scripts/world/world_view.gd" id="2_worldview"]
+[ext_resource type="Script" path="res://scripts/world/entity_registry.gd" id="3_registry"]
+[ext_resource type="Script" path="res://scripts/net/ws_client.gd" id="4_wsclient"]
+
+[node name="WorldObserver" type="Node3D"]
+script = ExtResource("1_observer")
+
+[node name="WorldView" type="Node3D" parent="."]
+script = ExtResource("2_worldview")
+
+[node name="EntityRegistry" type="Node3D" parent="."]
+script = ExtResource("3_registry")
+
+[node name="WSClient" type="Node" parent="."]
+script = ExtResource("4_wsclient")

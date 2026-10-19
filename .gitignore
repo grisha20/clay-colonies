@@ -23,6 +23,7 @@ art/blender/*.blend1
 *.webm
 *.avi
 !godot/recordings/*.mp4
+!godot/recordings/**/*.mp4
 
 # Логи и мусор
 *.log
