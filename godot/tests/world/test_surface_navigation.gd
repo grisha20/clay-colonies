@@ -46,6 +46,18 @@ func _init() -> void:
 	if test_extrapolation_and_stop_reconciliation():
 		passed += 1
 
+	total += 1
+	if test_sealed_enclosure_safe_route_failure():
+		passed += 1
+
+	total += 1
+	if test_160ms_gap_smooth_pacing_and_walk_state():
+		passed += 1
+
+	total += 1
+	if test_map_bounds_and_out_of_world_rejection():
+		passed += 1
+
 	print("=== SURFACE NAVIGATION RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL SURFACE NAVIGATION TESTS PASSED!")
@@ -228,4 +240,99 @@ func test_extrapolation_and_stop_reconciliation() -> bool:
 
 	stop_actor.queue_free()
 	print("  PASS: test_extrapolation_and_stop_reconciliation (safe target clamp, delta=%f >= 0.0)" % delta)
+	return true
+
+func test_sealed_enclosure_safe_route_failure() -> bool:
+	var closed: Array = []
+	for y in range(206, 216, 2):
+		for x in [194, 200]:
+			closed.append({"id": "side-%s-%s" % [x, y], "type": "wall", "stage": "built", "colonyId": "colony-1", "pos": {"x": x, "y": y}})
+	for x in [196, 198]:
+		for y in [206, 214]:
+			closed.append({"id": "cap-%s-%s" % [x, y], "type": "wall", "stage": "built", "colonyId": "colony-1", "pos": {"x": x, "y": y}})
+
+	var from_p = Vector2(197.0, 211.0)
+	var goal = Vector2(205.0, 211.0)
+	var failed_route = SurfaceNav.surface_route(from_p, goal, "colony-1", closed, [])
+
+	if failed_route.is_empty():
+		push_error("Expected failed_route to have fallback [from_p], got empty array")
+		return false
+
+	var safe_to_last = SurfaceNav.surface_line_open(from_p, failed_route[-1], "colony-1", closed, [])
+	if not safe_to_last:
+		push_error("Failed route last waypoint must be safe from start, got safe_to_last=false")
+		return false
+
+	var actor = _create_actor(from_p, goal, closed, [])
+	actor._process(0.05)
+	var current_p = Vector2(actor.position.x, actor.position.z)
+	var is_open = SurfaceNav.surface_point_open(current_p, "colony-1", closed, [])
+	if not is_open:
+		push_error("Sealed enclosure caused actor to penetrate wall at %s" % str(actor.position))
+		actor.queue_free()
+		return false
+
+	if actor.position.distance_to(Vector3(from_p.x, 0.0, from_p.y)) > 0.01:
+		push_error("Actor should hold position inside enclosure at %s, but moved to %s" % [str(from_p), str(actor.position)])
+		actor.queue_free()
+		return false
+
+	actor.queue_free()
+	print("  PASS: test_sealed_enclosure_safe_route_failure (holds position, 0 wall penetration)")
+	return true
+
+func test_160ms_gap_smooth_pacing_and_walk_state() -> bool:
+	var r = _create_actor(Vector2(10.0, 10.0), Vector2(10.1, 10.0))
+	var idle_count = 0
+	var zero_step_count = 0
+
+	for i in range(10):
+		var old_x = r.position.x
+		r._process(0.016)
+		var step_mm = (r.position.x - old_x) * 1000.0
+		if step_mm < 0.0001:
+			zero_step_count += 1
+		if r.current_anim_state != NetworkResident.AnimState.WALK:
+			idle_count += 1
+
+	if zero_step_count > 0:
+		push_error("160ms delivery gap had %d/10 frozen frames (step_mm == 0)" % zero_step_count)
+		r.queue_free()
+		return false
+
+	if idle_count > 0:
+		push_error("160ms delivery gap had %d/10 non-WALK frames" % idle_count)
+		r.queue_free()
+		return false
+
+	# Ensure position at end of 160ms does not overshoot target 10.1
+	if r.position.x > 10.1001:
+		push_error("160ms delivery gap overshot target: pos.x=%f > 10.1" % r.position.x)
+		r.queue_free()
+		return false
+
+	r.queue_free()
+	print("  PASS: test_160ms_gap_smooth_pacing_and_walk_state (continuous displacement, zero idle stutter)")
+	return true
+
+func test_map_bounds_and_out_of_world_rejection() -> bool:
+	# Test out of map boundaries
+	if SurfaceNav.surface_point_open(Vector2(-5.0, 10.0), "colony-1", [], []):
+		push_error("Vector2(-5, 10) should be rejected by map bounds")
+		return false
+
+	if SurfaceNav.surface_point_open(Vector2(10.0, -5.0), "colony-1", [], []):
+		push_error("Vector2(10, -5) should be rejected by map bounds")
+		return false
+
+	if SurfaceNav.surface_point_open(Vector2(485.0, 100.0), "colony-1", [], []):
+		push_error("Vector2(485, 100) should be rejected by map bounds")
+		return false
+
+	if not SurfaceNav.surface_point_open(Vector2(100.0, 100.0), "colony-1", [], []):
+		push_error("Vector2(100, 100) should be open on empty map")
+		return false
+
+	print("  PASS: test_map_bounds_and_out_of_world_rejection (strict boundaries matching shared)")
 	return true

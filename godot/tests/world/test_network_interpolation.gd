@@ -54,12 +54,12 @@ func test_model_faces_direction_of_movement() -> bool:
 		var res = NetworkResident.new()
 		root.add_child(res)
 
-		# Initial position
-		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.1, 1.0)
+		# Initial position (valid coordinates within map)
+		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 100.0, "y": 100.0}}, 0.1, 1.0)
 		res._process(0.016)
 
 		# Move along dir
-		var target = dir * 2.0
+		var target = Vector3(100.0, 0.0, 100.0) + dir * 2.0
 		res.update_from_ant_data({
 			"id": "ant-1",
 			"pos": {"x": target.x, "y": target.z},
@@ -212,10 +212,10 @@ func test_high_speed_stride_policy_and_bounds() -> bool:
 
 		# Nominal 100ms packet with distance proportional to sim speed
 		var step_dist = 0.048 * spd
-		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 0.0, "y": 0.0}}, 0.100, spd)
+		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 100.0, "y": 100.0}}, 0.100, spd)
 		res._process(0.016)
 
-		res.update_from_ant_data({"id": "ant-1", "pos": {"x": step_dist, "y": 0.0}}, 0.100, spd)
+		res.update_from_ant_data({"id": "ant-1", "pos": {"x": 100.0 + step_dist, "y": 100.0}}, 0.100, spd)
 		res._process(0.050)
 
 		# Animation speed_scale must be clamped to at most 8.0 to prevent visual flicker
@@ -233,10 +233,10 @@ func test_high_speed_stride_policy_and_bounds() -> bool:
 				return false
 
 		# Advance remaining time and verify target reached
-		res._process(0.060)
-		if res.position.distance_to(Vector3(step_dist, 0.0, 0.0)) > 0.05:
+		res._process(0.120)
+		if res.position.distance_to(Vector3(100.0 + step_dist, 0.0, 100.0)) > 0.05:
 			push_error("Failed to reach target at %fx speed! Pos: %s, Target: %s" % [
-				spd, str(res.position), str(Vector3(step_dist, 0.0, 0.0))
+				spd, str(res.position), str(Vector3(100.0 + step_dist, 0.0, 100.0))
 			])
 			res.queue_free()
 			root.free()

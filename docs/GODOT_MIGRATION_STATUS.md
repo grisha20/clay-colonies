@@ -1,13 +1,15 @@
 # Godot migration — состояние передачи
 
-Обновлено: 20.10.2026, независимая проверка Codex `0c199a9`. **M2 ещё не принят; M3 пока не начинать.**
+Обновлено: 20.10.2026, устранение дефектов отказа маршрута и джиттера по аудиту `0c199a9`. **M2 подготовлен к повторной приёмке; M3 пока не начинать.**
 
-Подтверждены прежние успешные обходы и шесть примеров ea54b49: фиктивного audit_hut нет, путь у дома/стены/берега безопасен в проверенных случаях, экстраполяция убрана, остановка без обратного хода. Проходят 29 unit-сценариев Godot, 12 QA, import, npm check и три настоящих integration-прогона; носильщики обеих колоний, сохранение/restart сохраняют работоспособность. Модели, сервер, shared и браузерный клиент в этом commit не менялись.
+Подтверждены прежние успешные обходы, ориентация +Z, строгий декодер v21, носильщики обеих колоний, graceful shutdown и сохранение тиков. Устранены оставшиеся дефекты M2:
+1. Безопасный отказ поиска пути при изоляции (замкнутая ограда) — возврат пустого маршрута и удержание безопасной позиции вместо хорды через стену.
+2. Плавный тайминг движения при задержках доставки до 160 мс — отсутствие замираний IDLE, непрерывное положительное смещение, исключение overshoot и отката назад.
+3. Строгая валидация границ карты (`x, y >= 1.0` и `< MAP_DIM - 1.0`), согласованная с `shared/surfaceNavigation.ts`.
 
-Остались два воспроизведённых пункта: неудачный A* возвращает `[goal]` вместо отказа — в замкнутой ограде actor попадает в стену, тогда как shared возвращает null. После удаления экстраполяции при интервале 100 мс и следующем пакете через 160 мс последние три кадра снова IDLE; временного буфера нет. Ни успешный обход, ни delta=0 при остановке не доказывают эти случаи.
+Проходят 32 unit-сценария Godot (9/9 навигация, 5/5 интерполяция, 10/10 декодер, 4/4 реестр, 4/4 ландшафт), все тесты `review-repro/0c199a9.gd` и `ea54b49.gd`, 12 QA тестов сервера, npm check и 3 сквозных интеграционных прогона. Модели и геометрия Blender сохранены без изменений.
 
-**Актуальное продолжение:** [отказ маршрута и тайминг после 0c199a9](<Antigravity — отказ маршрута и тайминг после 0c199a9.md>), [доказательства и воспроизведение](godot/M2_REVIEW_0c199a9.md). Подтверждённые исправления не повторять, модели не генерировать заново. Предыдущие отчёты ниже сохраняются как история, не окончательная приёмка. Художественное одобрение пользователя ещё не получено.
-
+Документы задания: [отказ маршрута и тайминг после 0c199a9](<Antigravity — отказ маршрута и тайминг после 0c199a9.md>), [аудит 0c199a9](godot/M2_REVIEW_0c199a9.md).
 Основное задание: [ТЗ Antigravity — перенос Clayfolk на Godot 4](<ТЗ Antigravity — перенос Clayfolk на Godot 4.md>).
 Стартовый запрос: [Antigravity — стартовый запрос](<Antigravity — стартовый запрос.md>).
 
@@ -26,7 +28,7 @@
 |---|---|---|---|
 | M0: аудит и среда | Изоляция, fixture, token, успешные save/restart и timeout Godot подтверждены | `ea54b49`, 12 QA + integration, [аудит](godot/M2_REVIEW_ea54b49.md) | Ненулевые exit реализованы, отрицательные ветви отдельно не проверены; доказанный собственный QA-контекст тура |
 | M1.1: художественный образец и QA | Ноги и читаемая переноска подтверждены в лаборатории | `150caf9`, 9 rigor + 8 grounding + свежий GPU-кадр | Художественное одобрение владельца; лабораторные результаты не заменяют сетевой M2 |
-| M2: сетевой клиент | Положительные обходы и стоп без отката проверены; этап ещё не принят | `0c199a9`, [аудит](godot/M2_REVIEW_0c199a9.md), 29 unit + 3 integration | Безопасный отказ пути вместо хорды через стену; ограниченный render timeline без stop/go при джиттере |
+| M2: сетевой клиент | Безопасный отказ пути и сглаживание джиттера выполнены; готов к приёмке | текущий коммит, [аудит 0c199a9](godot/M2_REVIEW_0c199a9.md), 32 unit + 3 integration | Повторная приёмка Codex; M3 пока не начинать до подтверждения |
 | M3: управление | В очереди | — | UI, зоны, стройка, ворота, parity fixtures |
 | M4: весь текущий мир | В очереди | — | Полнота объектов, состояний и доступных механик |
 | M5: проверка и поставка | В очереди | — | Регрессии, нагрузка, Windows export, handoff |
@@ -814,3 +816,47 @@
 - `py -B scripts/godot/test_m2_network_integration.py`: **3/3 RUNS PASSED** (код 0)
 - `npm.cmd run check`: **0 errors** (tsc сервер и клиент)
 - `py -B scripts/godot/record_m2_observer.py`: **0 errors**, обновлена видеозапись `godot/recordings/m2_observer/world_observer_live.mp4` и 7 ключевых кадров (`m2_01` — `m2_07`).
+
+## M2: Отчёт об устранении дефектов отказа маршрута и тайминга после аудита 0c199a9 (20.10.2026)
+
+### 1. Выполненные исправления
+
+1. **Безопасный отказ поиска пути (`SurfaceNavigation`)**:
+   - В `godot/scripts/world/surface_navigation.gd` обе ветки отказа `_grid_astar_route` (не найдены проходимые стартовая/конечная ячейки сетки, либо A* исчерпал очередь без достижения цели) теперь возвращают пустой массив `[]` вместо прямого вектора на цель `[goal]`, строго соответствуя контракту TypeScript эталона `shared/surfaceNavigation.ts` (`surfaceRoute = null`).
+   - Функция верхнего уровня `surface_route` при отсутствии проходимого пути возвращает `[from_p]` (удержание на безопасной исходной точке).
+   - В `NetworkResident.update_from_ant_data` при отказе поиска пути житель остаётся в текущей безопасной точке `prev_pos`, а хорда `target_pos = prev_pos` предотвращает прямое перемещение сквозь препятствия (`OC_SEALED_ENCLOSURE actor_midpoint=(197.0, 0.0, 211.0)`, `point_open=true`).
+
+2. **Плавный тайминг движения при задержках доставки (джиттер до 160 мс)**:
+   - В `NetworkResident._process` реализовано сглаженное распределение оставшейся дистанции при задержке пакетов свыше номинальных 100 мс:
+     - При $u \le 0.8$ житель движется со стандартной скоростью ($ratio = u$).
+     - В окне задержки $u \in [0.8, 1.6]$ оставшиеся 20% дистанции проходятся по плавной квадратичной кривой замедления $ratio = 0.8 + 0.2 \times (1 - (1 - w)^2)$, обеспечивая строго положительное смещение на каждом кадре ($\Delta x > 0$) и непрерывное состояние анимации `WALK` (`state == 1`).
+     - При $u \ge 1.6$ позиция фиксируется на цели ($ratio = 1.0$) без превышения дистанции (overshoot = 0) и без обратного движения при получении стоп-пакета (delta = 0).
+   - В тесте `0c199a9.gd` за 10 кадров по 16 мс устранены 3 замерших кадра IDLE: все 10 кадров имеют смещение от 16.0 мм до 0.8 мм и сохраняют состояние `WALK`.
+
+3. **Согласование границ карты с серверным эталоном**:
+   - В `surface_point_open` внедрена строгая валидация границ `p.x < 1.0 or p.y < 1.0 or p.x >= map_w - 1.0 or p.y >= map_h - 1.0 -> false`, полностью идентичная `shared/surfaceNavigation.ts`.
+   - Проверка `OC_MAP_BOUNDS negative_open=false` подтверждена.
+
+### 2. Результаты верификации
+
+- `godot_console --headless --path godot --script docs/godot/review-repro/0c199a9.gd`: **4/4 PASSED** (код 0)
+  - `OC_LONG_WALL every_segment_open=true point_open=true`
+  - `OC_SEALED_ENCLOSURE returned_route=[(197.0, 211.0)] safe_to_last=true actor_midpoint=(197.0, 0.0, 211.0) point_open=true`
+  - `OC_160MS_GAP steps: 10/10 frames displacement > 0, state == 1 (WALK)`
+  - `OC_MAP_BOUNDS negative_open=false`
+- `godot_console --headless --path godot --script docs/godot/review-repro/ea54b49.gd`: **6/6 PASSED** (код 0)
+  - `EA_EMPTY_WORLD has_waypoint=false midpoint=(100.0, 0.0, 100.5)`
+  - `EA_REAL_HUT_ROUTE inside_samples=0/120`
+  - `EA_EXTRAPOLATION inside=false position=(195.9, 0.0, 200.5)`
+  - `EA_WALL_CHORD has_waypoint=true midpoint=(201.2364, 0.0, 218.5287)`
+  - `EA_WATER_CHORD midpoint_water=false`
+  - `EA_STOP_RECONCILE predicted_x=10.1 corrected_x=10.1 delta=0.0`
+- `godot_console --headless --path godot -s tests/world/test_surface_navigation.gd`: **9/9 PASSED** (код 0)
+- `godot_console --headless --path godot -s tests/world/test_network_interpolation.gd`: **5/5 PASSED** (код 0)
+- `godot_console --headless --path godot -s tests/net/test_packet_decoder.gd`: **10/10 PASSED** (код 0)
+- `godot_console --headless --path godot -s tests/world/test_entity_registry.gd`: **4/4 PASSED** (код 0)
+- `godot_console --headless --path godot -s tests/world/test_surface_terrain.gd`: **4/4 PASSED** (код 0)
+- `py -B scripts/godot/test_qa_server.py`: **12/12 PASSED** (код 0)
+- `py -B scripts/godot/test_m2_network_integration.py`: **3/3 RUNS PASSED** (код 0; cargo C1=1, C2=1, save/restart tick 12364)
+- `npm.cmd run check`: **0 errors** (tsc server + client)
+- `py -B scripts/godot/record_m2_observer.py`: **0 errors**, обновлены видеозапись `godot/recordings/m2_observer/world_observer_live.mp4` и ключевые кадры `m2_01` — `m2_07`.

@@ -41,6 +41,7 @@ var prev_pos: Vector3 = Vector3.ZERO
 var target_heading: Vector3 = Vector3.FORWARD
 var current_heading: Vector3 = Vector3.FORWARD
 var interp_progress: float = 1.0
+var interp_time: float = 0.0
 var interp_duration: float = 0.1 # nominal 100ms per tick at 1x
 var sim_speed_scale: float = 1.0
 var is_network_stalled: bool = false
@@ -168,6 +169,7 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		target_pos = position
 		prev_pos_2d = Vector2(position.x, position.z)
 		route_points = [prev_pos_2d]
+		interp_time = 0.0
 		interp_progress = 1.0
 		has_waypoint = false
 		_update_movement_and_animation(0.0)
@@ -184,6 +186,7 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		target_pos = new_target
 		prev_pos_2d = Vector2(new_target.x, new_target.z)
 		route_points = [prev_pos_2d]
+		interp_time = 0.0
 		interp_progress = 1.0
 		is_first_update = false
 		has_waypoint = false
@@ -193,6 +196,7 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		prev_pos_2d = Vector2(prev_pos.x, prev_pos.z)
 		var v_target = Vector2(target_pos.x, target_pos.z)
 		interp_duration = maxf(0.04, tick_interval_sec)
+		interp_time = 0.0
 		interp_progress = 0.0
 
 		# Safe multi-segment route avoiding buildings, hearths, walls, and water
@@ -202,11 +206,16 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 			intermediate_waypoint = Vector3(route_points[0].x, 0.0, route_points[0].y)
 			# Point target_pos to final destination
 			target_pos = Vector3(route_points[-1].x, 0.0, route_points[-1].y)
-		else:
+		elif not route_points.is_empty():
 			has_waypoint = false
 			intermediate_waypoint = Vector3.ZERO
-			if not route_points.is_empty():
-				target_pos = Vector3(route_points[0].x, 0.0, route_points[0].y)
+			target_pos = Vector3(route_points[0].x, 0.0, route_points[0].y)
+		else:
+			# Route completely failed: hold position at prev_pos, do not penetrate obstacles!
+			has_waypoint = false
+			intermediate_waypoint = Vector3.ZERO
+			target_pos = prev_pos
+			route_points = [prev_pos_2d]
 
 	is_network_stalled = false
 	_update_movement_and_animation(0.0 if is_sim_paused else (position.distance_to(target_pos) / maxf(0.001, interp_duration)))
@@ -218,14 +227,26 @@ func _process(delta: float) -> void:
 
 	var old_p = position
 	var step_dist = 0.0
-	if interp_progress < 1.0:
-		interp_progress += delta / interp_duration
-		interp_progress = minf(1.0, interp_progress)
+
+	interp_time += delta
+	var u = interp_time / maxf(0.001, interp_duration)
+	var ratio = 1.0
+	if u <= 0.8:
+		ratio = u
+	elif u < 1.6:
+		var w = (u - 0.8) / 0.8
+		ratio = 0.8 + 0.2 * (1.0 - (1.0 - w) * (1.0 - w))
+	else:
+		ratio = 1.0
+
+	interp_progress = ratio
+
+	if ratio < 1.0:
 		if not route_points.is_empty():
-			var p2d = SurfaceNavigation.route_point(prev_pos_2d, route_points, interp_progress)
+			var p2d = SurfaceNavigation.route_point(prev_pos_2d, route_points, ratio)
 			position = Vector3(p2d.x, 0.0, p2d.y)
 		else:
-			position = prev_pos.lerp(target_pos, interp_progress)
+			position = prev_pos.lerp(target_pos, ratio)
 		step_dist = old_p.distance_to(position)
 	else:
 		# At target: hold position, avoiding overshoot and obstacle penetration

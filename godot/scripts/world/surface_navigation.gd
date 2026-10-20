@@ -30,7 +30,9 @@ static func fence_contains(b: Dictionary, p: Vector2) -> bool:
 	else:
 		return dy == 0 and absi(dx) <= 1
 
-static func surface_point_open(p: Vector2, owner: String, buildings: Array, entrances: Array) -> bool:
+static func surface_point_open(p: Vector2, owner: String, buildings: Array, entrances: Array, map_w: float = MAP_WIDTH, map_h: float = MAP_HEIGHT) -> bool:
+	if p.x < 1.0 or p.y < 1.0 or p.x >= map_w - 1.0 or p.y >= map_h - 1.0:
+		return false
 	if SurfaceTerrain.is_water_at(p.x, p.y):
 		return false
 	for ent in entrances:
@@ -326,7 +328,7 @@ static func _grid_astar_route(from_p: Vector2, goal: Vector2, owner: String, bui
 					goal_id = (gy - min_gy) * w + (gx - min_gx)
 
 	if start_id == -1 or goal_id == -1:
-		return [goal]
+		return []
 
 	var dist_map: Dictionary = {start_id: 0.0}
 	var parent_map: Dictionary = {}
@@ -387,7 +389,7 @@ static func _grid_astar_route(from_p: Vector2, goal: Vector2, owner: String, bui
 					open_set.append(nid)
 
 	if not parent_map.has(goal_id) and start_id != goal_id:
-		return [goal]
+		return []
 
 	var full_path: Array[Vector2] = [goal]
 	var curr = goal_id
