@@ -221,6 +221,7 @@ func _process(delta: float) -> void:
 	current_heading = sample_res["heading"]
 	state_name = sample_res["state_name"]
 	carrying_amount = sample_res["carrying_amount"]
+	carry_kind = sample_res.get("carry_kind", carry_kind)
 
 	# Face movement direction
 	if current_heading.length_squared() > 0.001:

@@ -40,9 +40,18 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 	var target_3d = Vector3(target_2d.x, 0.0, target_2d.y)
 	var tick = int(data.get("tick", -1))
 	var st_name = str(data.get("state", "idle"))
-	var c_dict = data.get("carrying", {})
-	var c_amt = int(c_dict.get("amount", 0)) if typeof(c_dict) == TYPE_DICTIONARY else 0
-	var c_res = str(c_dict.get("resource", "")) if typeof(c_dict) == TYPE_DICTIONARY else ""
+	var raw_carrying = data.get("carrying", 0)
+	var c_amt: int = 0
+	if typeof(raw_carrying) in [TYPE_INT, TYPE_FLOAT]:
+		c_amt = int(raw_carrying)
+	elif typeof(raw_carrying) == TYPE_DICTIONARY:
+		c_amt = int(raw_carrying.get("amount", 0))
+
+	var c_res: String = ""
+	if data.has("carryKind"):
+		c_res = str(data.get("carryKind", ""))
+	elif typeof(raw_carrying) == TYPE_DICTIONARY and raw_carrying.has("resource"):
+		c_res = str(raw_carrying.get("resource", ""))
 
 	var head_dict = data.get("heading", {})
 	var head_vec = Vector3.FORWARD
@@ -75,10 +84,11 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 
 	var prev = samples[-1]
 
-	# 2. Discontinuity detection: tick regression or extreme jump
+	# 2. Discontinuity detection: tick regression, extreme tick jump (>100 ticks), or extreme teleport (>50m)
 	var is_tick_regression = (tick >= 0 and prev.tick >= 0 and tick < prev.tick)
+	var is_extreme_tick_gap = (tick >= 0 and prev.tick >= 0 and (tick - prev.tick) > 100)
 	var is_extreme_teleport = target_3d.distance_to(prev.pos) > 50.0
-	if is_tick_regression or is_extreme_teleport:
+	if is_tick_regression or is_extreme_tick_gap or is_extreme_teleport:
 		samples.clear()
 		var s_reset = Sample.new()
 		s_reset.server_time = 0.0
@@ -99,15 +109,13 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 		return
 
 	# 3. Calculate simulation time delta between previous sample and this sample
-	var dt = maxf(0.02, tick_interval_sec)
+	var step_time = 0.100 / maxf(0.001, speed_scale)
+	var dt = step_time
 	if tick >= 0 and prev.tick >= 0 and tick > prev.tick:
 		var td = tick - prev.tick
-		if td <= 10:
-			dt = (float(td) * 0.100) / maxf(0.001, speed_scale)
-		elif td <= 500 and speed_scale <= 1.5:
-			# Millisecond timestamp tick (e.g. 44f2939.gd test)
-			dt = float(td) / 1000.0
-	dt = clampf(dt, 0.02, 0.50)
+		dt = float(td) * step_time
+	elif tick_interval_sec > 0.0:
+		dt = tick_interval_sec
 
 	var s_new = Sample.new()
 	s_new.server_time = prev.server_time + dt
@@ -147,6 +155,7 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 		"heading": current_heading,
 		"state_name": "idle",
 		"carrying_amount": 0,
+		"carry_kind": "",
 		"is_stalled": false
 	}
 
@@ -159,17 +168,18 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 		res["position"] = current_pos
 		res["state_name"] = samples[0].state_name
 		res["carrying_amount"] = samples[0].carrying_amount
+		res["carry_kind"] = samples[0].carrying_resource
 		return res
 
 	var t_head = samples[-1].server_time
 	var lag = t_head - render_time
 
-	# Handle extreme lag (stall recovery or burst)
-	if lag > 0.500:
+	# Handle extreme queue lag (e.g. accumulating stale backlog after disconnect/freeze)
+	if samples.size() > 5 and lag > 1.500:
 		render_time = t_head - target_delay
 
 	var rate = 1.0
-	if lag > target_delay + 0.080:
+	if samples.size() > 2 and lag > target_delay + 0.080:
 		rate = 1.0 + minf(0.15, (lag - (target_delay + 0.080)) * 0.5)
 
 	render_time += delta * rate
@@ -212,4 +222,5 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 	res["heading"] = current_heading
 	res["state_name"] = B.state_name
 	res["carrying_amount"] = B.carrying_amount
+	res["carry_kind"] = B.carrying_resource
 	return res

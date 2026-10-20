@@ -200,6 +200,25 @@ func _run_integration_test() -> void:
 
 	print("  PASS: Resident motion verified: %d moving actors, %d aligned with heading (+Z)" % [moving_verified, heading_verified])
 
+	# Verify cargo retention across process frames
+	if snap.get("tick", 0) >= 12345:
+		var post_frame_carriers_c1 = 0
+		var post_frame_carriers_c2 = 0
+		for aid in registry.residents:
+			var res: NetworkResident = registry.residents[aid]
+			if res.carrying_amount > 0:
+				if not is_instance_valid(res.cargo_prop) or not res.cargo_prop.visible:
+					_fail("Resident '%s' has carrying_amount=%d after 30 frames but cargo_prop is not visible!" % [aid, res.carrying_amount])
+					return
+				if res.colony_id == "colony-1" or res.colony_id == "0":
+					post_frame_carriers_c1 += 1
+				else:
+					post_frame_carriers_c2 += 1
+		if post_frame_carriers_c1 == 0 or post_frame_carriers_c2 == 0:
+			_fail("Carriers lost cargo after 30 frames! C1: %d, C2: %d" % [post_frame_carriers_c1, post_frame_carriers_c2])
+			return
+		print("  PASS: Cargo retained across frames: Colony 1 has %d, Colony 2 has %d" % [post_frame_carriers_c1, post_frame_carriers_c2])
+
 	# 5. Verify Clean Disconnect & Reconnect with Zero Duplicates
 	print("[Step 3] Testing live disconnect and reconnect...")
 	ws_client.disconnect_from_server()

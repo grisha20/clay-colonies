@@ -37,6 +37,14 @@ func _init() -> void:
 	if test_render_timeline_series_smoothness_and_jitter():
 		passed += 1
 
+	total += 1
+	if test_cargo_retention_across_process_frames():
+		passed += 1
+
+	total += 1
+	if test_server_tick_units_and_gap_speeds():
+		passed += 1
+
 	print("=== NETWORK INTERPOLATION RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL NETWORK INTERPOLATION TESTS PASSED!")
@@ -327,13 +335,15 @@ func test_render_timeline_series_smoothness_and_jitter() -> bool:
 		root.free()
 		return false
 
-	# 2. Jitter delivery sequence matching review-repro/44f2939.gd: 100, 160, 40, 100, 160, 40 ms
-	var elapsed = 2.1
+	# 2. Jitter delivery sequence with true server ticks matching review-repro/b0ae820.gd:
+	# +1 tick and +0.1m per 100ms source snapshot, delivery arrival gaps 100, 160, 40, 100, 160, 40 ms
+	var packet = 20
 	var prev_gap = 100
 	var cycle = 0
 	for ms in [100, 160, 40, 100, 160, 40]:
+		packet += 1
 		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - float(prev_gap) / 1000.0
-		registry.update_from_snapshot(make_snap.call(int(elapsed * 1000), 100.0 + elapsed))
+		registry.update_from_snapshot(make_snap.call(packet, 100.0 + packet * 0.1))
 		for frame in range(int(ms / 10)):
 			var before_x = r.position.x
 			r._process(0.010)
@@ -350,14 +360,14 @@ func test_render_timeline_series_smoothness_and_jitter() -> bool:
 				registry.free()
 				root.free()
 				return false
-		elapsed += float(ms) / 1000.0
 		prev_gap = ms
 		cycle += 1
 
 	# 3. True stop: ant halts at final position
-	var stop_target = 100.0 + elapsed
+	var stop_target = 100.0 + packet * 0.1
 	for stop_p in range(1, 5):
-		registry.update_from_snapshot(make_snap.call(int(elapsed * 1000) + stop_p * 100, stop_target))
+		packet += 1
+		registry.update_from_snapshot(make_snap.call(packet, stop_target))
 		for frame in range(10):
 			var before_x = r.position.x
 			r._process(0.010)
@@ -382,5 +392,131 @@ func test_render_timeline_series_smoothness_and_jitter() -> bool:
 	registry.free()
 	root.free()
 	print("  PASS: test_render_timeline_series_smoothness_and_jitter (±5% steady tolerance, no packet pulse, clean stop)")
+	return true
+
+func test_cargo_retention_across_process_frames() -> bool:
+	var root = Node3D.new()
+	for col_id in ["colony-1", "colony-2"]:
+		var registry = EntityRegistry.new()
+		root.add_child(registry)
+		registry.set_process(false)
+		var kind = "clay" if col_id == "colony-1" else "wood"
+		var snap1 = {
+			"tick": 0, "session": {"speed": 1, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "carrier", "colonyId": col_id, "pos": {"x": 100.0, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": kind}]
+		}
+		registry.update_from_snapshot(snap1)
+		var actor = registry.get_resident("carrier")
+		actor.set_process(false)
+		actor.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+
+		if actor.carrying_amount != 3:
+			push_error("FAIL: [%s] Initial carrying_amount = %d, expected 3" % [col_id, actor.carrying_amount])
+			root.free()
+			return false
+
+		if not actor.cargo_prop or not actor.cargo_prop.visible:
+			push_error("FAIL: [%s] cargo_prop not visible before process with carrying=3" % col_id)
+			root.free()
+			return false
+
+		# Advance frames between packets
+		for frame in range(10):
+			actor._process(0.010)
+
+		# After process frames, carrying_amount must NOT be wiped to 0!
+		if actor.carrying_amount != 3:
+			push_error("FAIL: [%s] carrying_amount wiped to %d after process! Expected 3" % [col_id, actor.carrying_amount])
+			root.free()
+			return false
+
+		if not actor.cargo_prop or not actor.cargo_prop.visible:
+			push_error("FAIL: [%s] cargo_prop became hidden after process with carrying=3!" % col_id)
+			root.free()
+			return false
+
+		# Now test unloading: snapshot with carrying=0
+		var snap2 = {
+			"tick": 1, "session": {"speed": 1, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "carrier", "colonyId": col_id, "pos": {"x": 100.0, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 0, "carryKind": ""}]
+		}
+		registry.update_from_snapshot(snap2)
+		for frame in range(10):
+			actor._process(0.010)
+
+		if actor.carrying_amount != 0:
+			push_error("FAIL: [%s] carrying_amount not 0 after unload, got %d" % [col_id, actor.carrying_amount])
+			root.free()
+			return false
+
+		if actor.cargo_prop and actor.cargo_prop.visible:
+			push_error("FAIL: [%s] cargo_prop still visible after unload!" % col_id)
+			root.free()
+			return false
+
+		registry.free()
+
+	root.free()
+	print("  PASS: test_cargo_retention_across_process_frames (numeric carrying preserved across frames for both colonies)")
+	return true
+
+func test_server_tick_units_and_gap_speeds() -> bool:
+	var root = Node3D.new()
+	for gap in [1, 2, 5, 10, 11, 20]:
+		var r = NetworkResident.new()
+		root.add_child(r)
+		r.set_process(false)
+		r.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		var a1 = {"id": "tick_test", "colonyId": "colony-1", "pos": {"x": 100.0, "y": 100.0},
+			"heading": {"x": 1, "y": 0}, "state": "walk", "tick": 100}
+		r.update_from_ant_data(a1, 0.100, 1.0)
+		var a2 = {"id": "tick_test", "colonyId": "colony-1", "pos": {"x": 100.0 + gap * 0.1, "y": 100.0},
+			"heading": {"x": 1, "y": 0}, "state": "walk", "tick": 100 + gap}
+		r.update_from_ant_data(a2, 0.100, 1.0)
+
+		var duration = r.timeline.samples[-1].server_time - r.timeline.samples[0].server_time
+		var expected_dur = gap * 0.100
+		if absf(duration - expected_dur) > 0.001:
+			push_error("FAIL: Tick gap %d duration mismatch! got %.4f, expected %.4f" % [gap, duration, expected_dur])
+			root.free()
+			return false
+
+		var old_x = r.position.x
+		r._process(0.010)
+		var first_frame_speed = (r.position.x - old_x) / 0.010
+		if first_frame_speed < 0.95 or first_frame_speed > 1.05:
+			push_error("FAIL: Tick gap %d first frame speed explosion/drop! spd=%.3f (expected 1.000 ± 5%%)" % [gap, first_frame_speed])
+			root.free()
+			return false
+
+		r.free()
+
+	# Also verify across speed scales 1x, 5x, 20x, 50x
+	for spd_scale in [1.0, 5.0, 20.0, 50.0]:
+		var r = NetworkResident.new()
+		root.add_child(r)
+		r.set_process(false)
+		r.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		var a1 = {"id": "spd_test", "colonyId": "colony-1", "pos": {"x": 100.0, "y": 100.0},
+			"heading": {"x": 1, "y": 0}, "state": "walk", "tick": 100}
+		r.update_from_ant_data(a1, 0.100 / spd_scale, spd_scale)
+		var a2 = {"id": "spd_test", "colonyId": "colony-1", "pos": {"x": 100.5, "y": 100.0},
+			"heading": {"x": 1, "y": 0}, "state": "walk", "tick": 101}
+		r.update_from_ant_data(a2, 0.100 / spd_scale, spd_scale)
+
+		var duration = r.timeline.samples[-1].server_time - r.timeline.samples[0].server_time
+		var expected_dur = 0.100 / spd_scale
+		if absf(duration - expected_dur) > 0.001:
+			push_error("FAIL: Speed %.1fx tick duration mismatch! got %.4f, expected %.4f" % [spd_scale, duration, expected_dur])
+			root.free()
+			return false
+		r.free()
+
+	root.free()
+	print("  PASS: test_server_tick_units_and_gap_speeds (tick gaps 1..20 and speeds 1..50x have strictly consistent time units)")
 	return true
 
