@@ -57,6 +57,10 @@ func _init() -> void:
 	if test_buffered_snapshot_batches_bound_time_and_motion():
 		passed += 1
 
+	total += 1
+	if test_sustained_slow_delivery_keeps_motion_continuous():
+		passed += 1
+
 	print("=== NETWORK INTERPOLATION RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL NETWORK INTERPOLATION TESTS PASSED!")
@@ -177,6 +181,44 @@ func _check_buffered_snapshot_batch(count: int, speed: float, tick_step: int, co
 	if not valid:
 		push_error("Buffered batch failed: count=%d speed=%.0f tick_step=%d colony=%s peak=%.4f pending=%.4f" % [count, speed, tick_step, colony, peak, pending])
 	registry.free()
+	return valid
+
+func test_sustained_slow_delivery_keeps_motion_continuous() -> bool:
+	for interval_ms in [110, 120]:
+		for colony in ["colony-1", "colony-2"]:
+			if not _check_sustained_delivery(interval_ms, colony):
+				return false
+	return true
+
+func _check_sustained_delivery(interval_ms: int, colony: String) -> bool:
+	var registry = EntityRegistry.new()
+	registry.update_from_snapshot(_burst_snapshot(100, 100.0, 1.0, colony))
+	var actor = registry.get_resident("burst")
+	actor.set_process(false)
+	actor.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	var low = INF
+	var high = 0.0
+	var held = 0
+	for packet in range(1, 61):
+		# Actual preview cadence is around 110ms even though each simulation
+		# tick represents 100ms. Keep tick units unchanged and vary only arrival.
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - interval_ms / 1000.0
+		registry.update_from_snapshot(_burst_snapshot(100 + packet, 100.0 + packet * 0.1, 1.0, colony))
+		for frame in range(interval_ms / 10):
+			var before = actor.position.x
+			actor._process(0.010)
+			if packet >= 40:
+				var velocity = (actor.position.x - before) / 0.010
+				low = minf(low, velocity)
+				high = maxf(high, velocity)
+				if velocity < 0.05:
+					held += 1
+	var expected = 100.0 / interval_ms
+	var valid = low >= expected * 0.95 and high <= expected * 1.05 and held == 0
+	print("DELIVERY_", interval_ms, "MS ", colony, " min=", low, " max=", high, " expected=", expected, " held_frames=", held)
+	registry.free()
+	if not valid:
+		push_error("Sustained slow delivery creates periodic stops despite uniform source motion")
 	return valid
 
 func test_model_faces_direction_of_movement() -> bool:

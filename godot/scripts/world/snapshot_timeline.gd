@@ -26,6 +26,7 @@ const MAX_QUEUED_SECONDS: float = 0.500
 const TIME_EPSILON: float = 0.000001
 var target_delay: float = 0.100 # Nominal 100ms display delay (1 server broadcast period)
 var render_time: float = 0.0
+var playback_clock_scale: float = 1.0
 var current_pos: Vector3 = Vector3.ZERO
 var current_heading: Vector3 = Vector3.FORWARD
 var is_initialized: bool = false
@@ -36,11 +37,17 @@ func reset(pos: Vector3) -> void:
 	current_pos = pos
 	current_heading = Vector3.FORWARD
 	render_time = 0.0
+	playback_clock_scale = 1.0
 	is_initialized = false
 
 # Returns true when receipt changes the presentation epoch. The actor must apply
 # current_pos immediately, so a correction never becomes the next frame's stride.
 func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float = 1.0, sim_status: String = "playing", buildings: Array = [], entrances: Array = []) -> bool:
+	# Registry supplies the smoothed wall-time between broadcasts. A slightly
+	# slower real server must not make us exhaust every 100ms source interval
+	# and hold until the next packet. Keep source tick units intact; pace only
+	# the presentation clock. Short packet bursts never accelerate this clock.
+	playback_clock_scale = 0.100 / maxf(0.100, tick_interval_sec)
 	var pos_dict = data.get("pos", {})
 	var target_2d = Vector2(float(pos_dict.get("x", 0.0)), float(pos_dict.get("y", 0.0)))
 	var target_3d = Vector3(target_2d.x, 0.0, target_2d.y)
@@ -208,7 +215,7 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 	if samples.size() > 2 and lag > target_delay + 0.080:
 		rate = 1.0 + minf(0.15, (lag - (target_delay + 0.080)) * 0.5)
 
-	render_time += delta * rate
+	render_time += delta * playback_clock_scale * rate
 	render_time = minf(render_time, t_head)
 
 	# Locate enclosing samples
