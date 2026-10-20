@@ -14,6 +14,64 @@ const GATE_SPAN: int = 3
 const MAP_WIDTH: float = 480.0
 const MAP_HEIGHT: float = 480.0
 
+# Obstacle index for one buildings array. Every resident of a snapshot queries
+# the same array, so footprints and fence cells are derived once instead of per
+# probe. Keyed by content hash, so an array edited in place is re-indexed.
+static var _index_hash: int = 0
+static var _index_size: int = -1
+static var _footprints: Array = []
+static var _wall_cells: Dictionary = {}
+static var _gate_cells: Dictionary = {}
+
+static func _index(buildings: Array) -> void:
+	var h = buildings.hash()
+	if h == _index_hash and buildings.size() == _index_size:
+		return
+	_index_hash = h
+	_index_size = buildings.size()
+	_footprints = []
+	_wall_cells = {}
+	_gate_cells = {}
+	for b in buildings:
+		if typeof(b) != TYPE_DICTIONARY:
+			continue
+		var f = BuildingGeometry.get_building_footprint(b)
+		if not f.is_empty():
+			_footprints.append(f)
+			continue
+		if str(b.get("stage", "built")) != "built":
+			continue
+		var b_type = str(b.get("type", "wall"))
+		if b_type != "wall" and b_type != "gate":
+			continue
+		var pos_d = b.get("pos", {})
+		var cx = int(floor(float(pos_d.get("x", 0.0)) / WALL_CELL_SIZE))
+		var cy = int(floor(float(pos_d.get("y", 0.0)) / WALL_CELL_SIZE))
+		var cells: Array[Vector2i] = [Vector2i(cx, cy)]
+		if b_type == "gate" and int(b.get("gateSpan", 1)) == GATE_SPAN:
+			if str(b.get("gateAxis", "horizontal")) == "vertical":
+				cells = [Vector2i(cx, cy - 1), Vector2i(cx, cy), Vector2i(cx, cy + 1)]
+			else:
+				cells = [Vector2i(cx - 1, cy), Vector2i(cx, cy), Vector2i(cx + 1, cy)]
+		if b_type == "wall":
+			for c in cells:
+				_wall_cells[c] = true
+		else:
+			var colony = str(b.get("colonyId", ""))
+			for c in cells:
+				if not _gate_cells.has(c):
+					_gate_cells[c] = []
+				_gate_cells[c].append(colony)
+
+## Same predicate as fence_contains over every built wall and foreign gate.
+static func _fence_blocks(cell: Vector2i, owner: String) -> bool:
+	if _wall_cells.has(cell):
+		return true
+	for colony in _gate_cells.get(cell, []):
+		if colony != owner:
+			return true
+	return false
+
 static func fence_contains(b: Dictionary, p: Vector2) -> bool:
 	var pos_d = b.get("pos", {})
 	var bx = float(pos_d.get("x", 0.0))
@@ -43,20 +101,12 @@ static func surface_point_open(p: Vector2, owner: String, buildings: Array, entr
 			var edy = (p.y - ey) / BuildingGeometry.HEARTH_RADIUS_Y
 			if edx * edx + edy * edy < 1.0:
 				return false
-	for b in buildings:
-		if typeof(b) == TYPE_DICTIONARY:
-			var f = BuildingGeometry.get_building_footprint(b)
-			if not f.is_empty():
-				if BuildingGeometry.inside_footprint(p.x, p.y, f):
-					return false
-			else:
-				var stage = str(b.get("stage", "built"))
-				var b_type = str(b.get("type", "wall"))
-				var b_colony = str(b.get("colonyId", ""))
-				if stage == "built":
-					if b_type == "wall" or (b_type == "gate" and b_colony != owner):
-						if fence_contains(b, p):
-							return false
+	_index(buildings)
+	for f in _footprints:
+		if BuildingGeometry.inside_footprint(p.x, p.y, f):
+			return false
+	if _fence_blocks(Vector2i(int(floor(p.x / WALL_CELL_SIZE)), int(floor(p.y / WALL_CELL_SIZE))), owner):
+		return false
 	return true
 
 static func surface_grid_line_open(from_p: Vector2, to_p: Vector2, buildings: Array, owner: String) -> bool:
@@ -73,19 +123,12 @@ static func surface_grid_line_open(from_p: Vector2, to_p: Vector2, buildings: Ar
 	var cross_x = ((x + (1 if dx > 0 else 0)) * WALL_CELL_SIZE - from_p.x) / dx if absf(dx) > 0.00001 else INF
 	var cross_y = ((y + (1 if dy > 0 else 0)) * WALL_CELL_SIZE - from_p.y) / dy if absf(dy) > 0.00001 else INF
 
+	_index(buildings)
 	var check_cell = func(cx: int, cy: int) -> bool:
 		var center = Vector2((cx + 0.5) * WALL_CELL_SIZE, (cy + 0.5) * WALL_CELL_SIZE)
 		if SurfaceTerrain.is_water_at(center.x, center.y):
 			return false
-		for b in buildings:
-			if typeof(b) == TYPE_DICTIONARY:
-				var stage = str(b.get("stage", "built"))
-				var b_type = str(b.get("type", "wall"))
-				var b_colony = str(b.get("colonyId", ""))
-				if stage == "built" and (b_type == "wall" or (b_type == "gate" and b_colony != owner)):
-					if fence_contains(b, center):
-						return false
-		return true
+		return not _fence_blocks(Vector2i(cx, cy), owner)
 
 	if not check_cell.call(x, y):
 		return false
@@ -124,12 +167,10 @@ static func surface_line_open(a: Vector2, b: Vector2, owner: String, buildings: 
 			var camp = Vector2(float(ent.get("x", 0.0)), float(ent.get("y", 0.0)))
 			if BuildingGeometry.crosses_hearth(a, b, camp):
 				return false
-	for bld in buildings:
-		if typeof(bld) == TYPE_DICTIONARY:
-			var f = BuildingGeometry.get_building_footprint(bld)
-			if not f.is_empty():
-				if BuildingGeometry.crosses_footprint(a, b, f):
-					return false
+	_index(buildings)
+	for f in _footprints:
+		if BuildingGeometry.crosses_footprint(a, b, f):
+			return false
 	return surface_grid_line_open(a, b, buildings, owner)
 
 static func route_point(from_p: Vector2, points: Array[Vector2], ratio: float) -> Vector2:
@@ -159,11 +200,10 @@ static func route_point(from_p: Vector2, points: Array[Vector2], ratio: float) -
 ## Otherwise returns a multi-segment polyline [wp1, wp2, ..., goal] where every segment is verified open.
 static func surface_route(from_p: Vector2, target_p: Vector2, owner: String, buildings: Array, entrances: Array) -> Array[Vector2]:
 	var goal = target_p
-	for b in buildings:
-		if typeof(b) == TYPE_DICTIONARY:
-			var f = BuildingGeometry.get_building_footprint(b)
-			if not f.is_empty() and BuildingGeometry.inside_footprint(goal.x, goal.y, f):
-				goal = BuildingGeometry.outside_footprint(goal, f)
+	_index(buildings)
+	for f in _footprints:
+		if BuildingGeometry.inside_footprint(goal.x, goal.y, f):
+			goal = BuildingGeometry.outside_footprint(goal, f)
 
 	if not surface_point_open(goal, owner, buildings, entrances):
 		var found_open = false
@@ -197,15 +237,14 @@ static func _find_local_route(from_p: Vector2, goal: Vector2, owner: String, bui
 	var candidate_paths: Array = []
 
 	# Check buildings with footprints
-	for b in buildings:
-		if typeof(b) == TYPE_DICTIONARY:
-			var f = BuildingGeometry.get_building_footprint(b)
-			if not f.is_empty() and BuildingGeometry.crosses_footprint(from_p, goal, f):
-				var bx = float(f["x"])
-				var by = float(f["y"])
-				var mx = float(f["rx"]) + 0.8
-				var my = float(f["ry"]) + 0.8
-				_generate_perimeter_paths(from_p, goal, bx, by, mx, my, candidate_paths)
+	_index(buildings)
+	for f in _footprints:
+		if BuildingGeometry.crosses_footprint(from_p, goal, f):
+			var bx = float(f["x"])
+			var by = float(f["y"])
+			var mx = float(f["rx"]) + 0.8
+			var my = float(f["ry"]) + 0.8
+			_generate_perimeter_paths(from_p, goal, bx, by, mx, my, candidate_paths)
 
 	# Check hearths
 	for ent in entrances:

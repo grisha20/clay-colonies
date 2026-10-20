@@ -44,6 +44,10 @@ static func is_inside_polygon_exact(x: float, y: float, points: Array[Vector2]) 
 	return inside
 
 static func is_water_at(x: float, y: float) -> bool:
+	# Bounding boxes of the authored outlines: identical result, skips the
+	# polygon walk for the vast majority of the map.
+	if (x < 180.0 or x > 284.0 or y < 104.0 or y > 176.0) and (x < 164.0 or x > 316.0 or y < 312.0 or y > 432.0):
+		return false
 	if is_inside_polygon_exact(x, y, NORTH_LAKE_OUTLINE):
 		return true
 	if is_inside_polygon_exact(x, y, SOUTH_LAKE_OUTLINE):

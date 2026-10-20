@@ -28,6 +28,16 @@ var is_tour_mode: bool = false
 var tour_time: float = 0.0
 var tour_stage: int = 0
 
+## A minimised or background observer has nothing to show; without a cap the
+## engine keeps rendering as fast as it can and spins the fans up.
+const BACKGROUND_MAX_FPS: int = 20
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		Engine.max_fps = BACKGROUND_MAX_FPS
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		Engine.max_fps = 0
+
 func _ready() -> void:
 	_setup_hud()
 	_connect_signals()
