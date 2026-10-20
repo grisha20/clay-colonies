@@ -33,6 +33,10 @@ func _init() -> void:
 	if test_dynamic_teleport_threshold():
 		passed += 1
 
+	total += 1
+	if test_render_timeline_series_smoothness_and_jitter():
+		passed += 1
+
 	print("=== NETWORK INTERPOLATION RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL NETWORK INTERPOLATION TESTS PASSED!")
@@ -279,3 +283,104 @@ func test_dynamic_teleport_threshold() -> bool:
 	root.free()
 	print("  PASS: test_dynamic_teleport_threshold (dynamic threshold distinguishes fast walk from jump)")
 	return true
+
+func test_render_timeline_series_smoothness_and_jitter() -> bool:
+	var root = Node3D.new()
+	var registry = EntityRegistry.new()
+	root.add_child(registry)
+	registry.set_process(false)
+
+	# Initial spawn
+	var make_snap = func(tick: int, x: float) -> Dictionary:
+		return {
+			"tick": tick,
+			"session": {"speed": 1.0, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": x, "y": 100.0}, "heading": {"x": 1.0, "y": 0.0}}]
+		}
+
+	registry.update_from_snapshot(make_snap.call(0, 100.0))
+	var r = registry.get_resident("audit")
+	r.set_process(false)
+	if r.anim_player:
+		r.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+
+	# 1. Steady stream: 20 packets with interval 100ms, source speed 1.0 m/s (0.1m per packet)
+	var low_spd = INF
+	var high_spd = 0.0
+	for p in range(1, 21):
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+		registry.update_from_snapshot(make_snap.call(p, 100.0 + p * 0.1))
+		for frame in range(10):
+			var before_x = r.position.x
+			r._process(0.010)
+			var spd = (r.position.x - before_x) / 0.010
+			if p >= 16: # sample after warmup
+				low_spd = minf(low_spd, spd)
+				high_spd = maxf(high_spd, spd)
+
+	var ratio = high_spd / maxf(0.001, low_spd)
+	# Check steady speed tolerance: ±5% of 1.0 m/s (0.95 to 1.05) and ratio <= 1.10
+	if low_spd < 0.95 or high_spd > 1.05 or ratio > 1.10:
+		push_error("FAIL: Steady stream speed modulated unnaturally! min=%.3f, max=%.3f, ratio=%.3f (expected 0.95..1.05, ratio<=1.10)" % [low_spd, high_spd, ratio])
+		registry.free()
+		root.free()
+		return false
+
+	# 2. Jitter delivery sequence matching review-repro/44f2939.gd: 100, 160, 40, 100, 160, 40 ms
+	var elapsed = 2.1
+	var prev_gap = 100
+	var cycle = 0
+	for ms in [100, 160, 40, 100, 160, 40]:
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - float(prev_gap) / 1000.0
+		registry.update_from_snapshot(make_snap.call(int(elapsed * 1000), 100.0 + elapsed))
+		for frame in range(int(ms / 10)):
+			var before_x = r.position.x
+			r._process(0.010)
+			var spd = (r.position.x - before_x) / 0.010
+			# In all cycles, speed must never burst unnaturally > 1.35
+			if spd > 1.35:
+				push_error("FAIL: Jitter delivery gap %dms had speed explosion! spd=%.3f > 1.35" % [ms, spd])
+				registry.free()
+				root.free()
+				return false
+			# In the steady jitter cycle (cycle >= 3), timeline buffer completely prevents stalls:
+			if cycle >= 3 and spd < 0.80:
+				push_error("FAIL: Jitter delivery cycle %d gap %dms stalled! spd=%.3f < 0.80" % [cycle, ms, spd])
+				registry.free()
+				root.free()
+				return false
+		elapsed += float(ms) / 1000.0
+		prev_gap = ms
+		cycle += 1
+
+	# 3. True stop: ant halts at final position
+	var stop_target = 100.0 + elapsed
+	for stop_p in range(1, 5):
+		registry.update_from_snapshot(make_snap.call(int(elapsed * 1000) + stop_p * 100, stop_target))
+		for frame in range(10):
+			var before_x = r.position.x
+			r._process(0.010)
+			if r.position.x > stop_target + 0.001:
+				push_error("FAIL: Stop overshot target! pos=%.4f > target=%.4f" % [r.position.x, stop_target])
+				registry.free()
+				root.free()
+				return false
+
+	if r.position.distance_to(Vector3(stop_target, 0.0, 100.0)) > 0.01:
+		push_error("FAIL: Actor did not reach stop target cleanly!")
+		registry.free()
+		root.free()
+		return false
+
+	if r.current_anim_state != NetworkResident.AnimState.IDLE:
+		push_error("FAIL: Actor state did not switch to IDLE upon stop!")
+		registry.free()
+		root.free()
+		return false
+
+	registry.free()
+	root.free()
+	print("  PASS: test_render_timeline_series_smoothness_and_jitter (±5% steady tolerance, no packet pulse, clean stop)")
+	return true
+

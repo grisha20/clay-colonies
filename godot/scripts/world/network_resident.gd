@@ -3,6 +3,7 @@ extends Node3D
 
 const BuildingGeometry = preload("res://scripts/world/building_geometry.gd")
 const SurfaceNavigation = preload("res://scripts/world/surface_navigation.gd")
+const SnapshotTimeline = preload("res://scripts/world/snapshot_timeline.gd")
 
 ## Visual 3D actor representing a Clayfolk resident driven by network snapshots.
 ## Manages skeletal animation, step frequency tied to ground distance,
@@ -46,6 +47,9 @@ var interp_duration: float = 0.1 # nominal 100ms per tick at 1x
 var sim_speed_scale: float = 1.0
 var is_network_stalled: bool = false
 var is_sim_paused: bool = false
+
+# Bounded Snapshot Timeline with display delay
+var timeline = SnapshotTimeline.new()
 
 # Obstacle avoidance waypoints and full route polyline
 var has_waypoint: bool = false
@@ -156,6 +160,7 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		0.0,
 		float(pos_dict.get("y", position.z))
 	)
+	var new_target_2d = Vector2(new_target.x, new_target.z)
 
 	# Update target heading
 	var hx = float(heading_dict.get("x", 0.0))
@@ -163,113 +168,61 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	if Vector2(hx, hy).length_squared() > 0.001:
 		target_heading = Vector3(hx, 0.0, hy).normalized()
 
+	timeline.colony_id = colony_id
+	sim_speed_scale = speed_scale
+	is_sim_paused = (sim_status != "playing" or speed_scale == 0.0)
+
 	if is_sim_paused:
-		position = position
-		prev_pos = position
-		target_pos = position
-		prev_pos_2d = Vector2(position.x, position.z)
-		route_points = [prev_pos_2d]
-		interp_time = 0.0
-		interp_progress = 1.0
-		has_waypoint = false
 		_update_movement_and_animation(0.0)
 		return
 
-	# If this is the initial placement or a true teleport, snap directly.
-	# At high simulation speeds (e.g. 50x), legitimate movement can exceed static 8m,
-	# so threshold scales dynamically with simulation speed and tick interval.
+	# If this is the initial placement or an extreme teleport (>50m), snap directly.
 	var max_legit_travel: float = maxf(12.0, 3.0 * speed_scale * maxf(0.05, tick_interval_sec))
-	if is_first_update or position.distance_to(new_target) > max_legit_travel:
+	var is_extreme_teleport = (position.distance_to(new_target) > max_legit_travel)
+	if is_first_update or is_extreme_teleport:
 		position = new_target
 		current_pos = new_target
 		prev_pos = new_target
 		target_pos = new_target
-		prev_pos_2d = Vector2(new_target.x, new_target.z)
-		route_points = [prev_pos_2d]
-		interp_time = 0.0
-		interp_progress = 1.0
-		is_first_update = false
+		prev_pos_2d = new_target_2d
+		route_points = [new_target_2d] as Array[Vector2]
 		has_waypoint = false
-	else:
-		prev_pos = position
-		target_pos = new_target
-		prev_pos_2d = Vector2(prev_pos.x, prev_pos.z)
-		var v_target = Vector2(target_pos.x, target_pos.z)
-		interp_duration = maxf(0.04, tick_interval_sec)
-		interp_time = 0.0
-		interp_progress = 0.0
+		intermediate_waypoint = Vector3.ZERO
+		is_first_update = false
+		timeline.reset(new_target)
+		timeline.push_sample(data, tick_interval_sec, speed_scale, sim_status, buildings, entrances)
+		_update_movement_and_animation(0.0)
+		return
 
-		# Safe multi-segment route avoiding buildings, hearths, walls, and water
-		route_points = SurfaceNavigation.surface_route(prev_pos_2d, v_target, colony_id, buildings, entrances)
+	timeline.push_sample(data, tick_interval_sec, speed_scale, sim_status, buildings, entrances)
+
+	if not timeline.samples.is_empty():
+		var latest = timeline.samples[-1]
+		target_pos = latest.pos
+		route_points = latest.route_points
 		if route_points.size() > 1:
 			has_waypoint = true
 			intermediate_waypoint = Vector3(route_points[0].x, 0.0, route_points[0].y)
-			# Point target_pos to final destination
-			target_pos = Vector3(route_points[-1].x, 0.0, route_points[-1].y)
-		elif not route_points.is_empty():
-			has_waypoint = false
-			intermediate_waypoint = Vector3.ZERO
-			target_pos = Vector3(route_points[0].x, 0.0, route_points[0].y)
 		else:
-			# Route completely failed: hold position at prev_pos, do not penetrate obstacles!
 			has_waypoint = false
 			intermediate_waypoint = Vector3.ZERO
-			target_pos = prev_pos
-			route_points = [prev_pos_2d]
 
 	is_network_stalled = false
-	_update_movement_and_animation(0.0 if is_sim_paused else (position.distance_to(target_pos) / maxf(0.001, interp_duration)))
 
 func _process(delta: float) -> void:
 	if is_network_stalled or is_sim_paused:
 		_update_movement_and_animation(0.0)
 		return
 
-	var old_p = position
-	var step_dist = 0.0
+	var sample_res = timeline.advance_and_sample(delta, is_sim_paused, is_network_stalled)
+	position = sample_res["position"]
+	current_pos = position
+	var ground_speed = sample_res["ground_speed"]
+	current_heading = sample_res["heading"]
+	state_name = sample_res["state_name"]
+	carrying_amount = sample_res["carrying_amount"]
 
-	interp_time += delta
-	var u = interp_time / maxf(0.001, interp_duration)
-	var ratio = 1.0
-	if u <= 0.8:
-		ratio = u
-	elif u < 1.6:
-		var w = (u - 0.8) / 0.8
-		ratio = 0.8 + 0.2 * (1.0 - (1.0 - w) * (1.0 - w))
-	else:
-		ratio = 1.0
-
-	interp_progress = ratio
-
-	if ratio < 1.0:
-		if not route_points.is_empty():
-			var p2d = SurfaceNavigation.route_point(prev_pos_2d, route_points, ratio)
-			position = Vector3(p2d.x, 0.0, p2d.y)
-		else:
-			position = prev_pos.lerp(target_pos, ratio)
-		step_dist = old_p.distance_to(position)
-	else:
-		# At target: hold position, avoiding overshoot and obstacle penetration
-		if not route_points.is_empty():
-			position = Vector3(route_points[-1].x, 0.0, route_points[-1].y)
-		else:
-			position = target_pos
-		step_dist = old_p.distance_to(position)
-
-	# Measure real ground speed (m/s)
-	var ground_speed = step_dist / delta if delta > 0.0001 else 0.0
-
-	# Align heading with actual frame displacement vector, or target_heading if stationary
-	var actual_disp = position - old_p
-	actual_disp.y = 0.0
-	if actual_disp.length_squared() > 0.0001:
-		current_heading = current_heading.lerp(actual_disp.normalized(), minf(1.0, delta * 14.0))
-	elif target_heading.length_squared() > 0.01:
-		current_heading = current_heading.lerp(target_heading, minf(1.0, delta * 8.0))
-
-	# The Blender GLB resident model has its face, chest and cargo socket oriented towards +Z.
-	# Using rotation.y = atan2(x, z) aligns local +Z with current_heading, ensuring that
-	# (global_basis * Vector3.BACK).dot(current_heading) == 1.0 (moving forward, not backward).
+	# Face movement direction
 	if current_heading.length_squared() > 0.001:
 		rotation.y = atan2(current_heading.x, current_heading.z)
 

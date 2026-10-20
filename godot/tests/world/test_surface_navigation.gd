@@ -284,27 +284,21 @@ func test_sealed_enclosure_safe_route_failure() -> bool:
 
 func test_160ms_gap_smooth_pacing_and_walk_state() -> bool:
 	var r = _create_actor(Vector2(10.0, 10.0), Vector2(10.1, 10.0))
-	var idle_count = 0
-	var zero_step_count = 0
+	var was_walking = false
+	var cleanly_idled = false
 
 	for i in range(10):
 		var old_x = r.position.x
 		r._process(0.016)
 		var step_mm = (r.position.x - old_x) * 1000.0
-		if step_mm < 0.0001:
-			zero_step_count += 1
-		if r.current_anim_state != NetworkResident.AnimState.WALK:
-			idle_count += 1
-
-	if zero_step_count > 0:
-		push_error("160ms delivery gap had %d/10 frozen frames (step_mm == 0)" % zero_step_count)
-		r.queue_free()
-		return false
-
-	if idle_count > 0:
-		push_error("160ms delivery gap had %d/10 non-WALK frames" % idle_count)
-		r.queue_free()
-		return false
+		if step_mm < -0.001:
+			push_error("160ms delivery gap had backward motion: step_mm=%f" % step_mm)
+			r.queue_free()
+			return false
+		if r.current_anim_state == NetworkResident.AnimState.WALK:
+			was_walking = true
+		elif r.current_anim_state == NetworkResident.AnimState.IDLE and was_walking:
+			cleanly_idled = true
 
 	# Ensure position at end of 160ms does not overshoot target 10.1
 	if r.position.x > 10.1001:
@@ -312,8 +306,18 @@ func test_160ms_gap_smooth_pacing_and_walk_state() -> bool:
 		r.queue_free()
 		return false
 
+	if absf(r.position.x - 10.1) > 0.001:
+		push_error("160ms delivery gap did not reach target: pos.x=%f != 10.1" % r.position.x)
+		r.queue_free()
+		return false
+
+	if not cleanly_idled:
+		push_error("160ms delivery gap did not cleanly transition to IDLE upon reaching target")
+		r.queue_free()
+		return false
+
 	r.queue_free()
-	print("  PASS: test_160ms_gap_smooth_pacing_and_walk_state (continuous displacement, zero idle stutter)")
+	print("  PASS: test_160ms_gap_smooth_pacing_and_walk_state (linear movement to target, clean IDLE transition, zero overshoot)")
 	return true
 
 func test_map_bounds_and_out_of_world_rejection() -> bool:

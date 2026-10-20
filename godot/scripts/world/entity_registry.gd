@@ -83,6 +83,9 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 			residents[id] = resident
 			resident_spawned.emit(resident)
 
+		if not ant_data.has("tick"):
+			ant_data["tick"] = tick
+
 		resident.update_from_ant_data(ant_data, packet_dt, current_sim_speed, sim_status, buildings, entrances)
 
 	# Despawn entities that died, went underground, or left
