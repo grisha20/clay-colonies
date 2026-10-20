@@ -12,6 +12,8 @@ const SnapshotTimeline = preload("res://scripts/world/snapshot_timeline.gd")
 
 signal selected(resident: NetworkResident)
 
+const SELECTION_LAYER: int = 1 << 2
+
 enum AnimState {
 	IDLE,
 	WALK,
@@ -66,6 +68,7 @@ var mesh_instance: MeshInstance3D
 var bone_attachment_cargo: BoneAttachment3D
 var cargo_prop: Node3D
 var current_anim_state: AnimState = AnimState.IDLE
+var selection_ring: MeshInstance3D
 
 var is_first_update: bool = true
 
@@ -78,6 +81,44 @@ const COLONY_COLORS = {
 
 func _init() -> void:
 	_setup_visuals()
+	_setup_selection()
+
+func _setup_selection() -> void:
+	# Query-only area: picking cannot push residents or replace server navigation.
+	var area = Area3D.new()
+	area.name = "ResidentPickArea"
+	area.collision_layer = SELECTION_LAYER
+	area.collision_mask = 0
+	area.monitoring = false
+	area.input_ray_pickable = false
+	var collider = CollisionShape3D.new()
+	var shape = CapsuleShape3D.new()
+	shape.radius = 0.32
+	shape.height = 1.1
+	collider.shape = shape
+	collider.position.y = 0.55
+	area.add_child(collider)
+	add_child(area)
+
+	selection_ring = MeshInstance3D.new()
+	selection_ring.name = "SelectionRing"
+	var ring = TorusMesh.new()
+	ring.inner_radius = 0.38
+	ring.outer_radius = 0.44
+	ring.rings = 24
+	ring.ring_segments = 8
+	selection_ring.mesh = ring
+	selection_ring.position.y = 0.04
+	selection_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material = StandardMaterial3D.new()
+	material.albedo_color = Color(1.0, 0.88, 0.35)
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	selection_ring.material_override = material
+	selection_ring.visible = false
+	add_child(selection_ring)
+
+func set_selected(value: bool) -> void:
+	selection_ring.visible = value
 
 func _ready() -> void:
 	if not model_instance:

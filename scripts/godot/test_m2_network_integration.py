@@ -219,6 +219,17 @@ def run_integration_tests():
         assert godot_proc2.returncode == 0, f"Headless Godot test failed on fixture party with code {godot_proc2.returncode}!"
         print("  PASS: Headless Godot client completed successfully against fixture party (code 0)!")
 
+        # Exercise the actual observer scene, ray picking and inspector against
+        # this same owned fixture server; no game commands are issued.
+        observer_cmd = [
+            godot_bin, "--headless", "--path", "godot",
+            "-s", "tests/integration/test_observer_ui.gd",
+            "--", "--qa-port", str(port2)
+        ]
+        observer_proc = subprocess.run(observer_cmd, cwd=REPO_ROOT, check=False, timeout=30)
+        assert observer_proc.returncode == 0, f"Production observer UI failed with code {observer_proc.returncode}!"
+        print("  PASS: Production observer selection and inspector verified for both tribes")
+
         # Stop server 2 cleanly and verify exit code 0
         request_stop(state_dir2)
         proc2.wait(timeout=10)

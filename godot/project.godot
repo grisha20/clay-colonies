@@ -8,7 +8,7 @@ config_version=5
 
 config/name="Clayfolk"
 config/description="3D Clay Colony Simulation"
-run/main_scene="res://scenes/lab/resident_lab.tscn"
+run/main_scene="res://scenes/game/world_observer.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [display]

@@ -15,6 +15,11 @@ var camera_pivot: Node3D
 var camera: Camera3D
 var focused_target: Node3D = null
 var target_camera_distance: float = 14.0
+const MIN_CAMERA_DISTANCE: float = 4.0
+const MAX_CAMERA_DISTANCE: float = 80.0
+var colony_focus_points: Array[Vector3] = [COLONY_1_ENTRANCE, COLONY_2_ENTRANCE]
+var received_landmarks: bool = false
+var camera_navigated: bool = false
 
 
 # Map dimensions matching CONFIG.mapWidth/mapHeight
@@ -152,6 +157,7 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	var surface = snapshot.get("surface", {})
 	if typeof(surface) != TYPE_DICTIONARY:
 		return
+	_update_colony_focus_points(surface.get("entrances", []))
 
 	# 1. Update Campfires from actual surface.entrances with full lifecycle
 	var entrances = surface.get("entrances", [])
@@ -355,16 +361,16 @@ func _update_simple_marker(id: String, node_name: String, pos: Vector3, col: Col
 		active_world_nodes[id].position = pos + Vector3(0, marker_size * 0.5, 0)
 
 func _process(delta: float) -> void:
-	camera_distance = lerpf(camera_distance, target_camera_distance, delta * 4.0)
+	if not camera_pivot:
+		return
+	camera_distance = lerpf(camera_distance, target_camera_distance, 1.0 - exp(-4.0 * maxf(delta, 0.0)))
 	if camera:
 		var rad = deg_to_rad(camera_angle_deg)
 		camera.position = Vector3(0, sin(rad) * camera_distance, cos(rad) * camera_distance)
 
-	if is_instance_valid(focused_target):
-		camera_pivot.position = camera_pivot.position.lerp(focused_target.global_position, delta * 6.0)
-	else:
-		# Manual camera pan controls (WASD / Arrows)
-		var pan = Vector3.ZERO
+	var pan = Vector3.ZERO
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	if not (focus_owner is LineEdit or focus_owner is TextEdit):
 		if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
 			pan.x -= 1.0
 		if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
@@ -374,21 +380,49 @@ func _process(delta: float) -> void:
 		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
 			pan.z += 1.0
 
-		if pan.length_squared() > 0:
-			camera_pivot.position += pan.normalized() * (pan_speed * delta)
-			camera_pivot.position.x = clamp(camera_pivot.position.x, 10.0, MAP_WIDTH - 10.0)
-			camera_pivot.position.z = clamp(camera_pivot.position.z, 10.0, MAP_HEIGHT - 10.0)
+	if pan.length_squared() > 0:
+		focused_target = null
+		camera_navigated = true
+		camera_pivot.position += pan.normalized() * (pan_speed * camera_distance / 14.0 * delta)
+	elif is_instance_valid(focused_target):
+		camera_pivot.position = camera_pivot.position.lerp(focused_target.global_position, 1.0 - exp(-6.0 * maxf(delta, 0.0)))
+	camera_pivot.position = _clamp_focus(camera_pivot.position)
+
+func _clamp_focus(point: Vector3) -> Vector3:
+	return Vector3(clampf(point.x, 0.0, MAP_WIDTH), 0.0, clampf(point.z, 0.0, MAP_HEIGHT))
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			target_camera_distance = maxf(MIN_CAMERA_DISTANCE, target_camera_distance / 1.15)
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			target_camera_distance = minf(MAX_CAMERA_DISTANCE, target_camera_distance * 1.15)
+			get_viewport().set_input_as_handled()
+
+func _update_colony_focus_points(entrances: Variant) -> void:
+	if not entrances is Array:
+		return
+	var found = false
+	for index in range(mini(2, entrances.size())):
+		var point = entrances[index]
+		if point is Dictionary and point.has("x") and point.has("y"):
+			colony_focus_points[index] = _clamp_focus(Vector3(float(point.x), 0.0, float(point.y)))
+			found = true
+	if found and not received_landmarks:
+		received_landmarks = true
+		if not camera_navigated:
+			camera_pivot.position = colony_focus_points[0]
 
 func focus_on_colony(colony_idx: int) -> void:
 	focused_target = null
+	camera_navigated = true
 	target_camera_distance = 15.0
-	if colony_idx == 0:
-		camera_pivot.position = COLONY_1_ENTRANCE
-	else:
-		camera_pivot.position = COLONY_2_ENTRANCE
+	camera_pivot.position = colony_focus_points[clampi(colony_idx, 0, 1)]
 
 func focus_on_lake(lake_name: String) -> void:
 	focused_target = null
+	camera_navigated = true
 	target_camera_distance = 18.0
 	if lake_name == "north":
 		camera_pivot.position = NORTH_LAKE_CENTER
@@ -396,10 +430,11 @@ func focus_on_lake(lake_name: String) -> void:
 		camera_pivot.position = SOUTH_LAKE_CENTER
 
 func focus_on_resident(res: Node3D) -> void:
+	camera_navigated = true
 	if focused_target != res:
 		focused_target = res
 		target_camera_distance = 6.0
 		camera_distance = 6.0
 		if is_instance_valid(res):
-			camera_pivot.position = res.global_position
+			camera_pivot.position = _clamp_focus(res.global_position)
 

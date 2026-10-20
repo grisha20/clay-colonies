@@ -1,7 +1,7 @@
 class_name WorldObserver
 extends Node3D
 
-## Main controller for the M2 Network Observer Client.
+## Network observer with local camera and resident inspection controls.
 ## Connects WSClient to EntityRegistry, manages HUD telemetry,
 ## camera navigation, and connection status.
 
@@ -17,8 +17,10 @@ var pop_label: Label
 var inspector_label: Label
 var server_line_edit: LineEdit
 var connect_button: Button
+var follow_button: Button
+var clear_selection_button: Button
 
-var selected_resident_idx: int = 0
+var selected_resident_id: String = ""
 var last_snapshot_time: float = 0.0
 
 # Automated tour recording state
@@ -54,6 +56,7 @@ func _setup_hud() -> void:
 
 	# Main HUD Control panel at top
 	var top_panel = PanelContainer.new()
+	top_panel.mouse_force_pass_scroll_events = false
 	top_panel.position = Vector2(16, 16)
 	top_panel.custom_minimum_size = Vector2(480, 110)
 	canvas.add_child(top_panel)
@@ -71,12 +74,12 @@ func _setup_hud() -> void:
 	row_conn.add_child(server_line_edit)
 
 	connect_button = Button.new()
-	connect_button.text = "Connect"
+	connect_button.text = "Подключиться"
 	connect_button.pressed.connect(_on_connect_button_pressed)
 	row_conn.add_child(connect_button)
 
 	status_label = Label.new()
-	status_label.text = "Status: Disconnected"
+	status_label.text = "Нет соединения"
 	row_conn.add_child(status_label)
 
 	# Row 2: Telemetry
@@ -84,19 +87,19 @@ func _setup_hud() -> void:
 	vbox.add_child(row_telemetry)
 
 	tick_label = Label.new()
-	tick_label.text = "Tick: 0"
+	tick_label.text = "Шаг: 0"
 	row_telemetry.add_child(tick_label)
 
 	row_telemetry.add_child(VSeparator.new())
 
 	speed_label = Label.new()
-	speed_label.text = "Speed: 1.0x"
+	speed_label.text = "Скорость: —"
 	row_telemetry.add_child(speed_label)
 
 	row_telemetry.add_child(VSeparator.new())
 
 	pop_label = Label.new()
-	pop_label.text = "Colony 1: 0 | Colony 2: 0"
+	pop_label.text = "Племя A: 0 | Племя B: 0"
 	row_telemetry.add_child(pop_label)
 
 	# Row 3: Navigation buttons
@@ -104,39 +107,63 @@ func _setup_hud() -> void:
 	vbox.add_child(row_nav)
 
 	var btn_c1 = Button.new()
-	btn_c1.text = "Colony 1"
+	btn_c1.text = "Лагерь A"
 	btn_c1.pressed.connect(func(): world_view.focus_on_colony(0))
 	row_nav.add_child(btn_c1)
 
 	var btn_c2 = Button.new()
-	btn_c2.text = "Colony 2"
+	btn_c2.text = "Лагерь B"
 	btn_c2.pressed.connect(func(): world_view.focus_on_colony(1))
 	row_nav.add_child(btn_c2)
 
 	var btn_lake_n = Button.new()
-	btn_lake_n.text = "North Lake"
+	btn_lake_n.text = "Северное озеро"
 	btn_lake_n.pressed.connect(func(): world_view.focus_on_lake("north"))
 	row_nav.add_child(btn_lake_n)
 
 	var btn_lake_s = Button.new()
-	btn_lake_s.text = "South Lake"
+	btn_lake_s.text = "Южное озеро"
 	btn_lake_s.pressed.connect(func(): world_view.focus_on_lake("south"))
 	row_nav.add_child(btn_lake_s)
 
 	var btn_cycle = Button.new()
-	btn_cycle.text = "Cycle Ant"
+	btn_cycle.text = "Следующий житель"
 	btn_cycle.pressed.connect(_cycle_resident_focus)
 	row_nav.add_child(btn_cycle)
 
-	# Bottom Inspector Panel
+	# Separate selection from camera following; keep the inspector on screen.
 	var insp_panel = PanelContainer.new()
-	insp_panel.position = Vector2(16, 140)
-	insp_panel.custom_minimum_size = Vector2(360, 80)
+	insp_panel.mouse_force_pass_scroll_events = false
+	insp_panel.name = "ResidentInspector"
+	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	insp_panel.offset_left = -376
+	insp_panel.offset_top = -220
+	insp_panel.offset_right = -16
+	insp_panel.offset_bottom = -16
 	canvas.add_child(insp_panel)
+	var inspector_box = VBoxContainer.new()
+	insp_panel.add_child(inspector_box)
 
 	inspector_label = Label.new()
-	inspector_label.text = "Selected Resident: None\n(Use 'Cycle Ant' or click an ant to inspect)"
-	insp_panel.add_child(inspector_label)
+	inspector_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	inspector_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inspector_box.add_child(inspector_label)
+	var inspector_actions = HBoxContainer.new()
+	inspector_box.add_child(inspector_actions)
+	follow_button = Button.new()
+	follow_button.text = "Следовать (F)"
+	follow_button.pressed.connect(_toggle_follow_selected)
+	inspector_actions.add_child(follow_button)
+	clear_selection_button = Button.new()
+	clear_selection_button.text = "Снять выбор (Esc)"
+	clear_selection_button.pressed.connect(func(): select_resident(null))
+	inspector_actions.add_child(clear_selection_button)
+	var help_label = Label.new()
+	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
+	help_label.position = Vector2(16, 140)
+	help_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(help_label)
+	_update_inspector()
 
 func _connect_signals() -> void:
 	ws_client.snapshot_received.connect(_on_snapshot_received)
@@ -145,8 +172,10 @@ func _connect_signals() -> void:
 	ws_client.connection_error.connect(_on_connection_error)
 	ws_client.state_changed.connect(_on_state_changed)
 	entity_registry.population_updated.connect(_on_population_updated)
+	entity_registry.resident_despawned.connect(_on_resident_despawned)
 
 func _process(delta: float) -> void:
+	_update_inspector()
 	if is_tour_mode:
 		_process_tour(delta)
 
@@ -155,7 +184,7 @@ func _process(delta: float) -> void:
 		# If no snapshot received for > 0.6 seconds, stall movement
 		if now - last_snapshot_time > 0.6 and last_snapshot_time > 0.0:
 			entity_registry.on_network_stalled()
-			status_label.text = "Status: Connected (Stalled...)"
+			status_label.text = "Соединение есть, ожидаем снимок…"
 
 func _process_tour(delta: float) -> void:
 	tour_time += delta
@@ -220,25 +249,25 @@ func _focus_on_colony_resident(colony_idx: int) -> void:
 	for r in entity_registry.residents.values():
 		if is_instance_valid(r):
 			if r.colony_id == target_cid or r.colony_id == alt_cid:
+				select_resident(r)
 				world_view.focus_on_resident(r)
-				_update_inspector(r)
 				return
 
 func _focus_on_carrying_resident() -> void:
 	for r in entity_registry.residents.values():
 		if is_instance_valid(r) and r.carrying_amount > 0:
+			select_resident(r)
 			world_view.focus_on_resident(r)
-			_update_inspector(r)
 			return
 	for r in entity_registry.residents.values():
 		if is_instance_valid(r) and r.state_name in ["carry", "return"]:
+			select_resident(r)
 			world_view.focus_on_resident(r)
-			_update_inspector(r)
 			return
 	if not entity_registry.residents.is_empty():
 		var first_r = entity_registry.residents.values()[0]
+		select_resident(first_r)
 		world_view.focus_on_resident(first_r)
-		_update_inspector(first_r)
 
 
 func _on_connect_button_pressed() -> void:
@@ -248,23 +277,36 @@ func _on_connect_button_pressed() -> void:
 		ws_client.connect_to_server(server_line_edit.text)
 
 func _on_connected() -> void:
-	connect_button.text = "Disconnect"
-	status_label.text = "Status: CONNECTED (Protocol v%d)" % WSClient.EXPECTED_PROTOCOL_VERSION
+	connect_button.text = "Отключиться"
+	status_label.text = "Подключено"
+	select_resident(null)
 	entity_registry.clear_all() # Clean start: guarantee zero duplicate IDs
 
 func _on_disconnected() -> void:
-	connect_button.text = "Connect"
-	status_label.text = "Status: DISCONNECTED"
+	connect_button.text = "Подключиться"
+	status_label.text = "Нет соединения"
 	entity_registry.on_network_stalled()
 
 func _on_connection_error(msg: String) -> void:
-	status_label.text = "Status: ERROR (" + msg + ")"
+	status_label.text = "Ошибка: " + msg
 	entity_registry.on_network_stalled()
 
-func _on_state_changed(_new_state: int, status_text: String) -> void:
-	status_label.text = "Status: " + status_text
+func _on_state_changed(new_state: int, status_text: String) -> void:
+	match new_state:
+		WSClient.ClientState.DISCONNECTED:
+			status_label.text = "Нет соединения"
+		WSClient.ClientState.CONNECTING:
+			status_label.text = "Подключаемся…"
+		WSClient.ClientState.WAITING_FOR_SNAPSHOT:
+			status_label.text = "Ожидаем состояние мира…"
+		WSClient.ClientState.CONNECTED:
+			status_label.text = "Подключено"
+		_:
+			status_label.text = status_text
 
 func _on_snapshot_received(snapshot: Dictionary) -> void:
+	if int(snapshot.get("tick", 0)) < entity_registry.last_snapshot_tick:
+		select_resident(null)
 	last_snapshot_time = Time.get_ticks_msec() / 1000.0
 	entity_registry.on_network_resumed()
 	entity_registry.update_from_snapshot(snapshot)
@@ -273,46 +315,98 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})
 	var speed = float(session.get("speed", 1.0))
-	var weather = snapshot.get("weather", {})
-	var weather_state = str(weather.get("state", "clear"))
-
-	tick_label.text = "Tick: %d" % tick
+	tick_label.text = "Шаг: %d" % tick
 	if speed <= 0.0:
-		speed_label.text = "Speed: PAUSED (0x)"
+		speed_label.text = "Пауза"
 	else:
-		speed_label.text = "Speed: %.1fx (%s)" % [speed, weather_state]
+		speed_label.text = "Скорость: %.0f×" % speed
 
 	_update_inspector()
 
 func _on_population_updated(col1: int, col2: int) -> void:
-	pop_label.text = "Colony 1: %d | Colony 2: %d (Total: %d)" % [col1, col2, col1 + col2]
+	pop_label.text = "Племя A: %d | Племя B: %d (Всего: %d)" % [col1, col2, col1 + col2]
 
 func _cycle_resident_focus() -> void:
-	var res_list = entity_registry.residents.values()
-	if res_list.is_empty():
+	var ids = entity_registry.residents.keys()
+	if ids.is_empty():
 		return
-	selected_resident_idx = (selected_resident_idx + 1) % res_list.size()
-	var target = res_list[selected_resident_idx] as NetworkResident
+	var next_index = (ids.find(selected_resident_id) + 1) % ids.size()
+	var target = entity_registry.get_resident(str(ids[next_index]))
 	if is_instance_valid(target):
+		select_resident(target)
 		world_view.focus_on_resident(target)
-		_update_inspector(target)
 
-func _update_inspector(target: NetworkResident = null) -> void:
-	if not target:
-		if is_instance_valid(world_view.focused_target) and world_view.focused_target is NetworkResident:
-			target = world_view.focused_target as NetworkResident
-		elif not entity_registry.residents.is_empty():
-			var keys = entity_registry.residents.keys()
-			var safe_idx = min(selected_resident_idx, keys.size() - 1)
-			target = entity_registry.residents[keys[safe_idx]]
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		select_resident(resident_at_screen(event.position))
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			select_resident(null)
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_F:
+			_toggle_follow_selected()
+			get_viewport().set_input_as_handled()
 
+func resident_at_screen(screen_position: Vector2) -> NetworkResident:
+	var camera = world_view.camera
+	var origin = camera.project_ray_origin(screen_position)
+	var end = origin + camera.project_ray_normal(screen_position) * camera.far
+	var query = PhysicsRayQueryParameters3D.create(origin, end, NetworkResident.SELECTION_LAYER)
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	var hit = get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return null
+	var target = hit.collider.get_parent() as NetworkResident
+	if is_instance_valid(target) and not target.is_queued_for_deletion() and entity_registry.get_resident(target.ant_id) == target:
+		return target
+	return null
+
+func select_resident(target: NetworkResident) -> void:
+	var previous = entity_registry.get_resident(selected_resident_id)
+	if is_instance_valid(previous):
+		previous.set_selected(false)
+	var new_id = target.ant_id if is_instance_valid(target) else ""
+	if selected_resident_id != new_id:
+		world_view.focused_target = null
+	selected_resident_id = new_id
 	if is_instance_valid(target):
-		var carry_str = "None"
-		if target.carrying_amount > 0:
-			carry_str = "%s (%d)" % [target.carry_kind if target.carry_kind != "" else "clay", target.carrying_amount]
-		inspector_label.text = "ID: %s | Colony: %s | State: %s\nJob: %s | Carrying: %s\nPos: (%.1f, %.1f)" % [
-			target.ant_id, target.colony_id, target.state_name,
-			target.job_name if target.job_name != "" else "wander",
-			carry_str,
-			target.global_position.x, target.global_position.z
-		]
+		target.set_selected(true)
+	_update_inspector()
+
+func _toggle_follow_selected() -> void:
+	var target = entity_registry.get_resident(selected_resident_id)
+	if is_instance_valid(target):
+		if world_view.focused_target == target:
+			world_view.focused_target = null
+		else:
+			world_view.focus_on_resident(target)
+	_update_inspector()
+
+func _on_resident_despawned(id: String) -> void:
+	if selected_resident_id == id:
+		select_resident(null)
+		world_view.focused_target = null
+
+func _update_inspector() -> void:
+	if not inspector_label:
+		return
+	var target = entity_registry.get_resident(selected_resident_id)
+	var valid = is_instance_valid(target)
+	follow_button.disabled = not valid
+	clear_selection_button.disabled = not valid
+	if not valid:
+		inspector_label.text = "Житель не выбран\nЩёлкните по жителю, чтобы узнать его занятие и груз."
+		return
+	follow_button.text = "Не следовать (F)" if world_view.focused_target == target else "Следовать (F)"
+	var tasks = {"idle": "отдых", "forage": "поиск еды", "nurse": "уход за потомством", "dig": "копание", "carryDirt": "перенос грунта", "harvest": "добыча", "build": "строительство", "guard": "охрана", "fish": "рыбалка"}
+	var resources = {"clay": "глина", "wood": "дерево", "stone": "камень", "water": "вода", "food": "еда", "fish": "рыба", "meat": "мясо"}
+	var cargo = "нет"
+	if target.carrying_amount > 0:
+		cargo = "%s (%d)" % [resources.get(target.carry_kind, target.carry_kind if not target.carry_kind.is_empty() else "ресурс не указан"), target.carrying_amount]
+	var tribe = "A" if target.colony_id in ["colony-1", "0"] else "B"
+	inspector_label.text = "Житель %s · Племя %s\nРоль: %s\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
+		target.ant_id, tribe, "рабочий" if target.role == "worker" else target.role,
+		tasks.get(target.job_name, target.job_name if not target.job_name.is_empty() else "нет"),
+		cargo, target.position.x, target.position.z]
