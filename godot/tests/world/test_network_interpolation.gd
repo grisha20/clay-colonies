@@ -42,7 +42,15 @@ func _init() -> void:
 		passed += 1
 
 	total += 1
+	if test_unload_timing_matches_displayed_history():
+		passed += 1
+
+	total += 1
 	if test_server_tick_units_and_gap_speeds():
+		passed += 1
+
+	total += 1
+	if test_recovery_and_speed_change_timeline_rebase():
 		passed += 1
 
 	print("=== NETWORK INTERPOLATION RESULTS: %d/%d PASSED ===" % [passed, total])
@@ -519,4 +527,226 @@ func test_server_tick_units_and_gap_speeds() -> bool:
 	root.free()
 	print("  PASS: test_server_tick_units_and_gap_speeds (tick gaps 1..20 and speeds 1..50x have strictly consistent time units)")
 	return true
+
+func test_unload_timing_matches_displayed_history() -> bool:
+	var root = Node3D.new()
+	for col_id in ["colony-1", "colony-2"]:
+		var registry = EntityRegistry.new()
+		root.add_child(registry)
+		registry.set_process(false)
+		var kind = "clay" if col_id == "colony-1" else "wood"
+		var snap1 = {
+			"tick": 100, "session": {"speed": 1.0, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "audit", "colonyId": col_id, "pos": {"x": 100.0, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": kind}]
+		}
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+		registry.update_from_snapshot(snap1)
+		var actor = registry.get_resident("audit")
+		actor.set_process(false)
+		actor.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+
+		for frame in range(10):
+			actor._process(0.010)
+
+		# Delayed snapshot says unloaded at x=102 after 2.0s (tick 120)
+		var snap2 = {
+			"tick": 120, "session": {"speed": 1.0, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "audit", "colonyId": col_id, "pos": {"x": 102.0, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 0, "carryKind": ""}]
+		}
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+		registry.update_from_snapshot(snap2)
+
+		# First frame: actor has moved only 0.01m to x=100.01, far from unload point x=102
+		actor._process(0.010)
+		if actor.carrying_amount != 3 or not actor.cargo_prop or not actor.cargo_prop.visible:
+			push_error("FAIL: [%s] Premature unload at x=%.2f! carrying=%d, visible=%s" % [
+				col_id, actor.position.x, actor.carrying_amount, str(actor.cargo_prop.visible if actor.cargo_prop else false)])
+			registry.free()
+			root.free()
+			return false
+
+		# Advance remaining 199 frames (1.99s) to arrive at x=102
+		for frame in range(199):
+			actor._process(0.010)
+
+		if actor.carrying_amount != 0:
+			push_error("FAIL: [%s] Cargo not unloaded after reaching destination x=102! carrying=%d" % [col_id, actor.carrying_amount])
+			registry.free()
+			root.free()
+			return false
+
+		if actor.cargo_prop and actor.cargo_prop.visible:
+			push_error("FAIL: [%s] cargo_prop still visible after reaching unload destination!" % col_id)
+			registry.free()
+			root.free()
+			return false
+
+		registry.free()
+
+	root.free()
+	print("  PASS: test_unload_timing_matches_displayed_history (cargo stays visible during transit, unloads at destination)")
+	return true
+
+func test_recovery_and_speed_change_timeline_rebase() -> bool:
+	var root = Node3D.new()
+
+	# 1. Recovery after stall (both cold and warm)
+	for warm in [false, true]:
+		var registry = EntityRegistry.new()
+		root.add_child(registry)
+		registry.set_process(false)
+		var tick = 100
+		var x = 100.0
+		var snap0 = {
+			"tick": tick, "session": {"speed": 1.0, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": x, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+		}
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+		registry.update_from_snapshot(snap0)
+		var actor = registry.get_resident("audit")
+		actor.set_process(false)
+		actor.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+
+		if warm:
+			for packet in range(20):
+				tick += 1
+				x += 0.1
+				var sn = {
+					"tick": tick, "session": {"speed": 1.0, "status": "playing"},
+					"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+					"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": x, "y": 100.0},
+						"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+				}
+				registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+				registry.update_from_snapshot(sn)
+				for frame in range(10):
+					actor._process(0.010)
+
+		# Stall network for 200 frames (2.0s)
+		registry.on_network_stalled()
+		for frame in range(200):
+			actor._process(0.010)
+
+		# Network resumes with gap 20
+		tick += 20
+		x += 2.0
+		var snap_rec = {
+			"tick": tick, "session": {"speed": 1.0, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": x, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+		}
+		registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+		registry.update_from_snapshot(snap_rec)
+
+		var high_spd = 0.0
+		for packet in range(8):
+			if packet > 0:
+				tick += 1
+				x += 0.1
+				var sn = {
+					"tick": tick, "session": {"speed": 1.0, "status": "playing"},
+					"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+					"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": x, "y": 100.0},
+						"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+				}
+				registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+				registry.update_from_snapshot(sn)
+			for frame in range(10):
+				var before_x = actor.position.x
+				actor._process(0.010)
+				var frame_spd = (actor.position.x - before_x) / 0.010
+				high_spd = maxf(high_spd, frame_spd)
+
+		if high_spd > 1.35:
+			push_error("FAIL: Gap20 recovery speed spike warm=%s! peak=%.3f m/s (expected <= 1.35)" % [str(warm), high_spd])
+			registry.free()
+			root.free()
+			return false
+
+		# Feed 10 stop packets: must stop cleanly without overshoot or reversal
+		var clean_stop = true
+		for packet in range(10):
+			tick += 1
+			var sn_stop = {
+				"tick": tick, "session": {"speed": 1.0, "status": "playing"},
+				"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+				"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": x, "y": 100.0},
+					"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+			}
+			registry.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+			registry.update_from_snapshot(sn_stop)
+			for frame in range(10):
+				var before_x = actor.position.x
+				actor._process(0.010)
+				clean_stop = clean_stop and (actor.position.x >= before_x - 0.0001) and (actor.position.x <= x + 0.001)
+
+		if not clean_stop or absf(actor.position.x - x) >= 0.01:
+			push_error("FAIL: Stop after stall had overshoot/reversal warm=%s! pos=%.3f target=%.3f" % [str(warm), actor.position.x, x])
+			registry.free()
+			root.free()
+			return false
+
+		registry.free()
+
+	# 2. Speed change from 50x to 1x
+	var reg_spd = EntityRegistry.new()
+	root.add_child(reg_spd)
+	reg_spd.set_process(false)
+	var snap_50 = {
+		"tick": 100, "session": {"speed": 50.0, "status": "playing"},
+		"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+		"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": 100.0, "y": 100.0},
+			"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+	}
+	reg_spd.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+	reg_spd.update_from_snapshot(snap_50)
+	var actor_spd = reg_spd.get_resident("audit")
+	actor_spd.set_process(false)
+	actor_spd.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+
+	# Speed switch to 1x with tick 150 at x=105.0
+	var snap_1 = {
+		"tick": 150, "session": {"speed": 1.0, "status": "playing"},
+		"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+		"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": 105.0, "y": 100.0},
+			"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+	}
+	reg_spd.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+	reg_spd.update_from_snapshot(snap_1)
+	actor_spd._process(0.010)
+
+	var peak_speed = 0.0
+	for packet in range(1, 11):
+		var sn = {
+			"tick": 150 + packet, "session": {"speed": 1.0, "status": "playing"},
+			"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+			"ants": [{"id": "audit", "colonyId": "colony-1", "pos": {"x": 105.0 + packet * 0.1, "y": 100.0},
+				"heading": {"x": 1, "y": 0}, "state": "idle", "carrying": 3, "carryKind": "clay"}]
+		}
+		reg_spd.last_snapshot_timestamp = Time.get_ticks_msec() / 1000.0 - 0.100
+		reg_spd.update_from_snapshot(sn)
+		for frame in range(10):
+			var before_x = actor_spd.position.x
+			actor_spd._process(0.010)
+			var v = (actor_spd.position.x - before_x) / 0.010
+			peak_speed = maxf(peak_speed, v)
+
+	if peak_speed > 50.0 * 1.35:
+		push_error("FAIL: Speed change recovery peak speed spike! got %.3f m/s (expected <= %.3f)" % [peak_speed, 50.0 * 1.35])
+		reg_spd.free()
+		root.free()
+		return false
+
+	reg_spd.free()
+	root.free()
+	print("  PASS: test_recovery_and_speed_change_timeline_rebase (gap20 recovery peak <= 1.35, 50x->1x peak <= 67.5, clean stop)")
+	return true
+
 

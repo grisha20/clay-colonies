@@ -46,6 +46,7 @@ var interp_time: float = 0.0
 var interp_duration: float = 0.1 # nominal 100ms per tick at 1x
 var sim_speed_scale: float = 1.0
 var is_network_stalled: bool = false
+var was_stalled_pending_rebase: bool = false
 var is_sim_paused: bool = false
 
 # Bounded Snapshot Timeline with display delay
@@ -143,10 +144,16 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		_apply_colony_color()
 
 	role = data.get("role", "worker")
-	state_name = data.get("state", "idle")
 	job_name = data.get("job", "")
-	carrying_amount = int(data.get("carrying", 0))
+	state_name = data.get("state", "idle")
+	var raw_carrying = data.get("carrying", 0)
+	if typeof(raw_carrying) in [TYPE_INT, TYPE_FLOAT]:
+		carrying_amount = int(raw_carrying)
+	elif typeof(raw_carrying) == TYPE_DICTIONARY:
+		carrying_amount = int(raw_carrying.get("amount", 0))
 	carry_kind = str(data.get("carryKind", ""))
+	if carry_kind.is_empty() and typeof(raw_carrying) == TYPE_DICTIONARY:
+		carry_kind = str(raw_carrying.get("resource", ""))
 
 	sim_speed_scale = speed_scale
 	var is_game_over = (sim_status != "playing")
@@ -169,17 +176,22 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		target_heading = Vector3(hx, 0.0, hy).normalized()
 
 	timeline.colony_id = colony_id
-	sim_speed_scale = speed_scale
-	is_sim_paused = (sim_status != "playing" or speed_scale == 0.0)
 
 	if is_sim_paused:
 		_update_movement_and_animation(0.0)
 		return
 
-	# If this is the initial placement or an extreme teleport (>50m), snap directly.
+	# If initial placement, extreme teleport (>50m), stall recovery, or speed/status change, rebase directly.
 	var max_legit_travel: float = maxf(12.0, 3.0 * speed_scale * maxf(0.05, tick_interval_sec))
 	var is_extreme_teleport = (position.distance_to(new_target) > max_legit_travel)
-	if is_first_update or is_extreme_teleport:
+	var was_stalled = is_network_stalled or was_stalled_pending_rebase
+	var is_speed_or_status_changed = false
+	if timeline.is_initialized and not timeline.samples.is_empty():
+		var prev_sample = timeline.samples[-1]
+		if absf(prev_sample.sim_speed - speed_scale) > 0.001 or prev_sample.sim_status != sim_status:
+			is_speed_or_status_changed = true
+
+	if is_first_update or is_extreme_teleport or was_stalled or is_speed_or_status_changed:
 		position = new_target
 		current_pos = new_target
 		prev_pos = new_target
@@ -189,8 +201,15 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		has_waypoint = false
 		intermediate_waypoint = Vector3.ZERO
 		is_first_update = false
+		is_network_stalled = false
+		was_stalled_pending_rebase = false
 		timeline.reset(new_target)
 		timeline.push_sample(data, tick_interval_sec, speed_scale, sim_status, buildings, entrances)
+		if not timeline.samples.is_empty():
+			var s0 = timeline.samples[0]
+			state_name = s0.state_name
+			carrying_amount = s0.carrying_amount
+			carry_kind = s0.carrying_resource
 		_update_movement_and_animation(0.0)
 		return
 
@@ -208,6 +227,7 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 			intermediate_waypoint = Vector3.ZERO
 
 	is_network_stalled = false
+	was_stalled_pending_rebase = false
 
 func _process(delta: float) -> void:
 	if is_network_stalled or is_sim_paused:
@@ -230,7 +250,7 @@ func _process(delta: float) -> void:
 	_update_movement_and_animation(ground_speed)
 
 func _update_movement_and_animation(ground_speed: float) -> void:
-	var is_carrying = (carrying_amount > 0 or state_name in ["carry", "return", "deposit"])
+	var is_carrying = (carrying_amount > 0)
 	if cargo_prop:
 		cargo_prop.visible = is_carrying
 
@@ -291,6 +311,7 @@ func _play_anim(new_state: AnimState) -> void:
 
 func on_network_stalled() -> void:
 	is_network_stalled = true
+	was_stalled_pending_rebase = true
 	_update_movement_and_animation(0.0)
 
 func on_network_resumed() -> void:

@@ -84,11 +84,13 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 
 	var prev = samples[-1]
 
-	# 2. Discontinuity detection: tick regression, extreme tick jump (>100 ticks), or extreme teleport (>50m)
+	# 2. Discontinuity detection: tick regression, extreme tick gap (>100 ticks), extreme teleport (>50m), speed change, or status change
 	var is_tick_regression = (tick >= 0 and prev.tick >= 0 and tick < prev.tick)
 	var is_extreme_tick_gap = (tick >= 0 and prev.tick >= 0 and (tick - prev.tick) > 100)
 	var is_extreme_teleport = target_3d.distance_to(prev.pos) > 50.0
-	if is_tick_regression or is_extreme_tick_gap or is_extreme_teleport:
+	var is_speed_change = (absf(prev.sim_speed - speed_scale) > 0.001)
+	var is_status_change = (prev.sim_status != sim_status)
+	if is_tick_regression or is_extreme_tick_gap or is_extreme_teleport or is_speed_change or is_status_change:
 		samples.clear()
 		var s_reset = Sample.new()
 		s_reset.server_time = 0.0
@@ -159,6 +161,12 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 		"is_stalled": false
 	}
 
+	if not samples.is_empty():
+		var s_last = samples[-1]
+		res["state_name"] = s_last.state_name
+		res["carrying_amount"] = s_last.carrying_amount
+		res["carry_kind"] = s_last.carrying_resource
+
 	if is_sim_paused or is_network_stalled or samples.is_empty():
 		res["is_stalled"] = true
 		return res
@@ -173,10 +181,6 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 
 	var t_head = samples[-1].server_time
 	var lag = t_head - render_time
-
-	# Handle extreme queue lag (e.g. accumulating stale backlog after disconnect/freeze)
-	if samples.size() > 5 and lag > 1.500:
-		render_time = t_head - target_delay
 
 	var rate = 1.0
 	if samples.size() > 2 and lag > target_delay + 0.080:
@@ -205,7 +209,7 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 	# Align heading with displacement or target heading
 	var disp = new_pos - current_pos
 	disp.y = 0.0
-	if disp.length_squared() > 0.0001:
+	if disp.length_squared() > 0.001:
 		current_heading = current_heading.lerp(disp.normalized(), minf(1.0, delta * 14.0))
 	elif B.heading.length_squared() > 0.01:
 		current_heading = current_heading.lerp(B.heading, minf(1.0, delta * 8.0))
@@ -216,11 +220,12 @@ func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: b
 	if i > 1:
 		samples = samples.slice(i)
 
+	var active_sample = B if alpha >= 0.999 else A
 	res["position"] = current_pos
 	res["ground_speed"] = ground_speed
 	res["step_dist"] = step_dist
 	res["heading"] = current_heading
-	res["state_name"] = B.state_name
-	res["carrying_amount"] = B.carrying_amount
-	res["carry_kind"] = B.carrying_resource
+	res["state_name"] = active_sample.state_name
+	res["carrying_amount"] = active_sample.carrying_amount
+	res["carry_kind"] = active_sample.carrying_resource
 	return res
