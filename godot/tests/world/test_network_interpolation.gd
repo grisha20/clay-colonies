@@ -53,6 +53,10 @@ func _init() -> void:
 	if test_recovery_and_speed_change_timeline_rebase():
 		passed += 1
 
+	total += 1
+	if test_buffered_snapshot_batches_bound_time_and_motion():
+		passed += 1
+
 	print("=== NETWORK INTERPOLATION RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL NETWORK INTERPOLATION TESTS PASSED!")
@@ -60,6 +64,120 @@ func _init() -> void:
 	else:
 		push_error("SOME NETWORK INTERPOLATION TESTS FAILED!")
 		quit(1)
+
+func _burst_snapshot(tick: int, x: float, speed: float, colony: String, amount: int = 3) -> Dictionary:
+	return {"tick": tick, "session": {"speed": speed, "status": "playing"},
+		"surface": {"width": 480, "height": 480, "buildings": [], "entrances": []},
+		"ants": [{"id": "burst", "colonyId": colony, "pos": {"x": x, "y": 100.0},
+			"heading": {"x": 1.0, "y": 0.0}, "state": "idle", "carrying": amount,
+			"carryKind": ("clay" if colony == "colony-1" else "wood") if amount > 0 else ""}]}
+
+func _receive_burst_snapshot(registry: EntityRegistry, data: Dictionary) -> void:
+	# Use the same callback ordering as WorldObserver, including a real stall flag.
+	registry.on_network_resumed()
+	registry.update_from_snapshot(data)
+
+func test_buffered_snapshot_batches_bound_time_and_motion() -> bool:
+	for speed in [1.0, 5.0, 20.0, 50.0]:
+		for count in [60, 48, 20]:
+			for colony in ["colony-1", "colony-2"]:
+				if not _check_buffered_snapshot_batch(count, speed, int(speed), colony):
+					return false
+	# Many short source intervals can overflow memory before reaching the time
+	# budget. The count limit must also synchronize the cursor and actor atomically.
+	if not _check_buffered_snapshot_batch(60, 50.0, 1, "colony-1"):
+		return false
+	if not _check_buffered_rebase_keeps_safe_endpoint():
+		return false
+	print("  PASS: test_buffered_snapshot_batches_bound_time_and_motion (26 batches, both tribes, 1/5/20/50x, bounded delay, safe endpoint, clean unload/stop)")
+	return true
+
+func _check_buffered_rebase_keeps_safe_endpoint() -> bool:
+	var walls: Array = []
+	for y in range(206, 216, 2):
+		for x in [194, 200]:
+			walls.append({"id": "side-%s-%s" % [x, y], "type": "wall", "stage": "built", "colonyId": "colony-1", "pos": {"x": x, "y": y}})
+	for x in [196, 198]:
+		for y in [206, 214]:
+			walls.append({"id": "cap-%s-%s" % [x, y], "type": "wall", "stage": "built", "colonyId": "colony-1", "pos": {"x": x, "y": y}})
+	var registry = EntityRegistry.new()
+	var initial = _burst_snapshot(100, 197.0, 1.0, "colony-1")
+	initial.ants[0].pos.y = 211.0
+	initial.surface.buildings = walls
+	registry.update_from_snapshot(initial)
+	var actor: NetworkResident = registry.get_resident("burst")
+	actor.set_process(false)
+	var safe_position = Vector3(197.0, 0.0, 211.0)
+	var valid = true
+	for packet in range(1, 61):
+		var data = _burst_snapshot(100 + packet, 205.0, 1.0, "colony-1")
+		data.ants[0].pos.y = 211.0
+		data.surface.buildings = walls
+		registry.update_from_snapshot(data)
+		valid = valid and actor.position.distance_to(safe_position) < 0.001
+	actor._process(0.010)
+	valid = valid and actor.position.distance_to(safe_position) < 0.001
+	if not valid:
+		push_error("Buffered rebase escaped a sealed enclosure instead of using the safe held endpoint")
+	registry.free()
+	return valid
+
+func _check_buffered_snapshot_batch(count: int, speed: float, tick_step: int, colony: String) -> bool:
+	var registry = EntityRegistry.new()
+	registry.set_process(false)
+	_receive_burst_snapshot(registry, _burst_snapshot(100, 100.0, speed, colony))
+	var actor: NetworkResident = registry.get_resident("burst")
+	actor.set_process(false)
+	actor.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	registry.on_network_stalled()
+	actor._process(0.010)
+	var valid = true
+	var tick = 100
+	var target = 100.0
+	var pending = 0.0
+	var burst_step = float(tick_step) * 0.100 / speed
+	for packet in range(count):
+		tick += tick_step
+		target += burst_step # Source speed is 1m/s, independent of sim speed.
+		_receive_burst_snapshot(registry, _burst_snapshot(tick, target, speed, colony))
+		pending = actor.timeline.samples[-1].server_time - actor.timeline.render_time
+		valid = valid and pending <= 0.500001 and actor.timeline.samples.size() <= 48
+		valid = valid and actor.timeline.render_time >= actor.timeline.samples[0].server_time - 0.000001
+		valid = valid and actor.position.distance_to(actor.timeline.current_pos) < 0.0001
+	var peak = 0.0
+	# Follow the burst with ordinary 100ms delivery. Check the first frame too:
+	# the overflow correction must have happened during receipt, not in this frame.
+	for packet in range(21):
+		if packet > 0:
+			tick += int(speed)
+			target += 0.1
+			_receive_burst_snapshot(registry, _burst_snapshot(tick, target, speed, colony))
+		for frame in range(10):
+			var before = actor.position.x
+			actor._process(0.010)
+			var velocity = (actor.position.x - before) / 0.010
+			peak = maxf(peak, velocity)
+			valid = valid and velocity >= -0.01 and velocity <= 1.35
+			valid = valid and actor.position.x <= target + 0.001
+			valid = valid and actor.carrying_amount == 3 and actor.cargo_prop.visible
+			valid = valid and actor.carry_kind == ("clay" if colony == "colony-1" else "wood")
+			pending = actor.timeline.samples[-1].server_time - actor.timeline.render_time
+			valid = valid and pending <= 0.500001 and actor.timeline.samples.size() <= 48
+	# Stop and unload. Display must converge without overshoot or reverse motion.
+	for packet in range(10):
+		tick += int(speed)
+		_receive_burst_snapshot(registry, _burst_snapshot(tick, target, speed, colony, 0))
+		for frame in range(10):
+			var before = actor.position.x
+			actor._process(0.010)
+			valid = valid and actor.position.x >= before - 0.0001 and actor.position.x <= target + 0.001
+	valid = valid and absf(actor.position.x - target) < 0.01
+	valid = valid and actor.carrying_amount == 0 and actor.carry_kind.is_empty() and not actor.cargo_prop.visible
+	valid = valid and actor.current_anim_state == NetworkResident.AnimState.IDLE
+	if not valid:
+		push_error("Buffered batch failed: count=%d speed=%.0f tick_step=%d colony=%s peak=%.4f pending=%.4f" % [count, speed, tick_step, colony, peak, pending])
+	registry.free()
+	return valid
 
 func test_model_faces_direction_of_movement() -> bool:
 	var root = Node3D.new()

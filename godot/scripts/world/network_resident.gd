@@ -167,8 +167,6 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		0.0,
 		float(pos_dict.get("y", position.z))
 	)
-	var new_target_2d = Vector2(new_target.x, new_target.z)
-
 	# Update target heading
 	var hx = float(heading_dict.get("x", 0.0))
 	var hy = float(heading_dict.get("y", 1.0))
@@ -192,28 +190,18 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 			is_speed_or_status_changed = true
 
 	if is_first_update or is_extreme_teleport or was_stalled or is_speed_or_status_changed:
-		position = new_target
-		current_pos = new_target
-		prev_pos = new_target
-		target_pos = new_target
-		prev_pos_2d = new_target_2d
-		route_points = [new_target_2d] as Array[Vector2]
-		has_waypoint = false
-		intermediate_waypoint = Vector3.ZERO
 		is_first_update = false
 		is_network_stalled = false
 		was_stalled_pending_rebase = false
 		timeline.reset(new_target)
 		timeline.push_sample(data, tick_interval_sec, speed_scale, sim_status, buildings, entrances)
-		if not timeline.samples.is_empty():
-			var s0 = timeline.samples[0]
-			state_name = s0.state_name
-			carrying_amount = s0.carrying_amount
-			carry_kind = s0.carrying_resource
-		_update_movement_and_animation(0.0)
+		_apply_timeline_rebase()
 		return
 
-	timeline.push_sample(data, tick_interval_sec, speed_scale, sim_status, buildings, entrances)
+	var did_rebase = timeline.push_sample(data, tick_interval_sec, speed_scale, sim_status, buildings, entrances)
+	if did_rebase:
+		_apply_timeline_rebase()
+		return
 
 	if not timeline.samples.is_empty():
 		var latest = timeline.samples[-1]
@@ -228,6 +216,24 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 
 	is_network_stalled = false
 	was_stalled_pending_rebase = false
+
+func _apply_timeline_rebase() -> void:
+	# Authoritative correction at snapshot receipt, never a rendered movement step.
+	position = timeline.current_pos
+	current_pos = position
+	prev_pos = position
+	target_pos = position
+	prev_pos_2d = Vector2(position.x, position.z)
+	route_points = [prev_pos_2d] as Array[Vector2]
+	has_waypoint = false
+	intermediate_waypoint = Vector3.ZERO
+	current_heading = timeline.current_heading
+	if not timeline.samples.is_empty():
+		var sample = timeline.samples[0]
+		state_name = sample.state_name
+		carrying_amount = sample.carrying_amount
+		carry_kind = sample.carrying_resource
+	_update_movement_and_animation(0.0)
 
 func _process(delta: float) -> void:
 	if is_network_stalled or is_sim_paused:

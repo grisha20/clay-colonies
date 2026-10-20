@@ -20,6 +20,10 @@ class Sample:
 
 var samples: Array[Sample] = []
 const MAX_SAMPLES: int = 48
+# Queue budget in source wall-time, independent of simulation speed. A single
+# long source interval retains its real duration; extra queued intervals rebase.
+const MAX_QUEUED_SECONDS: float = 0.500
+const TIME_EPSILON: float = 0.000001
 var target_delay: float = 0.100 # Nominal 100ms display delay (1 server broadcast period)
 var render_time: float = 0.0
 var current_pos: Vector3 = Vector3.ZERO
@@ -34,7 +38,9 @@ func reset(pos: Vector3) -> void:
 	render_time = 0.0
 	is_initialized = false
 
-func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float = 1.0, sim_status: String = "playing", buildings: Array = [], entrances: Array = []) -> void:
+# Returns true when receipt changes the presentation epoch. The actor must apply
+# current_pos immediately, so a correction never becomes the next frame's stride.
+func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float = 1.0, sim_status: String = "playing", buildings: Array = [], entrances: Array = []) -> bool:
 	var pos_dict = data.get("pos", {})
 	var target_2d = Vector2(float(pos_dict.get("x", 0.0)), float(pos_dict.get("y", 0.0)))
 	var target_3d = Vector3(target_2d.x, 0.0, target_2d.y)
@@ -80,7 +86,7 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 		current_heading = head_vec
 		render_time = 0.0
 		is_initialized = true
-		return
+		return true
 
 	var prev = samples[-1]
 
@@ -108,7 +114,7 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 		current_pos = target_3d
 		current_heading = head_vec
 		render_time = 0.0
-		return
+		return true
 
 	# 3. Calculate simulation time delta between previous sample and this sample
 	var step_time = 0.100 / maxf(0.001, speed_scale)
@@ -144,10 +150,26 @@ func push_sample(data: Dictionary, tick_interval_sec: float, speed_scale: float 
 
 	samples.append(s_new)
 
-	# Bounded memory: keep at most MAX_SAMPLES
+	# Bound queued time as well as memory, on receipt rather than during rendering.
+	# Pruning consumed samples is safe; removing the interval containing the cursor
+	# requires an explicit rebase to the already navigation-validated endpoint.
+	var has_pending_interval = prev.server_time > render_time + TIME_EPSILON
+	var queue_over_budget = has_pending_interval and s_new.server_time - render_time > MAX_QUEUED_SECONDS + TIME_EPSILON
+	var would_drop_cursor = samples.size() > MAX_SAMPLES and samples[samples.size() - MAX_SAMPLES].server_time > render_time + TIME_EPSILON
+	if queue_over_budget or would_drop_cursor:
+		s_new.server_time = 0.0
+		s_new.route_points = [s_new.pos_2d] as Array[Vector2]
+		samples.clear()
+		samples.append(s_new)
+		current_pos = s_new.pos
+		current_heading = s_new.heading
+		render_time = 0.0
+		return true
+
 	if samples.size() > MAX_SAMPLES:
 		var prune_count = samples.size() - MAX_SAMPLES
 		samples = samples.slice(prune_count)
+	return false
 
 func advance_and_sample(delta: float, is_sim_paused: bool, is_network_stalled: bool) -> Dictionary:
 	var res = {
