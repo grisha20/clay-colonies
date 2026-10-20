@@ -27,8 +27,20 @@ var smoothed_interval: float = 0.100
 func update_from_snapshot(snapshot: Dictionary) -> void:
 	var tick = int(snapshot.get("tick", -1))
 	var session = snapshot.get("session", {})
+	var sim_status = str(session.get("status", "playing"))
 	current_sim_speed = float(session.get("speed", 1.0))
+	if sim_status != "playing":
+		current_sim_speed = 0.0
+
+	var surface = snapshot.get("surface", {})
+	var buildings: Array = surface.get("buildings", []) if typeof(surface) == TYPE_DICTIONARY else []
+	var entrances: Array = surface.get("entrances", []) if typeof(surface) == TYPE_DICTIONARY else []
 	var ants = snapshot.get("ants", [])
+
+	var is_tick_regression = (last_snapshot_tick >= 0 and tick < last_snapshot_tick)
+	if is_tick_regression:
+		for res in residents.values():
+			res.is_first_update = true
 
 	var now = Time.get_ticks_msec() / 1000.0
 	var packet_dt = 0.100
@@ -71,7 +83,7 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 			residents[id] = resident
 			resident_spawned.emit(resident)
 
-		resident.update_from_ant_data(ant_data, packet_dt, current_sim_speed)
+		resident.update_from_ant_data(ant_data, packet_dt, current_sim_speed, sim_status, buildings, entrances)
 
 	# Despawn entities that died, went underground, or left
 	var to_remove: Array[String] = []

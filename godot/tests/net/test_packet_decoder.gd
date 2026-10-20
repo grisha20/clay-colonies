@@ -28,11 +28,23 @@ func _init() -> void:
 		passed += 1
 
 	total += 1
+	if test_fractional_and_nonfinite_versions():
+		passed += 1
+
+	total += 1
 	if test_mandatory_fields_validation():
 		passed += 1
 
 	total += 1
+	if test_surface_and_session_dictionary_types():
+		passed += 1
+
+	total += 1
 	if test_ant_schema_validation():
+		passed += 1
+
+	total += 1
+	if test_ant_coordinates_and_duplicates():
 		passed += 1
 
 	total += 1
@@ -57,6 +69,7 @@ func _get_valid_sample_dict() -> Dictionary:
 		"protocolVersion": 21,
 		"tick": 100,
 		"session": {"mode": "match", "speed": 1.0, "status": "playing"},
+		"surface": {"width": 480, "height": 480, "entrances": [], "buildings": [], "resourceNodes": [], "foodSources": [], "fish": []},
 		"colonies": [{"id": "colony-1", "color": "#e06030", "ants": []}],
 		"ants": [
 			{"id": "ant-1", "colonyId": "colony-1", "pos": {"x": 120.0, "y": 240.0}, "state": "search"}
@@ -127,6 +140,31 @@ func test_version_type_validations() -> bool:
 	print("  PASS: test_version_type_validations (non-numeric types strictly rejected)")
 	return true
 
+func test_fractional_and_nonfinite_versions() -> bool:
+	# Fractional protocolVersion 21.9
+	var d1 = _get_valid_sample_dict()
+	d1["protocolVersion"] = 21.9
+	if WSClient.decode_and_validate_packet(JSON.stringify(d1)).get("ok", false):
+		push_error("Accepted fractional protocolVersion=21.9!")
+		return false
+
+	# Fractional snapshotVersion 21.5
+	var d2 = _get_valid_sample_dict()
+	d2["snapshotVersion"] = 21.5
+	if WSClient.decode_and_validate_packet(JSON.stringify(d2)).get("ok", false):
+		push_error("Accepted fractional snapshotVersion=21.5!")
+		return false
+
+	# Fractional tick 100.5
+	var d3 = _get_valid_sample_dict()
+	d3["tick"] = 100.5
+	if WSClient.decode_and_validate_packet(JSON.stringify(d3)).get("ok", false):
+		push_error("Accepted fractional tick=100.5!")
+		return false
+
+	print("  PASS: test_fractional_and_nonfinite_versions (fractional 21.9/21.5/100.5 rejected)")
+	return true
+
 func test_mandatory_fields_validation() -> bool:
 	# Missing tick
 	var d1 = _get_valid_sample_dict()
@@ -159,6 +197,45 @@ func test_mandatory_fields_validation() -> bool:
 	print("  PASS: test_mandatory_fields_validation (missing tick, negative tick, missing colonies/ants caught)")
 	return true
 
+func test_surface_and_session_dictionary_types() -> bool:
+	# surface is Array instead of Dictionary
+	var d1 = _get_valid_sample_dict()
+	d1["surface"] = []
+	if WSClient.decode_and_validate_packet(JSON.stringify(d1)).get("ok", false):
+		push_error("Accepted surface=[] as Array!")
+		return false
+
+	# session is Array instead of Dictionary
+	var d2 = _get_valid_sample_dict()
+	d2["session"] = []
+	if WSClient.decode_and_validate_packet(JSON.stringify(d2)).get("ok", false):
+		push_error("Accepted session=[] as Array!")
+		return false
+
+	# session missing
+	var d3 = _get_valid_sample_dict()
+	d3.erase("session")
+	if WSClient.decode_and_validate_packet(JSON.stringify(d3)).get("ok", false):
+		push_error("Accepted packet without session!")
+		return false
+
+	# surface missing
+	var d4 = _get_valid_sample_dict()
+	d4.erase("surface")
+	if WSClient.decode_and_validate_packet(JSON.stringify(d4)).get("ok", false):
+		push_error("Accepted packet without surface!")
+		return false
+
+	# session.speed is non-numeric
+	var d5 = _get_valid_sample_dict()
+	d5["session"] = {"speed": "fast"}
+	if WSClient.decode_and_validate_packet(JSON.stringify(d5)).get("ok", false):
+		push_error("Accepted session.speed as string 'fast'!")
+		return false
+
+	print("  PASS: test_surface_and_session_dictionary_types (surface=[], session=[], bad speed caught)")
+	return true
+
 func test_ant_schema_validation() -> bool:
 	# Ant missing id
 	var d1 = _get_valid_sample_dict()
@@ -182,6 +259,27 @@ func test_ant_schema_validation() -> bool:
 		return false
 
 	print("  PASS: test_ant_schema_validation (invalid ant structures caught)")
+	return true
+
+func test_ant_coordinates_and_duplicates() -> bool:
+	# Infinite coordinate 1e309
+	var d1 = _get_valid_sample_dict()
+	var raw = JSON.stringify(d1).replace('"x":120.0', '"x":1e309').replace('"x": 120.0', '"x": 1e309').replace('"x":120,', '"x":1e309,')
+	if WSClient.decode_and_validate_packet(raw).get("ok", false):
+		push_error("Accepted infinite coordinate x=1e309!")
+		return false
+
+	# Duplicate ant ID within same snapshot
+	var d2 = _get_valid_sample_dict()
+	d2["ants"] = [
+		{"id": "ant-1", "colonyId": "colony-1", "pos": {"x": 10.0, "y": 20.0}},
+		{"id": "ant-1", "colonyId": "colony-1", "pos": {"x": 30.0, "y": 40.0}}
+	]
+	if WSClient.decode_and_validate_packet(JSON.stringify(d2)).get("ok", false):
+		push_error("Accepted duplicate ant-1 in same packet!")
+		return false
+
+	print("  PASS: test_ant_coordinates_and_duplicates (infinite coords and duplicate IDs caught)")
 	return true
 
 func test_malformed_json_and_syntax() -> bool:

@@ -472,6 +472,7 @@ def start_server(
         proc = None
         exit_code = 0
         stop_requested = False
+        fallback_killed = False
         stop_file = os.path.join(real_state_dir, ".qa_server.stop")
         if os.path.exists(stop_file):
             try:
@@ -481,7 +482,7 @@ def start_server(
         env["CLAYFOLK_QA_STOP_FILE"] = stop_file
 
         def _stop_watcher():
-            nonlocal stop_requested
+            nonlocal stop_requested, fallback_killed
             while proc and proc.poll() is None:
                 if os.path.exists(stop_file):
                     stop_requested = True
@@ -494,6 +495,7 @@ def start_server(
                     # Emergency fallback kill only if graceful exit timed out:
                     if proc and proc.poll() is None:
                         print("[qa_server] WARNING: Graceful shutdown timed out; falling back to hard process termination.", file=sys.stderr)
+                        fallback_killed = True
                         kill_process_tree(proc.pid)
                     break
                 time.sleep(0.1)
@@ -506,12 +508,16 @@ def start_server(
             watcher_thread.start()
 
             raw_code = proc.wait()
-            if stop_requested:
+            if fallback_killed:
+                exit_code = 137
+                print(f"[qa_server] Server was forcefully terminated due to shutdown timeout (code {exit_code})", file=sys.stderr)
+            elif raw_code != 0:
+                exit_code = raw_code
+                print(f"[qa_server] Server process exited with code {exit_code}", file=sys.stderr)
+            elif stop_requested:
                 exit_code = 0
             else:
                 exit_code = raw_code
-                if exit_code != 0:
-                    print(f"[qa_server] Server process exited with code {exit_code}", file=sys.stderr)
         except KeyboardInterrupt:
             print("\n[qa_server] Stopping QA server process tree...")
         except Exception as e:

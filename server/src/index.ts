@@ -103,13 +103,18 @@ loop = startLoop(world, (includePheromones) => {
 });
 
 const gracefulExit = () => {
+  if (loop) {
+    loop.setSpeed(0);
+  }
   saveWorldSnapshot(world)
-    .catch((error: unknown) => {
-      console.warn(`Could not save snapshot on exit: ${(error as Error).message}`);
-    })
-    .finally(() => {
+    .then(() => {
       hub.close();
       process.exit(0);
+    })
+    .catch((error: unknown) => {
+      console.warn(`Could not save snapshot on exit: ${(error as Error).message}`);
+      hub.close();
+      process.exit(1);
     });
 };
 

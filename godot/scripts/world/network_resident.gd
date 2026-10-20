@@ -1,6 +1,8 @@
 class_name NetworkResident
 extends Node3D
 
+const BuildingGeometry = preload("res://scripts/world/building_geometry.gd")
+
 ## Visual 3D actor representing a Clayfolk resident driven by network snapshots.
 ## Manages skeletal animation, step frequency tied to ground distance,
 ## smooth position/rotation interpolation, colony material modulation,
@@ -42,6 +44,10 @@ var interp_duration: float = 0.1 # nominal 100ms per tick at 1x
 var sim_speed_scale: float = 1.0
 var is_network_stalled: bool = false
 var is_sim_paused: bool = false
+
+# Obstacle avoidance waypoints
+var has_waypoint: bool = false
+var intermediate_waypoint: Vector3 = Vector3.ZERO
 
 # Visual nodes
 var model_instance: Node3D
@@ -121,7 +127,7 @@ func _apply_colony_color() -> void:
 		custom_mat.albedo_color = col
 		mesh_instance.set_surface_override_material(0, custom_mat)
 
-func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scale: float) -> void:
+func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scale: float, sim_status: String = "playing", buildings: Array = [], entrances: Array = []) -> void:
 	ant_id = data.get("id", ant_id)
 	var new_colony = data.get("colonyId", colony_id)
 	if new_colony != colony_id:
@@ -135,7 +141,8 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	carry_kind = str(data.get("carryKind", ""))
 
 	sim_speed_scale = speed_scale
-	is_sim_paused = (speed_scale <= 0.0)
+	var is_game_over = (sim_status != "playing")
+	is_sim_paused = (speed_scale <= 0.0 or is_game_over)
 
 	var pos_dict = data.get("pos", {})
 	var heading_dict = data.get("heading", {})
@@ -152,6 +159,15 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	if Vector2(hx, hy).length_squared() > 0.001:
 		target_heading = Vector3(hx, 0.0, hy).normalized()
 
+	if is_sim_paused:
+		position = position
+		prev_pos = position
+		target_pos = position
+		interp_progress = 1.0
+		has_waypoint = false
+		_update_movement_and_animation(0.0)
+		return
+
 	# If this is the initial placement or a true teleport, snap directly.
 	# At high simulation speeds (e.g. 50x), legitimate movement can exceed static 8m,
 	# so threshold scales dynamically with simulation speed and tick interval.
@@ -163,11 +179,22 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		target_pos = new_target
 		interp_progress = 1.0
 		is_first_update = false
-	elif not is_sim_paused:
+		has_waypoint = false
+	else:
 		prev_pos = position
 		target_pos = new_target
 		interp_duration = maxf(0.04, tick_interval_sec)
 		interp_progress = 0.0
+
+		# Check obstacle avoidance between prev_pos and target_pos
+		var v_from = Vector2(prev_pos.x, prev_pos.z)
+		var v_target = Vector2(target_pos.x, target_pos.z)
+		var wp = BuildingGeometry.calculate_safe_waypoint(v_from, v_target, buildings, entrances)
+		if wp.distance_to(v_target) > 0.01:
+			has_waypoint = true
+			intermediate_waypoint = Vector3(wp.x, 0.0, wp.y)
+		else:
+			has_waypoint = false
 
 	is_network_stalled = false
 	_update_movement_and_animation(0.0 if is_sim_paused else (position.distance_to(target_pos) / maxf(0.001, interp_duration)))
@@ -182,8 +209,27 @@ func _process(delta: float) -> void:
 		var old_p = position
 		interp_progress += delta / interp_duration
 		interp_progress = min(1.0, interp_progress)
-		position = prev_pos.lerp(target_pos, interp_progress)
+		if has_waypoint:
+			if interp_progress < 0.5:
+				var t = interp_progress * 2.0
+				position = prev_pos.lerp(intermediate_waypoint, t)
+			else:
+				var t = (interp_progress - 0.5) * 2.0
+				position = intermediate_waypoint.lerp(target_pos, t)
+		else:
+			position = prev_pos.lerp(target_pos, interp_progress)
 		step_dist = old_p.distance_to(position)
+	elif interp_progress < 1.8:
+		# Grace extrapolation during network delivery jitter (up to 180ms on 100ms packet)
+		var old_p = position
+		interp_progress += delta / interp_duration
+		var move_dir = target_pos - (intermediate_waypoint if has_waypoint else prev_pos)
+		move_dir.y = 0.0
+		if move_dir.length_squared() > 0.0001:
+			var decay = maxf(0.0, 1.0 - (interp_progress - 1.0) * 1.25)
+			var ground_spd = (move_dir.length() / interp_duration) * decay
+			position += move_dir.normalized() * (ground_spd * delta)
+			step_dist = old_p.distance_to(position)
 
 	# Measure real ground speed (m/s)
 	var ground_speed = step_dist / delta if delta > 0.0001 else 0.0

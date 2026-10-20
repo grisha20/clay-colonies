@@ -153,13 +153,15 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	if typeof(surface) != TYPE_DICTIONARY:
 		return
 
-	# 1. Update Campfires from actual surface.entrances
+	# 1. Update Campfires from actual surface.entrances with full lifecycle
 	var entrances = surface.get("entrances", [])
-	if typeof(entrances) == TYPE_ARRAY and entrances.size() > 0:
+	var seen_campfires: Dictionary = {}
+	if typeof(entrances) == TYPE_ARRAY:
 		for i in range(entrances.size()):
 			var ent = entrances[i]
 			if typeof(ent) != TYPE_DICTIONARY:
 				continue
+			seen_campfires[i] = true
 			var ex = float(ent.get("x", 0.0))
 			var ey = float(ent.get("y", 0.0))
 			var e_pos = Vector3(ex, 0.0, ey)
@@ -179,6 +181,17 @@ func update_world_entities(snapshot: Dictionary) -> void:
 			else:
 				active_campfires[i].position = e_pos
 
+	# Remove campfires no longer in snapshot
+	var camps_to_remove: Array[int] = []
+	for cid in active_campfires.keys():
+		if not seen_campfires.has(cid):
+			camps_to_remove.append(cid)
+	for cid in camps_to_remove:
+		var cn = active_campfires[cid]
+		active_campfires.erase(cid)
+		if is_instance_valid(cn):
+			cn.queue_free()
+
 	# 2. Update Buildings from actual surface.buildings
 	var buildings = surface.get("buildings", [])
 	var seen_b_ids: Dictionary = {}
@@ -195,36 +208,62 @@ func update_world_entities(snapshot: Dictionary) -> void:
 			var bx = float(b_pos_dict.get("x", 0.0))
 			var by = float(b_pos_dict.get("y", 0.0))
 			var b_pos = Vector3(bx, 0.0, by)
+			var b_stage = str(b.get("stage", "built"))
 
 			if not active_buildings.has(b_id):
 				var b_node: Node3D = null
 				if b_type == "hut":
 					var hut_scene = load("res://assets/models/hut.glb") as PackedScene
 					b_node = hut_scene.instantiate() if hut_scene else Node3D.new()
-				elif b_type == "wall" or b_type == "gate":
+					b_node.position = b_pos
+				elif b_type == "wall":
 					b_node = MeshInstance3D.new()
 					var box = BoxMesh.new()
-					box.size = Vector3(1.8, 1.2, 1.8) if b_type == "wall" else Vector3(2.4, 1.5, 1.2)
+					box.size = Vector3(1.8, 1.2, 1.8)
 					b_node.mesh = box
 					var mat = StandardMaterial3D.new()
-					mat.albedo_color = Color(0.72, 0.50, 0.32, 1.0) if b_type == "wall" else Color(0.55, 0.35, 0.20, 1.0)
+					mat.albedo_color = Color(0.72, 0.50, 0.32, 1.0)
 					b_node.set_surface_override_material(0, mat)
+					b_node.position = b_pos + Vector3(0, box.size.y / 2.0, 0)
+				elif b_type == "gate":
+					b_node = MeshInstance3D.new()
+					var box = BoxMesh.new()
+					var gate_axis = str(b.get("gateAxis", "x"))
+					var gate_span = float(b.get("gateSpan", 2.4))
+					box.size = Vector3(gate_span, 1.5, 0.8) if gate_axis == "x" else Vector3(0.8, 1.5, gate_span)
+					b_node.mesh = box
+					var mat = StandardMaterial3D.new()
+					mat.albedo_color = Color(0.55, 0.35, 0.20, 1.0) if b_stage != "blueprint" else Color(0.55, 0.35, 0.20, 0.5)
+					if b_stage == "blueprint":
+						mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+					b_node.set_surface_override_material(0, mat)
+					b_node.position = b_pos + Vector3(0, box.size.y / 2.0, 0)
 				else:
 					# Storage, Workshop, Idol
 					b_node = MeshInstance3D.new()
 					var box = BoxMesh.new()
-					box.size = Vector3(2.5, 1.6, 2.5)
+					if b_type == "workshop":
+						box.size = Vector3(4.6, 2.0, 2.6)
+					elif b_type == "storage":
+						box.size = Vector3(3.4, 1.6, 2.1)
+					else:
+						box.size = Vector3(2.5, 1.6, 2.5)
 					b_node.mesh = box
 					var mat = StandardMaterial3D.new()
 					mat.albedo_color = Color(0.60, 0.45, 0.35, 1.0)
 					b_node.set_surface_override_material(0, mat)
+					b_node.position = b_pos + Vector3(0, box.size.y / 2.0, 0)
 
 				b_node.name = "Building_" + b_id
-				b_node.position = b_pos
 				buildings_container.add_child(b_node)
 				active_buildings[b_id] = b_node
 			else:
-				active_buildings[b_id].position = b_pos
+				var existing = active_buildings[b_id]
+				if existing is MeshInstance3D and existing.mesh:
+					var aabb = existing.mesh.get_aabb()
+					existing.position = b_pos + Vector3(0, aabb.size.y / 2.0, 0)
+				else:
+					existing.position = b_pos
 
 	# Remove buildings no longer in snapshot
 	var b_to_remove: Array[String] = []
@@ -237,7 +276,7 @@ func update_world_entities(snapshot: Dictionary) -> void:
 		if is_instance_valid(n):
 			n.queue_free()
 
-	# 3. Update ResourceNodes, FoodSources, Enemies
+	# 3. Update ResourceNodes, FoodSources, Fish, Deposits, Carrion, Enemies
 	var seen_node_ids: Dictionary = {}
 	for rnode in surface.get("resourceNodes", []):
 		if typeof(rnode) == TYPE_DICTIONARY:
@@ -254,6 +293,30 @@ func update_world_entities(snapshot: Dictionary) -> void:
 				seen_node_ids[fid] = true
 				var pos_d = fnode.get("pos", {})
 				_update_simple_marker(fid, "Food_" + fid, Vector3(float(pos_d.get("x", 0)), 0, float(pos_d.get("y", 0))), Color(0.95, 0.25, 0.25, 1.0), 0.8)
+
+	for fish in surface.get("fish", []):
+		if typeof(fish) == TYPE_DICTIONARY:
+			var fish_id = str(fish.get("id", ""))
+			if not fish_id.is_empty():
+				seen_node_ids[fish_id] = true
+				var pos_d = fish.get("pos", {})
+				_update_simple_marker(fish_id, "Fish_" + fish_id, Vector3(float(pos_d.get("x", 0)), 0.02, float(pos_d.get("y", 0))), Color(0.30, 0.70, 0.90, 1.0), 0.7)
+
+	for dep in surface.get("deposits", []):
+		if typeof(dep) == TYPE_DICTIONARY:
+			var did = str(dep.get("id", ""))
+			if not did.is_empty():
+				seen_node_ids[did] = true
+				var pos_d = dep.get("pos", {})
+				_update_simple_marker(did, "Deposit_" + did, Vector3(float(pos_d.get("x", 0)), 0, float(pos_d.get("y", 0))), Color(0.65, 0.50, 0.35, 1.0), 1.0)
+
+	for car in surface.get("carrion", []):
+		if typeof(car) == TYPE_DICTIONARY:
+			var cid = str(car.get("id", ""))
+			if not cid.is_empty():
+				seen_node_ids[cid] = true
+				var pos_d = car.get("pos", {})
+				_update_simple_marker(cid, "Carrion_" + cid, Vector3(float(pos_d.get("x", 0)), 0, float(pos_d.get("y", 0))), Color(0.40, 0.25, 0.20, 1.0), 0.7)
 
 	for enode in snapshot.get("enemies", []):
 		if typeof(enode) == TYPE_DICTIONARY:

@@ -123,7 +123,7 @@ def run_integration_tests():
             "--",
             "--qa-port", str(port1)
         ]
-        godot_proc1 = subprocess.run(godot_cmd1, cwd=REPO_ROOT, check=False)
+        godot_proc1 = subprocess.run(godot_cmd1, cwd=REPO_ROOT, check=False, timeout=30)
         assert godot_proc1.returncode == 0, f"Headless Godot test failed on fresh party with code {godot_proc1.returncode}!"
         print("  PASS: Headless Godot client completed successfully against fresh party (code 0)!")
 
@@ -155,16 +155,25 @@ def run_integration_tests():
         f_data = json.load(f)
     assert f_data.get("tick") == 12345
 
-    # Ensure at least two residents carry cargo in fixture
-    ants_fixture = f_data.get("ants", [])
-    if len(ants_fixture) > 0:
-        ants_fixture[0]["state"] = "carry"
-        ants_fixture[0]["carrying"] = 1
-        ants_fixture[0]["carryKind"] = "clay"
-    if len(ants_fixture) > 1:
-        ants_fixture[1]["state"] = "carry"
-        ants_fixture[1]["carrying"] = 2
-        ants_fixture[1]["carryKind"] = "wood"
+    # Ensure residents from BOTH colonies carry cargo in fixture (spawned away from entrance so they don't immediately drop cargo)
+    for c_idx, col in enumerate(f_data.get("colonies", [])):
+        col_ants = col.get("ants", [])
+        if len(col_ants) > 0:
+            target_ant_id = col_ants[0]["id"]
+            spawn_x = 180.0 if c_idx == 0 else 300.0
+            spawn_y = 200.0
+            col_ants[0]["state"] = "carry"
+            col_ants[0]["carrying"] = 1 + c_idx
+            col_ants[0]["carryKind"] = "clay" if c_idx == 0 else "wood"
+            col_ants[0]["pos"] = {"x": spawn_x, "y": spawn_y}
+            # Also sync into top-level f_data["ants"]
+            for a in f_data.get("ants", []):
+                if str(a.get("id")) == str(target_ant_id):
+                    a["state"] = "carry"
+                    a["carrying"] = 1 + c_idx
+                    a["carryKind"] = "clay" if c_idx == 0 else "wood"
+                    a["pos"] = {"x": spawn_x, "y": spawn_y}
+
     with open(fixture_file, "w", encoding="utf-8") as f:
         json.dump(f_data, f, indent=2)
 
@@ -206,7 +215,7 @@ def run_integration_tests():
             "--",
             "--qa-port", str(port2)
         ]
-        godot_proc2 = subprocess.run(godot_cmd2, cwd=REPO_ROOT, check=False)
+        godot_proc2 = subprocess.run(godot_cmd2, cwd=REPO_ROOT, check=False, timeout=30)
         assert godot_proc2.returncode == 0, f"Headless Godot test failed on fixture party with code {godot_proc2.returncode}!"
         print("  PASS: Headless Godot client completed successfully against fixture party (code 0)!")
 

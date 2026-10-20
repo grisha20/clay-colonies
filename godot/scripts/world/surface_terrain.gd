@@ -31,19 +31,29 @@ const SOUTH_LAKE_OUTLINE: Array[Vector2] = [
 	Vector2(172, 380), Vector2(164, 380)
 ]
 
+static func is_inside_polygon_exact(x: float, y: float, points: Array[Vector2]) -> bool:
+	var inside = false
+	var n = points.size()
+	var j = n - 1
+	for i in range(n):
+		var a = points[i]
+		var b = points[j]
+		if (a.y > y) != (b.y > y) and x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x:
+			inside = not inside
+		j = i
+	return inside
+
 static func is_water_at(x: float, y: float) -> bool:
-	var pt = Vector2(x, y)
-	if Geometry2D.is_point_in_polygon(pt, PackedVector2Array(NORTH_LAKE_OUTLINE)):
+	if is_inside_polygon_exact(x, y, NORTH_LAKE_OUTLINE):
 		return true
-	if Geometry2D.is_point_in_polygon(pt, PackedVector2Array(SOUTH_LAKE_OUTLINE)):
+	if is_inside_polygon_exact(x, y, SOUTH_LAKE_OUTLINE):
 		return true
 	return false
 
 static func get_lake_id_at(x: float, y: float) -> String:
-	var pt = Vector2(x, y)
-	if Geometry2D.is_point_in_polygon(pt, PackedVector2Array(NORTH_LAKE_OUTLINE)):
+	if is_inside_polygon_exact(x, y, NORTH_LAKE_OUTLINE):
 		return "north"
-	if Geometry2D.is_point_in_polygon(pt, PackedVector2Array(SOUTH_LAKE_OUTLINE)):
+	if is_inside_polygon_exact(x, y, SOUTH_LAKE_OUTLINE):
 		return "south"
 	return ""
 

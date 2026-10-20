@@ -49,18 +49,14 @@ func _cleanup() -> void:
 	if registry:
 		registry.clear_all()
 	if is_instance_valid(test_root):
+		if test_root.get_parent():
+			test_root.get_parent().remove_child(test_root)
 		test_root.free()
-
-func _process_residents(delta: float) -> void:
-	if registry:
-		for r in registry.residents.values():
-			if is_instance_valid(r):
-				r._process(delta)
-
 
 func _run_integration_test() -> void:
 	test_root = Node3D.new()
 	test_root.name = "TestRoot"
+	root.add_child(test_root)
 
 	registry = EntityRegistry.new()
 	registry.name = "EntityRegistry"
@@ -77,6 +73,9 @@ func _run_integration_test() -> void:
 
 	ws_client.snapshot_received.connect(snap_callable)
 
+	# Allow SceneTree to flush node notifications and run _ready() on all nodes
+	await process_frame
+
 	# 1. Connect to QA Server
 	print("[Step 1] Connecting to QA server at %s..." % target_url)
 	var err = ws_client.connect_to_server(target_url)
@@ -88,12 +87,7 @@ func _run_integration_test() -> void:
 	print("[Step 2] Connection establishing... Receiving live server snapshots...")
 	var collect_start = Time.get_ticks_msec() / 1000.0
 
-
 	while collected_snapshots.size() < 12:
-		ws_client._process(0.016)
-		_process_residents(0.016)
-
-
 		if ws_client.current_state == WSClient.ClientState.ERROR:
 			_fail("WSClient entered ERROR state: " + ws_client.status_message)
 			return
@@ -103,10 +97,9 @@ func _run_integration_test() -> void:
 			_fail("Timed out waiting for 12 snapshots, received %d (state: %d, status: %s)" % [collected_snapshots.size(), ws_client.current_state, ws_client.status_message])
 			return
 
-		await create_timer(0.016).timeout
+		await process_frame
 
 	print("  PASS: Received %d live snapshots from QA server!" % collected_snapshots.size())
-
 
 	# 3. Verify Snapshot Schema and Registry Populations
 	var snap = collected_snapshots[collected_snapshots.size() - 1]
@@ -130,6 +123,8 @@ func _run_integration_test() -> void:
 
 	var col1_count = 0
 	var col2_count = 0
+	var col1_carrying = 0
+	var col2_carrying = 0
 	for ant in ants:
 		var aid = str(ant.get("id"))
 		if not registry.residents.has(aid):
@@ -140,41 +135,66 @@ func _run_integration_test() -> void:
 			_fail("Resident instance invalid for '%s'" % aid)
 			return
 
-		if res.colony_id == "colony-1" or res.colony_id == "0":
+		var is_col1 = (res.colony_id == "colony-1" or res.colony_id == "0")
+		if is_col1:
 			col1_count += 1
 		else:
 			col2_count += 1
 
 		# Verify cargo representation if carrying
 		if ant.has("carrying") and int(ant.get("carrying")) > 0:
+			if is_col1:
+				col1_carrying += 1
+			else:
+				col2_carrying += 1
 			if res.carrying_amount <= 0:
 				_fail("Resident '%s' in snapshot has carrying=%d but NetworkResident carrying_amount=%d" % [aid, int(ant.get("carrying")), res.carrying_amount])
 				return
-			if not is_instance_valid(res.cargo_mesh_instance) or not res.cargo_mesh_instance.visible:
-				_fail("Resident '%s' has cargo but cargo_mesh_instance is not visible" % aid)
+			if not is_instance_valid(res.cargo_prop) or not res.cargo_prop.visible:
+				_fail("Resident '%s' has cargo but cargo_prop is not visible" % aid)
+				return
+			if not is_instance_valid(res.bone_attachment_cargo) or res.bone_attachment_cargo.bone_name != "Socket_Cargo":
+				_fail("Resident '%s' cargo is not attached to Socket_Cargo" % aid)
 				return
 
 	if col1_count == 0 or col2_count == 0:
 		_fail("Both tribes must have surface residents, got C1: %d, C2: %d" % [col1_count, col2_count])
 		return
 
+	if snap.get("tick", 0) >= 12345:
+		if col1_carrying == 0 or col2_carrying == 0:
+			_fail("Expected carriers from both colonies in fixture party, got C1: %d, C2: %d" % [col1_carrying, col2_carrying])
+			return
+		print("  PASS: Carriers verified for both tribes: Colony 1 has %d, Colony 2 has %d" % [col1_carrying, col2_carrying])
+
 	print("  PASS: Both tribes verified in registry: Colony 1 has %d residents, Colony 2 has %d residents (Total: %d)" % [col1_count, col2_count, registry.residents.size()])
 
-	# 4. Verify Movement Heading (+Z facing forward)
-	# Process multiple frames so moving residents update headings
-	for _frame in range(30):
-		_process_residents(0.016)
-		await create_timer(0.016).timeout
+	# 4. Verify Movement Heading (+Z facing forward) and actual displacement
+	var start_positions: Dictionary = {}
+	for aid in registry.residents:
+		start_positions[aid] = registry.residents[aid].global_position
 
+	for _frame in range(30):
+		await process_frame
+
+	var moving_verified = 0
 	var heading_verified = 0
-	for res in registry.residents.values():
-		if res.current_heading.length_squared() > 0.01:
+	for aid in registry.residents:
+		var res: NetworkResident = registry.residents[aid]
+		var delta_p = res.global_position - start_positions.get(aid, res.global_position)
+		delta_p.y = 0.0
+		if delta_p.length() > 0.02:
+			moving_verified += 1
 			var forward = res.transform.basis * Vector3.BACK # Local +Z
-			var dot = forward.normalized().dot(res.current_heading.normalized())
-			if dot > 0.90:
+			var dot = forward.normalized().dot(delta_p.normalized())
+			if dot > 0.70:
 				heading_verified += 1
 
-	print("  PASS: Resident heading verified (+Z facing motion direction for %d active movers)" % heading_verified)
+	if moving_verified == 0:
+		_fail("Expected non-zero moving actors during 30 frames, got 0")
+		return
+
+	print("  PASS: Resident motion verified: %d moving actors, %d aligned with heading (+Z)" % [moving_verified, heading_verified])
 
 	# 5. Verify Clean Disconnect & Reconnect with Zero Duplicates
 	print("[Step 3] Testing live disconnect and reconnect...")
@@ -185,8 +205,7 @@ func _run_integration_test() -> void:
 
 	registry.on_network_stalled()
 	for _f in range(5):
-		_process_residents(0.016)
-		await create_timer(0.016).timeout
+		await process_frame
 
 	# Reconnect
 	var rec_err = ws_client.connect_to_server(target_url)
@@ -199,10 +218,6 @@ func _run_integration_test() -> void:
 	var snaps_before = collected_snapshots.size()
 
 	while (collected_snapshots.size() - snaps_before) < 3:
-		ws_client._process(0.016)
-		_process_residents(0.016)
-
-
 		if ws_client.current_state == WSClient.ClientState.CONNECTED:
 			reconnected = true
 
@@ -211,7 +226,7 @@ func _run_integration_test() -> void:
 			_fail("Timed out waiting for reconnect to %s (received %d new snaps)" % [target_url, (collected_snapshots.size() - snaps_before)])
 			return
 
-		await create_timer(0.016).timeout
+		await process_frame
 
 	if not reconnected:
 		_fail("Client did not reach CONNECTED state after reconnecting")
