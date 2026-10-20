@@ -99,11 +99,6 @@ static func calculate_safe_waypoint(from_p: Vector2, target_p: Vector2, building
 				"ry": HEARTH_RADIUS_Y
 			})
 
-	if solids.is_empty():
-		# Fallback: check if the default hut at (100, 100) or other canonical structures are crossed
-		var audit_hut = {"x": 100.0, "y": 100.5, "rx": 4.0, "ry": 2.3}
-		if crosses_footprint(from_p, target_p, audit_hut):
-			solids.append(audit_hut)
 
 	# Find if target is inside a solid
 	var goal = target_p

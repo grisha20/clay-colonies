@@ -194,6 +194,10 @@ func _run_integration_test() -> void:
 		_fail("Expected non-zero moving actors during 30 frames, got 0")
 		return
 
+	if heading_verified == 0:
+		_fail("Expected aligned moving actors (+Z facing displacement), got 0 aligned out of %d moving" % moving_verified)
+		return
+
 	print("  PASS: Resident motion verified: %d moving actors, %d aligned with heading (+Z)" % [moving_verified, heading_verified])
 
 	# 5. Verify Clean Disconnect & Reconnect with Zero Duplicates

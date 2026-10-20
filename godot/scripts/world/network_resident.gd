@@ -2,6 +2,7 @@ class_name NetworkResident
 extends Node3D
 
 const BuildingGeometry = preload("res://scripts/world/building_geometry.gd")
+const SurfaceNavigation = preload("res://scripts/world/surface_navigation.gd")
 
 ## Visual 3D actor representing a Clayfolk resident driven by network snapshots.
 ## Manages skeletal animation, step frequency tied to ground distance,
@@ -45,9 +46,11 @@ var sim_speed_scale: float = 1.0
 var is_network_stalled: bool = false
 var is_sim_paused: bool = false
 
-# Obstacle avoidance waypoints
+# Obstacle avoidance waypoints and full route polyline
 var has_waypoint: bool = false
 var intermediate_waypoint: Vector3 = Vector3.ZERO
+var route_points: Array[Vector2] = []
+var prev_pos_2d: Vector2 = Vector2.ZERO
 
 # Visual nodes
 var model_instance: Node3D
@@ -163,6 +166,8 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		position = position
 		prev_pos = position
 		target_pos = position
+		prev_pos_2d = Vector2(position.x, position.z)
+		route_points = [prev_pos_2d]
 		interp_progress = 1.0
 		has_waypoint = false
 		_update_movement_and_animation(0.0)
@@ -177,24 +182,31 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 		current_pos = new_target
 		prev_pos = new_target
 		target_pos = new_target
+		prev_pos_2d = Vector2(new_target.x, new_target.z)
+		route_points = [prev_pos_2d]
 		interp_progress = 1.0
 		is_first_update = false
 		has_waypoint = false
 	else:
 		prev_pos = position
 		target_pos = new_target
+		prev_pos_2d = Vector2(prev_pos.x, prev_pos.z)
+		var v_target = Vector2(target_pos.x, target_pos.z)
 		interp_duration = maxf(0.04, tick_interval_sec)
 		interp_progress = 0.0
 
-		# Check obstacle avoidance between prev_pos and target_pos
-		var v_from = Vector2(prev_pos.x, prev_pos.z)
-		var v_target = Vector2(target_pos.x, target_pos.z)
-		var wp = BuildingGeometry.calculate_safe_waypoint(v_from, v_target, buildings, entrances)
-		if wp.distance_to(v_target) > 0.01:
+		# Safe multi-segment route avoiding buildings, hearths, walls, and water
+		route_points = SurfaceNavigation.surface_route(prev_pos_2d, v_target, colony_id, buildings, entrances)
+		if route_points.size() > 1:
 			has_waypoint = true
-			intermediate_waypoint = Vector3(wp.x, 0.0, wp.y)
+			intermediate_waypoint = Vector3(route_points[0].x, 0.0, route_points[0].y)
+			# Point target_pos to final destination
+			target_pos = Vector3(route_points[-1].x, 0.0, route_points[-1].y)
 		else:
 			has_waypoint = false
+			intermediate_waypoint = Vector3.ZERO
+			if not route_points.is_empty():
+				target_pos = Vector3(route_points[0].x, 0.0, route_points[0].y)
 
 	is_network_stalled = false
 	_update_movement_and_animation(0.0 if is_sim_paused else (position.distance_to(target_pos) / maxf(0.001, interp_duration)))
@@ -204,43 +216,35 @@ func _process(delta: float) -> void:
 		_update_movement_and_animation(0.0)
 		return
 
+	var old_p = position
 	var step_dist = 0.0
 	if interp_progress < 1.0:
-		var old_p = position
 		interp_progress += delta / interp_duration
-		interp_progress = min(1.0, interp_progress)
-		if has_waypoint:
-			if interp_progress < 0.5:
-				var t = interp_progress * 2.0
-				position = prev_pos.lerp(intermediate_waypoint, t)
-			else:
-				var t = (interp_progress - 0.5) * 2.0
-				position = intermediate_waypoint.lerp(target_pos, t)
+		interp_progress = minf(1.0, interp_progress)
+		if not route_points.is_empty():
+			var p2d = SurfaceNavigation.route_point(prev_pos_2d, route_points, interp_progress)
+			position = Vector3(p2d.x, 0.0, p2d.y)
 		else:
 			position = prev_pos.lerp(target_pos, interp_progress)
 		step_dist = old_p.distance_to(position)
-	elif interp_progress < 1.8:
-		# Grace extrapolation during network delivery jitter (up to 180ms on 100ms packet)
-		var old_p = position
-		interp_progress += delta / interp_duration
-		var move_dir = target_pos - (intermediate_waypoint if has_waypoint else prev_pos)
-		move_dir.y = 0.0
-		if move_dir.length_squared() > 0.0001:
-			var decay = maxf(0.0, 1.0 - (interp_progress - 1.0) * 1.25)
-			var ground_spd = (move_dir.length() / interp_duration) * decay
-			position += move_dir.normalized() * (ground_spd * delta)
-			step_dist = old_p.distance_to(position)
+	else:
+		# At target: hold position, avoiding overshoot and obstacle penetration
+		if not route_points.is_empty():
+			position = Vector3(route_points[-1].x, 0.0, route_points[-1].y)
+		else:
+			position = target_pos
+		step_dist = old_p.distance_to(position)
 
 	# Measure real ground speed (m/s)
 	var ground_speed = step_dist / delta if delta > 0.0001 else 0.0
 
-	# Smoothly rotate towards heading or movement vector
-	var move_vec = (target_pos - prev_pos)
-	move_vec.y = 0
-	if move_vec.length_squared() > 0.01:
-		current_heading = current_heading.lerp(move_vec.normalized(), min(1.0, delta * 12.0))
+	# Align heading with actual frame displacement vector, or target_heading if stationary
+	var actual_disp = position - old_p
+	actual_disp.y = 0.0
+	if actual_disp.length_squared() > 0.0001:
+		current_heading = current_heading.lerp(actual_disp.normalized(), minf(1.0, delta * 14.0))
 	elif target_heading.length_squared() > 0.01:
-		current_heading = current_heading.lerp(target_heading, min(1.0, delta * 8.0))
+		current_heading = current_heading.lerp(target_heading, minf(1.0, delta * 8.0))
 
 	# The Blender GLB resident model has its face, chest and cargo socket oriented towards +Z.
 	# Using rotation.y = atan2(x, z) aligns local +Z with current_heading, ensuring that
