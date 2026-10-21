@@ -623,6 +623,61 @@ static func _build_mountain(outline: Array[Vector2], peak: float) -> ArrayMesh:
 	return b.commit()
 
 
+## Hand tools, built along +Y from the grip (origin) so they sit in the
+## Socket_Tool_R bone: axe (chop), pick (mine), mallet (build), rod (fish).
+## Digging clay uses bare hands, so "dig" has no tool.
+static func tool(kind: String) -> ArrayMesh:
+	# Oversized on purpose: the camera looks from far above, a true-to-scale
+	# tool would vanish in the resident's fist.
+	return _cached("tool:" + kind, func():
+		var b = Builder.new()
+		match kind:
+			"chop":
+				_stick(b, Vector3(0, -0.08, 0), Vector3(0, 0.8, 0), 0.045, WOOD_LIGHT)
+				b.add(box(Vector3(0.07, 0.24, 0.3)), xf(Vector3(0, 0.72, 0.15)), STONE_DARK, MAT_MATTE, 0.03)
+				b.add(cyl(0.05, 0.05, 0.08, 6), xf(Vector3(0, 0.64, 0.02)), THATCH.darkened(0.2), MAT_MATTE)
+			"mine":
+				_stick(b, Vector3(0, -0.08, 0), Vector3(0, 0.78, 0), 0.045, WOOD_LIGHT)
+				b.add(cyl(0.0, 0.07, 0.32, 6), xf(Vector3(0, 0.75, 0.19), Vector3.ONE, Vector3(PI * 0.5, 0, 0)), STONE, MAT_MATTE)
+				b.add(cyl(0.0, 0.06, 0.24, 6), xf(Vector3(0, 0.75, -0.15), Vector3.ONE, Vector3(-PI * 0.5, 0, 0)), STONE, MAT_MATTE)
+			"build":
+				_stick(b, Vector3(0, -0.08, 0), Vector3(0, 0.58, 0), 0.045, WOOD_LIGHT)
+				b.add(cyl(0.11, 0.11, 0.28, 8), xf(Vector3(0, 0.62, 0), Vector3.ONE, Vector3(PI * 0.5, 0, 0)), WOOD, MAT_MATTE, 0.02)
+			"fish":
+				_stick(b, Vector3(0, -0.08, 0), Vector3(0, 1.5, 0.3), 0.028, WOOD_LIGHT)
+				b.add(sphere(0.045, -1.0, 6, 4), xf(Vector3(0, 1.5, 0.3)), BERRY, MAT_GLOSS)
+		return b.commit())
+
+
+## What a resident carries, sized like the old cargo prop (~0.35 m) and
+## centred on the Socket_Cargo bone: logs, a stone, a clay ball, berries, fish, meat.
+static func carry_load(kind: String) -> ArrayMesh:
+	return _cached("carry:" + kind, func():
+		var b = Builder.new()
+		match kind:
+			"wood":
+				_stick(b, Vector3(-0.22, 0.0, 0.0), Vector3(0.22, 0.02, 0.0), 0.07, WOOD)
+				_stick(b, Vector3(-0.2, 0.1, 0.03), Vector3(0.2, 0.12, -0.02), 0.06, WOOD_LIGHT)
+			"stone":
+				b.add(sphere(0.15, 0.24, 9, 5), xf(Vector3.ZERO, Vector3(1.1, 1, 0.9)), STONE, MAT_MATTE, 0.06)
+			"clay":
+				b.add(sphere(0.15, 0.26, 10, 6), xf(Vector3.ZERO), CLAY_LIGHT, MAT_GLOSS, 0.04)
+			"fish":
+				b.add(sphere(0.07, 0.1, 8, 4), xf(Vector3.ZERO, Vector3(1, 1, 2.6)), Color(0.75, 0.78, 0.8), MAT_GLOSS)
+				b.add(cyl(0.0, 0.07, 0.12, 4), xf(Vector3(0, 0, -0.22), Vector3(1, 0.3, 1), Vector3(-PI * 0.5, 0, 0)), Color(0.6, 0.62, 0.65), MAT_GLOSS)
+			"meat":
+				b.add(sphere(0.13, 0.2, 8, 5), xf(Vector3.ZERO, Vector3(1.2, 1, 0.9)), MEAT, MAT_GLOSS, 0.04)
+				_stick(b, Vector3(-0.17, 0.02, 0), Vector3(0.2, 0.04, 0), 0.03, BONE)
+			_:
+				# Food: a little woven basket of berries.
+				b.add(cyl(0.15, 0.11, 0.13, 10), xf(Vector3(0, -0.02, 0)), THATCH.darkened(0.15), MAT_MATTE, 0.02)
+				for k in range(5):
+					var a2 = TAU * float(k) / 5.0
+					b.add(sphere(0.055, -1.0, 6, 4), xf(Vector3(cos(a2) * 0.07, 0.07, sin(a2) * 0.07)), BERRY, MAT_GLOSS)
+				b.add(sphere(0.055, -1.0, 6, 4), xf(Vector3(0, 0.1, 0)), BERRY.darkened(0.1), MAT_GLOSS)
+		return b.commit())
+
+
 ## Log seats around a hearth (purely decorative), laid outside the hearth ellipse.
 static func hearth_seats() -> ArrayMesh:
 	return _cached("hearth_seats", func():

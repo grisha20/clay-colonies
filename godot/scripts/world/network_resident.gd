@@ -67,16 +67,37 @@ var skeleton: Skeleton3D
 var mesh_instance: MeshInstance3D
 var bone_attachment_cargo: BoneAttachment3D
 var cargo_prop: Node3D
+var cargo_load: MeshInstance3D
+var cargo_load_kind: String = "-"
+var tool_prop: MeshInstance3D
+var tool_kind: String = ""
+## Current visible work from EntityRegistry.work_for ({} = none).
+var work: Dictionary = {}
+var colony_color_applied: String = ""
+var chips: CPUParticles3D
+var chips_kind: String = ""
+const CHIP_COLORS = {
+	"chop": Color(0.70, 0.52, 0.30),
+	"mine": Color(0.62, 0.61, 0.58),
+	"dig": Color(0.72, 0.38, 0.24),
+	"build": Color(0.80, 0.68, 0.48),
+}
 var current_anim_state: AnimState = AnimState.IDLE
 var selection_ring: MeshInstance3D
 
 var is_first_update: bool = true
 
 # Color palette by colony
+# Both tribes are clay; they differ by clay tone and the colour of their cord belt.
 const COLONY_COLORS = {
-	"colony-1": Color(0.88, 0.38, 0.19, 1.0), # Terracotta orange
-	"colony-2": Color(0.22, 0.52, 0.85, 1.0), # Slate / river blue
-	"default": Color(0.75, 0.45, 0.25, 1.0)
+	"colony-1": Color(0.90, 0.56, 0.36, 1.0), # Light terracotta
+	"colony-2": Color(0.62, 0.32, 0.24, 1.0), # Dark red-brown clay
+	"default": Color(0.80, 0.55, 0.40, 1.0)
+}
+const COLONY_CORDS = {
+	"colony-1": Color(0.95, 0.78, 0.28, 1.0), # Ochre yellow
+	"colony-2": Color(0.24, 0.55, 0.80, 1.0), # River blue
+	"default": Color(0.82, 0.76, 0.57, 1.0)
 }
 
 func _init() -> void:
@@ -148,41 +169,78 @@ func _setup_visuals() -> void:
 		_play_anim(AnimState.IDLE)
 
 func _setup_cargo_prop() -> void:
-	var cargo_bone_idx = skeleton.find_bone("Socket_Cargo")
+	# Loads ride on the head: the camera looks down from the south, so anything
+	# held at the chest vanishes behind the round body of anyone walking north.
+	var cargo_bone_idx = skeleton.find_bone("Socket_Head")
+	if cargo_bone_idx < 0:
+		cargo_bone_idx = skeleton.find_bone("Socket_Cargo")
 	if cargo_bone_idx >= 0:
 		bone_attachment_cargo = BoneAttachment3D.new()
 		bone_attachment_cargo.name = "CargoAttachment"
-		bone_attachment_cargo.bone_name = "Socket_Cargo"
+		bone_attachment_cargo.bone_name = skeleton.get_bone_name(cargo_bone_idx)
 		skeleton.add_child(bone_attachment_cargo)
 
-		var cargo_scene = load("res://assets/models/cargo.glb") as PackedScene
-		if cargo_scene:
-			cargo_prop = cargo_scene.instantiate()
-			cargo_prop.name = "CargoProp"
-			bone_attachment_cargo.add_child(cargo_prop)
-			cargo_prop.position = Vector3.ZERO
-			cargo_prop.rotation = Vector3.ZERO
-			cargo_prop.visible = false
+		# The load mesh follows what is carried (logs, stone, clay, berries, fish, meat).
+		cargo_prop = Node3D.new()
+		cargo_prop.name = "CargoProp"
+		bone_attachment_cargo.add_child(cargo_prop)
+		cargo_prop.visible = false
+		cargo_load = MeshInstance3D.new()
+		cargo_load.name = "Load"
+		# Seated on top of the head, a bit larger than life for the far camera.
+		var rest = skeleton.get_bone_global_rest(cargo_bone_idx)
+		cargo_load.basis = rest.basis.inverse().scaled(Vector3.ONE * 1.3)
+		cargo_load.position = (rest.basis.inverse() * Vector3.UP) * 0.12
+		cargo_prop.add_child(cargo_load)
+		_refresh_cargo_load()
 	else:
 		push_warning("[NetworkResident] Socket_Cargo bone not found in Skeleton3D")
+	var tool_bone_idx = skeleton.find_bone("Socket_Tool_R")
+	if tool_bone_idx >= 0:
+		var tool_attachment = BoneAttachment3D.new()
+		tool_attachment.name = "ToolAttachment"
+		tool_attachment.bone_name = "Socket_Tool_R"
+		skeleton.add_child(tool_attachment)
+		tool_prop = MeshInstance3D.new()
+		tool_prop.name = "Tool"
+		tool_prop.visible = false
+		tool_attachment.add_child(tool_prop)
+
+func _refresh_cargo_load() -> void:
+	var kind = carry_kind
+	if kind == "fruit" or kind == "":
+		kind = "food"
+	if not cargo_load or kind == cargo_load_kind:
+		return
+	cargo_load_kind = kind
+	cargo_load.mesh = PropFactory.carry_load(kind)
+
+## Visible work from EntityRegistry.work_for: pose, facing and tool.
+func set_work(w: Dictionary) -> void:
+	work = w
 
 func _apply_colony_color() -> void:
-	if not mesh_instance:
+	if not mesh_instance or colony_color_applied == colony_id:
 		return
+	colony_color_applied = colony_id
+	_tint_surface(0, COLONY_COLORS.get(colony_id, COLONY_COLORS["default"]))
+	if mesh_instance.mesh and mesh_instance.mesh.get_surface_count() > 2:
+		_tint_surface(2, COLONY_CORDS.get(colony_id, COLONY_CORDS["default"]))
 
-	var col = COLONY_COLORS.get(colony_id, COLONY_COLORS["default"])
-	var mat = mesh_instance.get_active_material(0)
+func _tint_surface(index: int, col: Color) -> void:
+	var mat = mesh_instance.mesh.surface_get_material(index)
 	if mat and mat is StandardMaterial3D:
 		var custom_mat = mat.duplicate() as StandardMaterial3D
 		custom_mat.albedo_color = col
-		mesh_instance.set_surface_override_material(0, custom_mat)
+		mesh_instance.set_surface_override_material(index, custom_mat)
 
 func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scale: float, sim_status: String = "playing", buildings: Array = [], entrances: Array = []) -> void:
 	ant_id = data.get("id", ant_id)
 	var new_colony = data.get("colonyId", colony_id)
 	if new_colony != colony_id:
 		colony_id = new_colony
-		_apply_colony_color()
+	# Also on the first update: the registry sets colony_id before spawning.
+	_apply_colony_color()
 
 	role = data.get("role", "worker")
 	job_name = data.get("job", "")
@@ -296,8 +354,9 @@ func _process(delta: float) -> void:
 	carrying_amount = sample_res["carrying_amount"]
 	carry_kind = sample_res.get("carry_kind", carry_kind)
 
-	# Face movement direction
-	if current_heading.length_squared() > 0.001:
+	# Face movement direction; while working the resident faces its target instead.
+	var working_here = not work.is_empty() and carrying_amount <= 0 and ground_speed < 0.05
+	if current_heading.length_squared() > 0.001 and not working_here:
 		rotation.y = atan2(current_heading.x, current_heading.z)
 
 	_update_movement_and_animation(ground_speed)
@@ -306,6 +365,11 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 	var is_carrying = (carrying_amount > 0)
 	if cargo_prop:
 		cargo_prop.visible = is_carrying
+		if is_carrying:
+			_refresh_cargo_load()
+	var working = not is_carrying and not work.is_empty() and ground_speed < 0.05
+	_update_tool(working)
+	_update_chips(working and not is_sim_paused and not is_network_stalled)
 
 	if is_sim_paused or is_network_stalled:
 		# FREEZE the active animation clip in place without changing animation state.
@@ -316,7 +380,14 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 		return
 
 	var target_state = AnimState.IDLE
-	if ground_speed < 0.05:
+	if working:
+		target_state = AnimState.WORK_GATHER if work.kind != "fish" else AnimState.IDLE
+		# Face the tree, rock, pit, site or fishing spot being worked.
+		var to = work.target - Vector3(position.x, 0.0, position.z)
+		to.y = 0.0
+		if to.length_squared() > 0.0004:
+			rotation.y = lerp_angle(rotation.y, atan2(to.x, to.z), 0.35)
+	elif ground_speed < 0.05:
 		target_state = AnimState.CARRY_IDLE if is_carrying else AnimState.IDLE
 	else:
 		target_state = AnimState.CARRY_WALK if is_carrying else AnimState.WALK
@@ -335,6 +406,57 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 			# while positional translation remains 100% faithful and unhampered.
 			anim_player.speed_scale = clampf(stride_rate, 0.2, 8.0)
 
+## Little bits flying from the worked spot: wood chips, rock grit, clay, dust.
+func _update_chips(working: bool) -> void:
+	var kind = str(work.get("kind", "")) if working else ""
+	if kind == "fish" or kind == "gather":
+		kind = ""
+	if kind == "":
+		if chips:
+			chips.emitting = false
+		return
+	if not chips:
+		chips = CPUParticles3D.new()
+		chips.name = "WorkChips"
+		chips.top_level = true
+		chips.amount = 10
+		chips.lifetime = 0.7
+		chips.explosiveness = 0.15
+		chips.direction = Vector3(0, 1, 0)
+		chips.spread = 55.0
+		chips.initial_velocity_min = 1.4
+		chips.initial_velocity_max = 2.6
+		chips.gravity = Vector3(0, -7.0, 0)
+		chips.scale_amount_min = 0.5
+		chips.scale_amount_max = 1.0
+		var quad = BoxMesh.new()
+		quad.size = Vector3(0.07, 0.05, 0.06)
+		chips.mesh = quad
+		var mat = StandardMaterial3D.new()
+		mat.vertex_color_use_as_albedo = true
+		mat.vertex_color_is_srgb = true
+		mat.roughness = 0.9
+		chips.material_override = mat
+		add_child(chips)
+	if kind != chips_kind:
+		chips_kind = kind
+		chips.color = CHIP_COLORS.get(kind, Color.WHITE)
+	var target: Vector3 = work.target
+	var height = 0.9 if kind == "chop" else 0.35
+	chips.global_position = Vector3(target.x, SurfaceTerrain.height_at(target.x, target.z) + height, target.z).lerp(Vector3(position.x, position.y + height, position.z), 0.35)
+	chips.emitting = true
+
+func _update_tool(working: bool) -> void:
+	if not tool_prop:
+		return
+	var kind = str(work.get("kind", "")) if working else ""
+	if kind == "dig" or kind == "gather":
+		kind = ""  # Clay, sticks and pebbles are taken with bare hands.
+	if kind != tool_kind:
+		tool_kind = kind
+		tool_prop.mesh = PropFactory.tool(kind) if kind != "" else null
+	tool_prop.visible = kind != ""
+
 func _play_anim(new_state: AnimState) -> void:
 	current_anim_state = new_state
 	if not anim_player:
@@ -346,10 +468,12 @@ func _play_anim(new_state: AnimState) -> void:
 			clip_name = "idle"
 		AnimState.WALK:
 			clip_name = "walk"
+		# Loads ride on the head, so carriers keep the free-arm clips; the
+		# chest-hold carry clips would show hands clutching nothing.
 		AnimState.CARRY_IDLE:
-			clip_name = "carry_idle"
+			clip_name = "idle"
 		AnimState.CARRY_WALK:
-			clip_name = "carry_walk"
+			clip_name = "walk"
 		AnimState.WORK_GATHER:
 			clip_name = "work_gather"
 

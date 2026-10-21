@@ -389,6 +389,7 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		world_view.apply_terrain()
 	entity_registry.update_from_snapshot(snapshot)
 	world_view.update_world_entities(snapshot)
+	world_view.set_worked_targets(entity_registry.worked_targets)
 	if start_menu:
 		start_menu.set_saves(snapshot.get("saves", []))
 

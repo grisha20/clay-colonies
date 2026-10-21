@@ -153,8 +153,12 @@ func _run_integration_test() -> void:
 			if not is_instance_valid(res.cargo_prop) or not res.cargo_prop.visible:
 				_fail("Resident '%s' has cargo but cargo_prop is not visible" % aid)
 				return
-			if not is_instance_valid(res.bone_attachment_cargo) or res.bone_attachment_cargo.bone_name != "Socket_Cargo":
-				_fail("Resident '%s' cargo is not attached to Socket_Cargo" % aid)
+			# Loads ride on the head (readable from the top-down camera), see docs/godot/RESIDENTS_AT_WORK.md.
+			if not is_instance_valid(res.bone_attachment_cargo) or res.bone_attachment_cargo.bone_name != "Socket_Head":
+				_fail("Resident '%s' cargo is not attached to Socket_Head" % aid)
+				return
+			if res.cargo_load.global_position.y < res.global_position.y + 1.4:
+				_fail("Resident '%s' cargo does not sit on the head (y=%.2f)" % [aid, res.cargo_load.global_position.y - res.global_position.y])
 				return
 
 	if col1_count == 0 or col2_count == 0:

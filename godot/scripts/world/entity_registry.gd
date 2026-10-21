@@ -13,6 +13,9 @@ var residents: Dictionary = {} # ant_id: String -> NetworkResident
 var last_snapshot_tick: int = -1
 var last_snapshot_timestamp: float = 0.0
 var current_sim_speed: float = 1.0
+## Resource/building ids someone is working on this snapshot -> work kind
+## ("chop", "mine", "dig", "build"). WorldView shakes them and throws chips.
+var worked_targets: Dictionary = {}
 
 # Parent node holding resident instances (defaults to self)
 var residents_container: Node3D = null
@@ -56,6 +59,8 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 	last_snapshot_timestamp = now
 	last_snapshot_tick = tick
 
+	var index = build_work_index(snapshot)
+	worked_targets = {}
 	var seen_ids: Dictionary = {}
 	var col1_count = 0
 	var col2_count = 0
@@ -87,6 +92,10 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 			ant_data["tick"] = tick
 
 		resident.update_from_ant_data(ant_data, packet_dt, current_sim_speed, sim_status, buildings, entrances)
+		var work = work_for(ant_data, index)
+		resident.set_work(work)
+		if not work.is_empty() and work.has("target_id"):
+			worked_targets[work.target_id] = work.kind
 
 	# Despawn entities that died, went underground, or left
 	var to_remove: Array[String] = []
@@ -141,3 +150,77 @@ func get_resident(ant_id: String) -> NetworkResident:
 
 func get_resident_count() -> int:
 	return residents.size()
+
+
+## Lookup tables for work detection, built once per snapshot.
+static func build_work_index(snapshot: Dictionary) -> Dictionary:
+	var nodes: Dictionary = {}
+	var sites: Dictionary = {}
+	var alarms: Dictionary = {}
+	var surface = snapshot.get("surface", {})
+	if typeof(surface) == TYPE_DICTIONARY:
+		for n in surface.get("resourceNodes", []):
+			if typeof(n) == TYPE_DICTIONARY:
+				nodes[str(n.get("id", ""))] = n
+		for b in surface.get("buildings", []):
+			if typeof(b) == TYPE_DICTIONARY:
+				sites[str(b.get("id", ""))] = b
+	for c in snapshot.get("colonies", []):
+		if typeof(c) == TYPE_DICTIONARY and typeof(c.get("colony")) == TYPE_DICTIONARY:
+			alarms[str(c.get("id", ""))] = bool(c.colony.get("alarm", false))
+	var weather = snapshot.get("weather", {})
+	var clear = typeof(weather) != TYPE_DICTIONARY or str(weather.get("state", "clear")) == "clear"
+	return {"nodes": nodes, "sites": sites, "alarms": alarms, "clear": clear}
+
+static func _pos2(d: Variant) -> Vector2:
+	if typeof(d) != TYPE_DICTIONARY:
+		return Vector2.INF
+	return Vector2(float(d.get("x", 0.0)), float(d.get("y", 0.0)))
+
+## What a resident is visibly doing right now, mirroring the 2D client's
+## canWork (client/src/render/surface/motion.ts) plus fishing:
+## {kind: "chop"|"mine"|"dig"|"gather"|"build"|"fish", target: Vector3, target_id?} or {}.
+static func work_for(ant: Dictionary, index: Dictionary) -> Dictionary:
+	if float(ant.get("carrying", 0)) > 0.0 or ant.get("capturedBy") != null:
+		return {}
+	if not bool(index.get("clear", true)) or float(ant.get("waterExposure", 0.0)) > 0.0:
+		return {}
+	if bool(index.alarms.get(str(ant.get("colonyId", "")), false)):
+		return {}
+	var pos = _pos2(ant.get("pos"))
+	var state = str(ant.get("state", ""))
+	match str(ant.get("job", "")):
+		"harvest":
+			var node = index.nodes.get(str(ant.get("harvestNodeId", "")))
+			if node == null or float(node.get("amount", 0.0)) <= 0.0 or state != "idle" or float(ant.get("harvestHits", 0)) <= 0.0:
+				return {}
+			var np = _pos2(node.get("pos"))
+			if pos.distance_to(np) > 1.6:
+				return {}
+			# Tools follow resourceNodeTool (shared/types.ts): axe for trees, pick for
+			# rock; sticks, pebbles and clay are gathered by hand.
+			var kind = "gather"
+			match str(node.get("kind", "")):
+				"tree":
+					kind = "chop"
+				"stone":
+					kind = "mine"
+				"clay":
+					kind = "dig"
+			# Quarry work sites are drawn by their deposit: shake that instead.
+			var target_id = str(node.get("depositId", "")) if str(node.get("depositId", "")) != "" else str(node.get("id", ""))
+			return {"kind": kind, "target": Vector3(np.x, 0.0, np.y), "target_id": target_id}
+		"build":
+			var site = index.sites.get(str(ant.get("buildTargetId", "")))
+			if site == null or str(site.get("stage", "")) != "inProgress" or state != "idle":
+				return {}
+			var sp = _pos2(site.get("pos"))
+			if pos.distance_to(sp) > 2.6:
+				return {}
+			return {"kind": "build", "target": Vector3(sp.x, 0.0, sp.y), "target_id": str(site.get("id", ""))}
+		"fish":
+			var lure = _pos2(ant.get("fishingLurePos"))
+			if lure == Vector2.INF or int(ant.get("fishingTicks", 0)) <= 0:
+				return {}
+			return {"kind": "fish", "target": Vector3(lure.x, 0.0, lure.y)}
+	return {}

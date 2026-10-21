@@ -69,6 +69,8 @@ var anim_time: float = 0.0
 var sim_speed: float = 1.0
 var _source_cache: Dictionary = {}
 var _prewarm: Array[Callable] = []
+## Targets residents are working on (EntityRegistry.worked_targets): trees shake.
+var worked_targets: Dictionary = {}
 var _trail_updates: int = 0
 
 func _ready() -> void:
@@ -843,6 +845,16 @@ func _update_trails(ants: Array) -> void:
 	if _trail_updates % 3 == 0:
 		trail_map.upload()
 
+func set_worked_targets(targets: Dictionary) -> void:
+	# Release trees that are no longer being chopped.
+	for id in worked_targets.keys():
+		if not targets.has(id):
+			var tree = active_world_nodes.get(id) as Node3D
+			if is_instance_valid(tree):
+				tree.rotation.x = 0.0
+				tree.rotation.z = 0.0
+	worked_targets = targets.duplicate()
+
 ## Cheap box test around both authored lakes before the exact polygon test.
 func _near_lake(x: float, y: float) -> bool:
 	for lake in SurfaceTerrain.get_lakes():
@@ -896,6 +908,15 @@ func _animate_world(delta: float) -> void:
 		mi.set_meta("shown_yaw", yaw)
 		mi.position = _ground(shown)
 		mi.rotation.y = yaw
+	# Trees being chopped shudder at each blow; base stays planted (mesh origin is the root).
+	for id in worked_targets.keys():
+		if worked_targets[id] != "chop":
+			continue
+		var tree = active_world_nodes.get(id) as Node3D
+		if is_instance_valid(tree):
+			var hit = pow(maxf(0.0, sin(anim_time * 7.0 + float(id.hash() % 7))), 6.0)
+			tree.rotation.x = hit * 0.05
+			tree.rotation.z = hit * 0.03
 	for idx in active_campfires.keys():
 		var camp = active_campfires[idx]
 		if not is_instance_valid(camp):
