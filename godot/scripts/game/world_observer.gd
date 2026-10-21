@@ -22,6 +22,7 @@ var clear_selection_button: Button
 var start_menu: StartMenu
 var hud: GameHud
 var build: BuildController
+var priority_panel: PriorityPanel
 var population_counts: Array[int] = [0, 0]
 var player_colony: int = 0
 
@@ -245,6 +246,14 @@ func _setup_hud() -> void:
 	hud.speed_requested.connect(func(v): ws_client.send_command({"type": "setSpeed", "value": v}))
 	hud.alarm_requested.connect(func(on): ws_client.send_command({"type": "setAlarm", "colony": player_colony, "value": on}))
 
+	priority_panel = PriorityPanel.new()
+	canvas.add_child(priority_panel)
+	priority_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	priority_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	priority_panel.offset_left = 16
+	priority_panel.offset_bottom = -140
+	priority_panel.priorities_requested.connect(func(pr): ws_client.send_command({"type": "setPriorities", "colony": player_colony, "priorities": pr}))
+
 	build = BuildController.new()
 	build.name = "BuildController"
 	add_child(build)
@@ -434,6 +443,8 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		var session_d = snapshot.get("session", {})
 		player_colony = clampi(int(session_d.get("playerColonyIndex", 0)) if typeof(session_d) == TYPE_DICTIONARY else 0, 0, 1)
 		hud.update_from_snapshot(snapshot, population_counts[player_colony])
+	if priority_panel:
+		priority_panel.update_from_snapshot(snapshot, player_colony)
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})
@@ -549,6 +560,16 @@ func _on_resident_despawned(id: String) -> void:
 		select_resident(null)
 		world_view.focused_target = null
 
+## Named residents, deterministic by id (client/src/main.ts antName): a match
+## is remembered by its "Brave Little One".
+const FIRST_NAMES = ["Комок", "Малой", "Глинко", "Круглый", "Шмяк", "Лепень", "Тюха", "Крепыш", "Юркий", "Пузырь"]
+const TRAITS = ["Храбрый", "Кривой", "Сонный", "Шустрый", "Упрямый", "Тихий", "Весёлый", "Ворчливый"]
+
+static func resident_name(id: String) -> String:
+	var tail = id.replace("ant-", "")
+	var numeric = int(tail) if tail.is_valid_int() else 0
+	return "%s %s" % [TRAITS[int(numeric / FIRST_NAMES.size()) % TRAITS.size()], FIRST_NAMES[numeric % FIRST_NAMES.size()]]
+
 func _update_inspector() -> void:
 	if not inspector_label:
 		return
@@ -566,7 +587,7 @@ func _update_inspector() -> void:
 	if target.carrying_amount > 0:
 		cargo = "%s (%d)" % [resources.get(target.carry_kind, target.carry_kind if not target.carry_kind.is_empty() else "ресурс не указан"), target.carrying_amount]
 	var tribe = "A" if target.colony_id in ["colony-1", "0"] else "B"
-	inspector_label.text = "Житель %s · Племя %s\nРоль: %s\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
-		target.ant_id, tribe, "рабочий" if target.role == "worker" else target.role,
+	inspector_label.text = "%s · племя %s (%s)\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
+		resident_name(target.ant_id), tribe, target.ant_id,
 		tasks.get(target.job_name, target.job_name if not target.job_name.is_empty() else "нет"),
 		cargo, target.position.x, target.position.z]

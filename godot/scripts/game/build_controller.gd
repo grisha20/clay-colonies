@@ -15,6 +15,7 @@ const TOOLS = [
 	["hut", "Хижина", "1"], ["storage", "Склад", "2"], ["workshop", "Мастерская", "3"], ["idol", "Идол", "4"],
 	["wall", "Ограда", "5"], ["gate", "Ворота", "6"],
 	["harvest", "Зона добычи", "7"], ["forbid", "Запрет", "8"], ["erase", "Ластик", "9"],
+	["post", "Пост обороны", "0"],
 ]
 const HINTS = {
 	"hut": "Хижина: +4 к пределу жителей",
@@ -26,6 +27,7 @@ const HINTS = {
 	"harvest": "Зона добычи: жители добывают только здесь · тяните прямоугольник",
 	"forbid": "Запрет: жители сюда не ходят · тяните прямоугольник",
 	"erase": "Ластик: снимает зоны и недостроенную ограду",
+	"post": "Пост обороны: стража ждёт здесь, у ворот или у берега",
 }
 const OK_COLOR := Color(0.35, 0.85, 0.4, 0.45)
 const BAD_COLOR := Color(0.95, 0.25, 0.2, 0.5)
@@ -158,7 +160,7 @@ func set_tool(t: String) -> void:
 	if ghost_building:
 		ghost_building.queue_free()
 		ghost_building = null
-	if t in ["hut", "storage", "workshop", "idol", "gate"]:
+	if t in ["hut", "storage", "workshop", "idol", "gate", "post"]:
 		ghost_building = _make_ghost(t)
 		ghost_root.add_child(ghost_building)
 	_hide_ghosts()
@@ -185,6 +187,9 @@ func _make_ghost(t: String) -> Node3D:
 		"idol":
 			node = MeshInstance3D.new()
 			node.mesh = PropFactory.idol()
+		"post":
+			node = MeshInstance3D.new()
+			node.mesh = PropFactory.post_pole()
 		_:
 			node = MeshInstance3D.new()
 			node.mesh = PropFactory.gate(float(BuildRules.GATE_SPAN) * BuildRules.WALL_CELL_SIZE, false)
@@ -242,6 +247,12 @@ func update_preview(p: Vector2) -> void:
 			ghost_ring.scale = Vector3(float(f.rx), 1.0, float(f.ry))
 			ghost_ring.material_override = _overlay_ok if last_reason == "" else _overlay_bad
 			_hint(last_reason, tool)
+		"post":
+			last_reason = BuildRules.post_placement(surface, owner, p)
+			ghost_building.visible = true
+			ghost_building.position = _ground(p)
+			_set_ghost_tint(ghost_building, last_reason == "")
+			hud.show_tooltip(HINTS.post if last_reason == "" else "Пост обороны: " + last_reason, observer.get_viewport().get_mouse_position())
 		"gate":
 			last_reason = BuildRules.gate_placement(surface, owner, p, gate_axis)
 			var snapped = BuildRules.snap_fence_position(p)
@@ -358,7 +369,7 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 	var p: Vector2 = ground_point.call(event.position)
 	if p == Vector2.INF:
 		return true
-	if tool in ["hut", "storage", "workshop", "idol", "gate"]:
+	if tool in ["hut", "storage", "workshop", "idol", "gate", "post"]:
 		if event.pressed:
 			_place_point(p, event.shift_pressed)
 		return true
@@ -373,6 +384,12 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 func _place_point(p: Vector2, keep_tool: bool) -> void:
 	var surface = _surface()
 	var colony = int(observer.player_colony)
+	if tool == "post":
+		if BuildRules.post_placement(surface, _owner(), p) != "":
+			return
+		ws_client.send_command({"type": "setDefensePost", "x": p.x, "y": p.y, "colony": colony})
+		set_tool("")
+		return
 	if tool == "gate":
 		if BuildRules.gate_placement(surface, _owner(), p, gate_axis) != "":
 			return

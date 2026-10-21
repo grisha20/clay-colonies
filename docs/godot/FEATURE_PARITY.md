@@ -47,3 +47,5 @@
 | | Стартовое меню и сохранения | Кнопка «Новая игра» | `start_menu.gd`, `saveGame`/`loadGame`/`newGame` | test_start_menu.gd | implemented | Автосохранение перед новой игрой |
 | | День и ночь | `nightLighting.ts`, `lighting.ts` | `atmosphere.gd`: перенос dayCycle, лунный свет, костры шире, свет хижин | test_atmosphere + live capture_daynight | implemented | Без луны и звёзд |
 | | Дождь | `particles.ts`, `weather` | Струи вокруг камеры, мокрая земля, лужи, круги, рябь озёр, ветер, дымка | test_atmosphere + GPU-кадры | implemented | Жители не мокнут визуально |
+| | Приоритеты работ | Панель `#prio-rows`, `setPriorities` | `priority_panel.gd`: цели, факт, инструменты, причины | test_priority_panel + live test_build_tools | implemented | — |
+| | Пост обороны | Инструмент «пост», `setDefensePost` | Флажок в цвете племени, инструмент 0 | live test_build_tools | implemented | — |

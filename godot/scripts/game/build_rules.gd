@@ -189,3 +189,27 @@ static func cost_text(kind: String) -> String:
 		if int(c.get(res[0], 0)) > 0:
 			parts.append("%d %s" % [int(c[res[0]]), res[1]])
 	return ", ".join(parts)
+
+
+## setDefensePost is accepted where server/src/sim/building.ts isSurfaceBlockedAt
+## is false: inside the map, not water or rock, not a wall or foreign gate cell,
+## not a hearth, not inside a built footprint.
+static func post_placement(surface: Dictionary, owner: String, pos: Vector2) -> String:
+	if pos.x < 0 or pos.y < 0 or pos.x >= float(surface.get("width", 480)) or pos.y >= float(surface.get("height", 480)):
+		return "За границей карты"
+	if SurfaceTerrain.is_water_at(pos.x, pos.y):
+		return "Пост нужен на сухом берегу или у ворот"
+	if SurfaceTerrain.is_mountain_at(pos.x, pos.y):
+		return "Основание упирается в скалы"
+	for e in surface.get("entrances", []):
+		var ep = _pos(e)
+		if pow((pos.x - ep.x) / BuildingGeometry.HEARTH_RADIUS_X, 2) + pow((pos.y - ep.y) / BuildingGeometry.HEARTH_RADIUS_Y, 2) < 1.0:
+			return "Слишком близко к костру"
+	for b in surface.get("buildings", []):
+		var t = str(b.get("type", ""))
+		if str(b.get("stage", "")) == "built" and (t == "wall" or (t == "gate" and str(b.get("colonyId", "")) != owner)) and fence_contains(b, pos):
+			return "Место занято оградой"
+		var f = BuildingGeometry.get_building_footprint(b)
+		if not f.is_empty() and BuildingGeometry.inside_footprint(pos.x, pos.y, f):
+			return "Внутри постройки"
+	return ""

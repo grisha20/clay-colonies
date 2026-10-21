@@ -58,6 +58,8 @@ var water_material: ShaderMaterial
 var water_container: Node3D
 var atmosphere: Atmosphere
 var hut_lights: Array = []
+var defense_posts: Array = [null, null]
+const POST_COLORS = [Color(0.95, 0.78, 0.28), Color(0.24, 0.55, 0.80)]
 var mountain_container: Node3D
 var trail_map: TrailMap
 
@@ -358,6 +360,7 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	if typeof(session) == TYPE_DICTIONARY:
 		sim_speed = float(session.get("speed", 1.0))
 	_update_colony_fire(snapshot.get("colonies", []))
+	_update_defense_posts(snapshot.get("colonies", []))
 
 	var entrances = _as_array(surface.get("entrances", []))
 	var buildings = _as_array(surface.get("buildings", []))
@@ -576,6 +579,34 @@ func _update_moving(id: String, node_name: String, pos: Vector3, heading: Varian
 	mi.position = _ground(mi.get_meta("shown_pos", pos))
 	mi.rotation = Vector3(0.0, mi.get_meta("shown_yaw", target_yaw), 0.0)
 	mi.set_meta("moving", true)
+
+## Banner at each tribe's defence post (colony.defensePost), where guards gather.
+func _update_defense_posts(colonies: Variant) -> void:
+	if typeof(colonies) != TYPE_ARRAY:
+		return
+	for i in range(2):
+		var post = null
+		if i < colonies.size() and typeof(colonies[i]) == TYPE_DICTIONARY and typeof(colonies[i].get("colony")) == TYPE_DICTIONARY:
+			post = colonies[i].colony.get("defensePost")
+		var node: Node3D = defense_posts[i]
+		if typeof(post) != TYPE_DICTIONARY:
+			if node:
+				node.visible = false
+			continue
+		if node == null:
+			var mi = MeshInstance3D.new()
+			mi.name = "DefensePost_%d" % (i + 1)
+			mi.mesh = PropFactory.post_pole()
+			var cloth = MeshInstance3D.new()
+			cloth.name = "Cloth"
+			cloth.mesh = PropFactory.post_cloth(POST_COLORS[i])
+			cloth.position = Vector3(0.05, 2.85, 0)
+			mi.add_child(cloth)
+			buildings_container.add_child(mi)
+			defense_posts[i] = mi
+			node = mi
+		node.visible = true
+		node.position = _ground(_pos3(post))
 
 func _update_colony_fire(colonies: Variant) -> void:
 	if typeof(colonies) != TYPE_ARRAY:
@@ -897,6 +928,10 @@ func describe_at(p: Vector2) -> String:
 		if typeof(e) == TYPE_DICTIONARY and _pos3(e.get("pos")).distance_to(Vector3(p.x, 0, p.y)) < 2.2:
 			var n = {"spider": "Паук", "beetle": "Жук", "lakeMonster": "Озёрный монстр"}.get(str(e.get("type", "")), "Зверь")
 			return "%s · здоровье %d / %d" % [n, int(float(e.get("hp", 0))), int(float(e.get("maxHp", 0)))]
+	for i in range(2):
+		var post = defense_posts[i] as Node3D
+		if post and post.visible and Vector2(post.position.x, post.position.z).distance_to(p) < 1.5:
+			return "Пост обороны %s · сюда сбегается стража" % ("племени A" if i == 0 else "племени B")
 	var entrances = _as_array(surface.get("entrances", []))
 	for i in range(entrances.size()):
 		if Vector2(_pos3(entrances[i]).x, _pos3(entrances[i]).z).distance_to(p) < 3.0:
@@ -1041,6 +1076,12 @@ func _animate_world(delta: float) -> void:
 			var hit = pow(maxf(0.0, sin(anim_time * 7.0 + float(id.hash() % 7))), 6.0)
 			tree.rotation.x = hit * 0.05
 			tree.rotation.z = hit * 0.03
+	for i in range(2):
+		var post = defense_posts[i] as Node3D
+		if post and post.visible:
+			var cloth = post.get_node("Cloth") as Node3D
+			cloth.rotation.y = sin(anim_time * 2.2 + i) * 0.25
+			cloth.rotation.x = sin(anim_time * 3.1 + i * 2.0) * 0.06
 	for idx in active_campfires.keys():
 		var camp = active_campfires[idx]
 		if not is_instance_valid(camp):

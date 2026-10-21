@@ -165,6 +165,34 @@ func run() -> void:
 	mouse(gspot, MOUSE_BUTTON_LEFT, true)
 	check("gate_placed", await wait_until(func(): return own("gate").size() == gates_before + 1 and str(own("gate")[-1].get("gateAxis", "")) == "vertical", 5.0))
 
+	# Defence post: the banner tool moves colony.defensePost to the click.
+	var post_spot = camp + Vector2(-24, -10)
+	if BuildRules.post_placement(scene.world_view.last_snapshot.surface, "colony-1", post_spot) != "":
+		post_spot = camp + Vector2(-26, 8)
+	var key0 = InputEventKey.new()
+	key0.keycode = KEY_0
+	key0.pressed = true
+	scene._unhandled_input(key0)
+	check("hotkey_selects_post", scene.build.tool == "post")
+	await hover(post_spot)
+	await shot("build_07_post")
+	mouse(post_spot, MOUSE_BUTTON_LEFT, true)
+	var post_at = func():
+		var dp = scene.world_view.last_snapshot.colonies[0].colony.get("defensePost")
+		return typeof(dp) == TYPE_DICTIONARY and Vector2(float(dp.x), float(dp.y)).distance_to(post_spot) < 0.5
+	check("defense_post_moved", await wait_until(post_at, 5.0))
+	check("post_banner_drawn", scene.world_view.defense_posts[0] != null and scene.world_view.defense_posts[0].visible)
+
+	# Work priorities: the panel buttons change colony.priorities on the server.
+	var prio_before = int(scene.world_view.last_snapshot.colonies[0].colony.priorities.get("guard", 0))
+	var next = scene.world_view.last_snapshot.colonies[0].colony.priorities.duplicate()
+	next["guard"] = prio_before + 1
+	scene.priority_panel.priorities_requested.emit(next)
+	var guard_now = func(): return int(scene.world_view.last_snapshot.colonies[0].colony.priorities.get("guard", 0)) == prio_before + 1
+	check("priority_reaches_server", await wait_until(guard_now, 5.0))
+	await frames(10)
+	await shot("build_08_priorities")
+
 	# Esc and right click leave the tool.
 	scene.build.set_tool("gate")
 	var esc = InputEventKey.new()

@@ -678,6 +678,29 @@ static func carry_load(kind: String) -> ArrayMesh:
 		return b.commit())
 
 
+## Defence post: a stake with a cloth banner in the tribe colour and a ring of
+## stones; the cloth is a separate node so WorldView can make it flutter.
+static func post_pole() -> ArrayMesh:
+	return _cached("post_pole", func():
+		var b = Builder.new()
+		for k in range(7):
+			var a = TAU * float(k) / 7.0
+			b.add(sphere(0.22, 0.26, 8, 4), xf(Vector3(cos(a) * 0.55, 0.06, sin(a) * 0.55)), STONE if k % 2 == 0 else STONE_DARK, MAT_MATTE, 0.06, k)
+		_stick(b, Vector3(0, 0, 0), Vector3(0, 3.0, 0), 0.08, WOOD)
+		b.add(cyl(0.0, 0.1, 0.25, 6), xf(Vector3(0, 3.12, 0)), WOOD_LIGHT, MAT_MATTE)
+		_stick(b, Vector3(0, 2.85, 0), Vector3(1.0, 2.85, 0), 0.04, WOOD_LIGHT)
+		return b.commit())
+
+
+static func post_cloth(color: Color) -> ArrayMesh:
+	return _cached("post_cloth:%s" % color.to_html(), func():
+		var b = Builder.new()
+		# Hangs from the cross bar (origin), along +X and down.
+		b.add(box(Vector3(0.95, 0.75, 0.04)), xf(Vector3(0.5, -0.4, 0)), color, MAT_MATTE, 0.02)
+		b.add(cyl(0.0, 0.12, 0.25, 4), xf(Vector3(0.5, -0.88, 0), Vector3(3.6, 1, 0.3), Vector3(PI, 0, 0)), color.darkened(0.1), MAT_MATTE)
+		return b.commit())
+
+
 ## Log seats around a hearth (purely decorative), laid outside the hearth ellipse.
 static func hearth_seats() -> ArrayMesh:
 	return _cached("hearth_seats", func():

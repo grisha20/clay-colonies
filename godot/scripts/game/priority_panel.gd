@@ -1,0 +1,199 @@
+class_name PriorityPanel
+extends PanelContainer
+
+## Work priorities of the controlled tribe (client/src/main.ts priority panel):
+## target workers per job (clay, wood, stone, build, guard, fish), who actually
+## does it now, free hands, people on food, tools, and why a target is unmet.
+## The server is the authority (colony.priorities); buttons emit setPriorities.
+
+signal priorities_requested(priorities: Dictionary)
+
+const KEYS = ["clay", "wood", "stone", "build", "guard", "fish"]
+const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка"}
+
+var header: Label
+var rows_box: VBoxContainer
+var priorities: Dictionary = {}
+var free_for_plus: int = 0
+var signature: String = ""
+
+
+func _ready() -> void:
+	name = "PriorityPanel"
+	add_theme_stylebox_override("panel", GameHud.panel_style())
+	theme = GameHud.ink_theme()
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_force_pass_scroll_events = false
+	custom_minimum_size = Vector2(300, 0)
+	var box = VBoxContainer.new()
+	add_child(box)
+	var title = Label.new()
+	title.text = "Работы"
+	title.add_theme_font_size_override("font_size", 22)
+	box.add_child(title)
+	header = Label.new()
+	header.add_theme_font_size_override("font_size", 14)
+	box.add_child(header)
+	rows_box = VBoxContainer.new()
+	rows_box.add_theme_constant_override("separation", 2)
+	box.add_child(rows_box)
+
+
+static func count_jobs(snapshot: Dictionary, colony_id: String) -> Dictionary:
+	var counts = {"clay": 0, "wood": 0, "stone": 0, "build": 0, "guard": 0, "fish": 0, "food": 0}
+	var nodes: Dictionary = {}
+	var surface = snapshot.get("surface", {})
+	if typeof(surface) == TYPE_DICTIONARY:
+		for n in surface.get("resourceNodes", []):
+			nodes[str(n.get("id", ""))] = str(n.get("kind", ""))
+	for ant in snapshot.get("ants", []):
+		if typeof(ant) != TYPE_DICTIONARY or str(ant.get("colonyId", "")) != colony_id:
+			continue
+		match str(ant.get("job", "")):
+			"build":
+				counts.build += 1
+			"guard":
+				counts.guard += 1
+			"fish":
+				counts.fish += 1
+			"harvest":
+				var kind = str(ant.get("carryKind", ""))
+				if not kind in ["clay", "wood", "stone"]:
+					kind = node_yield(str(nodes.get(str(ant.get("harvestNodeId", "")), "")))
+				if kind in ["clay", "wood", "stone"]:
+					counts[kind] += 1
+			_:
+				counts.food += 1
+	return counts
+
+
+## shared/types.ts resourceNodeYield.
+static func node_yield(kind: String) -> String:
+	if kind == "tree" or kind == "stick":
+		return "wood"
+	if kind == "stone" or kind == "loose-stone":
+		return "stone"
+	if kind == "clay":
+		return "clay"
+	return ""
+
+
+func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
+	var colonies = snapshot.get("colonies", [])
+	if typeof(colonies) != TYPE_ARRAY or player >= colonies.size():
+		return
+	var colony: Dictionary = colonies[player].get("colony", {})
+	var colony_id = "colony-2" if player == 1 else "colony-1"
+	priorities = colony.get("priorities", {}).duplicate()
+	for k in KEYS:
+		priorities[k] = int(priorities.get(k, 0))
+	var counts = count_jobs(snapshot, colony_id)
+	var population = 0
+	var scouts = 0
+	for ant in snapshot.get("ants", []):
+		if typeof(ant) == TYPE_DICTIONARY and str(ant.get("colonyId", "")) == colony_id:
+			population += 1
+			if str(ant.get("forageRole", "")) == "scout":
+				scouts += 1
+	var assigned = 0
+	for k in KEYS:
+		assigned += int(priorities[k])
+	free_for_plus = maxi(0, population - scouts - assigned)
+	var alive = {"clay": false, "wood": false, "stone": false, "fish": false}
+	var loose_stone = false
+	var surface = snapshot.get("surface", {})
+	for n in surface.get("resourceNodes", []):
+		if float(n.get("amount", 0.0)) > 0.0:
+			var y = node_yield(str(n.get("kind", "")))
+			if y != "":
+				alive[y] = true
+			if str(n.get("kind", "")) == "loose-stone":
+				loose_stone = true
+	for f in surface.get("fish", []):
+		if str(f.get("state", "")) != "respawning":
+			alive.fish = true
+	var food = float(colony.get("food", 0.0))
+	var alarm = bool(colony.get("alarm", false))
+	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0))}
+	var sig = JSON.stringify([priorities, counts, alive, free_for_plus, population, tools, food < 30.0, food < 15.0, alarm, loose_stone])
+	if sig == signature:
+		return
+	signature = sig
+	header.text = "Жителей %d · свободно %d · на еде %d" % [population, free_for_plus, int(counts.food)]
+	for c in rows_box.get_children():
+		c.queue_free()
+	for k in KEYS:
+		var target = int(priorities[k])
+		var row = HBoxContainer.new()
+		var label = Label.new()
+		label.text = LABELS[k]
+		label.custom_minimum_size = Vector2(80, 0)
+		row.add_child(label)
+		var minus = _button("−", target <= 0)
+		minus.pressed.connect(func(): _change(k, -1))
+		row.add_child(minus)
+		var value = Label.new()
+		value.text = str(target)
+		value.custom_minimum_size = Vector2(26, 0)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(value)
+		var plus = _button("+", free_for_plus <= 0)
+		plus.pressed.connect(func(): _change(k, 1))
+		row.add_child(plus)
+		var actual = Label.new()
+		actual.text = "  заняты: %d" % int(counts[k])
+		actual.add_theme_font_size_override("font_size", 14)
+		row.add_child(actual)
+		if tools.has(k):
+			var t = Label.new()
+			t.text = "  %s: %d" % [{"wood": "топоры", "stone": "кирки", "fish": "удочки"}[k], tools[k]]
+			t.add_theme_font_size_override("font_size", 13)
+			t.add_theme_color_override("font_color", GameHud.INK.lightened(0.3))
+			row.add_child(t)
+		rows_box.add_child(row)
+		var reason = unmet_reason(k, target, int(counts[k]), alive, alarm, population, food, tools, loose_stone)
+		if reason != "":
+			var r = Label.new()
+			r.text = "    " + reason
+			r.add_theme_font_size_override("font_size", 12)
+			r.add_theme_color_override("font_color", Color(0.56, 0.32, 0.18))
+			rows_box.add_child(r)
+
+
+## Why a job has fewer workers than asked (same order as the 2D panel).
+static func unmet_reason(k: String, target: int, count: int, alive: Dictionary, alarm: bool, population: int, food: float, tools: Dictionary, loose_stone: bool) -> String:
+	if target <= count:
+		return ""
+	var gather = k in ["clay", "wood", "stone"]
+	if alarm and k != "guard":
+		return "Тревога: рабочие у костра"
+	if (gather or k == "fish") and not bool(alive.get(k, true)):
+		return "Источник иссяк"
+	if gather and population < 8:
+		return "Для добычи нужно 8 жителей"
+	if gather and food < 30.0:
+		return "Добыча ждёт запаса 30 еды"
+	if k == "build" and food < 15.0:
+		return "Стройка ждёт запаса 15 еды"
+	if k == "fish" and int(tools.get("fish", 0)) < target:
+		return "Не хватает удочек"
+	if k == "stone" and int(tools.get("stone", 0)) == 0 and not loose_stone:
+		return "Нужна кирка из мастерской"
+	return "Нет фронта работ или свободных жителей" if k == "build" else "Ждёт свободного жителя или сдачи груза"
+
+
+func _button(text: String, disabled: bool) -> Button:
+	var b = Button.new()
+	b.text = text
+	b.disabled = disabled
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(28, 26)
+	return b
+
+
+func _change(k: String, delta: int) -> void:
+	if delta > 0 and free_for_plus <= 0:
+		return
+	var next = priorities.duplicate()
+	next[k] = maxi(0, int(next.get(k, 0)) + delta)
+	priorities_requested.emit(next)
