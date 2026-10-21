@@ -23,7 +23,9 @@ def main() -> int:
         print("Port 8788 is busy. Close the previous Godot preview and try again.")
         return 1
 
-    state_dir = REPO_ROOT / "tmp" / "qa" / "play"
+    # The original preview party used the authored flat map. Keep it intact;
+    # the normal launcher now starts/resumes a separate generated-world party.
+    state_dir = REPO_ROOT / "tmp" / "qa" / "play-random"
     state_dir.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env["CLAYFOLK_QA_ROOT"] = str(REPO_ROOT / "tmp" / "qa")
