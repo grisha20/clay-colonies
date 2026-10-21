@@ -1,4 +1,4 @@
-"""One-click Godot preview with a persistent, isolated QA party."""
+"""Launch the current Godot game and start menu with an isolated QA server."""
 
 import os
 from pathlib import Path
@@ -47,7 +47,8 @@ def main() -> int:
                 return 1
             print("Opening Clayfolk Godot. Close the game to save and stop the preview.")
             return subprocess.call(
-                [godot, "--path", str(REPO_ROOT / "godot"), "--", "--qa-port", str(port)],
+                [godot, "--path", str(REPO_ROOT / "godot"), "--",
+                 "--menu-address", f"ws://127.0.0.1:{port}"],
                 cwd=REPO_ROOT,
             )
         finally:
