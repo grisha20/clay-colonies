@@ -68,6 +68,9 @@ var colony_fire: Array[float] = [1.0, 1.0]
 var anim_time: float = 0.0
 var sim_speed: float = 1.0
 var _source_cache: Dictionary = {}
+## Latest snapshot, read by describe_at for hover tooltips.
+var last_snapshot: Dictionary = {}
+const BUILDING_NAMES = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "wall": "Ограда", "gate": "Ворота"}
 var _prewarm: Array[Callable] = []
 ## Targets residents are working on (EntityRegistry.worked_targets): trees shake.
 var worked_targets: Dictionary = {}
@@ -334,6 +337,7 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	var surface = snapshot.get("surface", {})
 	if typeof(surface) != TYPE_DICTIONARY:
 		return
+	last_snapshot = snapshot
 	_update_colony_focus_points(surface.get("entrances", []))
 	var session = snapshot.get("session", {})
 	if typeof(session) == TYPE_DICTIONARY:
@@ -854,6 +858,91 @@ func set_worked_targets(targets: Dictionary) -> void:
 				tree.rotation.x = 0.0
 				tree.rotation.z = 0.0
 	worked_targets = targets.duplicate()
+
+## Hover text for the object at a world point (x, z), or "" for open ground.
+func describe_at(p: Vector2) -> String:
+	var surface = last_snapshot.get("surface", {})
+	if typeof(surface) != TYPE_DICTIONARY:
+		return ""
+	var tribe = func(colony_id: String) -> String: return "племени A" if colony_id == "colony-1" else "племени B"
+	for e in _as_array(last_snapshot.get("enemies", [])):
+		if typeof(e) == TYPE_DICTIONARY and _pos3(e.get("pos")).distance_to(Vector3(p.x, 0, p.y)) < 2.2:
+			var n = {"spider": "Паук", "beetle": "Жук", "lakeMonster": "Озёрный монстр"}.get(str(e.get("type", "")), "Зверь")
+			return "%s · здоровье %d / %d" % [n, int(float(e.get("hp", 0))), int(float(e.get("maxHp", 0)))]
+	var entrances = _as_array(surface.get("entrances", []))
+	for i in range(entrances.size()):
+		if Vector2(_pos3(entrances[i]).x, _pos3(entrances[i]).z).distance_to(p) < 3.0:
+			return "Костёр %s · огонь %d%%" % ["племени A" if i == 0 else "племени B", int(colony_fire[mini(i, 1)] * 100.0)]
+	for b in _as_array(surface.get("buildings", [])):
+		if typeof(b) != TYPE_DICTIONARY:
+			continue
+		var bp = _pos3(b.get("pos"))
+		var reach = 1.4 if str(b.get("type", "")) in ["wall", "gate"] else 4.0
+		if Vector2(bp.x, bp.z + 0.5).distance_to(p) < reach:
+			var text = "%s %s" % [BUILDING_NAMES.get(str(b.get("type", "")), "Постройка"), tribe.call(str(b.get("colonyId", "")))]
+			if str(b.get("stage", "built")) != "built":
+				text += " · строится %d%%" % int(clampf(float(b.get("progress", 0.0)), 0.0, 1.0) * 100.0)
+			elif float(b.get("maxHp", 0)) > 0:
+				text += " · прочность %d / %d" % [int(float(b.get("hp", 0))), int(float(b.get("maxHp", 0)))]
+			return text
+	var remaining: Dictionary = {}
+	var best_text = ""
+	var best_d = 2.0
+	for n in _as_array(surface.get("resourceNodes", [])):
+		if typeof(n) != TYPE_DICTIONARY:
+			continue
+		var dep = str(n.get("depositId", ""))
+		if dep != "":
+			remaining[dep] = float(remaining.get(dep, 0.0)) + maxf(0.0, float(n.get("amount", 0.0)))
+			continue
+		var amount = float(n.get("amount", 0.0))
+		if amount <= 0.0:
+			continue
+		var np = _pos3(n.get("pos"))
+		var d = Vector2(np.x, np.z).distance_to(p)
+		if d >= best_d:
+			continue
+		best_d = d
+		match str(n.get("kind", "")):
+			"tree":
+				best_text = "Росток · ещё растёт" if str(n.get("growth", "")) == "sapling" else "Дерево · %d дерева · нужен топор" % int(ceil(amount))
+			"stick":
+				best_text = "Хворост · %d дерева · руками" % int(ceil(amount))
+			"stone":
+				best_text = "Скала · %d камня · нужна кирка" % int(ceil(amount))
+			"loose-stone":
+				best_text = "Камешки · %d камня · руками" % int(ceil(amount))
+			_:
+				best_text = "Глина · %d · руками" % int(ceil(amount))
+	for f in _as_array(surface.get("foodSources", [])):
+		if typeof(f) != TYPE_DICTIONARY:
+			continue
+		var fp = _pos3(f.get("pos"))
+		var d = Vector2(fp.x, fp.z).distance_to(p)
+		if d < best_d:
+			best_d = d
+			var amount = float(f.get("amount", 0.0))
+			if str(f.get("kind", "food")) == "food":
+				best_text = "Ягодный куст · %d еды" % int(amount) if amount > 0.0 else "Ягодный куст · обобран, отрастёт"
+			else:
+				best_text = "Мясо · %d еды" % int(amount)
+	if best_text != "":
+		return best_text
+	for dep in _as_array(surface.get("deposits", [])):
+		if typeof(dep) != TYPE_DICTIONARY:
+			continue
+		var dp = _pos3(dep.get("pos"))
+		if pow((p.x - dp.x) / DEPOSIT_RX, 2) + pow((p.y - dp.z) / DEPOSIT_RY, 2) <= 1.0:
+			var left = int(float(remaining.get(str(dep.get("id", "")), 0.0)))
+			var kind_name = "Каменный карьер" if str(dep.get("kind", "")) == "stone" else "Глиняный карьер"
+			var how = "6 рабочих мест · нужна кирка" if str(dep.get("kind", "")) == "stone" else "6 рабочих мест · руками"
+			return "%s · %d / %d · %s" % [kind_name, left, int(float(dep.get("capacity", 0))), "Истощён" if left <= 0 else how]
+	if SurfaceTerrain.is_mountain_at(p.x, p.y):
+		return "Скалы · не пройти"
+	var lake = SurfaceTerrain.get_lake_id_at(p.x, p.y)
+	if lake != "":
+		return "Озеро · рыба и водный монстр"
+	return ""
 
 ## Cheap box test around both authored lakes before the exact polygon test.
 func _near_lake(x: float, y: float) -> bool:

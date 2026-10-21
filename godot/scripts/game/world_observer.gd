@@ -20,6 +20,9 @@ var connect_button: Button
 var follow_button: Button
 var clear_selection_button: Button
 var start_menu: StartMenu
+var hud: GameHud
+var population_counts: Array[int] = [0, 0]
+var player_colony: int = 0
 
 var selected_resident_id: String = ""
 var last_snapshot_time: float = 0.0
@@ -104,8 +107,16 @@ func _setup_hud() -> void:
 	# Main HUD Control panel at top
 	var top_panel = PanelContainer.new()
 	top_panel.mouse_force_pass_scroll_events = false
-	top_panel.position = Vector2(16, 16)
-	top_panel.custom_minimum_size = Vector2(480, 110)
+	# Connection, camera shortcuts and save live in a compact strip at the
+	# bottom-left; the top belongs to the player HUD (stores, tasks, alerts).
+	top_panel.name = "ObserverPanel"
+	top_panel.theme = GameHud.ink_theme()
+	top_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.86)))
+	top_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	top_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	top_panel.offset_left = 16
+	top_panel.offset_bottom = -16
+	top_panel.custom_minimum_size = Vector2(480, 0)
 	canvas.add_child(top_panel)
 
 	var vbox = VBoxContainer.new()
@@ -194,6 +205,8 @@ func _setup_hud() -> void:
 	var insp_panel = PanelContainer.new()
 	insp_panel.mouse_force_pass_scroll_events = false
 	insp_panel.name = "ResidentInspector"
+	insp_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.9)))
+	insp_panel.theme = GameHud.ink_theme()
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	insp_panel.offset_left = -376
 	insp_panel.offset_top = -220
@@ -218,6 +231,11 @@ func _setup_hud() -> void:
 	clear_selection_button.pressed.connect(func(): select_resident(null))
 	inspector_actions.add_child(clear_selection_button)
 
+	hud = GameHud.new()
+	canvas.add_child(hud)
+	hud.speed_requested.connect(func(v): ws_client.send_command({"type": "setSpeed", "value": v}))
+	hud.alarm_requested.connect(func(on): ws_client.send_command({"type": "setAlarm", "colony": player_colony, "value": on}))
+
 	start_menu = StartMenu.new()
 	start_menu.visible = false
 	canvas.add_child(start_menu)
@@ -227,7 +245,11 @@ func _setup_hud() -> void:
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
-	help_label.position = Vector2(16, 140)
+	help_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	help_label.offset_left = 18
+	help_label.offset_top = -176
+	help_label.add_theme_color_override("font_color", Color(1, 0.97, 0.88))
+	help_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	help_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas.add_child(help_label)
 	_update_inspector()
@@ -243,6 +265,7 @@ func _connect_signals() -> void:
 
 func _process(delta: float) -> void:
 	_update_inspector()
+	_update_world_tooltip()
 	if is_tour_mode:
 		_process_tour(delta)
 
@@ -392,6 +415,10 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 	world_view.set_worked_targets(entity_registry.worked_targets)
 	if start_menu:
 		start_menu.set_saves(snapshot.get("saves", []))
+	if hud:
+		var session_d = snapshot.get("session", {})
+		player_colony = clampi(int(session_d.get("playerColonyIndex", 0)) if typeof(session_d) == TYPE_DICTIONARY else 0, 0, 1)
+		hud.update_from_snapshot(snapshot, population_counts[player_colony])
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})
@@ -405,6 +432,7 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 	_update_inspector()
 
 func _on_population_updated(col1: int, col2: int) -> void:
+	population_counts = [col1, col2]
 	pop_label.text = "Племя A: %d | Племя B: %d (Всего: %d)" % [col1, col2, col1 + col2]
 
 func _cycle_resident_focus() -> void:
@@ -428,6 +456,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_F:
 			_toggle_follow_selected()
 			get_viewport().set_input_as_handled()
+
+## Hover text for whatever lies under the mouse (trees, quarries, buildings, creatures).
+func _update_world_tooltip() -> void:
+	if not hud or not world_view.camera:
+		return
+	var vp = get_viewport()
+	var mouse = vp.get_mouse_position()
+	if (start_menu and start_menu.visible) or vp.gui_get_hovered_control() != null or not vp.get_visible_rect().has_point(mouse):
+		hud.show_tooltip("", mouse)
+		return
+	var cam = world_view.camera
+	var origin = cam.project_ray_origin(mouse)
+	var dir = cam.project_ray_normal(mouse)
+	if dir.y > -0.01:
+		hud.show_tooltip("", mouse)
+		return
+	# Ground plane is close enough for picking: hills are gentle swells.
+	var hit = origin + dir * (-origin.y / dir.y)
+	hud.show_tooltip(world_view.describe_at(Vector2(hit.x, hit.z)), mouse)
 
 func resident_at_screen(screen_position: Vector2) -> NetworkResident:
 	var camera = world_view.camera

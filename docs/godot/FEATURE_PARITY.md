@@ -39,7 +39,7 @@
 | | Выбор и инспектор жителей | `client/src/main.ts`, `client/src/ui/gameplay.ts` | `world_observer.gd`, query-only Area3D в `network_resident.gd` | tests/game/test_observer_controls.gd + tests/integration/test_observer_ui.gd | implemented | Raycast, кольцо, стабильный ID, роль/занятие/груз, follow/F/Esc, очистка; выбор других типов объектов ещё не реализован |
 | | Рисование зон | `paintZone`, `eraseZone` | Проекция луча на землю (Raycast) | Сетка 4x4 клетки | Planned (M3) | Harvest / Forbid |
 | | Строительство | `placeBuilding`, `paintWall`, `placeGate` | Полупрозрачный 3D-предпросмотр | Валидация фундамента и цены | Planned (M3) | Запрет на воде и препятствиях |
-| | Панели HUD | HTML/Canvas оверлеи | `godot/scripts/game/world_observer.gd`, Control / CanvasLayer | Observer controls + live observer integration | partial | Подключение, население, скорость и инспектор жителя; склады, задачи партии, тревога и игровые команды ещё не реализованы |
+| | Панели HUD | HTML/Canvas оверлеи | `game_hud.gd`: запасы, день/погода, скорость, тревога, задачи, предупреждения, подсказки `WorldView.describe_at` | test_game_hud + live capture_hud | implemented | Нет прироста запасов и мини-карты |
 | | Смена племени | `takeControl` (colony 0 / 1) | Кнопка переключения племени | Обновление управляемой колонии | Planned (M3) | Поддержка хотсита A/B |
 | | Технический офсет-редактор | `editor.ts` (сдвиг 2D спрайтов) | Не требуется в 3D | — | Excluded | Технический долг PixiJS |
 | **Мир и партия** | Случайная карта | — (в 2D карта была фиксированной) | `server/src/sim/terrainGen.ts`, `surface.terrain`, `surface_terrain.gd` | check:terrain, test_surface_terrain (паритет) | implemented | Углы, озёра, хребты, холмы, леса, честные карьеры |
