@@ -130,7 +130,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
   }
 });
 loop = startLoop(world, (includePheromones) => {
-  hub.broadcast((view) => networkSnapshot(view, includePheromones));
+  hub.broadcast((view) => networkSnapshot(view, includePheromones && view.pheromones !== false));
 });
 
 const gracefulExit = () => {

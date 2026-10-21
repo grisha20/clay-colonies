@@ -303,8 +303,12 @@ func _connect_signals() -> void:
 	entity_registry.resident_despawned.connect(_on_resident_despawned)
 
 func _process(delta: float) -> void:
+	var t0 = Time.get_ticks_usec()
 	_update_inspector()
+	FramePerf.add("frame.inspector", t0)
+	t0 = Time.get_ticks_usec()
 	_update_world_tooltip()
+	FramePerf.add("frame.tooltip", t0)
 	if is_tour_mode:
 		_process_tour(delta)
 
@@ -449,8 +453,13 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		world_view.ground_decor.stop_workers()
 		SurfaceTerrain.set_terrain(terrain)
 		world_view.apply_terrain()
+	var t0 = Time.get_ticks_usec()
 	entity_registry.update_from_snapshot(snapshot)
+	FramePerf.add("snap.registry", t0)
+	t0 = Time.get_ticks_usec()
 	world_view.update_world_entities(snapshot)
+	FramePerf.add("snap.world_view", t0)
+	t0 = Time.get_ticks_usec()
 	world_view.set_worked_targets(entity_registry.worked_targets)
 	if start_menu:
 		start_menu.set_saves(snapshot.get("saves", []))
@@ -464,6 +473,7 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		advice_feed.update_from_snapshot(snapshot, player_colony)
 	if build:
 		build.update_from_snapshot(snapshot, player_colony)
+	FramePerf.add("snap.panels", t0)
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})

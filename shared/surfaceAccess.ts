@@ -3,11 +3,12 @@ import { buildingFootprint, crossesBuilding, insideBuilding } from "./buildingGe
 import { insideHearth, crossesHearth, outsideHearth } from "./campGeometry";
 import { fenceCellCenters } from "./fenceGeometry";
 import { isWaterAt, isTerrainBlockedAt, surfaceTerrainRevision } from "./surfaceTerrain";
-import { surfaceLineOpen, surfacePointOpen, type SurfaceObstacles } from "./surfaceNavigation";
+import { builtObstacleKey, surfaceLineOpen, surfacePointOpen, type SurfaceObstacles } from "./surfaceNavigation";
 
 export function surfaceGeometryKey(surface: SurfaceObstacles): string {
   // Terrain revision: a different world (lakes, mountains) invalidates cached regions.
-  return surfaceTerrainRevision()+"#"+surface.buildings.filter(b=>b.stage==="built").map(b=>`${b.id}:${b.type}:${b.colonyId}:${b.pos.x}:${b.pos.y}:${b.gateAxis}:${b.gateSpan}`).join("|");
+  // Built obstacles as a numeric signature: the joined id string per call was ~7% of a late-match step.
+  return surfaceTerrainRevision()+"#"+builtObstacleKey(surface.buildings);
 }
 /** Settlement-level connected regions. Build once per geometry/owner; no A*
  * search for every resource/worker pair, and no per-tick resident planner. */

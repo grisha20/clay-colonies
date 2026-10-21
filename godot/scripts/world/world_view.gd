@@ -374,12 +374,20 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	var deposits = _as_array(surface.get("deposits", []))
 	var resource_nodes = _as_array(surface.get("resourceNodes", []))
 
+	var t0 = Time.get_ticks_usec()
 	_update_campfires(entrances)
 	_update_mothers(snapshot)
 	_update_buildings(buildings)
+	FramePerf.add("wv.buildings", t0)
+	t0 = Time.get_ticks_usec()
 	_update_fences(buildings)
+	FramePerf.add("wv.fences", t0)
+	t0 = Time.get_ticks_usec()
 	_update_ground_features(entrances, buildings, deposits)
+	FramePerf.add("wv.ground_features", t0)
+	t0 = Time.get_ticks_usec()
 	_update_trails(_as_array(snapshot.get("ants", [])))
+	FramePerf.add("wv.trails", t0)
 
 	var seen_node_ids: Dictionary = {}
 	var deposit_remaining: Dictionary = {}
@@ -1196,7 +1204,9 @@ func _animate_world(delta: float) -> void:
 			light.omni_range = lerpf(12.0, 7.0 + 13.0 * fire, night)
 
 func _process(delta: float) -> void:
+	var t0 = Time.get_ticks_usec()
 	_animate_world(delta)
+	FramePerf.add("frame.animate_world", t0)
 	if not camera_pivot:
 		return
 	camera_distance = lerpf(camera_distance, target_camera_distance, 1.0 - exp(-4.0 * maxf(delta, 0.0)))

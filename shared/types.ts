@@ -456,6 +456,8 @@ export type DurableWorldSnapshot = WorldSnapshot;
 export type NetworkViewState = {
   mode: NetworkViewMode;
   undergroundColonyIndex: number;
+  /** false: the client draws no pheromones (Godot), skip the 1 Hz grids. */
+  pheromones?: boolean;
 };
 
 /** A named save slot on the server (the running match autosaves separately). */

@@ -1221,7 +1221,8 @@ function normalizeNetworkView(_view?: Partial<NetworkViewState>): NetworkViewSta
 
 export function toNetworkSnapshot(world: World, includePheromones = true, view?: Partial<NetworkViewState>): NetworkWorldSnapshot {
   const networkView = normalizeNetworkView(view);
-  const ants = world.ants.filter((ant) => ant.layer === "surface").map(ant=>({...ant,taskMotion:ant.state==="idle"?undefined:taskMotionReport(ant)}));
+  // scoutTrail is server-side memory no client draws (~28 KB per snapshot late in a match).
+  const ants = world.ants.filter((ant) => ant.layer === "surface").map(ant=>({...ant,scoutTrail:undefined,taskMotion:ant.state==="idle"?undefined:taskMotionReport(ant)}));
   const snapshot = toSnapshot(world, includePheromones);
 
   return {

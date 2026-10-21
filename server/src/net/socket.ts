@@ -77,6 +77,7 @@ export type ClientCommand =
       type: "setView";
       mode: NetworkViewState["mode"];
       undergroundColonyIndex: number;
+      pheromones?: boolean;
     }
   | {
       type: "saveOffsetSettings";
@@ -143,7 +144,8 @@ export function parseCommand(raw: string): ClientCommand | null {
       return {
         type: "setView",
         mode,
-        undergroundColonyIndex
+        undergroundColonyIndex,
+        pheromones: command.pheromones === false ? false : undefined
       };
     }
 
@@ -282,7 +284,8 @@ export function createSocketHub(
         if (command.type === "setView") {
           clients.set(socket, {
             mode: command.mode,
-            undergroundColonyIndex: command.undergroundColonyIndex
+            undergroundColonyIndex: command.undergroundColonyIndex,
+            pheromones: command.pheromones
           });
           socket.send(JSON.stringify(getSnapshot(clients.get(socket)!, false)));
           return;
@@ -302,7 +305,7 @@ export function createSocketHub(
           if (client.bufferedAmount > MAX_BUFFERED_BYTES) {
             continue;
           }
-          const key = `${view.mode}:${view.undergroundColonyIndex}`;
+          const key = `${view.mode}:${view.undergroundColonyIndex}:${view.pheromones !== false}`;
           let message = messages.get(key);
           if (!message) {
             message = JSON.stringify(snapshotForView(view));

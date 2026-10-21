@@ -9,6 +9,8 @@ signal resident_spawned(resident: NetworkResident)
 signal resident_despawned(ant_id: String)
 signal population_updated(colony_1_count: int, colony_2_count: int)
 
+## Time per snapshot for route detours around obstacles (SurfaceNavigation).
+const DETOUR_BUDGET_MS := 3.0
 var residents: Dictionary = {} # ant_id: String -> NetworkResident
 var last_snapshot_tick: int = -1
 var last_snapshot_timestamp: float = 0.0
@@ -59,7 +61,10 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 	last_snapshot_timestamp = now
 	last_snapshot_tick = tick
 
+	SurfaceNavigation.begin_detour_budget(DETOUR_BUDGET_MS)
+	var tp = Time.get_ticks_usec()
 	var index = build_work_index(snapshot)
+	FramePerf.add("reg.work_index", tp)
 	worked_targets = {}
 	var seen_ids: Dictionary = {}
 	var col1_count = 0
@@ -91,12 +96,17 @@ func update_from_snapshot(snapshot: Dictionary) -> void:
 		if not ant_data.has("tick"):
 			ant_data["tick"] = tick
 
+		tp = Time.get_ticks_usec()
 		resident.update_from_ant_data(ant_data, packet_dt, current_sim_speed, sim_status, buildings, entrances)
+		FramePerf.add("reg.resident_update", tp)
+		tp = Time.get_ticks_usec()
 		var work = work_for(ant_data, index)
 		resident.set_work(work)
+		FramePerf.add("reg.set_work", tp)
 		if not work.is_empty() and work.has("target_id"):
 			worked_targets[work.target_id] = work.kind
 
+	SurfaceNavigation.end_detour_budget()
 	# Despawn entities that died, went underground, or left
 	var to_remove: Array[String] = []
 	for id in residents.keys():

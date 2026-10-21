@@ -38,6 +38,15 @@ var has_received_valid_snapshot: bool = false
 var packets_received: int = 0
 var bytes_received: int = 0
 
+## JSON of a late-match snapshot (~130 KB) takes 4-5 ms to parse: it is parsed
+## on a worker thread. Only the newest unparsed packet is kept; one parse runs
+## at a time and its result is applied on the main thread a frame later.
+var threaded_decode: bool = true
+var _pending_text: String = ""
+var _decode_text: String = ""
+var _decode_result: Dictionary = {}
+var _decode_task: int = -1
+
 func _ready() -> void:
 	if current_state == ClientState.DISCONNECTED:
 		_set_state(ClientState.DISCONNECTED, "Ready to connect")
@@ -59,11 +68,15 @@ func _process(delta: float) -> void:
 		WebSocketPeer.STATE_OPEN:
 			if current_state == ClientState.CONNECTING:
 				_set_state(ClientState.WAITING_FOR_SNAPSHOT, "Connected to %s, waiting for snapshot..." % server_url)
+				# This client draws no pheromones: the server skips its 1 Hz grids
+				# (~200 KB per second of JSON to parse late in a match).
+				send_command({"type": "setView", "mode": "surface", "undergroundColonyIndex": 0, "pheromones": false})
 
 			while peer.get_available_packet_count() > 0:
 				_process_packet()
 				if current_state == ClientState.ERROR:
 					break
+			_pump_decode()
 
 		WebSocketPeer.STATE_CONNECTING:
 			if current_state != ClientState.CONNECTING:
@@ -91,6 +104,7 @@ func connect_to_server(target_url: String = "") -> Error:
 		disconnect_from_server()
 
 	has_received_valid_snapshot = false
+	_drain_decode()
 	peer = WebSocketPeer.new()
 	peer.inbound_buffer_size = 4 * 1024 * 1024
 	peer.max_queued_packets = 2048
@@ -104,6 +118,7 @@ func connect_to_server(target_url: String = "") -> Error:
 	return OK
 
 func disconnect_from_server() -> void:
+	_drain_decode()
 	if peer and (peer.get_ready_state() == WebSocketPeer.STATE_OPEN or peer.get_ready_state() == WebSocketPeer.STATE_CONNECTING):
 		peer.close(1000, "Client disconnect")
 	if current_state != ClientState.ERROR:
@@ -220,9 +235,44 @@ func _process_packet() -> void:
 	bytes_received += packet.size()
 	packets_received += 1
 	last_packet_time = Time.get_ticks_msec() / 1000.0
-
 	var text = packet.get_string_from_utf8()
-	var val_res = decode_and_validate_packet(text)
+	if not threaded_decode:
+		var t0 = Time.get_ticks_usec()
+		var res = decode_and_validate_packet(text)
+		FramePerf.add("net.decode", t0)
+		_apply_decoded(res)
+		return
+	_pending_text = text
+
+
+func _decode_job() -> void:
+	_decode_result = decode_and_validate_packet(_decode_text)
+
+
+func _pump_decode() -> void:
+	if _decode_task != -1 and WorkerThreadPool.is_task_completed(_decode_task):
+		WorkerThreadPool.wait_for_task_completion(_decode_task)
+		_decode_task = -1
+		var t0 = Time.get_ticks_usec()
+		_apply_decoded(_decode_result)
+		FramePerf.add("net.apply", t0)
+		_decode_result = {}
+	if _decode_task == -1 and _pending_text != "" and current_state != ClientState.ERROR:
+		_decode_text = _pending_text
+		_pending_text = ""
+		_decode_task = WorkerThreadPool.add_task(_decode_job, false, "Snapshot JSON")
+
+
+## Finish a parse in flight and drop queued text (disconnect, reconnect).
+func _drain_decode() -> void:
+	if _decode_task != -1:
+		WorkerThreadPool.wait_for_task_completion(_decode_task)
+		_decode_task = -1
+	_pending_text = ""
+	_decode_result = {}
+
+
+func _apply_decoded(val_res: Dictionary) -> void:
 	if not val_res.get("ok", false):
 		var err_msg = "Packet validation failed: " + str(val_res.get("error", "Unknown error"))
 		push_error("[WSClient] " + err_msg)
@@ -242,6 +292,11 @@ func _process_packet() -> void:
 		connected.emit()
 
 	snapshot_received.emit(snapshot)
+
+
+func _exit_tree() -> void:
+	_drain_decode()
+
 
 func _set_state(new_state: ClientState, msg: String) -> void:
 	current_state = new_state

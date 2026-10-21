@@ -112,5 +112,7 @@ check("headless: tribe grows under the mother", pop > 8, `population ${pop}`);
 check("headless: advice is well formed", bad === 0);
 console.log(`advice seen: ${[...seen].join(", ") || "none"}; priorities ${JSON.stringify(fresh.colonies[0].colony.priorities)}`);
 
+const { rmSync } = await import("node:fs");
+for (const f of ["./.mother-snapshot.json", "./.mother-genome-a.json", "./.mother-genome-b.json", "./.mother-genome-spider.json"]) rmSync(f, { force: true });
 console.log(failures ? `FAILURES: ${failures}` : "ALL PASS");
 process.exit(failures ? 1 : 0);

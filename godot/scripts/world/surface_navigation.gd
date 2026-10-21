@@ -22,14 +22,42 @@ static var _index_size: int = -1
 static var _footprints: Array = []
 static var _wall_cells: Dictionary = {}
 static var _gate_cells: Dictionary = {}
+## Footprint indices bucketed by BUCKET-sized cells: checks look only at the
+## buildings near the point or segment instead of all of them.
+const BUCKET := 8.0
+static var _buckets: Dictionary = {}
+
+static var _index_source: Array = []
+## Detours (perimeter search and A*) are the only expensive route work. The
+## registry gives them a shared time budget per snapshot; past it a blocked
+## resident holds its validated position for this packet instead of freezing
+## the frame (one late-match detour once took 371 ms).
+static var _detour_deadline_usec: int = 0
+const ASTAR_MAX_EXPANSIONS := 600
+
+static func begin_detour_budget(ms: float) -> void:
+	_detour_deadline_usec = Time.get_ticks_usec() + int(ms * 1000.0)
+
+static func end_detour_budget() -> void:
+	_detour_deadline_usec = 0
+
+static func _detour_budget_spent() -> bool:
+	return _detour_deadline_usec > 0 and Time.get_ticks_usec() > _detour_deadline_usec
 
 static func _index(buildings: Array) -> void:
+	# Every route check of every resident asks for the index: the same Array
+	# object within one snapshot answers without hashing (a deep hash of all
+	# buildings per call was ~15 ms per snapshot with 94 residents).
+	if is_same(buildings, _index_source):
+		return
+	_index_source = buildings
 	var h = buildings.hash()
 	if h == _index_hash and buildings.size() == _index_size:
 		return
 	_index_hash = h
 	_index_size = buildings.size()
 	_footprints = []
+	_buckets = {}
 	_wall_cells = {}
 	_gate_cells = {}
 	for b in buildings:
@@ -37,7 +65,18 @@ static func _index(buildings: Array) -> void:
 			continue
 		var f = BuildingGeometry.get_building_footprint(b)
 		if not f.is_empty():
+			var fi = _footprints.size()
 			_footprints.append(f)
+			var fx = float(f.x)
+			var fy = float(f.y)
+			var frx = float(f.rx) + 1.0
+			var fry = float(f.ry) + 1.0
+			for by in range(int(floor((fy - fry) / BUCKET)), int(floor((fy + fry) / BUCKET)) + 1):
+				for bx in range(int(floor((fx - frx) / BUCKET)), int(floor((fx + frx) / BUCKET)) + 1):
+					var key = Vector2i(bx, by)
+					if not _buckets.has(key):
+						_buckets[key] = []
+					_buckets[key].append(fi)
 			continue
 		if str(b.get("stage", "built")) != "built":
 			continue
@@ -62,6 +101,29 @@ static func _index(buildings: Array) -> void:
 				if not _gate_cells.has(c):
 					_gate_cells[c] = []
 				_gate_cells[c].append(colony)
+
+## Footprints whose (slightly grown) box touches the box of a and b.
+static func _footprints_near(a: Vector2, b: Vector2) -> Array:
+	var x0 = int(floor(minf(a.x, b.x) / BUCKET))
+	var x1 = int(floor(maxf(a.x, b.x) / BUCKET))
+	var y0 = int(floor(minf(a.y, b.y) / BUCKET))
+	var y1 = int(floor(maxf(a.y, b.y) / BUCKET))
+	if x0 == x1 and y0 == y1:
+		var only: Array = []
+		for fi in _buckets.get(Vector2i(x0, y0), []):
+			only.append(_footprints[fi])
+		return only
+	if (x1 - x0 + 1) * (y1 - y0 + 1) > 64:
+		return _footprints
+	var seen: Dictionary = {}
+	var out: Array = []
+	for cy in range(y0, y1 + 1):
+		for cx in range(x0, x1 + 1):
+			for fi in _buckets.get(Vector2i(cx, cy), []):
+				if not seen.has(fi):
+					seen[fi] = true
+					out.append(_footprints[fi])
+	return out
 
 ## Same predicate as fence_contains over every built wall and foreign gate.
 static func _fence_blocks(cell: Vector2i, owner: String) -> bool:
@@ -102,7 +164,7 @@ static func surface_point_open(p: Vector2, owner: String, buildings: Array, entr
 			if edx * edx + edy * edy < 1.0:
 				return false
 	_index(buildings)
-	for f in _footprints:
+	for f in _footprints_near(p, p):
 		if BuildingGeometry.inside_footprint(p.x, p.y, f):
 			return false
 	if _fence_blocks(Vector2i(int(floor(p.x / WALL_CELL_SIZE)), int(floor(p.y / WALL_CELL_SIZE))), owner):
@@ -168,7 +230,7 @@ static func surface_line_open(a: Vector2, b: Vector2, owner: String, buildings: 
 			if BuildingGeometry.crosses_hearth(a, b, camp):
 				return false
 	_index(buildings)
-	for f in _footprints:
+	for f in _footprints_near(a, b):
 		if BuildingGeometry.crosses_footprint(a, b, f):
 			return false
 	return surface_grid_line_open(a, b, buildings, owner)
@@ -199,9 +261,12 @@ static func route_point(from_p: Vector2, points: Array[Vector2], ratio: float) -
 ## Returns [target_p] if direct segment is completely open.
 ## Otherwise returns a multi-segment polyline [wp1, wp2, ..., goal] where every segment is verified open.
 static func surface_route(from_p: Vector2, target_p: Vector2, owner: String, buildings: Array, entrances: Array) -> Array[Vector2]:
+	# Standing still: the previous endpoint was already validated.
+	if from_p.distance_squared_to(target_p) < 1e-8:
+		return [target_p] as Array[Vector2]
 	var goal = target_p
 	_index(buildings)
-	for f in _footprints:
+	for f in _footprints_near(target_p, target_p):
 		if BuildingGeometry.inside_footprint(goal.x, goal.y, f):
 			goal = BuildingGeometry.outside_footprint(goal, f)
 
@@ -233,12 +298,14 @@ static func surface_route(from_p: Vector2, target_p: Vector2, owner: String, bui
 	return [from_p]
 
 static func _find_local_route(from_p: Vector2, goal: Vector2, owner: String, buildings: Array, entrances: Array) -> Array[Vector2]:
+	if _detour_budget_spent():
+		return []
 	# 1. Fast perimeter waypoint search for convex blockers
 	var candidate_paths: Array = []
 
 	# Check buildings with footprints
 	_index(buildings)
-	for f in _footprints:
+	for f in _footprints_near(from_p, goal):
 		if BuildingGeometry.crosses_footprint(from_p, goal, f):
 			var bx = float(f["x"])
 			var by = float(f["y"])
@@ -253,9 +320,16 @@ static func _find_local_route(from_p: Vector2, goal: Vector2, owner: String, bui
 			if BuildingGeometry.crosses_hearth(from_p, goal, camp):
 				_generate_perimeter_paths(from_p, goal, camp.x, camp.y, BuildingGeometry.HEARTH_RADIUS_X + 0.8, BuildingGeometry.HEARTH_RADIUS_Y + 0.8, candidate_paths)
 
-	# Check walls
+	# Check walls near the segment only (a palisade elsewhere cannot block it).
+	var near_min = Vector2(minf(from_p.x, goal.x), minf(from_p.y, goal.y)) - Vector2(4, 4)
+	var near_max = Vector2(maxf(from_p.x, goal.x), maxf(from_p.y, goal.y)) + Vector2(4, 4)
 	for b in buildings:
 		if typeof(b) == TYPE_DICTIONARY:
+			var bp = b.get("pos", {})
+			var bx0 = float(bp.get("x", 0.0))
+			var by0 = float(bp.get("y", 0.0))
+			if bx0 < near_min.x or bx0 > near_max.x or by0 < near_min.y or by0 > near_max.y:
+				continue
 			var stage = str(b.get("stage", "built"))
 			var b_type = str(b.get("type", "wall"))
 			var b_colony = str(b.get("colonyId", ""))
@@ -290,6 +364,8 @@ static func _find_local_route(from_p: Vector2, goal: Vector2, owner: String, bui
 
 	if not best_path.is_empty():
 		return _simplify_path(from_p, best_path, owner, buildings, entrances)
+	if _detour_budget_spent():
+		return []
 
 	# 2. Local A* search on 2x2 grid for arbitrary obstacles / water shorelines
 	return _grid_astar_route(from_p, goal, owner, buildings, entrances)
@@ -378,7 +454,11 @@ static func _grid_astar_route(from_p: Vector2, goal: Vector2, owner: String, bui
 		Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)
 	]
 
+	var expansions = 0
 	while not open_set.is_empty():
+		expansions += 1
+		if expansions > ASTAR_MAX_EXPANSIONS or (expansions % 32 == 0 and _detour_budget_spent()):
+			return []
 		# Pop lowest f_score
 		var current_idx = 0
 		var current_id = open_set[0]

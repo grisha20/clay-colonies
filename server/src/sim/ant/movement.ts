@@ -14,7 +14,7 @@ import { isSheltered } from "../weather";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { insideHearth } from "../../../../shared/campGeometry";
 import { addFoodStock, consumeFoodStock, normalizedCarryFoodKind } from "../foodStock";
-import { surfaceLineOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
+import { builtObstacleKey, surfaceLineOpen, surfaceRoute } from "../../../../shared/surfaceNavigation";
 import { markTaskPath, watchTaskMotion } from "../taskProgress";
 import { deferTask } from "../taskAccess";
 import { buildingServicePoint } from "../../../../shared/buildingGeometry";
@@ -48,10 +48,17 @@ export function calculateSurfacePath(world: World, from: Vec2, to: Vec2, colonyI
   return surfaceRoute(world.surface, from, to, colonyId);
 }
 
-const safeRoutes = new Map<string, { target: Vec2; points: Vec2[]; until: number; geometry: string }>();
+const safeRoutes = new Map<string, { target: Vec2; points: Vec2[]; until: number; geometry: number }>();
 export function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
-  const geometry = world.surface.buildings.filter(b => b.stage === "built").map(b => b.id).join("|");
+  const geometry = builtObstacleKey(world.surface.buildings);
   let route = safeRoutes.get(ant.id);
+  // A new building only drops routes it actually blocks: dropping every route at
+  // once made all residents re-plan in the same step (periodic server spikes).
+  if (route && route.geometry !== geometry && distance(route.target, target) <= 0.5) {
+    let prev = ant.pos, open = true;
+    for (const p of route.points) { if (!surfaceLineOpen(world.surface, prev, p, ant.colonyId)) { open = false; break; } prev = p; }
+    if (open) route.geometry = geometry;
+  }
   if (route && (distance(route.target, target) > 0.5 || world.tick >= route.until || route.geometry !== geometry || world.tick < route.until - 300 ||
       route.points.length > 0 && !surfaceLineOpen(world.surface, ant.pos, route.points[0], ant.colonyId))) {
     safeRoutes.delete(ant.id); route = undefined;

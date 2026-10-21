@@ -9,6 +9,7 @@ import { buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding, bu
 import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
 import { fenceCellCenters, fencePlacement, gatePlacement, GATE_SPAN, snapFencePosition, type GateAxis } from "../../../shared/fenceGeometry";
 import { surfaceGridLineOpen } from "../../../shared/surfaceGrid";
+import { markObstaclesChanged } from "../../../shared/surfaceNavigation";
 import type { World } from "./world";
 
 let nextBuildingId = 1;
@@ -248,6 +249,7 @@ export function eraseBuildCells(world: World, colonyIndex: number, cells: number
 
 export function completeBuilding(world: World, building: Building): void {
   building.stage = "built";
+  markObstaclesChanged();
   building.progress = 1;
   building.hp = building.maxHp;
   if (building.type === "wall" || building.type === "gate") {
