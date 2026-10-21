@@ -1,5 +1,5 @@
 import { lakePoints, lakeRoute } from "./lakeNavigation";
-import { lakeIdAt, surfaceTerrainRevision, type LakeId } from "./surfaceTerrain";
+import { lakeIdAt, surfaceTerrainRevision, type LakeId, isMountainAt } from "./surfaceTerrain";
 import { surfaceRoute, surfacePointOpen, type SurfaceObstacles } from "./surfaceNavigation";
 import { surfaceGridLineOpen } from "./surfaceGrid";
 import { buildingFootprint, crossesBuilding } from "./buildingGeometry";
@@ -25,7 +25,7 @@ export function amphibianLineOpen(surface:SurfaceObstacles,from:Vec2,to:Vec2,id:
   if(surface.entrances.some(c=>crossesHearth(from.x,from.y,to.x,to.y,c)))return false;
   if(surface.buildings.some(b=>{const f=buildingFootprint(b);return f&&crossesBuilding(from,to,f);}))return false;
   const fences=surface.buildings.filter(b=>b.stage==="built"&&(b.type==="wall"||b.type==="gate"));
-  return surfaceGridLineOpen(from,to,(x,y)=>{const lake=lakeIdAt(x,y);return (!lake||lake===id)&&nearLakeShore({x,y},id)&&!fences.some(b=>fenceContains(b,{x,y}));});
+  return surfaceGridLineOpen(from,to,(x,y)=>{const lake=lakeIdAt(x,y);return (!lake||lake===id)&&!isMountainAt(x,y)&&nearLakeShore({x,y},id)&&!fences.some(b=>fenceContains(b,{x,y}));});
 }
 export function amphibianRoute(surface:SurfaceObstacles,from:Vec2,to:Vec2,id:LakeId):Vec2[]|null {
   if(!nearLakeShore(to,id))return null;

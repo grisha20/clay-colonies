@@ -2,7 +2,7 @@ import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { applyMode, chooseMode, hasAvailableCarrion, isSpiderFastMode, resetSpiderBrainRuntime, type SpiderMode } from "../ai/spiderBrain";
 import { recordAndEvolveSpider, saveSpiderGenome } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
-import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { tickCache } from "./cache";
 import { isWithinRadius } from "./ant/utils";
 import { resolveSurfaceCollision } from "./building";
@@ -34,7 +34,7 @@ function randomSurfacePoint(): Vec2 {
       y: 8 + Math.random() * (CONFIG.mapHeight - 16)
     };
 
-    if (!isWaterAt(pos.x, pos.y) && !isWithinRadius(pos, CONFIG.surfaceEntrance, CONFIG.spiderAvoidRadius * 2.5)) {
+    if (!isTerrainBlockedAt(pos.x, pos.y) && !isWithinRadius(pos, CONFIG.surfaceEntrance, CONFIG.spiderAvoidRadius * 2.5)) {
       return pos;
     }
   }
@@ -58,7 +58,7 @@ function randomLairPoint(): Vec2 {
     );
 
     if (
-      !isWaterAt(pos.x, pos.y) &&
+      !isTerrainBlockedAt(pos.x, pos.y) &&
       !isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) &&
       !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)
     ) {

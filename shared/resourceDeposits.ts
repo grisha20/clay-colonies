@@ -1,5 +1,5 @@
 import type { Ant, Building, ResourceDeposit, ResourceNode, Vec2 } from "./types";
-import { isWaterAt } from "./surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt } from "./surfaceTerrain";
 
 export const DEPOSIT_RX = 10;
 export const DEPOSIT_RY = 6.5;
@@ -32,7 +32,7 @@ export function ensureResourceDeposits(surface: DepositSurface): void {
     if (surface.buildings.some(b => Math.hypot(p.x - b.pos.x, p.y - b.pos.y) < 19)) return false;
     if (deposits.some(d => Math.hypot(p.x - d.pos.x, p.y - d.pos.y) < 28)) return false;
     return Array.from({ length: 24 }, (_, i) => i * Math.PI / 12).every(a =>
-      !isWaterAt(p.x + Math.cos(a) * (DEPOSIT_RX + 3), p.y + Math.sin(a) * (DEPOSIT_RY + 4))) && !isWaterAt(p.x, p.y);
+      !isTerrainBlockedAt(p.x + Math.cos(a) * (DEPOSIT_RX + 3), p.y + Math.sin(a) * (DEPOSIT_RY + 4))) && !isTerrainBlockedAt(p.x, p.y);
   };
   for (const [id, kind, x, y] of sites) {
     let pos: Vec2 | undefined;

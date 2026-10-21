@@ -2,7 +2,7 @@
 // Площадка (site) -> доставка ресурсов со склада лагеря -> стройка (inProgress) -> готово (built).
 // Готовые стены блокируют движение через сетку клеток WALL_CELL_SIZE x WALL_CELL_SIZE.
 import { WALL_CELL_SIZE, type Building, type BuildingType, type Vec2 } from "../../../shared/types";
-import { isWaterAt, lakeFieldAt } from "../../../shared/surfaceTerrain";
+import { isWaterAt, lakeFieldAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import { insideHearth, crossesHearth, outsideHearth } from "../../../shared/campGeometry";
 import { buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding, buildingServicePoint } from "../../../shared/buildingGeometry";
@@ -289,7 +289,7 @@ export function isSurfaceBlockedAt(world: World, x: number, y: number, colonyId?
   if (x < 0 || y < 0 || x >= CONFIG.mapWidth || y >= CONFIG.mapHeight) {
     return true;
   }
-  return isWaterAt(x, y) || isWallBlockedAt(world, x, y, colonyId) ||
+  return isTerrainBlockedAt(x, y) || isWallBlockedAt(world, x, y, colonyId) ||
     world.surface.entrances.some(camp => insideHearth(x, y, camp)) ||
     world.surface.buildings.some(b => { const f = buildingFootprint(b); return f && insideBuilding(x, y, f); });
 }
@@ -328,7 +328,7 @@ function surfaceSegmentClear(world: World, fromX: number, fromY: number, toX: nu
   if (isSurfaceBlockedAt(world, toX, toY, colonyId)) return false;
   if (world.surface.entrances.some(camp => crossesHearth(fromX, fromY, toX, toY, camp))) return false;
   if (world.surface.buildings.some(b => { const f = buildingFootprint(b); return f && crossesBuilding({ x: fromX, y: fromY }, { x: toX, y: toY }, f); })) return false;
-  return surfaceGridLineOpen({ x: fromX, y: fromY }, { x: toX, y: toY }, (x, y) => !isWaterAt(x, y) && !isWallBlockedAt(world, x, y, colonyId));
+  return surfaceGridLineOpen({ x: fromX, y: fromY }, { x: toX, y: toY }, (x, y) => !isTerrainBlockedAt(x, y) && !isWallBlockedAt(world, x, y, colonyId));
 }
 
 export function resolveSurfaceCollision(

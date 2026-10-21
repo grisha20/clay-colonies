@@ -3,7 +3,7 @@ import { dayCycle } from "../../../shared/dayCycle";
 import { CONFIG } from "../config";
 import { createWorkerAnt, syncWorldLegacyFields, type World } from "./world";
 import { createSpider } from "./enemy";
-import { isWaterAt, lakeDefinitions, type LakeId } from "../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, type LakeId, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 
 export function createSession(tick = 0): SessionState {
   return {
@@ -75,7 +75,7 @@ export function updateRaids(world: World): void {
     const spider = createSpider();
     const direction = raid.count % 2 === 0 ? 1 : -1;
     spider.pos = { x: home.x + direction * 62, y: home.y };
-    if (isWaterAt(spider.pos.x, spider.pos.y)) spider.pos = { x: home.x, y: home.y + 60 };
+    if (isTerrainBlockedAt(spider.pos.x, spider.pos.y)) spider.pos = { x: home.x, y: home.y + 60 };
     spider.lair = { ...spider.pos };
     spider.raid = true;
     spider.targetColonyId = raid.targetColonyId;

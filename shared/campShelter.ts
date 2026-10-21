@@ -1,7 +1,7 @@
 import type { Building, Vec2 } from "./types";
 import { buildingFootprint, insideBuilding } from "./buildingGeometry";
 import { insideHearth } from "./campGeometry";
-import { isWaterAt } from "./surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt } from "./surfaceTerrain";
 import { fenceCellCenters } from "./fenceGeometry";
 
 /** Ordered, spaced drying places. The first two belong to the decorative royals. */
@@ -14,7 +14,7 @@ export function campShelterPoints(camp: Vec2, buildings: Building[], width: numb
     for (let i = 0; i < count; i++) {
       const angle = Math.PI / 2 + i * Math.PI * 2 / count;
       const p = { x: camp.x + Math.cos(angle) * radius, y: camp.y + Math.sin(angle) * radius };
-      if (p.x < 1.5 || p.y < 1.5 || p.x > width - 1.5 || p.y > height - 1.5 || isWaterAt(p.x, p.y) || insideHearth(p.x, p.y, camp)) continue;
+      if (p.x < 1.5 || p.y < 1.5 || p.x > width - 1.5 || p.y > height - 1.5 || isTerrainBlockedAt(p.x, p.y) || insideHearth(p.x, p.y, camp)) continue;
       if (foundations.some(f => insideBuilding(p.x, p.y, { ...f, rx: f.rx + 0.6, ry: f.ry + 0.6 }))) continue;
       if (walls.some(b => Math.abs(b.x - p.x) < 1.8 && Math.abs(b.y - p.y) < 1.8)) continue;
       points.push(p);

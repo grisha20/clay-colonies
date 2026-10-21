@@ -1,5 +1,5 @@
 import type { Ant, Vec2 } from "../../../../shared/types";
-import { isWaterAt, lakeDefinitions, surfaceTerrainRevision } from "../../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, surfaceTerrainRevision, isTerrainBlockedAt } from "../../../../shared/surfaceTerrain";
 import { CONFIG } from "../../config";
 import type { World } from "../world";
 import { isWallBlockedAt, isSurfaceBlockedAt } from "../building";
@@ -156,7 +156,7 @@ export function moveToSafety(world: World, ant: Ant): boolean {
       const dx = ant.pos.x - danger.pos.x, dy = ant.pos.y - danger.pos.y;
       const d = Math.hypot(dx, dy), side = Number(ant.id.replace(/\D/g, "")) % 2 ? 1 : -1;
       const away = { x: ant.pos.x + (d > 0.01 ? dx / d : side) * 10, y: ant.pos.y + (d > 0.01 ? dy / d : 0.4) * 10 };
-      if (!isWaterAt(away.x, away.y) && !isWallBlockedAt(world, away.x, away.y, ant.colonyId)) {
+      if (!isTerrainBlockedAt(away.x, away.y) && !isWallBlockedAt(world, away.x, away.y, ant.colonyId)) {
         const escapeLength = dist(ant.pos, away);
         ant.heading = { x: (away.x - ant.pos.x) / escapeLength, y: (away.y - ant.pos.y) / escapeLength };
         moveSurfaceToward(world, ant, away, false, false);

@@ -22,7 +22,21 @@ export type SurfaceTerrainData = {
   version: 1;
   seed: number;
   lakes: readonly LakeDefinition[];
+  /** Rocky massifs: impassable for walkers and builders, like water. */
+  mountains?: readonly MountainDefinition[];
+  /** Rolling hills: walkable, only shape the ground height. */
+  hills?: readonly HillDefinition[];
 };
+
+export type MountainDefinition = {
+  id: string;
+  /** Clockwise world-space footprint of the impassable rock. */
+  outline: readonly { x: number; y: number }[];
+  /** Peak height in world units above the meadow (visual). */
+  height: number;
+};
+
+export type HillDefinition = { x: number; y: number; radius: number; height: number };
 
 // Two deliberately authored, connected contours. Internal blue marker lines were
 // hatching; only the outer blue outlines define shoreline geometry.
@@ -64,8 +78,10 @@ const LEGACY_LAKES: readonly LakeDefinition[] = [
 export const LEGACY_TERRAIN: SurfaceTerrainData = { version: 1, seed: 0, lakes: LEGACY_LAKES };
 
 type LakeBounds = { lake: LakeDefinition; minX: number; minY: number; maxX: number; maxY: number };
+type MountainBounds = { mountain: MountainDefinition; minX: number; minY: number; maxX: number; maxY: number };
 let activeTerrain: SurfaceTerrainData = LEGACY_TERRAIN;
 let activeBounds: LakeBounds[] = boundsFor(LEGACY_TERRAIN);
+let mountainBounds: MountainBounds[] = [];
 let revision = 0;
 
 function boundsFor(terrain: SurfaceTerrainData): LakeBounds[] {
@@ -78,14 +94,27 @@ function boundsFor(terrain: SurfaceTerrainData): LakeBounds[] {
   }));
 }
 
+function mountainBoundsFor(terrain: SurfaceTerrainData): MountainBounds[] {
+  return (terrain.mountains ?? []).map((mountain) => ({
+    mountain,
+    minX: Math.min(...mountain.outline.map((p) => p.x)),
+    minY: Math.min(...mountain.outline.map((p) => p.y)),
+    maxX: Math.max(...mountain.outline.map((p) => p.x)),
+    maxY: Math.max(...mountain.outline.map((p) => p.y))
+  }));
+}
+
+function sameOutline(a: readonly { x: number; y: number }[], b: readonly { x: number; y: number }[]): boolean {
+  return a.length === b.length && a.every((p, j) => p.x === b[j].x && p.y === b[j].y);
+}
+
 function sameTerrain(a: SurfaceTerrainData, b: SurfaceTerrainData): boolean {
   if (a === b) return true;
-  if (a.seed !== b.seed || a.lakes.length !== b.lakes.length) return false;
-  return a.lakes.every((lake, i) => {
-    const other = b.lakes[i];
-    return lake.id === other.id && lake.outline.length === other.outline.length &&
-      lake.outline.every((p, j) => p.x === other.outline[j].x && p.y === other.outline[j].y);
-  });
+  const am = a.mountains ?? [], bm = b.mountains ?? [], ah = a.hills ?? [], bh = b.hills ?? [];
+  if (a.seed !== b.seed || a.lakes.length !== b.lakes.length || am.length !== bm.length || ah.length !== bh.length) return false;
+  return a.lakes.every((lake, i) => lake.id === b.lakes[i].id && sameOutline(lake.outline, b.lakes[i].outline)) &&
+    am.every((m, i) => m.id === bm[i].id && m.height === bm[i].height && sameOutline(m.outline, bm[i].outline)) &&
+    ah.every((h, i) => h.x === bh[i].x && h.y === bh[i].y && h.radius === bh[i].radius && h.height === bh[i].height);
 }
 
 /** Installs the terrain of the world being simulated or displayed. Missing terrain means the legacy map. */
@@ -94,6 +123,7 @@ export function setSurfaceTerrain(terrain: SurfaceTerrainData | undefined | null
   if (sameTerrain(next, activeTerrain)) return;
   activeTerrain = next;
   activeBounds = boundsFor(next);
+  mountainBounds = mountainBoundsFor(next);
   revision += 1;
 }
 
@@ -168,6 +198,54 @@ export function lakeIdAt(x: number, y: number): LakeId | null {
     }
   }
   return null;
+}
+
+export function mountainIdAt(x: number, y: number): string | null {
+  for (const b of mountainBounds) {
+    if (x < b.minX || x > b.maxX || y < b.minY || y > b.maxY) continue;
+    if (isInsidePolygon(x, y, b.mountain.outline)) return b.mountain.id;
+  }
+  return null;
+}
+
+export function isMountainAt(x: number, y: number): boolean {
+  return mountainIdAt(x, y) !== null;
+}
+
+/** Ground nobody can walk or build on: water and rock massifs. Use isWaterAt for water-only rules. */
+export function isTerrainBlockedAt(x: number, y: number): boolean {
+  return lakeIdAt(x, y) !== null || mountainIdAt(x, y) !== null;
+}
+
+/** Distance from (x, y) to a polygon outline (unsigned). */
+function outlineDistance(x: number, y: number, outline: readonly { x: number; y: number }[]): number {
+  let distance = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < outline.length; i += 1) distance = Math.min(distance, distanceToSegment(x, y, outline[i], outline[(i + 1) % outline.length]));
+  return distance;
+}
+
+export const MOUNTAIN_FOOT = 5;
+
+/**
+ * Visual ground height in world units. Hills are smooth bumps; mountains rise
+ * from a short foot slope outside their outline to their peak inside. Gameplay
+ * never reads it (hills are walkable, mountains are blocked by isMountainAt).
+ * Clients port this formula (godot/scripts/world/surface_terrain.gd).
+ */
+export function heightAt(x: number, y: number): number {
+  let h = 0;
+  for (const hill of activeTerrain.hills ?? []) {
+    const d2 = ((x - hill.x) ** 2 + (y - hill.y) ** 2) / (hill.radius * hill.radius);
+    if (d2 < 1) h += hill.height * (1 - d2) * (1 - d2);
+  }
+  for (const b of mountainBounds) {
+    if (x < b.minX - MOUNTAIN_FOOT || x > b.maxX + MOUNTAIN_FOOT || y < b.minY - MOUNTAIN_FOOT || y > b.maxY + MOUNTAIN_FOOT) continue;
+    const d = outlineDistance(x, y, b.mountain.outline);
+    const inside = isInsidePolygon(x, y, b.mountain.outline);
+    const t = inside ? Math.min(1, 0.25 + d / 10) : Math.max(0, 0.25 * (1 - d / MOUNTAIN_FOOT));
+    h = Math.max(h, b.mountain.height * t * t * (3 - 2 * t));
+  }
+  return h;
 }
 
 export function isDeepWaterAt(x: number, y: number): boolean {

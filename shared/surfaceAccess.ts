@@ -2,11 +2,12 @@ import { WALL_CELL_SIZE, type Building, type Vec2 } from "./types";
 import { buildingFootprint, crossesBuilding, insideBuilding } from "./buildingGeometry";
 import { insideHearth, crossesHearth, outsideHearth } from "./campGeometry";
 import { fenceCellCenters } from "./fenceGeometry";
-import { isWaterAt } from "./surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt, surfaceTerrainRevision } from "./surfaceTerrain";
 import { surfaceLineOpen, surfacePointOpen, type SurfaceObstacles } from "./surfaceNavigation";
 
 export function surfaceGeometryKey(surface: SurfaceObstacles): string {
-  return surface.buildings.filter(b=>b.stage==="built").map(b=>`${b.id}:${b.type}:${b.colonyId}:${b.pos.x}:${b.pos.y}:${b.gateAxis}:${b.gateSpan}`).join("|");
+  // Terrain revision: a different world (lakes, mountains) invalidates cached regions.
+  return surfaceTerrainRevision()+"#"+surface.buildings.filter(b=>b.stage==="built").map(b=>`${b.id}:${b.type}:${b.colonyId}:${b.pos.x}:${b.pos.y}:${b.gateAxis}:${b.gateSpan}`).join("|");
 }
 /** Settlement-level connected regions. Build once per geometry/owner; no A*
  * search for every resource/worker pair, and no per-tick resident planner. */
@@ -21,7 +22,7 @@ export class SurfaceAccess {
     this.width=Math.ceil(surface.width/WALL_CELL_SIZE);this.height=Math.ceil(surface.height/WALL_CELL_SIZE);
     this.blocked=new Uint8Array(this.width*this.height);this.labels=new Int32Array(this.blocked.length);
     this.solids=surface.buildings.map(buildingFootprint).filter((f):f is NonNullable<typeof f>=>!!f);
-    for(let y=0;y<this.height;y++)for(let x=0;x<this.width;x++) if((x+.5)*2>=surface.width-1||(y+.5)*2>=surface.height-1||area&&(Math.abs((x+.5)*2-area.center.x)>area.radius||Math.abs((y+.5)*2-area.center.y)>area.radius)||isWaterAt((x+.5)*2,(y+.5)*2))this.blocked[y*this.width+x]=1;
+    for(let y=0;y<this.height;y++)for(let x=0;x<this.width;x++) if((x+.5)*2>=surface.width-1||(y+.5)*2>=surface.height-1||area&&(Math.abs((x+.5)*2-area.center.x)>area.radius||Math.abs((y+.5)*2-area.center.y)>area.radius)||isTerrainBlockedAt((x+.5)*2,(y+.5)*2))this.blocked[y*this.width+x]=1;
     for(const b of surface.buildings)if(b.stage==="built"&&(b.type==="wall"||b.type==="gate"&&b.colonyId!==owner))for(const p of fenceCellCenters(b))this.mark(p.x,p.y);
     for(const f of this.solids)this.cover(f.x-f.rx,f.y-f.ry,f.x+f.rx,f.y+f.ry,(p)=>insideBuilding(p.x,p.y,f));
     for(const c of surface.entrances)this.cover(c.x-3,c.y-2,c.x+3,c.y+2,p=>insideHearth(p.x,p.y,c));

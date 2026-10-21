@@ -1,7 +1,7 @@
 import { WALL_CELL_SIZE, type Building, type Vec2 } from "./types";
 import { buildingFootprint, crossesBuilding, insideBuilding, outsideBuilding } from "./buildingGeometry";
 import { crossesHearth, insideHearth } from "./campGeometry";
-import { isWaterAt } from "./surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt } from "./surfaceTerrain";
 import { fenceContains } from "./fenceGeometry";
 import { surfaceGridLineOpen } from "./surfaceGrid";
 
@@ -9,7 +9,7 @@ export type SurfaceObstacles = { width: number; height: number; buildings: Build
 const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 
 export function surfacePointOpen(surface: SurfaceObstacles, p: Vec2, owner?: string): boolean {
-  if (p.x < 1 || p.y < 1 || p.x >= surface.width - 1 || p.y >= surface.height - 1 || isWaterAt(p.x, p.y)) return false;
+  if (p.x < 1 || p.y < 1 || p.x >= surface.width - 1 || p.y >= surface.height - 1 || isTerrainBlockedAt(p.x, p.y)) return false;
   if (surface.entrances.some(c => insideHearth(p.x, p.y, c))) return false;
   return !surface.buildings.some(b => {
     const f = buildingFootprint(b);
@@ -23,7 +23,7 @@ export function surfaceLineOpen(surface: SurfaceObstacles, a: Vec2, b: Vec2, own
   if (surface.entrances.some(c => crossesHearth(a.x, a.y, b.x, b.y, c))) return false;
   if (surface.buildings.some(building => { const f = buildingFootprint(building); return f && crossesBuilding(a, b, f); })) return false;
   const fences = surface.buildings.filter(b => b.stage === "built" && (b.type === "wall" || b.type === "gate" && b.colonyId !== owner));
-  return surfaceGridLineOpen(a, b, (x, y) => !isWaterAt(x, y) && !fences.some(b => fenceContains(b, { x, y })));
+  return surfaceGridLineOpen(a, b, (x, y) => !isTerrainBlockedAt(x, y) && !fences.some(b => fenceContains(b, { x, y })));
 }
 
 /** A shared route for simulation and packet interpolation. Failed routes stop,

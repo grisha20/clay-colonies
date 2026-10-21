@@ -18,7 +18,7 @@ import {
   type Vec2,
   type WorldSnapshot
 } from "../../../shared/types";
-import { LEGACY_TERRAIN, isWaterAt, setSurfaceTerrain, type SurfaceTerrainData } from "../../../shared/surfaceTerrain";
+import { LEGACY_TERRAIN, isWaterAt, setSurfaceTerrain, type SurfaceTerrainData, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { computeDirectives, createFitnessState, type ColonyDirectives, type FitnessState } from "../ai/controller";
 import type { GenomeState } from "../ai/genome";
 import type { SpiderGenomeState } from "../ai/spiderGenome";
@@ -141,10 +141,10 @@ function isSpawnableSurfacePos(pos: Vec2, waterBuffer = 1.5): boolean {
   if (pos.x < 2 || pos.y < 2 || pos.x >= CONFIG.mapWidth - 2 || pos.y >= CONFIG.mapHeight - 2) {
     return false;
   }
-  if (isWaterAt(pos.x, pos.y)) {
+  if (isTerrainBlockedAt(pos.x, pos.y)) {
     return false;
   }
-  return !isWaterAt(pos.x + waterBuffer, pos.y) && !isWaterAt(pos.x - waterBuffer, pos.y) && !isWaterAt(pos.x, pos.y + waterBuffer) && !isWaterAt(pos.x, pos.y - waterBuffer);
+  return !isTerrainBlockedAt(pos.x + waterBuffer, pos.y) && !isTerrainBlockedAt(pos.x - waterBuffer, pos.y) && !isTerrainBlockedAt(pos.x, pos.y + waterBuffer) && !isTerrainBlockedAt(pos.x, pos.y - waterBuffer);
 }
 
 function nearestSpawnableSurfacePos(pos: Vec2): Vec2 {

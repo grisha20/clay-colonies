@@ -5,7 +5,7 @@ import { amphibianLineOpen, amphibianRoute, lakeShorePortals, nearLakeShore } fr
 import { surfaceGeometryKey } from "../../../shared/surfaceAccess";
 import { surfacePointOpen } from "../../../shared/surfaceNavigation";
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
-import { isWaterAt, lakeDefinitions, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, lakeIdAt, type LakeId, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../shared/dayCycle";
 import { CONFIG } from "../config";
 import { calculateSurfacePath } from "./ant/movement";
@@ -69,7 +69,7 @@ export function nearestDryPosition(world: World, point: Vec2): Vec2 | null {
   for (let radius = 0; radius <= 48; radius += 2) {
     for (let i = 0; i < 16; i++) {
       const p = { x: point.x + Math.cos(i * Math.PI / 8) * radius, y: point.y + Math.sin(i * Math.PI / 8) * radius };
-      if (p.x > 2 && p.y > 2 && p.x < world.surface.width - 2 && p.y < world.surface.height - 2 && !isWaterAt(p.x, p.y) && !isWallBlockedAt(world, p.x, p.y)) return p;
+      if (p.x > 2 && p.y > 2 && p.x < world.surface.width - 2 && p.y < world.surface.height - 2 && !isTerrainBlockedAt(p.x, p.y) && !isWallBlockedAt(world, p.x, p.y)) return p;
     }
   }
   return null;
@@ -102,7 +102,7 @@ export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: nu
     const wall = world.surface.buildings.find(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && fenceContains(b, candidate));
     if (wall) { damageBuilding(world, wall, CONFIG.raidBuildingDamage); return; }
   }
-  if (isWaterAt(candidate.x, candidate.y)) return;
+  if (isTerrainBlockedAt(candidate.x, candidate.y)) return;
   const before = { ...enemy.pos };
   enemy.pos.x = Math.max(1, Math.min(world.surface.width - 1, candidate.x));
   enemy.pos.y = Math.max(1, Math.min(world.surface.height - 1, candidate.y));

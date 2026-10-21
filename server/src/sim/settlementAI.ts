@@ -1,5 +1,5 @@
 import type { Building, BuildingType, Vec2 } from "../../../shared/types";
-import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import { placePointBuilding, placeGate, paintWallCells, wallCellIndexAt, isSurfaceBlockedAt } from "./building";
 import type { World } from "./world";
@@ -93,7 +93,7 @@ export function updateSettlementAI(world: World): void {
     for (let offset = -18; offset <= 18; offset += 2) {
       for (const dy of [-26, 28]) {
         const p = { x: camp.x + offset, y: camp.y + dy };
-        if (isWaterAt(p.x, p.y)) continue;
+        if (isTerrainBlockedAt(p.x, p.y)) continue;
         (Math.abs(offset) <= 2 ? gateCells : wallCells).push(wallCellIndexAt(p.x, p.y));
       }
     }

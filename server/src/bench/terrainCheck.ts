@@ -21,6 +21,9 @@ const terrainModule = await import("../../../shared/surfaceTerrain");
 const { LEGACY_TERRAIN, getSurfaceTerrain, isWaterAt, lakeIdAt, setSurfaceTerrain } = terrainModule;
 type SurfaceTerrainData = import("../../../shared/surfaceTerrain").SurfaceTerrainData;
 const { CONFIG } = await import("../config");
+const { surfacePointOpen, surfaceRoute, surfaceLineOpen } = await import("../../../shared/surfaceNavigation");
+const { pointBuildingPlacement } = await import("../../../shared/buildingPlacement");
+const { isMountainAt, isTerrainBlockedAt, heightAt } = terrainModule;
 
 let seed = 4242, passed = 0;
 const originalRandom = Math.random;
@@ -104,6 +107,31 @@ try {
     assert.ok(isWaterAt(238, 115) && isWaterAt(237, 352));
     assert.ok(loaded.surface.fish.every((f) => f.lakeId === "north" || f.lakeId === "south"));
     for (let i = 0; i < 20; i++) { step(loaded); updateWildlife(loaded); }
+  });
+
+  check("Горы: непроходимы, обходятся маршрутом, на них не строят и не спавнят", () => {
+    const rocky: SurfaceTerrainData = {
+      ...custom,
+      seed: 78,
+      // A rock wall across the meadow north of camp A with open ends.
+      mountains: [{ id: "ridge", height: 9, outline: [{ x: 100, y: 196 }, { x: 140, y: 196 }, { x: 142, y: 206 }, { x: 98, y: 206 }] }],
+      hills: [{ x: 300, y: 300, radius: 30, height: 3 }]
+    };
+    const [g, s, gb] = genomes();
+    const w = createWorld(g, s, gb, rocky);
+    assert.ok(isMountainAt(120, 200) && isTerrainBlockedAt(120, 200) && !isWaterAt(120, 200));
+    assert.ok(heightAt(120, 200) > 4 && heightAt(300, 300) > 2.9 && heightAt(60, 60) === 0);
+    assert.ok(w.surface.resourceNodes.every((n) => !isMountainAt(n.pos.x, n.pos.y)), "no resources in rock");
+    assert.ok(w.surface.foodSources.every((f) => !isMountainAt(f.pos.x, f.pos.y)), "no food in rock");
+    assert.equal(surfacePointOpen(w.surface, { x: 120, y: 201 }, "colony-1"), false);
+    assert.equal(surfaceLineOpen(w.surface, { x: 120, y: 190 }, { x: 120, y: 212 }, "colony-1"), false);
+    const route = surfaceRoute(w.surface, { x: 120, y: 188 }, { x: 120, y: 214 }, "colony-1");
+    assert.ok(route && route.length > 1, "route detours around the ridge");
+    let prev = { x: 120, y: 188 };
+    for (const p of route!) { assert.ok(surfaceLineOpen(w.surface, prev, p, "colony-1")); prev = p; }
+    assert.equal(pointBuildingPlacement(w.surface, "colony-1", "hut", { x: 120, y: 201 }), "Основание упирается в скалы");
+    for (let i = 0; i < 300; i++) step(w);
+    assert.ok(w.ants.every((a) => a.layer !== "surface" || !isMountainAt(a.pos.x, a.pos.y)), "no resident inside rock");
   });
 
   console.log(`${passed} passed, 0 failed.`);
