@@ -77,6 +77,39 @@ static func _flat_material(c: Color) -> StandardMaterial3D:
 	return m
 
 
+const GROUPS = [
+	["Жильё и хозяйство", ["hut", "storage", "workshop", "idol"]],
+	["Оборона", ["wall", "gate", "post"]],
+	["Зоны", ["harvest", "forbid", "erase"]],
+]
+const TILE_TEXT := Color(0.98, 0.93, 0.82)
+const COST_SHORT := Color(1.0, 0.55, 0.45)
+const RES_GENITIVE = {"clay": "глины", "wood": "дерева", "stone": "камня"}
+var tile_costs: Dictionary = {}    # tool -> {res: Label}
+var tile_counts: Dictionary = {}   # tool -> Label
+var tile_icons: Dictionary = {}    # tool -> TextureRect
+var icon_textures: Dictionary = {}
+var toolbar_state: Dictionary = {} # tool -> {"short": [res], "full": bool}
+
+
+static func _tile_style(fill: Color, border: Color, width: int) -> StyleBoxFlat:
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = border
+	sb.set_border_width_all(width)
+	sb.set_corner_radius_all(7)
+	sb.shadow_color = Color(0, 0, 0, 0.25)
+	sb.shadow_size = 2
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	sb.content_margin_top = 3
+	sb.content_margin_bottom = 3
+	return sb
+
+
+## Stronghold-style build bar: groups of picture tiles with name, cost as
+## resource icons, hotkey badge and "built / limit". Missing resources turn the
+## number red, a reached limit greys the picture (update_from_snapshot).
 func _build_toolbar(canvas: CanvasLayer) -> void:
 	toolbar = PanelContainer.new()
 	toolbar.name = "BuildToolbar"
@@ -85,24 +118,173 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 	toolbar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	toolbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	toolbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	toolbar.offset_bottom = -16
+	toolbar.offset_bottom = -12
 	toolbar.mouse_force_pass_scroll_events = false
 	canvas.add_child(toolbar)
-	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	toolbar.add_child(row)
+	var kinds: Array = []
 	for spec in TOOLS:
-		var b = Button.new()
-		var cost = BuildRules.cost_text(spec[0])
-		b.text = "%s\n%s" % [spec[1], cost if cost != "" else " "]
-		b.tooltip_text = "%s  [%s]" % [HINTS[spec[0]], spec[2]]
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(100, 54)
+		kinds.append(spec[0])
+	icon_textures = BuildIcons.create(self, kinds)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	toolbar.add_child(row)
+	var specs: Dictionary = {}
+	for spec in TOOLS:
+		specs[spec[0]] = spec
+	for g in range(GROUPS.size()):
+		if g > 0:
+			row.add_child(VSeparator.new())
+		var group = VBoxContainer.new()
+		group.add_theme_constant_override("separation", 2)
+		row.add_child(group)
+		var title = Label.new()
+		title.text = GROUPS[g][0]
+		title.add_theme_font_size_override("font_size", 13)
+		title.add_theme_color_override("font_color", GameHud.INK.lightened(0.25))
+		group.add_child(title)
+		var tiles = HBoxContainer.new()
+		tiles.add_theme_constant_override("separation", 5)
+		group.add_child(tiles)
+		for t in GROUPS[g][1]:
+			tiles.add_child(_make_tile(specs[t]))
+
+
+func _plain_label(text: String, size: int, color: Color) -> Label:
+	var l = Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
+
+func _make_tile(spec: Array) -> Button:
+	var t: String = spec[0]
+	var b = Button.new()
+	b.name = "Tool_" + t
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(96, 124)
+	b.tooltip_text = "%s  [%s]" % [HINTS[t], spec[2]]
+	b.add_theme_stylebox_override("normal", _tile_style(Color(0.45, 0.34, 0.23), Color(0.27, 0.19, 0.12), 2))
+	b.add_theme_stylebox_override("hover", _tile_style(Color(0.53, 0.41, 0.28), Color(0.33, 0.24, 0.15), 2))
+	b.add_theme_stylebox_override("pressed", _tile_style(Color(0.58, 0.45, 0.28), Color(0.98, 0.80, 0.30), 3))
+	b.add_theme_stylebox_override("hover_pressed", _tile_style(Color(0.62, 0.48, 0.30), Color(0.98, 0.80, 0.30), 3))
+	b.pressed.connect(func(): set_tool("" if tool == t else t))
+	var box = VBoxContainer.new()
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = 4
+	box.offset_right = -4
+	box.offset_top = 4
+	box.offset_bottom = -4
+	box.add_theme_constant_override("separation", 1)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(box)
+	var pic = TextureRect.new()
+	pic.texture = icon_textures.get(t)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.custom_minimum_size = Vector2(88, 68)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(pic)
+	tile_icons[t] = pic
+	var sign = BuildIcons.sign_for(t)
+	if sign:
+		var s = TextureRect.new()
+		s.texture = sign
+		s.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		s.offset_left = -30
+		s.offset_top = -30
+		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pic.add_child(s)
+	var name_label = _plain_label(spec[1], 13, TILE_TEXT)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(name_label)
+	var cost_row = HBoxContainer.new()
+	cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	cost_row.add_theme_constant_override("separation", 2)
+	cost_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(cost_row)
+	var costs: Dictionary = {}
+	var cost: Dictionary = BuildRules.COSTS.get(t, {})
+	for res in ["clay", "wood", "stone"]:
+		if int(cost.get(res, 0)) <= 0:
+			continue
+		var ic = TextureRect.new()
+		ic.texture = GameHud.make_icon(res)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.custom_minimum_size = Vector2(16, 16)
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cost_row.add_child(ic)
+		var n = _plain_label(str(int(cost[res])), 13, TILE_TEXT)
+		cost_row.add_child(n)
+		costs[res] = n
+	if costs.is_empty():
+		cost_row.add_child(_plain_label("даром", 12, TILE_TEXT.darkened(0.2)))
+	tile_costs[t] = costs
+	var key = _plain_label(spec[2], 12, Color(0.25, 0.17, 0.10))
+	key.position = Vector2(5, 3)
+	var kb = StyleBoxFlat.new()
+	kb.bg_color = Color(0.96, 0.88, 0.66)
+	kb.set_corner_radius_all(4)
+	kb.content_margin_left = 4
+	kb.content_margin_right = 4
+	key.add_theme_stylebox_override("normal", kb)
+	b.add_child(key)
+	if BuildRules.LIMITS.has(t):
+		var count = _plain_label("", 12, TILE_TEXT)
+		count.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		count.offset_left = -40
+		count.offset_right = -5
+		count.offset_top = 3
+		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		count.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+		b.add_child(count)
+		tile_counts[t] = count
+	buttons[t] = b
+	return b
+
+
+## Resources and building counts of the player's tribe: short costs go red,
+## a reached limit greys the picture and says so in the tooltip.
+func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
+	var colonies = snapshot.get("colonies", [])
+	if typeof(colonies) != TYPE_ARRAY or player >= colonies.size():
+		return
+	var colony: Dictionary = colonies[player].get("colony", {})
+	var owner = "colony-2" if player == 1 else "colony-1"
+	var built: Dictionary = {}
+	var surface = snapshot.get("surface", {})
+	if typeof(surface) == TYPE_DICTIONARY:
+		for bd in surface.get("buildings", []):
+			if typeof(bd) == TYPE_DICTIONARY and str(bd.get("colonyId", "")) == owner:
+				var bt = str(bd.get("type", ""))
+				built[bt] = int(built.get(bt, 0)) + 1
+	for spec in TOOLS:
 		var t: String = spec[0]
-		b.pressed.connect(func(): set_tool("" if tool == t else t))
-		row.add_child(b)
-		buttons[t] = b
+		var short: Array = []
+		var cost: Dictionary = BuildRules.COSTS.get(t, {})
+		for res in tile_costs[t].keys():
+			var lack = float(colony.get(res, 0.0)) < float(cost.get(res, 0))
+			if lack:
+				short.append(res)
+			(tile_costs[t][res] as Label).add_theme_color_override("font_color", COST_SHORT if lack else TILE_TEXT)
+		var full = false
+		if tile_counts.has(t):
+			var n = int(built.get(t, 0))
+			var limit = int(BuildRules.LIMITS[t])
+			full = n >= limit
+			(tile_counts[t] as Label).text = "%d/%d" % [n, limit]
+		(tile_icons[t] as TextureRect).modulate = Color(0.45, 0.45, 0.45) if full else (Color(0.8, 0.75, 0.72) if not short.is_empty() else Color.WHITE)
+		var tip = "%s  [%s]" % [HINTS[t], spec[2]]
+		if full:
+			tip += "\nДостигнут предел этих построек"
+		elif not short.is_empty():
+			tip += "\nНе хватает: " + ", ".join(short.map(func(r): return RES_GENITIVE[r]))
+		(buttons[t] as Button).tooltip_text = tip
+		toolbar_state[t] = {"short": short, "full": full}
 
 
 func _build_ghosts() -> void:

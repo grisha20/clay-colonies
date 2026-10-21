@@ -278,10 +278,15 @@ func _setup_hud() -> void:
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
-	help_label.text = "WASD — камера · колесо — масштаб · ЛКМ — выбрать · 1–9 — стройка и зоны · Esc/ПКМ — отмена"
-	help_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	help_label.offset_left = 18
-	help_label.offset_top = -112
+	help_label.text = "WASD — камера · колесо — масштаб · ЛКМ — выбрать\n1–9, 0 — стройка и зоны · Esc/ПКМ — отмена"
+	# Bottom-right under the inspector: the picture build bar fills the bottom centre.
+	help_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	help_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	help_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	help_label.offset_right = -18
+	help_label.offset_bottom = -14
+	help_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	help_label.add_theme_font_size_override("font_size", 13)
 	help_label.add_theme_color_override("font_color", Color(1, 0.97, 0.88))
 	help_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	help_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -457,6 +462,8 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		priority_panel.update_from_snapshot(snapshot, player_colony)
 	if advice_feed:
 		advice_feed.update_from_snapshot(snapshot, player_colony)
+	if build:
+		build.update_from_snapshot(snapshot, player_colony)
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})
