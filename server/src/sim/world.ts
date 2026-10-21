@@ -975,6 +975,7 @@ export function worldFromSnapshot(
           guard: colonySnapshot.colony.priorities?.guard ?? 1,
           fish: colonySnapshot.colony.priorities?.fish ?? 1
         },
+        autoManage: colonySnapshot.colony.autoManage ?? false,
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
         knownFood: colonySnapshot.colony.knownFood ?? [],
         activeFoodTargetId: colonySnapshot.colony.activeFoodTargetId,

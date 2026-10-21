@@ -16,6 +16,7 @@ import { alphaGroundProfile, plantedOffset } from "../../../client/src/render/su
 const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
 const s = { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
 const world = toSnapshot(createWorld(g, s, structuredClone(g)));
+world.colonies.forEach(c => { c.colony.autoManage = false; });
 const ant = world.ants[0];
 world.ants = [ant]; world.enemies = []; world.session.speed = 1;
 ant.layer = "surface"; ant.heading = { x: 1, y: 0 }; ant.carrying = 0;
@@ -258,7 +259,7 @@ scenario("Frequent strikes at 50x finish their visible swing; picking up cargo c
   ant.carrying = 1; frame(); assert.equal(tracker.resident(ant).attackActive, false);
 });
 scenario("Royal patrols move continuously between 10 Hz packets, stop on pause and disconnection", () => {
-  const w = toSnapshot(createWorld(g, s, structuredClone(g))); w.enemies = []; w.weather.state = "clear"; w.tick = 1800;
+  const w = toSnapshot(createWorld(g, s, structuredClone(g))); w.enemies = []; w.colonies.forEach(c => { c.colony.autoManage = false; }); w.weather.state = "clear"; w.tick = 1800;
   w.colonies.forEach(c => { c.colony.alarm = false; }); w.session.speed = 1;
   const walk = new RoyalWalk(), poses = new MotionTracker(); let ms = 1000;
   let previous = walk.update(w, ms), still = 0, minimum = Infinity, maximum = 0;
@@ -288,7 +289,7 @@ scenario("Shadow footprints keep their horizontal width at noon and sweep in eve
   }
 });
 scenario("Rain brings both royals back to separate places at the hearth", () => {
-  const w = toSnapshot(createWorld(g, s, structuredClone(g))); w.enemies = []; w.weather.state = "warning"; w.tick = 1800; w.session.speed = 1;
+  const w = toSnapshot(createWorld(g, s, structuredClone(g))); w.enemies = []; w.colonies.forEach(c => { c.colony.autoManage = false; }); w.weather.state = "warning"; w.tick = 1800; w.session.speed = 1;
   w.colonies.forEach(c => { c.colony.alarm = false; c.colony.fire = 1; }); const walk = new RoyalWalk();
   let residents = walk.update(w);
   for (let i = 0; i < 150; i++) { w.tick += 5; residents = walk.update(w); }

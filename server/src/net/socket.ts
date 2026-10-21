@@ -6,6 +6,7 @@ export type ClientCommand =
   | { type: "placeGate"; colonyIndex: number; x: number; y: number; axis: "horizontal" | "vertical" }
   | { type: "takeControl"; colonyIndex: number }
   | { type: "setAlarm"; colonyIndex: number; value: boolean }
+  | { type: "setAutoManage"; colonyIndex: number; value: boolean }
   | { type: "setDefensePost"; colonyIndex: number; x: number; y: number }
   | { type: "trainWaterWeapons"; colonyIndex: number }
   | { type: "setGrowth"; colonyIndex: number; paused: boolean; reserve: number }
@@ -104,6 +105,7 @@ export function parseCommand(raw: string): ClientCommand | null {
         : 0;
     if (command.type === "takeControl") return { type: "takeControl", colonyIndex };
     if (command.type === "setAlarm" && typeof command.value === "boolean") return { type: "setAlarm", colonyIndex, value: command.value };
+    if (command.type === "setAutoManage" && typeof command.value === "boolean") return { type: "setAutoManage", colonyIndex, value: command.value };
     if (command.type === "setSandbox" && typeof command.value === "boolean") return { type: "setSandbox", value: command.value, colonyIndex };
     if (command.type === "trainWaterWeapons") return { type: "trainWaterWeapons", colonyIndex };
     if (command.type === "setGrowth" && typeof command.paused === "boolean" && typeof command.reserve === "number" && Number.isFinite(command.reserve)) {

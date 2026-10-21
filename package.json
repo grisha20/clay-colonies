@@ -22,6 +22,7 @@
     "check:navigation": "tsx server/src/bench/navigationCheck.ts",
     "check:jitter": "tsx server/src/bench/jitterCheck.ts",
     "check:terrain": "tsx server/src/bench/terrainCheck.ts",
+    "check:mother": "tsx server/src/bench/motherCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },
   "devDependencies": {

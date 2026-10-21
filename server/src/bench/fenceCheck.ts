@@ -90,7 +90,7 @@ const { isWaterAt } = await import("../../../shared/surfaceTerrain");
 const { parseCommand } = await import("../net/socket");
 function fresh() {
   const g = { current: randomGenome(), best:null, bestFitness:0, archive:[], generationsRun:0 };
-  const w = createWorld(g,{current:randomSpiderGenome(),best:null,bestFitness:0,archive:[],generationsRun:0},structuredClone(g));
+  const w = createWorld(g,{current:randomSpiderGenome(),best:null,bestFitness:0,archive:[],generationsRun:0},structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; });
   w.surface.buildings=[]; w.surface.entrances=[]; rebuildWallBlocked(w); return w;
 }
 try {

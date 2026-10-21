@@ -7,11 +7,15 @@ extends PanelContainer
 ## The server is the authority (colony.priorities); buttons emit setPriorities.
 
 signal priorities_requested(priorities: Dictionary)
+signal auto_manage_requested(enabled: bool)
 
 const KEYS = ["clay", "wood", "stone", "build", "guard", "fish"]
 const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка"}
 
 var header: Label
+var mode_button: Button
+var mode_hint: Label
+var auto_manage := false
 var rows_box: VBoxContainer
 var priorities: Dictionary = {}
 var free_for_plus: int = 0
@@ -34,6 +38,20 @@ func _ready() -> void:
 	header = Label.new()
 	header.add_theme_font_size_override("font_size", 14)
 	box.add_child(header)
+	# «Праматерь решает»: the tribe AI sets the targets (colony.autoManage);
+	# any +/- hands them to the player (the server switches to manual).
+	mode_button = Button.new()
+	mode_button.name = "ModeButton"
+	mode_button.focus_mode = Control.FOCUS_NONE
+	mode_button.pressed.connect(func(): auto_manage_requested.emit(not auto_manage))
+	box.add_child(mode_button)
+	mode_hint = Label.new()
+	mode_hint.add_theme_font_size_override("font_size", 12)
+	mode_hint.add_theme_color_override("font_color", GameHud.INK.lightened(0.3))
+	mode_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_hint.custom_minimum_size = Vector2(300, 0)
+	box.add_child(mode_hint)
+	_update_mode()
 	rows_box = VBoxContainer.new()
 	rows_box.add_theme_constant_override("separation", 2)
 	box.add_child(rows_box)
@@ -115,6 +133,10 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	var food = float(colony.get("food", 0.0))
 	var alarm = bool(colony.get("alarm", false))
 	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0))}
+	var auto = bool(colony.get("autoManage", false))
+	if auto != auto_manage:
+		auto_manage = auto
+		_update_mode()
 	var sig = JSON.stringify([priorities, counts, alive, free_for_plus, population, tools, food < 30.0, food < 15.0, alarm, loose_stone])
 	if sig == signature:
 		return
@@ -180,6 +202,13 @@ static func unmet_reason(k: String, target: int, count: int, alive: Dictionary, 
 	if k == "stone" and int(tools.get("stone", 0)) == 0 and not loose_stone:
 		return "Нужна кирка из мастерской"
 	return "Нет фронта работ или свободных жителей" if k == "build" else "Ждёт свободного жителя или сдачи груза"
+
+
+func _update_mode() -> void:
+	if mode_button == null:
+		return
+	mode_button.text = "Праматерь решает" if auto_manage else "Вручную · вернуть Праматери"
+	mode_hint.text = "Праматерь сама расставляет жителей. Нажмите ± — и работы ваши." if auto_manage else "Вы распределяете жителей сами."
 
 
 func _button(text: String, disabled: bool) -> Button:

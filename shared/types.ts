@@ -239,6 +239,14 @@ export type Underground = {
   ants: string[];
 };
 
+export type Advice = {
+  key: string;
+  text: string;
+  severity: "info" | "warn" | "danger";
+  since: number;
+  pos?: Vec2;
+};
+
 export type Colony = {
   id: string;
   foundedTick: number;
@@ -261,6 +269,11 @@ export type Colony = {
   waterWeapons?: boolean;
   growthPaused?: boolean;
   clayReserve?: number;
+  /** «Праматерь решает»: priorities, clay reserve and alarm are run by the tribe AI
+   *  (server/src/sim/settlementAI.ts). Missing in old saves = manual. */
+  autoManage?: boolean;
+  /** Current advice of the tribe mother (server/src/sim/advisor.ts), recomputed. */
+  advice?: Advice[];
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).
   // «+» берёт человека из свободных, «−» возвращает. Свободные — на еде.
   priorities: {

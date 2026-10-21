@@ -44,7 +44,8 @@ function scenario(name: string, run: () => void) { run(); passed++; console.log(
 function fresh() {
   const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
   const s = { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
-  return createWorld(g, s, structuredClone(g));
+  const w = createWorld(g, s, structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; });
+  return w;
 }
 
 try {

@@ -38,6 +38,8 @@ const genome = await loadGenome();
 const genomeB = await loadGenome(process.env.GENOME_FILE_B);
 const spiderGenome = await loadSpiderGenome();
 const world = createWorld(genome, spiderGenome, genomeB);
+// Проверки ручного управления: Праматерь не перебивает приоритеты.
+world.colonies.forEach(c => { c.colony.autoManage = false; });
 // This suite isolates the economy and terrain. Threats/outcomes have their own scenarios.
 world.session.mode = "sandbox";
 world.session.dangersEnabled = false;

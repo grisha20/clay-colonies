@@ -24,7 +24,7 @@ const { moveBuilding } = await import("../sim/ant/build");
 const { placePointBuilding } = await import("../sim/building");
 let seed = 91817, passed = 0; const originalRandom = Math.random;
 Math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-function fresh() { const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }; return createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); }
+function fresh() { const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }; const w = createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; }); return w; }
 function check(name: string, run: () => void) { run(); passed++; console.log(`PASS  ${name}`); }
 try {
   check("Соперник: занятые старые позиции не останавливают поиск места для мастерской",()=>{

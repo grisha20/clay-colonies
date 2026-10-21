@@ -27,7 +27,7 @@ function fence(x:number,y:number,type:Building["type"]="wall"):Building {
 function fresh() {
   clearDeadAntPaths(new Set());
   const g={current:randomGenome(),best:null,bestFitness:0,archive:[],generationsRun:0};
-  const w=createWorld(g,{current:randomSpiderGenome(),best:null,bestFitness:0,archive:[],generationsRun:0},structuredClone(g));
+  const w=createWorld(g,{current:randomSpiderGenome(),best:null,bestFitness:0,archive:[],generationsRun:0},structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; });
   w.surface.buildings=[]; w.surface.entrances=[]; w.enemies=[]; w.weather.state="clear";
   for(let x=91;x<=151;x+=2) {
     if(x<119||x>123) w.surface.buildings.push(fence(x,215));

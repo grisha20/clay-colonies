@@ -12,6 +12,7 @@ import { eraseBuildCells, paintWallCells, placeGate, placePointBuilding, isSurfa
 import { startLoop, type LoopController } from "./loop";
 import { trainWaterWeapons, prepareSandboxGuard } from "./sim/session";
 import { createObjectives } from "./sim/objectives";
+import { noteManualAlarm } from "./sim/settlementAI";
 
 const genomeState = await loadGenome();
 const genomeStateB = await loadGenome(CONFIG.genomeFileB);
@@ -56,7 +57,11 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
   }
   if (command.type === "setAlarm") {
     const c = world.colonies[command.colonyIndex];
-    if (c) c.colony.alarm = command.value;
+    if (c) { c.colony.alarm = command.value; noteManualAlarm(c); }
+  }
+  if (command.type === "setAutoManage") {
+    const c = world.colonies[command.colonyIndex];
+    if (c) c.colony.autoManage = command.value;
   }
   if (command.type === "setDefensePost" && !isSurfaceBlockedAt(world, command.x, command.y, world.colonies[command.colonyIndex]?.id)) {
     const c = world.colonies[command.colonyIndex];
@@ -65,7 +70,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
   if (command.type === "trainWaterWeapons") trainWaterWeapons(world, command.colonyIndex);
   if (command.type === "setGrowth") {
     const c = world.colonies[command.colonyIndex];
-    if (c) { c.colony.growthPaused = command.paused; c.colony.clayReserve = command.reserve; }
+    if (c) { c.colony.growthPaused = command.paused; c.colony.clayReserve = command.reserve; c.colony.autoManage = false; }
   }
   if (command.type === "dropFood") {
     if (world.session.mode === "sandbox") addFoodSource(world, command.x, command.y, CONFIG.playerFoodAmount);
@@ -92,7 +97,9 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
   if (command.type === "setPriorities") {
     const colony = world.colonies[command.colonyIndex];
     if (colony) {
+      // Hand-set priorities take over from the mother («вручную»).
       colony.colony.priorities = command.priorities;
+      colony.colony.autoManage = false;
     }
   }
   if (command.type === "newGame") {

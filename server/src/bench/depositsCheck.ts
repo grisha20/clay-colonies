@@ -16,7 +16,7 @@ const { assignHarvestJobs } = await import("../sim/economy");
 const { moveHarvesting } = await import("../sim/ant/forage");
 const { updateTickCache, updateWorldSurfaceCache } = await import("../sim/cache");
 let passed = 0;
-function fresh() { const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }; return createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); }
+function fresh() { const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }; const w = createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; }); return w; }
 function check(name: string, run: () => void) { run(); passed++; console.log(`PASS  ${name}`); }
 try {
   check("8 крупных залежей, равный близкий доступ обоим племенам, площадки и рабочие места на суше", () => {

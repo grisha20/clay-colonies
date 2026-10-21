@@ -2,7 +2,7 @@ import type { Building, BuildingType, Vec2 } from "../../../shared/types";
 import { isWaterAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import { placePointBuilding, placeGate, paintWallCells, wallCellIndexAt, isSurfaceBlockedAt } from "./building";
-import type { World } from "./world";
+import type { ColonyRuntime, World } from "./world";
 import { trainWaterWeapons } from "./session";
 import { fenceCellCenters } from "../../../shared/fenceGeometry";
 import { pointBuildingPlacement } from "../../../shared/buildingPlacement";
@@ -33,26 +33,59 @@ function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop
 }
 
 /** One settlement-level planner. It pays normal costs through normal workers. */
+/** Alarms raised by the mother of a player tribe; only those she lowers herself. */
+const motherAlarm = new WeakMap<ColonyRuntime, boolean>();
+
+export function enemyNearCamp(world: World, runtime: ColonyRuntime): boolean {
+  const camp = runtime.surfaceEntrance;
+  return world.enemies.some(e => e.hp > 0 && Math.hypot(e.pos.x - camp.x, e.pos.y - camp.y) < 28);
+}
+
+/** Player turned the alarm on or off by hand: the mother leaves it alone. */
+export function noteManualAlarm(runtime: ColonyRuntime): void {
+  motherAlarm.delete(runtime);
+}
+
+/**
+ * Daily tribe logic of the mother: who does what, how much clay to keep before
+ * molding new residents and when to sound the alarm. AI tribes always run it;
+ * the player's tribe runs it while `autoManage` («Праматерь решает») is on.
+ * Building and expansion stay with the player.
+ */
+function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean): void {
+  const c = runtime.colony, population = runtime.ants.length;
+  const built = (type: BuildingType) => world.surface.buildings.filter(b => b.colonyId === c.id && b.type === type && b.stage === "built").length;
+  const threat = enemyNearCamp(world, runtime);
+  if (!isPlayer) c.alarm = threat;
+  else if (threat && !c.alarm) { c.alarm = true; motherAlarm.set(runtime, true); }
+  else if (!threat && c.alarm && motherAlarm.get(runtime)) { c.alarm = false; motherAlarm.delete(runtime); }
+  c.growthPaused = false;
+  c.clayReserve = population < 14 ? 0 : 6;
+  const foodLow = c.food < Math.max(18, population * 1.5);
+  c.priorities = {
+    clay: foodLow ? 1 : c.clay < 45 ? 3 : 1,
+    wood: c.wood < 30 ? 2 : 1,
+    stone: built("workshop") && c.stone < 24 ? 2 : 0,
+    build: foodLow ? 1 : 3,
+    guard: threat ? Math.min(5, Math.floor(population / 4)) : population >= 15 ? 2 : 1,
+    fish: !foodLow && built("workshop") && c.rods > 0 && population >= 20 ? 1 : 0
+  };
+}
+
 export function updateSettlementAI(world: World): void {
   if (world.tick % 100 !== 0) return;
   for (const [index, runtime] of world.colonies.entries()) {
-    if (index === (world.session.playerColonyIndex ?? 0) || !runtime.ants.length) continue;
+    if (!runtime.ants.length) continue;
+    const isPlayer = index === (world.session.playerColonyIndex ?? 0);
+    if (isPlayer) {
+      if (runtime.colony.autoManage) runTribeLogic(world, runtime, true);
+      continue;
+    }
+    runTribeLogic(world, runtime, false);
     const c = runtime.colony, camp = runtime.surfaceEntrance, population = runtime.ants.length;
     let buildings = world.surface.buildings.filter(b => b.colonyId === c.id);
     const built = (type: BuildingType) => buildings.filter(b => b.type === type && b.stage === "built").length;
-    const threat = world.enemies.some(e => e.hp > 0 && Math.hypot(e.pos.x - camp.x, e.pos.y - camp.y) < 28);
-    c.alarm = threat;
-    c.growthPaused = false;
-    c.clayReserve = population < 14 ? 0 : 6;
-    const foodLow = c.food < Math.max(18, population * 1.5);
-    c.priorities = {
-      clay: foodLow ? 1 : c.clay < 45 ? 3 : 1,
-      wood: c.wood < 30 ? 2 : 1,
-      stone: built("workshop") && c.stone < 24 ? 2 : 0,
-      build: foodLow ? 1 : 3,
-      guard: threat ? Math.min(5, Math.floor(population / 4)) : population >= 15 ? 2 : 1,
-      fish: !foodLow && built("workshop") && c.rods > 0 && population >= 20 ? 1 : 0
-    };
+    const threat = c.alarm;
     if (threat || world.weather.state !== "clear") continue;
     if (built("workshop") && c.wood >= 16 && c.stone >= 12 && world.tick > 12000) trainWaterWeapons(world, index);
     // Choose an unobstructed front; post is inside the fort and not in water.

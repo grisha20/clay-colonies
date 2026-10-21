@@ -69,6 +69,13 @@ var active_world_nodes: Dictionary = {} # id -> Node3D
 var fence_signature: String = ""
 var ground_signature: String = ""
 var colony_fire: Array[float] = [1.0, 1.0]
+## Праматерь at each hearth; molding plays when a new resident of that tribe appears.
+const MOTHER_ANGLE := 0.5 + PI / 3.0
+var mothers: Array = [null, null]
+var mother_mold: Array[float] = [0.0, 0.0]
+var known_residents: Array[Dictionary] = [{}, {}]
+var residents_seen := false
+var births_seen: Array[int] = [0, 0]
 var anim_time: float = 0.0
 var sim_speed: float = 1.0
 var _source_cache: Dictionary = {}
@@ -368,6 +375,7 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	var resource_nodes = _as_array(surface.get("resourceNodes", []))
 
 	_update_campfires(entrances)
+	_update_mothers(snapshot)
 	_update_buildings(buildings)
 	_update_fences(buildings)
 	_update_ground_features(entrances, buildings, deposits)
@@ -618,6 +626,73 @@ func _update_colony_fire(colonies: Variant) -> void:
 		var inner = entry.get("colony", {})
 		if typeof(inner) == TYPE_DICTIONARY and inner.has("fire"):
 			colony_fire[i] = clampf(float(inner.get("fire", 1.0)), 0.0, 1.0)
+
+func _update_mothers(snapshot: Dictionary) -> void:
+	var colonies = _as_array(snapshot.get("colonies", []))
+	var current: Array[Dictionary] = [{}, {}]
+	for a in _as_array(snapshot.get("ants", [])):
+		if typeof(a) != TYPE_DICTIONARY or str(a.get("state", "")) == "dead":
+			continue
+		var idx = 1 if str(a.get("colonyId", "")) == "colony-2" else 0
+		current[idx][str(a.get("id", ""))] = true
+	for i in range(2):
+		var camp = active_campfires.get(i) as Node3D
+		if camp == null:
+			continue
+		var node = mothers[i] as Node3D
+		if node == null:
+			var cid = "colony-%d" % (i + 1)
+			node = MeshInstance3D.new()
+			node.name = "Mother"
+			node.mesh = PropFactory.mother(NetworkResident.COLONY_COLORS[cid], NetworkResident.COLONY_CORDS[cid])
+			var local = Vector3(cos(MOTHER_ANGLE) * 3.9, 0.0, sin(MOTHER_ANGLE) * 2.8)
+			node.position = local
+			node.rotation.y = atan2(-local.x, -local.z)
+			var lump = MeshInstance3D.new()
+			lump.name = "Lump"
+			lump.mesh = PropFactory.mother_lump()
+			lump.position = Vector3(0, 1.12, 0.66)
+			node.add_child(lump)
+			var puff = CPUParticles3D.new()
+			puff.name = "Puff"
+			puff.emitting = false
+			puff.one_shot = true
+			puff.amount = 24
+			puff.lifetime = 0.9
+			puff.explosiveness = 0.9
+			puff.direction = Vector3(0, 1, 0.4)
+			puff.spread = 70.0
+			puff.initial_velocity_min = 0.8
+			puff.initial_velocity_max = 2.0
+			puff.gravity = Vector3(0, -2.5, 0)
+			puff.scale_amount_min = 0.06
+			puff.scale_amount_max = 0.14
+			var puff_mesh = SphereMesh.new()
+			puff_mesh.radius = 0.5
+			puff_mesh.height = 1.0
+			puff_mesh.radial_segments = 6
+			puff_mesh.rings = 3
+			var puff_mat = StandardMaterial3D.new()
+			puff_mat.albedo_color = Color(0.86, 0.62, 0.42)
+			puff_mesh.material = puff_mat
+			puff.mesh = puff_mesh
+			puff.position = Vector3(0, 1.3, 0.7)
+			node.add_child(puff)
+			camp.add_child(node)
+			mothers[i] = node
+		var alive = true
+		if i < colonies.size() and typeof(colonies[i]) == TYPE_DICTIONARY and typeof(colonies[i].get("colony")) == TYPE_DICTIONARY:
+			alive = bool(colonies[i].colony.get("queenAlive", true))
+		node.visible = alive
+		if residents_seen and alive:
+			for id in current[i].keys():
+				if not known_residents[i].has(id):
+					births_seen[i] += 1
+					mother_mold[i] = 1.4
+					(node.get_node("Puff") as CPUParticles3D).restart()
+					break
+	known_residents = current
+	residents_seen = true
 
 func _update_campfires(entrances: Array) -> void:
 	var seen_campfires: Dictionary = {}
@@ -929,6 +1004,10 @@ func describe_at(p: Vector2) -> String:
 			var n = {"spider": "Паук", "beetle": "Жук", "lakeMonster": "Озёрный монстр"}.get(str(e.get("type", "")), "Зверь")
 			return "%s · здоровье %d / %d" % [n, int(float(e.get("hp", 0))), int(float(e.get("maxHp", 0)))]
 	for i in range(2):
+		var mother = mothers[i] as Node3D
+		if mother and mother.visible and Vector2(mother.global_position.x, mother.global_position.z).distance_to(p) < 1.6:
+			return "Праматерь %s · лепит новых жителей из глины" % tribe.call("colony-%d" % (i + 1))
+	for i in range(2):
 		var post = defense_posts[i] as Node3D
 		if post and post.visible and Vector2(post.position.x, post.position.z).distance_to(p) < 1.5:
 			return "Пост обороны %s · сюда сбегается стража" % ("племени A" if i == 0 else "племени B")
@@ -1082,6 +1161,20 @@ func _animate_world(delta: float) -> void:
 			var cloth = post.get_node("Cloth") as Node3D
 			cloth.rotation.y = sin(anim_time * 2.2 + i) * 0.25
 			cloth.rotation.x = sin(anim_time * 3.1 + i * 2.0) * 0.06
+	for i in range(2):
+		var mother = mothers[i] as Node3D
+		if mother == null or not mother.visible:
+			continue
+		mother_mold[i] = maxf(0.0, mother_mold[i] - delta)
+		var mold = mother_mold[i] / 1.4
+		var breathe = sin(anim_time * 1.3 + i)
+		mother.scale = Vector3(1.0 - breathe * 0.008, 1.0 + breathe * 0.015, 1.0)
+		mother.rotation.x = sin(mold * PI) * 0.18
+		var lump = mother.get_node("Lump") as Node3D
+		var knead = sin(anim_time * 4.0 + i * 1.7) * (0.5 if mold > 0.0 else 0.12)
+		var grow = 1.0 + sin(mold * PI) * 0.9
+		lump.scale = Vector3(1.0 + knead * 0.3, 1.0 - knead * 0.3, 1.0 + knead * 0.15) * grow
+		lump.rotation.y = anim_time * (3.0 if mold > 0.0 else 0.6)
 	for idx in active_campfires.keys():
 		var camp = active_campfires[idx]
 		if not is_instance_valid(camp):
@@ -1169,6 +1262,12 @@ func focus_on_colony(colony_idx: int) -> void:
 	camera_navigated = true
 	target_camera_distance = 15.0
 	camera_pivot.position = colony_focus_points[clampi(colony_idx, 0, 1)]
+
+func focus_on_point(p: Vector2) -> void:
+	focused_target = null
+	camera_navigated = true
+	target_camera_distance = 16.0
+	camera_pivot.position = Vector3(p.x, 0.0, p.y)
 
 func focus_on_lake(lake_name: String) -> void:
 	focused_target = null

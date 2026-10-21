@@ -24,7 +24,8 @@ const { updateWorldSurfaceCache, updateTickCache } = await import("../sim/cache"
 const { crossesHearth } = await import("../../../shared/campGeometry");
 function fresh() {
   const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
-  return createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g));
+  const w = createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; });
+  return w;
 }
 let count = 0;
 function check(name: string, run: () => void) { run(); count++; console.log(`PASS  ${name}`); }

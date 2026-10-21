@@ -715,6 +715,42 @@ static func hearth_seats() -> ArrayMesh:
 		return b.commit())
 
 
+## The tribe mother (Праматерь) sitting at the hearth: a big seated clay woman
+## in the tribe's clay tone with a bead necklace in its cord colour, a pile of
+## raw clay and a water pot beside her. She faces +Z; the clay lump she kneads
+## is a separate mesh (mother_lump) so WorldView can animate the molding.
+static func mother(body: Color, cord: Color) -> ArrayMesh:
+	return _cached("mother:%s:%s" % [body.to_html(), cord.to_html()], func():
+		var b = Builder.new()
+		var skin = body
+		var shade = body.darkened(0.18)
+		b.add(cyl(0.78, 1.05, 0.85, 14), xf(Vector3(0, 0.42, 0)), shade, MAT_MATTE, 0.05)
+		b.add(sphere(0.66, 1.25, 14, 8), xf(Vector3(0, 1.22, -0.05)), skin, MAT_MATTE, 0.04)
+		b.add(sphere(0.44, 0.86, 12, 7), xf(Vector3(0, 2.08, 0.02)), skin.lightened(0.06), MAT_MATTE, 0.03)
+		b.add(sphere(0.25, 0.42, 8, 5), xf(Vector3(0, 2.42, -0.28)), shade.darkened(0.15), MAT_MATTE, 0.05)
+		for side in [-1.0, 1.0]:
+			b.add(sphere(0.06, -1.0, 6, 4), xf(Vector3(0.15 * side, 2.14, 0.4)), Color(0.10, 0.08, 0.07), MAT_GLOSS)
+			b.add(sphere(0.09, 0.07, 6, 4), xf(Vector3(0.24 * side, 1.98, 0.36)), skin.lerp(Color(0.9, 0.45, 0.35), 0.35), MAT_MATTE)
+			_stick(b, Vector3(0.55 * side, 1.62, 0.0), Vector3(0.42 * side, 1.18, 0.42), 0.15, skin)
+			_stick(b, Vector3(0.42 * side, 1.18, 0.42), Vector3(0.16 * side, 1.08, 0.62), 0.13, skin)
+		for k in range(9):
+			var a = PI * (0.15 + 0.7 * float(k) / 8.0)
+			b.add(sphere(0.07, 0.07, 6, 4), xf(Vector3(cos(a) * 0.46, 1.72 - sin(a) * 0.16, sin(a) * 0.38)), cord if k % 2 == 0 else BONE, MAT_GLOSS)
+		var raw = Color(0.52, 0.31, 0.21)
+		for k in range(4):
+			b.add(sphere(0.26 - 0.03 * k, 0.2, 8, 4), xf(Vector3(1.0 + 0.22 * (k % 2), 0.1 + 0.08 * (k / 2), 0.35 + 0.25 * k)), raw.lightened(0.05 * k), MAT_GLOSS, 0.1, k)
+		b.add(cyl(0.22, 0.3, 0.55, 10), xf(Vector3(-1.0, 0.28, 0.4)), CLAY, MAT_MATTE, 0.04)
+		b.add(cyl(0.2, 0.2, 0.04, 10), xf(Vector3(-1.0, 0.54, 0.4)), Color(0.28, 0.45, 0.55), MAT_GLOSS)
+		return b.commit())
+
+
+static func mother_lump() -> ArrayMesh:
+	return _cached("mother_lump", func():
+		var b = Builder.new()
+		b.add(sphere(0.24, 0.36, 10, 6), xf(Vector3.ZERO), Color(0.55, 0.33, 0.22), MAT_GLOSS, 0.12)
+		return b.commit())
+
+
 ## Flickering flame tongues for the campfire. Uses the unshaded flame material.
 static func flame() -> ArrayMesh:
 	return _cached("flame", func():

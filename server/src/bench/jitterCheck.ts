@@ -20,7 +20,7 @@ const { step } = await import("../sim/step");
 const distance = (a: {x:number;y:number}, b: {x:number;y:number}) => Math.hypot(a.x-b.x,a.y-b.y);
 function fresh() {
   const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
-  const w = createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g));
+  const w = createWorld(g, { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 }, structuredClone(g)); w.colonies.forEach(c => { c.colony.autoManage = false; });
   w.surface.buildings = []; w.surface.foodSources = []; w.surface.carrion = []; w.enemies = []; w.weather.state = "clear"; w.tick = 100;
   w.colonies[0].colony.food = 1000;
   return w;

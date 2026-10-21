@@ -25,6 +25,7 @@ export function createColony(
     picks: 0,
     rods: 0,
     priorities: { clay: 1, wood: 1, stone: 1, build: 1, guard: 1, fish: 1 },
+    autoManage: true,
     population: {
       workers: CONFIG.startingWorkers,
       scouts: CONFIG.startingScouts,

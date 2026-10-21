@@ -23,6 +23,7 @@ var start_menu: StartMenu
 var hud: GameHud
 var build: BuildController
 var priority_panel: PriorityPanel
+var advice_feed: AdviceFeed
 var population_counts: Array[int] = [0, 0]
 var player_colony: int = 0
 
@@ -253,6 +254,15 @@ func _setup_hud() -> void:
 	priority_panel.offset_left = 16
 	priority_panel.offset_bottom = -140
 	priority_panel.priorities_requested.connect(func(pr): ws_client.send_command({"type": "setPriorities", "colony": player_colony, "priorities": pr}))
+	priority_panel.auto_manage_requested.connect(func(on): ws_client.send_command({"type": "setAutoManage", "colony": player_colony, "value": on}))
+
+	advice_feed = AdviceFeed.new()
+	canvas.add_child(advice_feed)
+	advice_feed.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	advice_feed.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	advice_feed.offset_right = -16
+	advice_feed.offset_top = 140
+	advice_feed.show_requested.connect(func(p): world_view.focus_on_point(p))
 
 	build = BuildController.new()
 	build.name = "BuildController"
@@ -445,6 +455,8 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		hud.update_from_snapshot(snapshot, population_counts[player_colony])
 	if priority_panel:
 		priority_panel.update_from_snapshot(snapshot, player_colony)
+	if advice_feed:
+		advice_feed.update_from_snapshot(snapshot, player_colony)
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})
