@@ -59,6 +59,11 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
     const c = world.colonies[command.colonyIndex];
     if (c) { c.colony.alarm = command.value; noteManualAlarm(c); }
   }
+  if (command.type === "setFiring") {
+    // Firing is the mother's call in auto mode: a hand on it takes over.
+    const c = world.colonies[command.colonyIndex];
+    if (c) { c.colony.firingPaused = command.paused; c.colony.autoManage = false; }
+  }
   if (command.type === "setAutoManage") {
     const c = world.colonies[command.colonyIndex];
     if (c) c.colony.autoManage = command.value;

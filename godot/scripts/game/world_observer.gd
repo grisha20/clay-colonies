@@ -255,6 +255,7 @@ func _setup_hud() -> void:
 	priority_panel.offset_bottom = -140
 	priority_panel.priorities_requested.connect(func(pr): ws_client.send_command({"type": "setPriorities", "colony": player_colony, "priorities": pr}))
 	priority_panel.auto_manage_requested.connect(func(on): ws_client.send_command({"type": "setAutoManage", "colony": player_colony, "value": on}))
+	priority_panel.firing_requested.connect(func(paused): ws_client.send_command({"type": "setFiring", "colony": player_colony, "paused": paused}))
 
 	advice_feed = AdviceFeed.new()
 	canvas.add_child(advice_feed)
@@ -616,7 +617,10 @@ func _update_inspector() -> void:
 	if target.carrying_amount > 0:
 		cargo = "%s (%d)" % [resources.get(target.carry_kind, target.carry_kind if not target.carry_kind.is_empty() else "ресурс не указан"), target.carrying_amount]
 	var tribe = "A" if target.colony_id in ["colony-1", "0"] else "B"
-	inspector_label.text = "%s · племя %s (%s)\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
-		resident_name(target.ant_id), tribe, target.ant_id,
+	var clay_state = "обожжён — дождь не страшен" if target.fired else "сырая — боится дождя и воды"
+	if target.kiln_called:
+		clay_state = "идёт к печи на обжиг"
+	inspector_label.text = "%s · племя %s (%s)\nГлина: %s\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
+		resident_name(target.ant_id), tribe, target.ant_id, clay_state,
 		tasks.get(target.job_name, target.job_name if not target.job_name.is_empty() else "нет"),
 		cargo, target.position.x, target.position.z]

@@ -8,6 +8,7 @@ extends PanelContainer
 
 signal priorities_requested(priorities: Dictionary)
 signal auto_manage_requested(enabled: bool)
+signal firing_requested(paused: bool)
 
 const KEYS = ["clay", "wood", "stone", "build", "guard", "fish"]
 const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка"}
@@ -16,6 +17,11 @@ var header: Label
 var mode_button: Button
 var mode_hint: Label
 var auto_manage := false
+## Kiln firing: "обожжено N из M" and a pause button (colony.firingPaused).
+var firing_row: HBoxContainer
+var firing_label: Label
+var firing_button: Button
+var firing_paused := false
 var rows_box: VBoxContainer
 var priorities: Dictionary = {}
 var free_for_plus: int = 0
@@ -52,6 +58,18 @@ func _ready() -> void:
 	mode_hint.custom_minimum_size = Vector2(300, 0)
 	box.add_child(mode_hint)
 	_update_mode()
+	firing_row = HBoxContainer.new()
+	firing_row.name = "FiringRow"
+	firing_label = Label.new()
+	firing_label.add_theme_font_size_override("font_size", 14)
+	firing_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	firing_row.add_child(firing_label)
+	firing_button = Button.new()
+	firing_button.focus_mode = Control.FOCUS_NONE
+	firing_button.pressed.connect(func(): firing_requested.emit(not firing_paused))
+	firing_row.add_child(firing_button)
+	firing_row.visible = false
+	box.add_child(firing_row)
 	rows_box = VBoxContainer.new()
 	rows_box.add_theme_constant_override("separation", 2)
 	box.add_child(rows_box)
@@ -133,6 +151,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	var food = float(colony.get("food", 0.0))
 	var alarm = bool(colony.get("alarm", false))
 	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0))}
+	_update_firing(snapshot, colony, colony_id)
 	var auto = bool(colony.get("autoManage", false))
 	if auto != auto_manage:
 		auto_manage = auto
@@ -202,6 +221,30 @@ static func unmet_reason(k: String, target: int, count: int, alive: Dictionary, 
 	if k == "stone" and int(tools.get("stone", 0)) == 0 and not loose_stone:
 		return "Нужна кирка из мастерской"
 	return "Нет фронта работ или свободных жителей" if k == "build" else "Ждёт свободного жителя или сдачи груза"
+
+
+func _update_firing(snapshot: Dictionary, colony: Dictionary, colony_id: String) -> void:
+	var kilns = 0
+	var burning = 0
+	var surface = snapshot.get("surface", {})
+	if typeof(surface) == TYPE_DICTIONARY:
+		for b in surface.get("buildings", []):
+			if typeof(b) == TYPE_DICTIONARY and str(b.get("type", "")) == "kiln" and str(b.get("stage", "")) == "built" and str(b.get("colonyId", "")) == colony_id:
+				kilns += 1
+				var f = b.get("firing")
+				if typeof(f) == TYPE_DICTIONARY and bool(f.get("paid", false)):
+					burning += 1
+	var total = 0
+	var fired = 0
+	for ant in snapshot.get("ants", []):
+		if typeof(ant) == TYPE_DICTIONARY and str(ant.get("colonyId", "")) == colony_id:
+			total += 1
+			if bool(ant.get("fired", false)):
+				fired += 1
+	firing_paused = bool(colony.get("firingPaused", false))
+	firing_row.visible = kilns > 0
+	firing_label.text = "Обожжено %d из %d%s" % [fired, total, " · печь горит" if burning > 0 else ""]
+	firing_button.text = "Обжиг на паузе" if firing_paused else "Обжиг идёт"
 
 
 func _update_mode() -> void:

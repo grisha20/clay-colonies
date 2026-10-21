@@ -74,6 +74,10 @@ var tool_kind: String = ""
 ## Current visible work from EntityRegistry.work_for ({} = none).
 var work: Dictionary = {}
 var colony_color_applied: String = ""
+## Kiln-fired: darker, redder, glazed clay (server Ant.fired).
+var fired: bool = false
+var kiln_called: bool = false
+const FIRED_TINT := Color(0.50, 0.21, 0.12)
 var chips: CPUParticles3D
 var chips_kind: String = ""
 const CHIP_COLORS = {
@@ -220,18 +224,24 @@ func set_work(w: Dictionary) -> void:
 	work = w
 
 func _apply_colony_color() -> void:
-	if not mesh_instance or colony_color_applied == colony_id:
+	var key = "%s:%s" % [colony_id, fired]
+	if not mesh_instance or colony_color_applied == key:
 		return
-	colony_color_applied = colony_id
-	_tint_surface(0, COLONY_COLORS.get(colony_id, COLONY_COLORS["default"]))
+	colony_color_applied = key
+	var body: Color = COLONY_COLORS.get(colony_id, COLONY_COLORS["default"])
+	if fired:
+		body = body.lerp(FIRED_TINT, 0.5)
+	_tint_surface(0, body, 0.42 if fired else -1.0)
 	if mesh_instance.mesh and mesh_instance.mesh.get_surface_count() > 2:
 		_tint_surface(2, COLONY_CORDS.get(colony_id, COLONY_CORDS["default"]))
 
-func _tint_surface(index: int, col: Color) -> void:
+func _tint_surface(index: int, col: Color, roughness: float = -1.0) -> void:
 	var mat = mesh_instance.mesh.surface_get_material(index)
 	if mat and mat is StandardMaterial3D:
 		var custom_mat = mat.duplicate() as StandardMaterial3D
 		custom_mat.albedo_color = col
+		if roughness >= 0.0:
+			custom_mat.roughness = roughness
 		mesh_instance.set_surface_override_material(index, custom_mat)
 
 func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scale: float, sim_status: String = "playing", buildings: Array = [], entrances: Array = []) -> void:
@@ -239,6 +249,8 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	var new_colony = data.get("colonyId", colony_id)
 	if new_colony != colony_id:
 		colony_id = new_colony
+	fired = bool(data.get("fired", false))
+	kiln_called = str(data.get("kilnId", "")) != ""
 	# Also on the first update: the registry sets colony_id before spawning.
 	_apply_colony_color()
 

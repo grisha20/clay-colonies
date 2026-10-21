@@ -3,8 +3,8 @@ import { DEPOSIT_RX, DEPOSIT_RY } from "./resourceDeposits";
 import { buildingFootprint } from "./buildingGeometry";
 import { isWaterAt, isMountainAt } from "./surfaceTerrain";
 
-export type PointBuilding = "hut" | "storage" | "workshop" | "idol";
-export const POINT_BUILDING_LIMITS = { hut: 8, storage: 6, workshop: 2, idol: 1 };
+export type PointBuilding = "hut" | "storage" | "workshop" | "idol" | "kiln";
+export const POINT_BUILDING_LIMITS = { hut: 8, storage: 6, workshop: 2, idol: 1, kiln: 2 };
 export function pointBuildingPlacement(surface: { width: number; height: number; entrances: Vec2[]; buildings: Building[]; deposits?: ResourceDeposit[] }, owner: string, type: PointBuilding, pos: Vec2, limit = POINT_BUILDING_LIMITS[type], entranceMargin = 7): string | null {
   if (pos.x < 2 || pos.y < 2 || pos.x > surface.width - 2 || pos.y > surface.height - 2) return "За границей карты";
   if (surface.entrances.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < entranceMargin)) return "Слишком близко к костру";

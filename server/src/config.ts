@@ -354,6 +354,18 @@ export const CONFIG = {
   workshopMaxHp: 100,
   workshopBuildTicks: 220,
   maxWorkshopsPerColony: POINT_BUILDING_LIMITS.workshop,
+  // Печь обжига (server/src/sim/kiln.ts): сырые жители -> обожжённые.
+  kilnCost: { clay: 10, wood: 0, stone: 6 },
+  kilnMaxHp: 120,
+  kilnBuildTicks: 240,
+  maxKilnsPerColony: POINT_BUILDING_LIMITS.kiln,
+  kilnFiringTicks: 400,
+  kilnWoodPerFiring: 2,
+  kilnWoodReserve: 4,
+  kilnCallTimeoutTicks: 1500,
+  // Обожжённый житель: доля урона от воды и прибавка силы.
+  firedWaterFactor: 0.35,
+  firedStrengthBonus: 0.3,
   axeCost: { wood: 2, stone: 1 },
   pickCost: { wood: 2, stone: 2 },
   rodCost: { wood: 2, stone: 0 },

@@ -13,7 +13,7 @@ import { colonyWorldView } from "./world";
 
 const inaccessibleSince = new WeakMap<Building, number>();
 
-function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop"|"idol"):Vec2[] {
+function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop"|"idol"|"kiln"):Vec2[] {
   const runtime=world.colonies[index],camp=runtime.surfaceEntrance,scoped=colonyWorldView(world,runtime),rival=world.colonies[world.session.playerColonyIndex??0]?.surfaceEntrance;
   const candidates:Vec2[]=[];
   for(const radius of [18,26,34,42,50])for(let i=0;i<16;i++){
@@ -62,6 +62,9 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
   c.growthPaused = false;
   c.clayReserve = population < 14 ? 0 : 6;
   const foodLow = c.food < Math.max(18, population * 1.5);
+  // Firing burns wood: hold it while a building site still waits for wood, or when hungry.
+  const siteNeedsWood = world.surface.buildings.some(b => b.colonyId === c.id && b.stage !== "built" && b.cost.wood > b.delivered.wood);
+  c.firingPaused = foodLow || (siteNeedsWood && c.wood < 12);
   c.priorities = {
     clay: foodLow ? 1 : c.clay < 45 ? 3 : 1,
     wood: c.wood < 30 ? 2 : 1,
@@ -111,10 +114,11 @@ export function updateSettlementAI(world: World): void {
     const postCandidates=[{x:camp.x+sign*9,y:camp.y+5},...buildings.filter(b=>b.type==="gate"&&b.stage==="built").map(b=>({x:b.pos.x,y:b.pos.y+(b.pos.y<camp.y?4:-4)})),{x:camp.x,y:camp.y+5}];
     c.defensePost=postCandidates.find(p=>!isSurfaceBlockedAt(world,p.x,p.y,runtime.id)&&taskApproach(scoped,p))??c.defensePost;
     if (reachablePending) continue;
-    let type: "hut" | "storage" | "workshop" | "idol" | undefined;
+    let type: "hut" | "storage" | "workshop" | "idol" | "kiln" | undefined;
     if (!built("workshop")) type = "workshop";
     else if (built("hut") < Math.min(CONFIG.maxHutsPerColony, 3 + Math.floor(world.tick / 9000)) && (population >= 10 + built("hut") * 4 || world.tick >= 4000 && built("hut") < 3)) type = "hut";
     else if (built("storage") < 2 && population >= 20 && world.tick > 6000) type = "storage";
+    else if (!built("kiln") && population >= 14 && world.tick > 5000 && c.stone >= 6) type = "kiln";
     else if (!built("idol") && world.tick > CONFIG.matchMinTicks / 2 && c.clay > 35 && c.stone > 10) type = "idol";
     if (type) {
       for (const p of settlementSites(world,index,type)) if (!placementAccessWarning(world.surface,runtime.id,[{type,pos:p,colonyId:runtime.id,id:"ai-plan",stage:"built"} as Building])&&placePointBuilding(world, index, type, p.x, p.y)) break;

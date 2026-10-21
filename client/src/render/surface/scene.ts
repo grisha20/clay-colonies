@@ -614,6 +614,19 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
         g.rect(x - maskR * 0.35, y - poleH + maskR * 0.35, maskR * 0.7, 1.6).fill({ color: 0x2f1812, alpha: 0.9 });
         g.circle(x, y - poleH - maskR - 2, 1.4).fill({ color: 0xef9a64, alpha: 0.9 });
       }
+    } else if (building.type === "kiln") {
+      // Печь обжига: глиняный купол с тёмным устьем; горит, пока идёт обжиг.
+      const r = 2.2 * cell;
+      g.zIndex = y + 3;
+      if (building.stage !== "built") {
+        g.circle(x, y, r).stroke({ width: 1.6, color: darkColor, alpha: 0.7 });
+        g.circle(x, y, r * Math.max(0.15, building.progress)).fill({ color: clayColor, alpha: 0.35 });
+      } else {
+        g.ellipse(x, y - r * 0.35, r, r * 0.8).fill({ color: 0x9a4a2a, alpha: 1 });
+        g.ellipse(x, y - r * 0.35, r, r * 0.8).stroke({ width: 1.5, color: darkColor, alpha: 1 });
+        g.ellipse(x, y + r * 0.1, r * 0.38, r * 0.3).fill({ color: building.firing?.paid ? 0xf08a2c : 0x24160f, alpha: 1 });
+        g.rect(x - r * 0.55, y - r * 1.25, r * 0.28, r * 0.5).fill({ color: 0x6e3a22, alpha: 1 });
+      }
     } else {
       // Хижина
       const radius = offsetSettings.buildingGeometry.hutRadius * cell;

@@ -31,6 +31,7 @@ import { updateRaids, updateOutcome, announceDusk } from "./session";
 import { updateWildlife } from "./wildlife";
 import { updateSettlementAI } from "./settlementAI";
 import { updateAdvisor } from "./advisor";
+import { updateKilns } from "./kiln";
 
 let scentOffsets: { dx: number; dy: number; falloff: number }[] | null = null;
 type ToolKind = "axe" | "pick" | "rod";
@@ -204,6 +205,7 @@ export function step(world: World): void {
   updateRaids(world);
   updateSettlementAI(world);
   updateAdvisor(world);
+  updateKilns(world);
 
   profiler.measure("phase.weather", () => updateWeather(world));
   profiler.measure("phase.resources", () => {

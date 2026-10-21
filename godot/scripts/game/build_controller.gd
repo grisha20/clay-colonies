@@ -12,7 +12,7 @@ extends Node
 signal tool_changed(tool: String)
 
 const TOOLS = [
-	["hut", "Хижина", "1"], ["storage", "Склад", "2"], ["workshop", "Мастерская", "3"], ["idol", "Идол", "4"],
+	["hut", "Хижина", "1"], ["storage", "Склад", "2"], ["workshop", "Мастерская", "3"], ["idol", "Идол", "4"], ["kiln", "Печь обжига", "Q"],
 	["wall", "Ограда", "5"], ["gate", "Ворота", "6"],
 	["harvest", "Зона добычи", "7"], ["forbid", "Запрет", "8"], ["erase", "Ластик", "9"],
 	["post", "Пост обороны", "0"],
@@ -21,6 +21,7 @@ const HINTS = {
 	"hut": "Хижина: +4 к пределу жителей",
 	"storage": "Склад: запасы ближе к работе",
 	"workshop": "Мастерская: топоры, кирки, удочки",
+	"kiln": "Печь обжига: сырые жители становятся обожжёнными — дождь им не страшен, вода почти не берёт; топится дровами",
 	"idol": "Идол: ритуал победы у живого костра",
 	"wall": "Ограда: тяните линию",
 	"gate": "Ворота: свои проходят, чужие нет · R — поворот",
@@ -78,7 +79,7 @@ static func _flat_material(c: Color) -> StandardMaterial3D:
 
 
 const GROUPS = [
-	["Жильё и хозяйство", ["hut", "storage", "workshop", "idol"]],
+	["Жильё и хозяйство", ["hut", "storage", "workshop", "kiln", "idol"]],
 	["Оборона", ["wall", "gate", "post"]],
 	["Зоны", ["harvest", "forbid", "erase"]],
 ]
@@ -342,7 +343,7 @@ func set_tool(t: String) -> void:
 	if ghost_building:
 		ghost_building.queue_free()
 		ghost_building = null
-	if t in ["hut", "storage", "workshop", "idol", "gate", "post"]:
+	if t in ["hut", "storage", "workshop", "idol", "kiln", "gate", "post"]:
 		ghost_building = _make_ghost(t)
 		ghost_root.add_child(ghost_building)
 	_hide_ghosts()
@@ -366,6 +367,9 @@ func _make_ghost(t: String) -> Node3D:
 		"workshop":
 			node = MeshInstance3D.new()
 			node.mesh = PropFactory.workshop()
+		"kiln":
+			node = MeshInstance3D.new()
+			node.mesh = PropFactory.kiln()
 		"idol":
 			node = MeshInstance3D.new()
 			node.mesh = PropFactory.idol()
@@ -418,7 +422,7 @@ func update_preview(p: Vector2) -> void:
 	var surface = _surface()
 	var owner = _owner()
 	match tool:
-		"hut", "storage", "workshop", "idol":
+		"hut", "storage", "workshop", "idol", "kiln":
 			last_reason = BuildRules.point_building_placement(surface, owner, tool, p)
 			ghost_building.visible = true
 			ghost_building.position = _ground(p)
@@ -472,7 +476,7 @@ func _cost_times(kind: String, n: int) -> String:
 
 
 func _hint(reason: String, kind: String) -> void:
-	var name = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "gate": "Ворота"}.get(kind, "")
+	var name = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "kiln": "Печь обжига", "gate": "Ворота"}.get(kind, "")
 	var text = "%s · %s" % [name, BuildRules.cost_text(kind)] if reason == "" else "%s: %s" % [name, reason]
 	hud.show_tooltip(text, observer.get_viewport().get_mouse_position())
 
@@ -529,7 +533,7 @@ func update_zone_overlay() -> void:
 func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		for spec in TOOLS:
-			if event.keycode == KEY_0 + int(spec[2]):
+			if _hotkey_matches(event, spec[2]):
 				set_tool("" if tool == spec[0] else spec[0])
 				return true
 		if tool == "":
@@ -551,7 +555,7 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 	var p: Vector2 = ground_point.call(event.position)
 	if p == Vector2.INF:
 		return true
-	if tool in ["hut", "storage", "workshop", "idol", "gate", "post"]:
+	if tool in ["hut", "storage", "workshop", "idol", "kiln", "gate", "post"]:
 		if event.pressed:
 			_place_point(p, event.shift_pressed)
 		return true
@@ -561,6 +565,14 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 		_commit_drag(drag_start, p)
 		drag_start = Vector2.INF
 	return true
+
+
+## Digits by keycode; letters by physical key so a Russian layout works too.
+static func _hotkey_matches(event: InputEventKey, key: String) -> bool:
+	if key.is_valid_int():
+		return event.keycode == KEY_0 + int(key)
+	var code = OS.find_keycode_from_string(key)
+	return event.physical_keycode == code or event.keycode == code
 
 
 func _place_point(p: Vector2, keep_tool: bool) -> void:

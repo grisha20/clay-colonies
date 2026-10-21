@@ -23,15 +23,17 @@ import { dissolveAnt } from "../water";
 import { moveDefending, moveToSafety } from "./defense";
 import { moveToRainShelter } from "./shelter";
 import { isSheltered } from "../weather";
+import { moveToKiln } from "../kiln";
 
 export { clearDeadAntPaths } from "./movement";
 
 export function updateWaterExposure(ant: Ant, world?: World): boolean {
   if (isWaterAt(ant.pos.x, ant.pos.y)) {
-    dissolveAnt(ant, CONFIG.waterExposurePerTick, world);
+    // Fired clay holds its shape: water eats it far slower.
+    dissolveAnt(ant, CONFIG.waterExposurePerTick * (ant.fired ? CONFIG.firedWaterFactor : 1), world);
     return ant.state === "dead";
   }
-  if (world?.weather.state === "rain" && !isSheltered(world, ant.pos)) {
+  if (world?.weather.state === "rain" && !ant.fired && !isSheltered(world, ant.pos)) {
     ant.waterExposure = Math.min(CONFIG.waterExposureDeathTicks, (ant.waterExposure ?? 0) + CONFIG.rainExposurePerTick);
     if (ant.waterExposure >= CONFIG.rainErosionWetness) dissolveAnt(ant, CONFIG.rainErosionPerTick, world);
     return ant.state === "dead";
@@ -45,6 +47,7 @@ export function updateWaterExposure(ant: Ant, world?: World): boolean {
 export function stepSurface(world: World, ant: Ant): void {
   const hadCast=ant.job==="fish"||!!ant.fishingTargetId;
   if (moveToSafety(world, ant) || moveToRainShelter(world, ant) || moveDefending(world, ant)) {if(hadCast)releaseFish(world,ant);return;}
+  if (moveToKiln(world, ant)) return;
   if (
     (ant.forageRole === "scout" || (ant.forageRole === "forager" && !!world.colony.activeFoodTargetId)) &&
     ant.state === "return" &&

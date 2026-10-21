@@ -58,6 +58,7 @@ var water_material: ShaderMaterial
 var water_container: Node3D
 var atmosphere: Atmosphere
 var hut_lights: Array = []
+var kiln_nodes: Array = []
 var defense_posts: Array = [null, null]
 const POST_COLORS = [Color(0.95, 0.78, 0.28), Color(0.24, 0.55, 0.80)]
 var mountain_container: Node3D
@@ -81,7 +82,7 @@ var sim_speed: float = 1.0
 var _source_cache: Dictionary = {}
 ## Latest snapshot, read by describe_at for hover tooltips.
 var last_snapshot: Dictionary = {}
-const BUILDING_NAMES = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "wall": "Ограда", "gate": "Ворота"}
+const BUILDING_NAMES = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "wall": "Ограда", "gate": "Ворота", "kiln": "Печь обжига"}
 var _prewarm: Array[Callable] = []
 ## Targets residents are working on (EntityRegistry.worked_targets): trees shake.
 var worked_targets: Dictionary = {}
@@ -777,6 +778,14 @@ func _update_buildings(buildings: Array) -> void:
 		node.position = _ground(b_pos)
 		# Sites and buildings under construction read as translucent ghosts
 		# that firm up with progress.
+		if b_type == "kiln" and b_stage == "built":
+			# Fire in the mouth while a resident is being fired (wood paid).
+			var firing = b.get("firing")
+			var lit = typeof(firing) == TYPE_DICTIONARY and bool(firing.get("paid", false))
+			var glow = node.get_node_or_null("Glow") as Node3D
+			if glow and glow.visible != lit:
+				glow.visible = lit
+				(node.get_node("KilnLight") as OmniLight3D).visible = lit
 		var fade = 0.0
 		if b_stage != "built":
 			fade = snappedf(lerpf(0.65, 0.25, clampf(float(b.get("progress", 0.0)), 0.0, 1.0)), 0.01)
@@ -842,6 +851,32 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int) -> N
 			var w = MeshInstance3D.new()
 			w.mesh = PropFactory.workshop()
 			return w
+		"kiln":
+			var oven = MeshInstance3D.new()
+			oven.mesh = PropFactory.kiln()
+			if built:
+				var glow = MeshInstance3D.new()
+				glow.name = "Glow"
+				glow.mesh = PropFactory.kiln_embers()
+				glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				glow.visible = false
+				var tongues = MeshInstance3D.new()
+				tongues.mesh = PropFactory.flame()
+				tongues.position = Vector3(0, 0.22, 1.66)
+				tongues.scale = Vector3(0.6, 0.55, 0.35)
+				tongues.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				glow.add_child(tongues)
+				oven.add_child(glow)
+				var light = OmniLight3D.new()
+				light.name = "KilnLight"
+				light.light_color = Color(1.0, 0.55, 0.22)
+				light.light_energy = 1.6
+				light.omni_range = 5.0
+				light.position = Vector3(0, 0.7, 1.9)
+				light.visible = false
+				oven.add_child(light)
+				kiln_nodes.append(oven)
+			return oven
 		_:
 			var i = MeshInstance3D.new()
 			i.mesh = PropFactory.idol()
@@ -922,6 +957,7 @@ func _update_ground_features(entrances: Array, buildings: Array, deposits: Array
 			"workshop": r = Vector2(6.0, 3.8)
 			"storage": r = Vector2(4.4, 3.0)
 			"idol": r = Vector2(2.6, 2.0)
+			"kiln": r = Vector2(3.4, 2.6)
 		yards.append(Vector4(p.x, p.z + 0.5, r.x, r.y))
 	var digs: Array = []
 	var dig_kinds: Array = []
@@ -1169,6 +1205,14 @@ func _animate_world(delta: float) -> void:
 			var cloth = post.get_node("Cloth") as Node3D
 			cloth.rotation.y = sin(anim_time * 2.2 + i) * 0.25
 			cloth.rotation.x = sin(anim_time * 3.1 + i * 2.0) * 0.06
+	kiln_nodes = kiln_nodes.filter(func(k): return is_instance_valid(k))
+	for kn in kiln_nodes:
+		var glow = (kn as Node3D).get_node_or_null("Glow") as Node3D
+		if glow and glow.visible:
+			var t = anim_time * 11.0 + kn.position.x
+			var f = sin(t) * 0.5 + sin(t * 2.7) * 0.3
+			glow.scale = Vector3(1.0 + f * 0.03, 1.0 + f * 0.06, 1.0)
+			(kn.get_node("KilnLight") as OmniLight3D).light_energy = 1.6 + f * 0.4
 	for i in range(2):
 		var mother = mothers[i] as Node3D
 		if mother == null or not mother.visible:

@@ -77,7 +77,7 @@ export type ZoneType = "harvest" | "forbid";
 
 // Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
 export const WALL_CELL_SIZE = 2;
-export type BuildingType = "hut" | "wall" | "gate" | "storage" | "idol" | "workshop";
+export type BuildingType = "hut" | "wall" | "gate" | "storage" | "idol" | "workshop" | "kiln";
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {
@@ -94,6 +94,8 @@ export type Building = {
   progress: number;
   hp: number;
   maxHp: number;
+  /** Kiln: the resident being fired (server/src/sim/kiln.ts). */
+  firing?: { antId: string; progress: number; calledAt: number; paid: boolean };
 };
 
 // Ресурсы склада племени (что лежит в запасах и что несут жители).
@@ -174,6 +176,10 @@ export type Ant = {
   waterExposure?: number;
   /** Permanent body mass lost to water, 0..1. */
   dissolved?: number;
+  /** Fired in a kiln: no rain erosion, slower in water, stronger. Missing = raw clay. */
+  fired?: boolean;
+  /** Kiln that called this resident for firing. */
+  kilnId?: string;
   capturedBy?: string;
   rescuedUntil?: number;
   waterAmmo?: number;
@@ -272,6 +278,10 @@ export type Colony = {
   /** «Праматерь решает»: priorities, clay reserve and alarm are run by the tribe AI
    *  (server/src/sim/settlementAI.ts). Missing in old saves = manual. */
   autoManage?: boolean;
+  /** Kilns call no residents while paused (the mother decides in auto mode). */
+  firingPaused?: boolean;
+  /** Residents fired so far in this match. */
+  firedTotal?: number;
   /** Current advice of the tribe mother (server/src/sim/advisor.ts), recomputed. */
   advice?: Advice[];
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).

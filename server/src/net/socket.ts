@@ -7,6 +7,7 @@ export type ClientCommand =
   | { type: "takeControl"; colonyIndex: number }
   | { type: "setAlarm"; colonyIndex: number; value: boolean }
   | { type: "setAutoManage"; colonyIndex: number; value: boolean }
+  | { type: "setFiring"; colonyIndex: number; paused: boolean }
   | { type: "setDefensePost"; colonyIndex: number; x: number; y: number }
   | { type: "trainWaterWeapons"; colonyIndex: number }
   | { type: "setGrowth"; colonyIndex: number; paused: boolean; reserve: number }
@@ -29,7 +30,7 @@ export type ClientCommand =
     }
   | {
       type: "placeBuilding";
-      building: "hut" | "storage" | "idol" | "workshop";
+      building: "hut" | "storage" | "idol" | "workshop" | "kiln";
       x: number;
       y: number;
       colonyIndex: number;
@@ -107,6 +108,7 @@ export function parseCommand(raw: string): ClientCommand | null {
     if (command.type === "takeControl") return { type: "takeControl", colonyIndex };
     if (command.type === "setAlarm" && typeof command.value === "boolean") return { type: "setAlarm", colonyIndex, value: command.value };
     if (command.type === "setAutoManage" && typeof command.value === "boolean") return { type: "setAutoManage", colonyIndex, value: command.value };
+    if (command.type === "setFiring" && typeof command.paused === "boolean") return { type: "setFiring", colonyIndex, paused: command.paused };
     if (command.type === "setSandbox" && typeof command.value === "boolean") return { type: "setSandbox", value: command.value, colonyIndex };
     if (command.type === "trainWaterWeapons") return { type: "trainWaterWeapons", colonyIndex };
     if (command.type === "setGrowth" && typeof command.paused === "boolean" && typeof command.reserve === "number" && Number.isFinite(command.reserve)) {
@@ -173,7 +175,7 @@ export function parseCommand(raw: string): ClientCommand | null {
     }
     if (command.type === "placeBuilding") {
       if (
-        (command.building !== "hut" && command.building !== "storage" && command.building !== "idol" && command.building !== "workshop") ||
+        (command.building !== "hut" && command.building !== "storage" && command.building !== "idol" && command.building !== "workshop" && command.building !== "kiln") ||
         typeof command.x !== "number" ||
         typeof command.y !== "number" ||
         !Number.isFinite(command.x) ||

@@ -23,6 +23,7 @@
     "check:jitter": "tsx server/src/bench/jitterCheck.ts",
     "check:terrain": "tsx server/src/bench/terrainCheck.ts",
     "check:mother": "tsx server/src/bench/motherCheck.ts",
+    "check:kiln": "tsx server/src/bench/kilnCheck.ts",
     "check:navparity": "tsx server/src/bench/navParityCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },

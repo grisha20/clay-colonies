@@ -39,7 +39,8 @@ export function rainShelterPoint(world: World, ant: Ant): Vec2 | undefined {
 
 export function moveToRainShelter(world: World, ant: Ant): boolean {
   const weather = world.weather.state;
-  if (weather === "clear" && (ant.waterExposure ?? 0) <= 0) {
+  // Fired residents shrug off rain; only wet ones (from a lake) still dry by the fire.
+  if ((weather === "clear" || ant.fired) && (ant.waterExposure ?? 0) <= 0) {
     if (ant.state === "idle" && ant.carrying > 0) ant.state = "carry";
     return false;
   }

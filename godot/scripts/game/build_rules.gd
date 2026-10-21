@@ -12,12 +12,13 @@ const ZONE_CELL_SIZE := 4.0
 const GATE_SPAN := 3
 const DEPOSIT_RX := 10.0
 const DEPOSIT_RY := 6.5
-const LIMITS := {"hut": 8, "storage": 6, "workshop": 2, "idol": 1}
+const LIMITS := {"hut": 8, "storage": 6, "workshop": 2, "idol": 1, "kiln": 2}
 const COSTS := {
 	"hut": {"clay": 8, "wood": 5, "stone": 0},
 	"storage": {"clay": 0, "wood": 6, "stone": 4},
 	"workshop": {"clay": 8, "wood": 4, "stone": 0},
 	"idol": {"clay": 25, "wood": 0, "stone": 5},
+	"kiln": {"clay": 10, "wood": 0, "stone": 6},
 	"wall": {"clay": 2, "wood": 0, "stone": 0},
 	"gate": {"clay": 2, "wood": 1, "stone": 0},
 }

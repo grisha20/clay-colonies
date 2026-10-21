@@ -48,13 +48,22 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
 
   if (!count("workshop") && world.tick > 1500) out.push({ key: "workshop", severity: "warn", text: "Нужна мастерская — без неё не будет топоров и кирок", pos: { ...camp } });
 
+  const raw = ants.filter(a => !a.fired).length;
+  if (count("workshop", true) && !count("kiln") && raw >= 10 && world.tick > 4000)
+    out.push({ key: "kiln", severity: "warn", text: `Сырых жителей ${raw} — поставь печь, обожжённым дождь не страшен`, pos: { ...camp } });
+  else if (count("kiln", true) && raw > 0 && !c.firingPaused && c.wood < CONFIG.kilnWoodPerFiring + CONFIG.kilnWoodReserve)
+    out.push({ key: "kiln-wood", severity: "info", text: "Печь остыла — для обжига нужны дрова" });
+
   const site = own.find(b => b.stage !== "built" && b.type !== "wall" && b.type !== "gate" && missing(b.cost, b.delivered, c) !== undefined);
   if (site) {
     const res = missing(site.cost, site.delivered, c)!;
     out.push({ key: `site-${res}`, severity: "info", text: `На стройку не хватает ${RESOURCE_NAMES[res]}`, pos: { ...site.pos } });
   }
 
-  if (world.weather.state === "warning") out.push({ key: "rain", severity: "info", text: "Тучи собираются — скоро дождь" });
+  if (world.weather.state === "warning") {
+    const rawCount = ants.filter(a => !a.fired).length;
+    out.push({ key: "rain", severity: rawCount ? "warn" : "info", text: rawCount ? `Тучи собираются — ${rawCount} сырых жителей размокнут без крыши` : "Тучи собираются — скоро дождь" });
+  }
   return out;
 }
 

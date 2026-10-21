@@ -524,6 +524,44 @@ static func idol() -> ArrayMesh:
 		return b.commit())
 
 
+## Kiln (печь обжига): a domed clay oven on a stone ring with a dark arched
+## mouth facing +Z, a short chimney, a soot ring and a stack of firewood.
+## The fire in the mouth is a separate node (WorldView turns it on while firing).
+static func kiln() -> ArrayMesh:
+	return _cached("kiln", func():
+		var b = Builder.new()
+		b.add(cyl(1.0, 1.06, 0.2, 16), xf(Vector3(0, 0.1, 0.3), Vector3(2.5, 1, 1.9)), EARTH.lightened(0.04), MAT_MATTE, 0.04)
+		for k in range(12):
+			var a = TAU * float(k) / 12.0
+			b.add(sphere(0.3, 0.32, 8, 4), xf(Vector3(cos(a) * 1.55, 0.14, sin(a) * 1.35)), STONE if k % 2 == 0 else STONE_DARK, MAT_MATTE, 0.08, k)
+		var fired_clay = CLAY.darkened(0.12)
+		b.add(sphere(1.45, 2.3, 18, 9), xf(Vector3(0, 0.55, 0), Vector3(1.0, 1.0, 0.92)), fired_clay, MAT_MATTE, 0.05)
+		b.add(cyl(1.5, 1.6, 0.5, 18), xf(Vector3(0, 0.3, 0)), fired_clay.darkened(0.08), MAT_MATTE, 0.04)
+		# Arched mouth: dark hollow with a lip.
+		b.add(sphere(0.55, 0.9, 12, 6), xf(Vector3(0, 0.55, 1.2), Vector3(1.0, 1.0, 0.5)), Color(0.10, 0.07, 0.05), MAT_MATTE)
+		b.add(cyl(0.68, 0.68, 0.18, 14), xf(Vector3(0, 0.55, 1.27), Vector3(1, 1, 0.55), Vector3(PI / 2, 0, 0)), CLAY_LIGHT.darkened(0.1), MAT_MATTE, 0.04)
+		# Soot above the mouth and a chimney.
+		b.add(sphere(0.5, 0.35, 10, 4), xf(Vector3(0, 1.25, 1.05), Vector3(1.2, 1.0, 0.4)), Color(0.22, 0.17, 0.14), MAT_MATTE)
+		b.add(cyl(0.22, 0.3, 0.8, 10), xf(Vector3(-0.35, 2.05, -0.3)), fired_clay.darkened(0.15), MAT_MATTE, 0.05)
+		b.add(cyl(0.16, 0.16, 0.06, 10), xf(Vector3(-0.35, 2.46, -0.3)), Color(0.12, 0.09, 0.07), MAT_MATTE)
+		# Firewood stack beside the oven.
+		for k in range(5):
+			var row = k / 3
+			var z = -0.35 + 0.33 * float(k % 3) + 0.16 * float(row)
+			_stick(b, Vector3(1.75, 0.16 + 0.3 * float(row), z - 0.7), Vector3(1.75, 0.16 + 0.3 * float(row), z + 0.55), 0.14, TRUNK if k % 2 == 0 else WOOD, k)
+		return b.commit())
+
+
+## Glowing embers filling the kiln mouth (unshaded flame material), shown
+## over the dark hollow while a resident is being fired.
+static func kiln_embers() -> ArrayMesh:
+	return _cached("kiln_embers", func():
+		var b = Builder.new()
+		b.add(sphere(0.5, 0.82, 12, 6), xf(Vector3(0, 0.55, 1.52), Vector3(1.0, 1.0, 0.3)), Color(1.0, 0.45, 0.10), MAT_FLAME)
+		b.add(sphere(0.32, 0.5, 10, 5), xf(Vector3(0, 0.48, 1.6), Vector3(1.0, 1.0, 0.3)), Color(1.0, 0.82, 0.35), MAT_FLAME)
+		return b.commit())
+
+
 static func fence_post(gate_side: bool = false) -> ArrayMesh:
 	return _cached("fence_post:%s" % gate_side, func():
 		var b = Builder.new()
