@@ -10,6 +10,7 @@ uniform vec3 shallow : source_color = vec3(0.36, 0.62, 0.62);
 uniform vec3 deep : source_color = vec3(0.12, 0.32, 0.42);
 uniform vec3 foam : source_color = vec3(0.92, 0.94, 0.86);
 uniform float speed_scale = 1.0;
+uniform float rain = 0.0;
 
 varying vec2 world_xz;
 
@@ -33,6 +34,11 @@ void fragment() {
 	float r2 = 0.6 * cf_noise(q2 * 0.75 - vec2(t * 0.8, -t * 0.4)) + 0.4 * cf_noise(q1 * 1.1 + vec2(t * 0.3, t * 0.7));
 	vec3 col = mix(shallow, deep, depth);
 	col += (r1 * r2 - 0.25) * 0.08;
+	// Rain stipples the surface with spreading rings and dulls it.
+	float drops = rain > 0.01 ? cf_rain_rings(p * 1.6, TIME) * rain : 0.0;
+	col = mix(col, col * 0.85 + vec3(0.04, 0.05, 0.06), rain * 0.5);
+	col += drops * 0.25;
+	r1 += drops * 0.6;
 	float foam_band = (1.0 - smoothstep(0.0, 0.7 + r1 * 0.5, -ld)) * (0.55 + 0.45 * r2);
 	col = mix(col, foam, foam_band * 0.65);
 	ALBEDO = col;

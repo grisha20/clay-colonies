@@ -45,3 +45,5 @@
 | **Мир и партия** | Случайная карта | — (в 2D карта была фиксированной) | `server/src/sim/terrainGen.ts`, `surface.terrain`, `surface_terrain.gd` | check:terrain, test_surface_terrain (паритет) | implemented | Углы, озёра, хребты, холмы, леса, честные карьеры |
 | | Горы и холмы | — | Скальные массивы `PropFactory.mountain`, рельеф в `ground.gdshader` | GPU-кадры, check:terrain | implemented | Горы непроходимы, холмы визуальные |
 | | Стартовое меню и сохранения | Кнопка «Новая игра» | `start_menu.gd`, `saveGame`/`loadGame`/`newGame` | test_start_menu.gd | implemented | Автосохранение перед новой игрой |
+| | День и ночь | `nightLighting.ts`, `lighting.ts` | `atmosphere.gd`: перенос dayCycle, лунный свет, костры шире, свет хижин | test_atmosphere + live capture_daynight | implemented | Без луны и звёзд |
+| | Дождь | `particles.ts`, `weather` | Струи вокруг камеры, мокрая земля, лужи, круги, рябь озёр, ветер, дымка | test_atmosphere + GPU-кадры | implemented | Жители не мокнут визуально |

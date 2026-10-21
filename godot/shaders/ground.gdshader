@@ -29,6 +29,8 @@ uniform vec3 stone_dug : source_color = vec3(0.56, 0.54, 0.50);
 
 varying vec2 world_xz;
 
+uniform float wetness = 0.0;
+uniform float rain_time = 0.0;
 uniform vec3 rock : source_color = vec3(0.52, 0.50, 0.46);
 uniform vec3 scree : source_color = vec3(0.62, 0.58, 0.50);
 uniform vec3 moss : source_color = vec3(0.36, 0.44, 0.24);
@@ -113,6 +115,15 @@ void fragment() {
 	rough = mix(rough, 0.5, wet);
 	if (ld < 0.0) {
 		col = mix(wet_sand, lake_bed, smoothstep(0.0, 6.0, -ld));
+	}
+
+	// Rain: darker, glossy soil; puddles in low spots; rings where drops land.
+	if (wetness > 0.01 && ld > 0.0) {
+		float puddle = smoothstep(0.62, 0.72, cf_fbm(p * 0.09 + vec2(3.0, 11.0))) * dirt;
+		col *= 1.0 - wetness * (0.22 + 0.18 * puddle);
+		rough = mix(rough, mix(0.45, 0.12, puddle), wetness);
+		float rings = cf_rain_rings(p, rain_time) * wetness * (0.35 + 0.65 * puddle);
+		col += rings * 0.08;
 	}
 
 	// Beyond the playable map the meadow quietly darkens.

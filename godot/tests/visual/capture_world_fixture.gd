@@ -30,9 +30,18 @@ func run() -> void:
 	var out_dir = "user://captures"
 	var hide_prefix = ""
 	var organic = false
+	var force_tick = -1
+	var force_weather = ""
+	var only_shots: PackedStringArray = []
 	for i in range(args.size()):
 		if args[i] == "--fixture" and i + 1 < args.size():
 			fixture_path = args[i + 1]
+		elif args[i] == "--tick" and i + 1 < args.size():
+			force_tick = int(args[i + 1])
+		elif args[i] == "--weather" and i + 1 < args.size():
+			force_weather = args[i + 1]
+		elif args[i] == "--shots" and i + 1 < args.size():
+			only_shots = args[i + 1].split(",")
 		elif args[i] == "--organic-lakes":
 			organic = true
 		elif args[i] == "--hide" and i + 1 < args.size():
@@ -56,6 +65,10 @@ func run() -> void:
 				pts.append({"x": spec[1] + cos(a) * spec[3] * wob, "y": spec[2] + sin(a) * spec[4] * wob})
 			lakes.append({"id": spec[0], "seed": 1, "outline": pts})
 		snapshot.surface["terrain"] = {"version": 1, "seed": 1, "lakes": lakes}
+	if force_tick >= 0:
+		snapshot["tick"] = force_tick
+	if force_weather != "":
+		snapshot["weather"] = {"state": force_weather, "until": int(snapshot.get("tick", 0)) + 9999}
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var scene = load("res://scenes/game/world_observer.tscn").instantiate() as WorldObserver
 	root.add_child(scene)
@@ -77,6 +90,8 @@ func run() -> void:
 			if c.name.begins_with(hide_prefix):
 				c.visible = false
 	for shot in SHOTS:
+		if not only_shots.is_empty() and not only_shots.has(shot[0]):
+			continue
 		wv.focused_target = null
 		wv.camera_navigated = true
 		wv.camera_pivot.position = shot[1]

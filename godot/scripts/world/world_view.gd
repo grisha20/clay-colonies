@@ -56,6 +56,8 @@ var ground_decor: GroundDecor
 var ground_material: ShaderMaterial
 var water_material: ShaderMaterial
 var water_container: Node3D
+var atmosphere: Atmosphere
+var hut_lights: Array = []
 var mountain_container: Node3D
 var trail_map: TrailMap
 
@@ -83,6 +85,10 @@ func _ready() -> void:
 	_setup_containers()
 	_setup_lakes()
 	_setup_camera()
+	atmosphere.ground_material = ground_material
+	atmosphere.water_material = water_material
+	atmosphere.grass_material = ground_decor.grass_material
+	atmosphere.follow = camera_pivot
 
 func _setup_containers() -> void:
 	buildings_container = Node3D.new()
@@ -153,6 +159,13 @@ func _setup_environment() -> void:
 	env.adjustment_contrast = 1.04
 	we.environment = env
 	add_child(we)
+
+	atmosphere = Atmosphere.new()
+	atmosphere.sun = sun
+	atmosphere.env = env
+	atmosphere.sky_mat = sky_mat
+	atmosphere.camera_distance_source = func(): return camera_distance
+	add_child(atmosphere)
 
 func _setup_terrain() -> void:
 	var ground = MeshInstance3D.new()
@@ -338,6 +351,8 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	if typeof(surface) != TYPE_DICTIONARY:
 		return
 	last_snapshot = snapshot
+	if atmosphere:
+		atmosphere.on_snapshot(snapshot)
 	_update_colony_focus_points(surface.get("entrances", []))
 	var session = snapshot.get("session", {})
 	if typeof(session) == TYPE_DICTIONARY:
@@ -664,6 +679,8 @@ func _update_buildings(buildings: Array) -> void:
 		active_buildings.erase(b_id)
 		if is_instance_valid(n):
 			n.queue_free()
+	if not b_to_remove.is_empty():
+		hut_lights = hut_lights.filter(func(l): return is_instance_valid(l) and not l.is_queued_for_deletion())
 
 func _make_building(b_type: String, built: bool, vertical: bool, span: int) -> Node3D:
 	match b_type:
@@ -674,6 +691,17 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int) -> N
 			hut.scale = HUT_SCALE
 			hut.position = Vector3(0, 0, 0.5)
 			root.add_child(hut)
+			# A warm glow at the doorway after dusk.
+			var door = OmniLight3D.new()
+			door.name = "DoorLight"
+			door.light_color = Color(1.0, 0.66, 0.32)
+			door.omni_range = 4.5
+			door.light_energy = 0.0
+			door.shadow_enabled = false
+			door.position = Vector3(0, 0.9, 2.9)
+			door.visible = false
+			root.add_child(door)
+			hut_lights.append(door)
 			return root
 		"wall":
 			var post = MeshInstance3D.new()
@@ -981,6 +1009,13 @@ func _queue_prewarm() -> void:
 ## Per-frame life: gliding creatures, flickering fires, water speed.
 func _animate_world(delta: float) -> void:
 	anim_time += delta
+	if atmosphere:
+		atmosphere.advance(delta)
+	var night = atmosphere.darkness if atmosphere else 0.0
+	for light in hut_lights:
+		if is_instance_valid(light):
+			light.visible = night > 0.05
+			light.light_energy = 1.1 * night
 	if not _prewarm.is_empty():
 		_prewarm.pop_front().call()
 	var k = 1.0 - exp(-8.0 * maxf(delta, 0.0))
@@ -1022,7 +1057,9 @@ func _animate_world(delta: float) -> void:
 		var light = camp.get_node_or_null("FireLight") as OmniLight3D
 		if light:
 			light.visible = fire > 0.05
-			light.light_energy = (1.4 + flicker * 0.35) * lerpf(0.3, 1.0, fire)
+			# The hearth is the heart of the camp at night: brighter and wider in the dark.
+			light.light_energy = (1.4 + flicker * 0.35) * lerpf(0.3, 1.0, fire) * lerpf(1.0, 2.4, night)
+			light.omni_range = lerpf(12.0, 7.0 + 13.0 * fire, night)
 
 func _process(delta: float) -> void:
 	_animate_world(delta)

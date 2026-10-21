@@ -153,3 +153,15 @@ float cf_height(vec2 p) {
 	}
 	return h;
 }
+
+// Raindrop rings: one drop per 1.3-unit cell, each on its own phase.
+float cf_rain_rings(vec2 p, float t) {
+	vec2 cell = floor(p / 1.3);
+	vec2 local = fract(p / 1.3) - 0.5;
+	float h = cf_hash(cell + vec2(7.0, 3.0));
+	vec2 centre = (vec2(cf_hash(cell + vec2(1.0, 9.0)), cf_hash(cell + vec2(5.0, 2.0))) - 0.5) * 0.5;
+	float age = fract(t * 1.1 + h);
+	float r = age * 0.45;
+	float d = length(local - centre);
+	return (1.0 - smoothstep(0.015, 0.05, abs(d - r))) * (1.0 - age);
+}
