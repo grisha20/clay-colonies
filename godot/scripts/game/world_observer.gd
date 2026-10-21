@@ -319,6 +319,10 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		select_resident(null)
 	last_snapshot_time = Time.get_ticks_msec() / 1000.0
 	entity_registry.on_network_resumed()
+	# Terrain first: resident navigation and the world view both read it.
+	var surface = snapshot.get("surface", {})
+	if SurfaceTerrain.set_terrain(surface.get("terrain") if typeof(surface) == TYPE_DICTIONARY else null):
+		world_view.apply_terrain()
 	entity_registry.update_from_snapshot(snapshot)
 	world_view.update_world_entities(snapshot)
 

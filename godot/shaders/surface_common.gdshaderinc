@@ -1,14 +1,17 @@
 // Shared helpers for the Clayfolk surface: value noise and lake signed distance.
-// Lake outlines are the authored polygons from shared/surfaceTerrain.ts (set by WorldView).
+// Lake outlines come from the world's terrain (snapshot surface.terrain, set by WorldView).
 
-uniform vec2 north_lake[48];
-uniform int north_lake_count = 0;
-uniform vec2 south_lake[48];
-uniform int south_lake_count = 0;
+// Up to 8 lakes flattened into one point list: lake i uses points
+// [lake_start[i], lake_start[i] + lake_len[i]) and is skipped outside lake_box[i]
+// (xy = min, zw = max, already padded for the shoreline band).
+const int CF_MAX_LAKES = 8;
+const int CF_MAX_LAKE_POINTS = 384;
+uniform vec2 lake_points[384];
+uniform int lake_start[8];
+uniform int lake_len[8];
+uniform vec4 lake_box[8];
+uniform int lake_count = 0;
 
-// Integer lattice hash. A float fract() hash is chaotic enough that compiler
-// FMA contraction changes corner values between neighbouring cells, which shows
-// up as hard square blotches; integer arithmetic is exact.
 float cf_hash(vec2 p) {
 	uvec2 q = uvec2(ivec2(floor(p)) + ivec2(65536));
 	q *= uvec2(1597334673u, 3812015801u);
@@ -39,36 +42,16 @@ float cf_fbm(vec2 p) {
 	return v;
 }
 
-float cf_sd_north(vec2 p) {
+float cf_sd_lake(vec2 p, int lake) {
 	float d = 1e9;
 	float s = 1.0;
-	int n = north_lake_count;
-	for (int i = 0; i < n; i++) {
-		int j = (i == 0) ? n - 1 : i - 1;
-		vec2 vi = north_lake[i];
-		vec2 vj = north_lake[j];
-		vec2 e = vj - vi;
-		vec2 w = p - vi;
-		vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
-		d = min(d, dot(b, b));
-		bool c1 = p.y >= vi.y;
-		bool c2 = p.y < vj.y;
-		bool c3 = e.x * w.y > e.y * w.x;
-		if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) {
-			s = -s;
-		}
-	}
-	return s * sqrt(d);
-}
-
-float cf_sd_south(vec2 p) {
-	float d = 1e9;
-	float s = 1.0;
-	int n = south_lake_count;
-	for (int i = 0; i < n; i++) {
-		int j = (i == 0) ? n - 1 : i - 1;
-		vec2 vi = south_lake[i];
-		vec2 vj = south_lake[j];
+	int first = lake_start[lake];
+	int n = lake_len[lake];
+	for (int k = 0; k < n; k++) {
+		int i = first + k;
+		int j = first + ((k == 0) ? n - 1 : k - 1);
+		vec2 vi = lake_points[i];
+		vec2 vj = lake_points[j];
 		vec2 e = vj - vi;
 		vec2 w = p - vi;
 		vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
@@ -88,11 +71,11 @@ float cf_sd_south(vec2 p) {
 float cf_lake_distance(vec2 p) {
 	float raw = 1e9;
 	// Cheap bounding test: only evaluate polygons near their boxes.
-	if (p.x > 160.0 && p.x < 304.0 && p.y > 84.0 && p.y < 196.0) {
-		raw = min(raw, cf_sd_north(p));
-	}
-	if (p.x > 144.0 && p.x < 336.0 && p.y > 292.0 && p.y < 452.0) {
-		raw = min(raw, cf_sd_south(p));
+	for (int i = 0; i < lake_count; i++) {
+		vec4 box = lake_box[i];
+		if (p.x > box.x && p.x < box.z && p.y > box.y && p.y < box.w) {
+			raw = min(raw, cf_sd_lake(p, i));
+		}
 	}
 	float wobble = (cf_noise(p * 0.21) - 0.5) * 1.4 + (cf_noise(p * 0.9) - 0.5) * 0.35;
 	return raw + 0.55 + wobble;

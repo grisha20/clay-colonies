@@ -55,6 +55,7 @@ var fence_container: Node3D
 var ground_decor: GroundDecor
 var ground_material: ShaderMaterial
 var water_material: ShaderMaterial
+var water_container: Node3D
 var trail_map: TrailMap
 
 var active_buildings: Dictionary = {}  # building_id -> Node3D
@@ -174,36 +175,72 @@ func _setup_terrain() -> void:
 	add_child(ground)
 
 func _apply_lake_uniforms(mat: ShaderMaterial) -> void:
-	mat.set_shader_parameter("north_lake", PackedVector2Array(SurfaceTerrain.NORTH_LAKE_OUTLINE))
-	mat.set_shader_parameter("north_lake_count", SurfaceTerrain.NORTH_LAKE_OUTLINE.size())
-	mat.set_shader_parameter("south_lake", PackedVector2Array(SurfaceTerrain.SOUTH_LAKE_OUTLINE))
-	mat.set_shader_parameter("south_lake_count", SurfaceTerrain.SOUTH_LAKE_OUTLINE.size())
+	var points = PackedVector2Array()
+	var starts = PackedInt32Array()
+	var lens = PackedInt32Array()
+	var boxes = PackedVector4Array()
+	for lake in SurfaceTerrain.get_lakes():
+		var outline: Array[Vector2] = lake.outline
+		if starts.size() >= 8 or points.size() + outline.size() > 384:
+			push_warning("Terrain has more lakes/points than the surface shader draws")
+			break
+		starts.append(points.size())
+		lens.append(outline.size())
+		points.append_array(PackedVector2Array(outline))
+		var box: Rect2 = lake.box
+		# Padded for the sand/shore band drawn around each lake.
+		boxes.append(Vector4(box.position.x - 20.0, box.position.y - 20.0, box.end.x + 20.0, box.end.y + 20.0))
+	var count = starts.size()
+	while points.size() < 384:
+		points.append(Vector2.ZERO)
+	while starts.size() < 8:
+		starts.append(0)
+		lens.append(0)
+		boxes.append(Vector4.ZERO)
+	mat.set_shader_parameter("lake_points", points)
+	mat.set_shader_parameter("lake_start", starts)
+	mat.set_shader_parameter("lake_len", lens)
+	mat.set_shader_parameter("lake_box", boxes)
+	mat.set_shader_parameter("lake_count", count)
 
 func _setup_lakes() -> void:
 	water_material = ShaderMaterial.new()
 	water_material.shader = load("res://shaders/water.gdshader")
-	_apply_lake_uniforms(water_material)
+	water_container = Node3D.new()
+	water_container.name = "WaterContainer"
+	add_child(water_container)
+	_build_water()
 
-	# Water surfaces cover each authored polygon's box; the shader draws the
-	# softened pond outline from shared/surfaceTerrain.ts and discards the rest.
-	for lake in [["NorthLakePolygon", SurfaceTerrain.NORTH_LAKE_OUTLINE], ["SouthLakePolygon", SurfaceTerrain.SOUTH_LAKE_OUTLINE]]:
-		var outline: Array[Vector2] = lake[1]
-		var lo = Vector2(INF, INF)
-		var hi = Vector2(-INF, -INF)
-		for pt in outline:
-			lo = Vector2(minf(lo.x, pt.x), minf(lo.y, pt.y))
-			hi = Vector2(maxf(hi.x, pt.x), maxf(hi.y, pt.y))
+## Water surfaces cover each lake's box; the shader draws the softened pond
+## outline from the world's terrain and discards the rest.
+func _build_water() -> void:
+	_apply_lake_uniforms(water_material)
+	for c in water_container.get_children():
+		c.queue_free()
+	for lake in SurfaceTerrain.get_lakes():
+		var box: Rect2 = lake.box
 		var quad = PlaneMesh.new()
-		quad.size = hi - lo + Vector2(2.0, 2.0)
+		quad.size = box.size + Vector2(2.0, 2.0)
 		quad.subdivide_width = int(quad.size.x / 2.0)
 		quad.subdivide_depth = int(quad.size.y / 2.0)
 		var mi = MeshInstance3D.new()
-		mi.name = lake[0]
+		mi.name = "Lake_" + str(lake.id)
 		mi.mesh = quad
-		mi.position = Vector3((lo.x + hi.x) * 0.5, 0.06, (lo.y + hi.y) * 0.5)
+		mi.position = Vector3(box.get_center().x, 0.06, box.get_center().y)
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.set_surface_override_material(0, water_material)
-		add_child(mi)
+		water_container.add_child(mi)
+
+## Called when a snapshot brings different terrain (another world was loaded or
+## generated): redraw water, shores and meadow dressing.
+func apply_terrain() -> void:
+	if ground_material:
+		_apply_lake_uniforms(ground_material)
+	if water_container:
+		_build_water()
+	ground_signature = ""
+	if ground_decor:
+		ground_decor.signature = ""
 
 func _setup_camera() -> void:
 	camera_pivot = Node3D.new()
@@ -742,7 +779,10 @@ func _update_trails(ants: Array) -> void:
 
 ## Cheap box test around both authored lakes before the exact polygon test.
 func _near_lake(x: float, y: float) -> bool:
-	return (x >= 180.0 and x <= 284.0 and y >= 104.0 and y <= 176.0) or (x >= 164.0 and x <= 316.0 and y >= 312.0 and y <= 432.0)
+	for lake in SurfaceTerrain.get_lakes():
+		if lake.box.has_point(Vector2(x, y)):
+			return true
+	return false
 
 ## Every prop variant costs a few milliseconds to sculpt the first time. Build
 ## them one per frame in the background so a berry being picked or a tree
@@ -873,7 +913,13 @@ func focus_on_lake(lake_name: String) -> void:
 	focused_target = null
 	camera_navigated = true
 	target_camera_distance = 18.0
-	if lake_name == "north":
+	# "north"/"south" buttons pick the first/second lake of the current world.
+	var lakes = SurfaceTerrain.get_lakes()
+	var index = 0 if lake_name == "north" else 1
+	if lakes.size() > index:
+		var c: Vector2 = lakes[index].box.get_center()
+		camera_pivot.position = Vector3(c.x, 0.0, c.y)
+	elif lake_name == "north":
 		camera_pivot.position = NORTH_LAKE_CENTER
 	else:
 		camera_pivot.position = SOUTH_LAKE_CENTER

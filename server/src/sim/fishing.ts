@@ -1,9 +1,11 @@
 import type { Ant, Fish, FishSpecies, Vec2 } from "../../../shared/types";
 import {
-  LAKE_DEFINITIONS,
   SURFACE_TERRAIN_CELL_SIZE,
+  lakeDefinition,
+  lakeDefinitions,
   lakeFieldAt,
-  lakeIdAt
+  lakeIdAt,
+  surfaceTerrainRevision
 } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
 import { isSurfaceBlockedAt, nearestDropPoint } from "./building";
@@ -29,7 +31,8 @@ function seededUnit(seed: number): number {
 }
 
 function spawnPoint(lakeId: Fish["lakeId"], salt: number): Vec2 {
-  const lake = LAKE_DEFINITIONS.find((item) => item.id === lakeId)!;
+  const lake = lakeDefinition(lakeId);
+  if (!lake) return { x: 0, y: 0 };
   const minX = Math.min(...lake.outline.map((point) => point.x));
   const maxX = Math.max(...lake.outline.map((point) => point.x));
   const minY = Math.min(...lake.outline.map((point) => point.y));
@@ -47,7 +50,7 @@ function spawnPoint(lakeId: Fish["lakeId"], salt: number): Vec2 {
 
 export function createInitialFishPopulation(): Fish[] {
   const fish: Fish[] = [];
-  for (const lake of LAKE_DEFINITIONS) {
+  for (const lake of lakeDefinitions()) {
     for (let index = 0; index < CONFIG.fishPerLake; index += 1) {
       const angle = seededUnit(lake.seed + index * 13) * Math.PI * 2;
       fish.push({
@@ -181,7 +184,7 @@ export function updateFishPopulation(world: World): void {
 }
 
 function fishingSpots(world: World): FishingSpot[] {
-  const key = `${world.surface.width}x${world.surface.height}`;
+  const key = `${world.surface.width}x${world.surface.height}:${surfaceTerrainRevision()}`;
   const cached = spotCache.get(key);
   if (cached) {
     return cached;

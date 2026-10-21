@@ -159,6 +159,20 @@ func run() -> void:
 	check("rebuild_does_not_block", rebuild_ms < 50.0, "ms=%.1f" % rebuild_ms)
 	check("rebuild_settles", decor.is_settled() and decor.instance_count > 15000 and decor.signature == "second", "instances=%d" % decor.instance_count)
 
+	# Another world's terrain redraws water: one surface per lake.
+	var ring: Array = []
+	for i in range(20):
+		var ang = TAU * float(i) / 20.0
+		ring.append({"x": 60.0 + cos(ang) * 15.0, "y": 400.0 + sin(ang) * 10.0})
+	SurfaceTerrain.set_terrain({"version": 1, "seed": 9, "lakes": [{"id": "pond", "seed": 1, "outline": ring}]})
+	view.apply_terrain()
+	var live_lakes = view.water_container.get_children().filter(func(c): return not c.is_queued_for_deletion())
+	check("terrain_switch_rebuilds_water", live_lakes.size() == 1 and live_lakes[0].name == "Lake_pond", str(live_lakes.size()))
+	SurfaceTerrain.set_terrain(null)
+	view.apply_terrain()
+	live_lakes = view.water_container.get_children().filter(func(c): return not c.is_queued_for_deletion())
+	check("legacy_terrain_restored", live_lakes.size() == 2)
+
 	# Removal follows the snapshot.
 	snap.surface.resourceNodes = []
 	snap.surface.foodSources = []

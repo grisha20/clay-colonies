@@ -25,8 +25,12 @@ void fragment() {
 	}
 	float depth = smoothstep(0.0, 7.0, -ld);
 	float t = TIME * 0.35 * speed_scale;
-	float r1 = cf_noise(p * 0.55 + vec2(t, t * 0.6));
-	float r2 = cf_noise(p * 1.3 - vec2(t * 0.8, -t * 0.4));
+	// Rotated, layered lattices hide the value-noise grid that otherwise shows
+	// up as little squares on a calm surface.
+	vec2 q1 = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * p;
+	vec2 q2 = mat2(vec2(0.28, -0.96), vec2(0.96, 0.28)) * p;
+	float r1 = 0.6 * cf_noise(q1 * 0.32 + vec2(t, t * 0.6)) + 0.4 * cf_noise(q2 * 0.5 - vec2(t * 0.5, t * 0.3));
+	float r2 = 0.6 * cf_noise(q2 * 0.75 - vec2(t * 0.8, -t * 0.4)) + 0.4 * cf_noise(q1 * 1.1 + vec2(t * 0.3, t * 0.7));
 	vec3 col = mix(shallow, deep, depth);
 	col += (r1 * r2 - 0.25) * 0.08;
 	float foam_band = (1.0 - smoothstep(0.0, 0.7 + r1 * 0.5, -ld)) * (0.55 + 0.45 * r2);

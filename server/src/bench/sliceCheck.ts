@@ -19,7 +19,7 @@ const { CONFIG } = await import("../config");
 const { simulationSlice } = await import("../loop");
 const { paintColonyZone, zoneIndexAt } = await import("../sim/zones");
 const { placeHut, placePointBuilding, paintWallCells, wallCellIndexAt, completeBuilding, isWallBlockedAt, isSurfaceBlockedAt, resolveSurfaceCollision } = await import("../sim/building");
-const { isWaterAt, lakeFieldAt, lakeIdAt, LAKE_DEFINITIONS } = await import("../../../shared/surfaceTerrain");
+const { isWaterAt, lakeFieldAt, lakeIdAt, lakeDefinitions, LEGACY_TERRAIN } = await import("../../../shared/surfaceTerrain");
 const { calculateSurfacePath } = await import("../sim/ant/movement");
 const { updateWaterExposure } = await import("../sim/ant/step");
 const { assignFishingJobs, moveFishing, updateFishPopulation } = await import("../sim/fishing");
@@ -103,8 +103,8 @@ check(
 // --- Озёра: фиксированная форма, физика, генерация и строительство ---
 check("Озёра: центры северного и южного озера заполнены водой", isWaterAt(238, 115) && isWaterAt(237, 352));
 check(
-  "Озёра: контуры состоят только из прямых участков сетки 4×4",
-  LAKE_DEFINITIONS.every((lake) => lake.outline.every((point, index) => {
+  "Озёра: контуры старой карты состоят только из прямых участков сетки 4×4",
+  LEGACY_TERRAIN.lakes.every((lake) => lake.outline.every((point, index) => {
     const next = lake.outline[(index + 1) % lake.outline.length];
     return point.x % 4 === 0 && point.y % 4 === 0 && (point.x === next.x || point.y === next.y);
   }))
@@ -117,7 +117,7 @@ check("Озёра: ресурсы не созданы в воде", world.surfac
 check("Озёра: еда не создана в воде", world.surface.foodSources.every((source) => !isWaterAt(source.pos.x, source.pos.y)));
 check(
   "Рыбалка: в каждом озере живёт полная популяция четырёх видов",
-  LAKE_DEFINITIONS.every((lake) => world.surface.fish.filter((fish) => fish.lakeId === lake.id).length === CONFIG.fishPerLake) &&
+  lakeDefinitions().every((lake) => world.surface.fish.filter((fish) => fish.lakeId === lake.id).length === CONFIG.fishPerLake) &&
     new Set(world.surface.fish.map((fish) => fish.species)).size === 4
 );
 check(

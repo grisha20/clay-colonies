@@ -1,7 +1,7 @@
 // Минимапа: упрощённая картина мира на 2D-canvas + рамка вьюпорта.
 // Перерисовывается на каждом снапшоте (10 раз/с) — при <100 точках это дёшево.
 import type { WorldSnapshot } from "../../../shared/types";
-import { SURFACE_TERRAIN_CELL_SIZE, isDeepWaterAt, isWaterAt } from "../../../shared/surfaceTerrain";
+import { SURFACE_TERRAIN_CELL_SIZE, isDeepWaterAt, isWaterAt, surfaceTerrainRevision } from "../../../shared/surfaceTerrain";
 import type { Camera } from "./types";
 import { SURFACE_TILE_SIZE } from "./types";
 import { depositRemaining } from "../../../shared/resourceDeposits";
@@ -10,7 +10,7 @@ let staticMinimapCache: { key: string; canvas: HTMLCanvasElement } | null = null
 
 function staticMinimapLayer(canvas: HTMLCanvasElement, world: WorldSnapshot): HTMLCanvasElement {
   const entrances = world.surface.entrances ?? [world.surface.entrance];
-  const key = [canvas.width, canvas.height, world.surface.width, world.surface.height, ...entrances.flatMap((item) => [item.x, item.y])].join(":");
+  const key = [canvas.width, canvas.height, world.surface.width, world.surface.height, surfaceTerrainRevision(), ...entrances.flatMap((item) => [item.x, item.y])].join(":");
   if (staticMinimapCache?.key === key) {
     return staticMinimapCache.canvas;
   }

@@ -11,7 +11,7 @@ import {
   type NetworkWorldSnapshot,
   type WorldSnapshot
 } from "../../shared/types";
-import { isWaterAt } from "../../shared/surfaceTerrain";
+import { isWaterAt, setSurfaceTerrain } from "../../shared/surfaceTerrain";
 import { depositContains, depositRemaining } from "../../shared/resourceDeposits";
 import { surfaceRoute, surfaceLineOpen, routePoint } from "../../shared/surfaceNavigation";
 import { lakeLineOpen, lakeRoute } from "../../shared/lakeNavigation";
@@ -2436,6 +2436,8 @@ socket.addEventListener("message", (event) => {
     console.warn(`Unsupported protocolVersion ${protocolVersion}; client expects ${CURRENT_PROTOCOL_VERSION}.`);
     warnedProtocolVersion = true;
   }
+  // Lakes belong to the world now; every shared water predicate reads them.
+  setSurfaceTerrain(snap.surface?.terrain);
 
   if (latestWorld && snap.tick < latestWorld.tick) {
     antInterp.clear(); fishInterp.clear(); enemyInterp.clear();

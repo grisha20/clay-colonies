@@ -1,3 +1,5 @@
+import type { LakeId, SurfaceTerrainData } from "./surfaceTerrain";
+
 export type Layer = "surface" | "underground";
 export type DetailLevel = "full" | "aggregate";
 export type NetworkViewMode = "surface" | "underground";
@@ -309,7 +311,7 @@ export type FishState = "swim" | "lured" | "respawning";
 /** A fish is a persistent lake actor. Caught fish wait in respawning state instead of appearing from nowhere. */
 export type Fish = {
   id: string;
-  lakeId: "north" | "south";
+  lakeId: LakeId;
   species: FishSpecies;
   state: FishState;
   pos: Vec2;
@@ -331,7 +333,7 @@ export type Enemy = {
   hoard: number;
   sprintLeft: number;
   tiredLeft: number;
-  lakeId?: "north" | "south";
+  lakeId?: LakeId;
   lakePadIndex?: number;
   lakeRestUntil?: number;
   lakeNextRestAt?: number;
@@ -355,7 +357,7 @@ export type SessionState = {
   endedAt?: number;
   dangersEnabled: boolean;
   raid: { phase: "peace" | "warning" | "attack"; at: number; until: number; count: number; targetColonyId: string };
-  lakes: Record<"north" | "south", { swallowed: number; nextSpawnAt: number }>;
+  lakes: Record<LakeId, { swallowed: number; nextSpawnAt: number }>;
   nextBeetlesAt: number;
   nextCreatureId: number;
   idolProgress: number;
@@ -374,6 +376,8 @@ export type Surface = {
   deposits?: ResourceDeposit[];
   buildings: Building[];
   fish: Fish[];
+  /** Lakes and other terrain of this world. Absent in saves made before v21 terrain data: legacy map. */
+  terrain?: SurfaceTerrainData;
 };
 
 export type SparseGrid = {

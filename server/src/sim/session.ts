@@ -3,16 +3,21 @@ import { dayCycle } from "../../../shared/dayCycle";
 import { CONFIG } from "../config";
 import { createWorkerAnt, syncWorldLegacyFields, type World } from "./world";
 import { createSpider } from "./enemy";
-import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, type LakeId } from "../../../shared/surfaceTerrain";
 
 export function createSession(tick = 0): SessionState {
   return {
     mode: "match", speed: 1, status: "playing", reason: "", dangersEnabled: true, playerColonyIndex: 0, startedAt: tick,
     raid: { phase: "peace", at: tick + CONFIG.raidFirstAt, until: 0, count: 0, targetColonyId: "colony-1" },
-    lakes: { north: { swallowed: 0, nextSpawnAt: tick + CONFIG.lakeMonsterSpawnTicks }, south: { swallowed: 0, nextSpawnAt: tick + CONFIG.lakeMonsterSpawnTicks } },
+    lakes: Object.fromEntries(lakeDefinitions().map((lake) => [lake.id, { swallowed: 0, nextSpawnAt: tick + CONFIG.lakeMonsterSpawnTicks }])),
     nextBeetlesAt: tick, nextCreatureId: 1, idolProgress: 0,
     stats: { born: 0, lost: 0, rescued: 0, raidsSurvived: 0 }, events: []
   };
+}
+
+/** Per-lake threat state; lakes of a generated or migrated world get an entry on first use. */
+export function lakeSession(world: World, id: LakeId): SessionState["lakes"][LakeId] {
+  return world.session.lakes[id] ??= { swallowed: 0, nextSpawnAt: world.tick + CONFIG.lakeMonsterSpawnTicks };
 }
 
 export function logEvent(world: World, text: string, pos?: Vec2): void {

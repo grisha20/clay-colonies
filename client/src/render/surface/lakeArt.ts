@@ -4,13 +4,18 @@ import type { WorldSnapshot } from "../../../../shared/types";
 import type { ViewBounds } from "../types";
 import { actorMotion, animationSeed } from "./motion";
 import { loadSpriteAtlas, type LoadedAtlas } from "./atlas";
-import { isWaterAt } from "../../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, surfaceTerrainRevision } from "../../../../shared/surfaceTerrain";
 
 let lilies: LoadedAtlas;
+let liliesRevision = -1;
 export async function preloadLakeArt(): Promise<void> { lilies = await loadSpriteAtlas("/assets/environment/clay-v2/lilies-atlas.png"); }
 export function updateLakeDetails(root: Container, ripples: Graphics, world: WorldSnapshot, cell: number, bounds: ViewBounds): void {
+  if (lilies && liliesRevision !== surfaceTerrainRevision()) {
+    for (const child of root.removeChildren()) child.destroy();
+  }
   if (!root.children.length && lilies) {
-    for (const id of ["north", "south"] as const) for (const [index, p] of lakeLilyPads(id).entries()) {
+    liliesRevision = surfaceTerrainRevision();
+    for (const { id } of lakeDefinitions()) for (const [index, p] of lakeLilyPads(id).entries()) {
       const texture = lilies.textures[index % 4], leaf = new Sprite(texture);
       leaf.anchor.set(0.6, 0.62); leaf.scale.set(72 / texture.width); leaf.position.set(p.x * cell, p.y * cell);
       root.addChild(leaf);

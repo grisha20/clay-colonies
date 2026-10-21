@@ -18,7 +18,7 @@ import {
   type Vec2,
   type WorldSnapshot
 } from "../../../shared/types";
-import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { LEGACY_TERRAIN, isWaterAt, setSurfaceTerrain, type SurfaceTerrainData } from "../../../shared/surfaceTerrain";
 import { computeDirectives, createFitnessState, type ColonyDirectives, type FitnessState } from "../ai/controller";
 import type { GenomeState } from "../ai/genome";
 import type { SpiderGenomeState } from "../ai/spiderGenome";
@@ -773,10 +773,15 @@ export function syncWorldLegacyFields(world: World): void {
 export function createWorld(
   genomeState: GenomeState,
   spiderGenomeState: SpiderGenomeState,
-  genomeStateB: GenomeState = genomeState
+  genomeStateB: GenomeState = genomeState,
+  terrain: SurfaceTerrainData = LEGACY_TERRAIN
 ): World {
+  // Placement below (resources, food, fish, deposits) asks the shared water
+  // predicates, so the world's terrain must be active before anything spawns.
+  setSurfaceTerrain(terrain);
   const entrances = [CONFIG.surfaceEntrance, CONFIG.surfaceEntranceB];
   const surface: Surface = {
+    terrain,
     width: CONFIG.mapWidth,
     height: CONFIG.mapHeight,
     entrance: CONFIG.surfaceEntrance,
@@ -877,6 +882,9 @@ export function worldFromSnapshot(
     return createWorld(genomeState, spiderGenomeState, genomeStateB);
   }
 
+  // Saves made before terrain data continue on the authored legacy map.
+  const terrain = snapshot.surface.terrain ?? LEGACY_TERRAIN;
+  setSurfaceTerrain(terrain);
   const snapshotAnts = snapshot.colonies.flatMap((colony) => colony.ants);
   const maxAntId = snapshotAnts.reduce((max, ant) => {
     const numeric = Number(ant.id.replace("ant-", ""));
@@ -1005,6 +1013,7 @@ export function worldFromSnapshot(
     session: { ...createSession(0), ...snapshot.session },
     surface: {
       ...snapshot.surface,
+      terrain,
       foodSources,
       carrion,
       entrances,

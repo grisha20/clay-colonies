@@ -29,9 +29,12 @@ func run() -> void:
 	var fixture_path = ""
 	var out_dir = "user://captures"
 	var hide_prefix = ""
+	var organic = false
 	for i in range(args.size()):
 		if args[i] == "--fixture" and i + 1 < args.size():
 			fixture_path = args[i + 1]
+		elif args[i] == "--organic-lakes":
+			organic = true
 		elif args[i] == "--hide" and i + 1 < args.size():
 			hide_prefix = args[i + 1]
 		elif args[i] == "--out" and i + 1 < args.size():
@@ -42,6 +45,17 @@ func run() -> void:
 		push_error("Cannot read fixture " + fixture_path)
 		quit(1)
 		return
+	if organic:
+		# Preview of generated-world water: replace the legacy lakes with organic ones.
+		var lakes = []
+		for spec in [["lake-a", 232.0, 140.0, 40.0, 26.0], ["lake-b", 240.0, 372.0, 46.0, 34.0], ["lake-c", 60.0, 420.0, 22.0, 16.0]]:
+			var pts = []
+			for i in range(40):
+				var a = TAU * float(i) / 40.0
+				var wob = 1.0 + 0.12 * sin(a * 3.0 + spec[1]) + 0.07 * sin(a * 5.0)
+				pts.append({"x": spec[1] + cos(a) * spec[3] * wob, "y": spec[2] + sin(a) * spec[4] * wob})
+			lakes.append({"id": spec[0], "seed": 1, "outline": pts})
+		snapshot.surface["terrain"] = {"version": 1, "seed": 1, "lakes": lakes}
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var scene = load("res://scenes/game/world_observer.tscn").instantiate() as WorldObserver
 	root.add_child(scene)

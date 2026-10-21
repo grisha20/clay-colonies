@@ -1,10 +1,12 @@
 import { lakePoints, lakeLineOpen } from "./lakeNavigation";
-import { lakeFieldAt, type LakeId } from "./surfaceTerrain";
+import { lakeFieldAt, surfaceTerrainRevision, type LakeId } from "./surfaceTerrain";
 import type { Enemy, Vec2 } from "./types";
 
 const pads = new Map<LakeId, Vec2[]>();
+let padsRevision = -1;
 /** Shared deterministic habitat: clients and saved creatures use the same pads. */
 export function lakeLilyPads(id: LakeId): Vec2[] {
+  if (padsRevision !== surfaceTerrainRevision()) { pads.clear(); padsRevision = surfaceTerrainRevision(); }
   let result = pads.get(id); if (result) return result;
   result = [];
   for (const point of lakePoints(id)) {

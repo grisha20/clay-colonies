@@ -1,5 +1,5 @@
 import { lakePoints, lakeRoute } from "./lakeNavigation";
-import { lakeIdAt, type LakeId } from "./surfaceTerrain";
+import { lakeIdAt, surfaceTerrainRevision, type LakeId } from "./surfaceTerrain";
 import { surfaceRoute, surfacePointOpen, type SurfaceObstacles } from "./surfaceNavigation";
 import { surfaceGridLineOpen } from "./surfaceGrid";
 import { buildingFootprint, crossesBuilding } from "./buildingGeometry";
@@ -8,7 +8,9 @@ import { fenceContains } from "./fenceGeometry";
 import type { Vec2 } from "./types";
 export type ShorePortal={water:Vec2;land:Vec2};
 const portals=new Map<LakeId,ShorePortal[]>();
+let portalsRevision=-1;
 export function lakeShorePortals(id:LakeId):ShorePortal[] {
+  if(portalsRevision!==surfaceTerrainRevision()){portals.clear();portalsRevision=surfaceTerrainRevision();}
   let result=portals.get(id);if(result)return result;result=[];
   for(const p of lakePoints(id))for(const [dx,dy] of [[4,0],[-4,0],[0,4],[0,-4]]) {const land={x:p.x+dx,y:p.y+dy};if(!lakeIdAt(land.x,land.y))result.push({water:p,land});}
   portals.set(id,result);return result;

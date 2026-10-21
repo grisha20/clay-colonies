@@ -30,6 +30,10 @@ func _init() -> void:
 	if test_procedural_lake_mesh_generation():
 		passed += 1
 
+	total += 1
+	if test_terrain_from_snapshot_data():
+		passed += 1
+
 	print("=== SURFACE TERRAIN RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL SURFACE TERRAIN TESTS PASSED!")
@@ -97,4 +101,24 @@ func test_procedural_lake_mesh_generation() -> bool:
 		return false
 
 	print("  PASS: test_procedural_lake_mesh_generation (triangulated ArrayMesh created)")
+	return true
+
+func test_terrain_from_snapshot_data() -> bool:
+	# Generated worlds send their lakes in surface.terrain; missing terrain = legacy map.
+	var ring: Array = []
+	for i in range(24):
+		var a = TAU * float(i) / 24.0
+		ring.append({"x": 100.0 + cos(a) * 20.0, "y": 100.0 + sin(a) * 12.0})
+	var rev = SurfaceTerrain.revision
+	var changed = SurfaceTerrain.set_terrain({"version": 1, "seed": 5, "lakes": [{"id": "lake-x", "seed": 1, "outline": ring}]})
+	var ok = changed and SurfaceTerrain.revision == rev + 1
+	ok = ok and SurfaceTerrain.is_water_at(100.0, 100.0) and SurfaceTerrain.get_lake_id_at(100.0, 100.0) == "lake-x"
+	ok = ok and not SurfaceTerrain.is_water_at(230.0, 135.0)
+	ok = ok and not SurfaceTerrain.set_terrain({"version": 1, "seed": 5, "lakes": [{"id": "lake-x", "seed": 1, "outline": ring}]})
+	SurfaceTerrain.set_terrain(null)
+	ok = ok and SurfaceTerrain.is_water_at(230.0, 135.0) and not SurfaceTerrain.is_water_at(100.0, 100.0)
+	if not ok:
+		push_error("Terrain data was not applied or restored correctly")
+		return false
+	print("  PASS: test_terrain_from_snapshot_data")
 	return true

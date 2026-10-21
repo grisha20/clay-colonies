@@ -1,6 +1,6 @@
 import { Container, Graphics, MaskFilter, RenderTexture, Sprite, Renderer, TilingSprite, Texture } from "pixi.js";
 import { WALL_CELL_SIZE, ZONE_CELL_SIZE, type Vec2, type WorldSnapshot } from "../../../../shared/types";
-import { lakeFieldAt, isWaterAt, SURFACE_TERRAIN_CELL_SIZE } from "../../../../shared/surfaceTerrain";
+import { lakeFieldAt, isWaterAt, SURFACE_TERRAIN_CELL_SIZE, surfaceTerrainRevision } from "../../../../shared/surfaceTerrain";
 import { createSpritePool } from "../spritePool";
 import type { Camera, SurfaceScene, ViewBounds } from "../types";
 import { SURFACE_TILE_SIZE } from "../types";
@@ -838,6 +838,8 @@ export function renderSurface(
     world.surface.width,
     world.surface.height,
     "surface-clay-materials-v6-quarries",
+    // Generated worlds bring their own lakes: rebuild the ground when terrain changes.
+    surfaceTerrainRevision(),
     (world.surface.deposits ?? []).map(d => `${d.id},${d.pos.x},${d.pos.y}`).join(";")
   ].join(":");
   if (scene.staticKey !== staticKey) {

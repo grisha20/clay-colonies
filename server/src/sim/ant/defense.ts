@@ -1,5 +1,5 @@
 import type { Ant, Vec2 } from "../../../../shared/types";
-import { LAKE_DEFINITIONS, isWaterAt } from "../../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, surfaceTerrainRevision } from "../../../../shared/surfaceTerrain";
 import { CONFIG } from "../../config";
 import type { World } from "../world";
 import { isWallBlockedAt, isSurfaceBlockedAt } from "../building";
@@ -14,10 +14,12 @@ import { taskApproach } from "../taskAccess";
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 const refuges = new WeakMap<Ant, { enemyId: string; origin: Vec2; goal: Vec2; until: number }>();
 let shorePoints: Vec2[] | undefined;
+let shoreRevision = -1;
 function waterBanks(): Vec2[] {
-  if (shorePoints) return shorePoints;
+  if (shorePoints && shoreRevision === surfaceTerrainRevision()) return shorePoints;
+  shoreRevision = surfaceTerrainRevision();
   shorePoints = [];
-  for (const lake of LAKE_DEFINITIONS) {
+  for (const lake of lakeDefinitions()) {
     for (let j = 0; j < lake.outline.length; j++) {
       const a = lake.outline[j], b = lake.outline[(j + 1) % lake.outline.length];
       const length = dist(a, b);

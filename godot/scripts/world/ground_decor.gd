@@ -118,7 +118,12 @@ static func _clear_zone(p: Vector2, entrances: Array, digs: Array, yards: Array)
 
 static func _shore_distance(p: Vector2) -> float:
 	## Rough distance to water (0..4) using a few probes; 99 when far away.
-	if not ((p.x > 150 and p.x < 300 and p.y > 90 and p.y < 190) or (p.x > 140 and p.x < 340 and p.y > 290 and p.y < 455)):
+	var near = false
+	for lake in SurfaceTerrain.get_lakes():
+		if lake.box.grow(4.0).has_point(p):
+			near = true
+			break
+	if not near:
 		return 99.0
 	if SurfaceTerrain.is_water_at(p.x, p.y):
 		return -1.0

@@ -2,7 +2,8 @@ export const SURFACE_TERRAIN_CELL_SIZE = 4;
 // Physics stays on a cheap 4×4 grid; visual shoreline samples twice as densely.
 export const LAKE_RENDER_CELL_SIZE = 1;
 
-export type LakeId = "north" | "south";
+/** Lake identity. Legacy worlds use "north"/"south"; generated worlds use any id. */
+export type LakeId = string;
 
 export type LakeDefinition = {
   id: LakeId;
@@ -11,9 +12,21 @@ export type LakeDefinition = {
   outline: readonly { x: number; y: number }[];
 };
 
+/**
+ * Surface terrain is world data (saved and broadcast in surface.terrain). Shared
+ * predicates read the active terrain, set once per loaded world on the server and
+ * per received snapshot on clients. Worlds saved before terrain existed use
+ * LEGACY_TERRAIN, so old matches continue on the map they started on.
+ */
+export type SurfaceTerrainData = {
+  version: 1;
+  seed: number;
+  lakes: readonly LakeDefinition[];
+};
+
 // Two deliberately authored, connected contours. Internal blue marker lines were
 // hatching; only the outer blue outlines define shoreline geometry.
-export const LAKE_DEFINITIONS: readonly LakeDefinition[] = [
+const LEGACY_LAKES: readonly LakeDefinition[] = [
   {
     id: "north",
     seed: 1701,
@@ -46,7 +59,60 @@ export const LAKE_DEFINITIONS: readonly LakeDefinition[] = [
       { x: 172, y: 380 }, { x: 164, y: 380 }
     ]
   }
-] as const;
+];
+
+export const LEGACY_TERRAIN: SurfaceTerrainData = { version: 1, seed: 0, lakes: LEGACY_LAKES };
+
+type LakeBounds = { lake: LakeDefinition; minX: number; minY: number; maxX: number; maxY: number };
+let activeTerrain: SurfaceTerrainData = LEGACY_TERRAIN;
+let activeBounds: LakeBounds[] = boundsFor(LEGACY_TERRAIN);
+let revision = 0;
+
+function boundsFor(terrain: SurfaceTerrainData): LakeBounds[] {
+  return terrain.lakes.map((lake) => ({
+    lake,
+    minX: Math.min(...lake.outline.map((p) => p.x)),
+    minY: Math.min(...lake.outline.map((p) => p.y)),
+    maxX: Math.max(...lake.outline.map((p) => p.x)),
+    maxY: Math.max(...lake.outline.map((p) => p.y))
+  }));
+}
+
+function sameTerrain(a: SurfaceTerrainData, b: SurfaceTerrainData): boolean {
+  if (a === b) return true;
+  if (a.seed !== b.seed || a.lakes.length !== b.lakes.length) return false;
+  return a.lakes.every((lake, i) => {
+    const other = b.lakes[i];
+    return lake.id === other.id && lake.outline.length === other.outline.length &&
+      lake.outline.every((p, j) => p.x === other.outline[j].x && p.y === other.outline[j].y);
+  });
+}
+
+/** Installs the terrain of the world being simulated or displayed. Missing terrain means the legacy map. */
+export function setSurfaceTerrain(terrain: SurfaceTerrainData | undefined | null): void {
+  const next = terrain && Array.isArray(terrain.lakes) ? terrain : LEGACY_TERRAIN;
+  if (sameTerrain(next, activeTerrain)) return;
+  activeTerrain = next;
+  activeBounds = boundsFor(next);
+  revision += 1;
+}
+
+export function getSurfaceTerrain(): SurfaceTerrainData {
+  return activeTerrain;
+}
+
+/** Bumps whenever the active terrain changes; derived caches compare against it. */
+export function surfaceTerrainRevision(): number {
+  return revision;
+}
+
+export function lakeDefinitions(): readonly LakeDefinition[] {
+  return activeTerrain.lakes;
+}
+
+export function lakeDefinition(id: LakeId): LakeDefinition | undefined {
+  return activeTerrain.lakes.find((lake) => lake.id === id);
+}
 
 function isInsidePolygon(x: number, y: number, points: readonly { x: number; y: number }[]): boolean {
   let inside = false;
@@ -72,7 +138,7 @@ function distanceToSegment(x: number, y: number, a: { x: number; y: number }, b:
 export function lakeFieldAt(x: number, y: number): number {
   let nearest = Number.POSITIVE_INFINITY;
   let signed = -Number.POSITIVE_INFINITY;
-  for (const lake of LAKE_DEFINITIONS) {
+  for (const lake of activeTerrain.lakes) {
     let distance = Number.POSITIVE_INFINITY;
     for (let i = 0; i < lake.outline.length; i += 1) {
       distance = Math.min(distance, distanceToSegment(x, y, lake.outline[i], lake.outline[(i + 1) % lake.outline.length]));
@@ -95,9 +161,10 @@ export function isWaterAt(x: number, y: number): boolean {
 
 /** Stable authored-lake identity used by fishing, rendering and future map generation. */
 export function lakeIdAt(x: number, y: number): LakeId | null {
-  for (const lake of LAKE_DEFINITIONS) {
-    if (isInsidePolygon(x, y, lake.outline)) {
-      return lake.id;
+  for (const b of activeBounds) {
+    if (x < b.minX || x > b.maxX || y < b.minY || y > b.maxY) continue;
+    if (isInsidePolygon(x, y, b.lake.outline)) {
+      return b.lake.id;
     }
   }
   return null;

@@ -1,10 +1,13 @@
-import { LAKE_DEFINITIONS, lakeIdAt, type LakeId } from "./surfaceTerrain";
+import { lakeDefinition, lakeIdAt, surfaceTerrainRevision, type LakeId } from "./surfaceTerrain";
 import type { Vec2 } from "./types";
 const grids = new Map<LakeId, Vec2[]>();
+let gridsRevision = -1;
 const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 export function lakePoints(id: LakeId): Vec2[] {
+  if (gridsRevision !== surfaceTerrainRevision()) { grids.clear(); gridsRevision = surfaceTerrainRevision(); }
   let points = grids.get(id); if (points) return points;
-  const lake = LAKE_DEFINITIONS.find(l => l.id === id)!; points = [];
+  const lake = lakeDefinition(id); points = [];
+  if (!lake) return points;
   for (let y = Math.min(...lake.outline.map(p => p.y)) + 2; y < Math.max(...lake.outline.map(p => p.y)); y += 4)
     for (let x = Math.min(...lake.outline.map(p => p.x)) + 2; x < Math.max(...lake.outline.map(p => p.x)); x += 4) if (lakeIdAt(x, y) === id) points.push({ x, y });
   grids.set(id, points); return points;

@@ -43,22 +43,70 @@ static func is_inside_polygon_exact(x: float, y: float, points: Array[Vector2]) 
 		j = i
 	return inside
 
-static func is_water_at(x: float, y: float) -> bool:
-	# Bounding boxes of the authored outlines: identical result, skips the
-	# polygon walk for the vast majority of the map.
-	if (x < 180.0 or x > 284.0 or y < 104.0 or y > 176.0) and (x < 164.0 or x > 316.0 or y < 312.0 or y > 432.0):
+# Active terrain. Lakes are world data (snapshot surface.terrain); snapshots
+# without terrain mean the authored legacy map above.
+# Each entry: {"id": String, "outline": Array[Vector2], "box": Rect2}
+static var lakes: Array = []
+static var revision: int = 0
+static var _signature: String = ""
+
+static func _legacy_lakes() -> Array:
+	return [_make_lake("north", NORTH_LAKE_OUTLINE), _make_lake("south", SOUTH_LAKE_OUTLINE)]
+
+static func _make_lake(id: String, outline: Array[Vector2]) -> Dictionary:
+	var lo = Vector2(INF, INF)
+	var hi = Vector2(-INF, -INF)
+	for p in outline:
+		lo = Vector2(minf(lo.x, p.x), minf(lo.y, p.y))
+		hi = Vector2(maxf(hi.x, p.x), maxf(hi.y, p.y))
+	return {"id": id, "outline": outline, "box": Rect2(lo, hi - lo)}
+
+static func _ensure() -> void:
+	if lakes.is_empty() and _signature == "":
+		lakes = _legacy_lakes()
+		_signature = "legacy"
+
+## Installs terrain from a snapshot's surface.terrain (null/invalid -> legacy map).
+## Returns true when the active terrain changed.
+static func set_terrain(data: Variant) -> bool:
+	var next: Array = []
+	var sig = "legacy"
+	if typeof(data) == TYPE_DICTIONARY and typeof(data.get("lakes")) == TYPE_ARRAY:
+		sig = str(data.get("seed", 0)) + ":" + JSON.stringify(data.get("lakes"))
+		for lake in data.get("lakes"):
+			if typeof(lake) != TYPE_DICTIONARY or typeof(lake.get("outline")) != TYPE_ARRAY:
+				continue
+			var outline: Array[Vector2] = []
+			for pt in lake.get("outline"):
+				if typeof(pt) == TYPE_DICTIONARY:
+					outline.append(Vector2(float(pt.get("x", 0.0)), float(pt.get("y", 0.0))))
+			if outline.size() >= 3:
+				next.append(_make_lake(str(lake.get("id", "")), outline))
+	else:
+		next = _legacy_lakes()
+	if sig == _signature:
 		return false
-	if is_inside_polygon_exact(x, y, NORTH_LAKE_OUTLINE):
-		return true
-	if is_inside_polygon_exact(x, y, SOUTH_LAKE_OUTLINE):
-		return true
-	return false
+	_signature = sig
+	lakes = next
+	revision += 1
+	return true
+
+static func get_lakes() -> Array:
+	_ensure()
+	return lakes
+
+static func is_water_at(x: float, y: float) -> bool:
+	return get_lake_id_at(x, y) != ""
 
 static func get_lake_id_at(x: float, y: float) -> String:
-	if is_inside_polygon_exact(x, y, NORTH_LAKE_OUTLINE):
-		return "north"
-	if is_inside_polygon_exact(x, y, SOUTH_LAKE_OUTLINE):
-		return "south"
+	_ensure()
+	for lake in lakes:
+		var box: Rect2 = lake.box
+		# Bounding box first: identical result, skips the polygon walk almost everywhere.
+		if x < box.position.x or y < box.position.y or x > box.end.x or y > box.end.y:
+			continue
+		if is_inside_polygon_exact(x, y, lake.outline):
+			return lake.id
 	return ""
 
 static func generate_lake_mesh(outline: Array[Vector2], water_height_y: float = 0.015) -> ArrayMesh:

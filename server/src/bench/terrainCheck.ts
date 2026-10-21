@@ -1,0 +1,114 @@
+import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+// Terrain as world data: a world built on non-legacy terrain spawns everything
+// against its own lakes, keeps them through save/load, and saves made before
+// terrain existed continue on the legacy map.
+const temp = await mkdtemp(path.join(os.tmpdir(), "clayfolk-terrain-"));
+for (const key of ["SNAPSHOT_FILE", "GENOME_FILE", "GENOME_FILE_B", "SPIDER_GENOME_FILE"]) process.env[key] = path.join(temp, key + ".json");
+const { createWorld, toSnapshot, worldFromSnapshot, toNetworkSnapshot } = await import("../sim/world");
+const { randomGenome } = await import("../ai/genome");
+const { randomSpiderGenome } = await import("../ai/spiderGenome");
+const { step } = await import("../sim/step");
+const { updateWildlife } = await import("../sim/wildlife");
+const { updateFishPopulation } = await import("../sim/fishing");
+const { lakePoints } = await import("../../../shared/lakeNavigation");
+const { lakeLilyPads } = await import("../../../shared/lakeHabitat");
+const { lakeShorePortals } = await import("../../../shared/amphibianNavigation");
+const terrainModule = await import("../../../shared/surfaceTerrain");
+const { LEGACY_TERRAIN, getSurfaceTerrain, isWaterAt, lakeIdAt, setSurfaceTerrain } = terrainModule;
+type SurfaceTerrainData = import("../../../shared/surfaceTerrain").SurfaceTerrainData;
+const { CONFIG } = await import("../config");
+
+let seed = 4242, passed = 0;
+const originalRandom = Math.random;
+Math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+
+function ring(cx: number, cy: number, rx: number, ry: number, n = 28) {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2;
+    return { x: Math.round((cx + Math.cos(a) * rx) * 10) / 10, y: Math.round((cy + Math.sin(a) * ry) * 10) / 10 };
+  });
+}
+// Organic lakes well away from both camps (120/240, 360/240) and the quarries.
+const custom: SurfaceTerrainData = {
+  version: 1,
+  seed: 77,
+  lakes: [
+    { id: "lake-a", seed: 11, outline: ring(240, 70, 34, 22) },
+    { id: "lake-b", seed: 23, outline: ring(240, 420, 30, 24) },
+    { id: "lake-c", seed: 37, outline: ring(430, 420, 20, 16) }
+  ]
+};
+function genomes() {
+  const g = { current: randomGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
+  const s = { current: randomSpiderGenome(), best: null, bestFitness: 0, archive: [], generationsRun: 0 };
+  return [g, s, structuredClone(g)] as [typeof g, typeof s, typeof g];
+}
+function check(name: string, run: () => void) { run(); passed++; console.log(`PASS  ${name}`); }
+
+try {
+  check("Местность: новый мир строится на собственных озёрах", () => {
+    const [g, s, gb] = genomes();
+    const w = createWorld(g, s, gb, custom);
+    assert.equal(getSurfaceTerrain(), custom);
+    assert.equal(w.surface.terrain, custom);
+    assert.ok(isWaterAt(240, 70) && isWaterAt(240, 420) && isWaterAt(430, 420));
+    assert.ok(!isWaterAt(238, 115) && !isWaterAt(237, 352), "legacy lakes are gone");
+    const lakeIds = new Set(custom.lakes.map((l) => l.id));
+    for (const id of lakeIds) assert.equal(w.surface.fish.filter((f) => f.lakeId === id).length, CONFIG.fishPerLake);
+    assert.ok(w.surface.fish.every((f) => lakeIdAt(f.pos.x, f.pos.y) === f.lakeId), "fish swim in their own lake");
+    const monsters = w.enemies.filter((e) => e.type === "lakeMonster");
+    assert.deepEqual(new Set(monsters.map((m) => m.lakeId)), lakeIds);
+    assert.ok(monsters.every((m) => lakeIdAt(m.pos.x, m.pos.y) === m.lakeId));
+    assert.deepEqual(new Set(Object.keys(w.session.lakes)), lakeIds);
+    assert.ok(w.surface.resourceNodes.every((n) => !isWaterAt(n.pos.x, n.pos.y)), "resources on land");
+    assert.ok(w.surface.foodSources.every((f) => !isWaterAt(f.pos.x, f.pos.y)), "food on land");
+  });
+
+  check("Местность: производные кэши озёр пересчитываются при смене карты", () => {
+    setSurfaceTerrain(custom);
+    const points = lakePoints("lake-a");
+    assert.ok(points.length > 20 && points.every((p) => lakeIdAt(p.x, p.y) === "lake-a"));
+    assert.ok(lakeLilyPads("lake-a").length > 0);
+    assert.ok(lakeShorePortals("lake-a").length > 0);
+    assert.equal(lakePoints("north").length, 0, "legacy lake unknown on this map");
+    setSurfaceTerrain(LEGACY_TERRAIN);
+    assert.equal(lakePoints("lake-a").length, 0);
+    assert.ok(lakePoints("north").length > 20);
+  });
+
+  check("Местность: сохраняется, загружается и уходит клиентам", () => {
+    const [g, s, gb] = genomes();
+    const w = createWorld(g, s, gb, custom);
+    for (let i = 0; i < 40; i++) { step(w); updateWildlife(w); updateFishPopulation(w); }
+    const snap = JSON.parse(JSON.stringify(toSnapshot(w, false)));
+    setSurfaceTerrain(LEGACY_TERRAIN);
+    const loaded = worldFromSnapshot(snap, g, s, gb);
+    assert.deepEqual(loaded.surface.terrain, custom);
+    assert.ok(isWaterAt(240, 70) && !isWaterAt(238, 115), "loading activates the saved terrain");
+    const net = toNetworkSnapshot(loaded, false);
+    assert.deepEqual(net.surface.terrain, custom);
+  });
+
+  check("Местность: старое сохранение без terrain продолжается на прежней карте", () => {
+    const [g, s, gb] = genomes();
+    const w = createWorld(g, s, gb);
+    const snap = JSON.parse(JSON.stringify(toSnapshot(w, false)));
+    delete snap.surface.terrain;
+    setSurfaceTerrain(custom);
+    const loaded = worldFromSnapshot(snap, g, s, gb);
+    assert.equal(loaded.surface.terrain, LEGACY_TERRAIN);
+    assert.ok(isWaterAt(238, 115) && isWaterAt(237, 352));
+    assert.ok(loaded.surface.fish.every((f) => f.lakeId === "north" || f.lakeId === "south"));
+    for (let i = 0; i < 20; i++) { step(loaded); updateWildlife(loaded); }
+  });
+
+  console.log(`${passed} passed, 0 failed.`);
+} finally {
+  Math.random = originalRandom;
+  setSurfaceTerrain(LEGACY_TERRAIN);
+  await rm(temp, { recursive: true, force: true });
+}

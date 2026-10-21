@@ -5,13 +5,13 @@ import { amphibianLineOpen, amphibianRoute, lakeShorePortals, nearLakeShore } fr
 import { surfaceGeometryKey } from "../../../shared/surfaceAccess";
 import { surfacePointOpen } from "../../../shared/surfaceNavigation";
 import type { Ant, Enemy, Vec2 } from "../../../shared/types";
-import { LAKE_DEFINITIONS, isWaterAt, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
+import { isWaterAt, lakeDefinitions, lakeIdAt, type LakeId } from "../../../shared/surfaceTerrain";
 import { dayCycle } from "../../../shared/dayCycle";
 import { CONFIG } from "../config";
 import { calculateSurfacePath } from "./ant/movement";
 import { isWallBlockedAt, resolveSurfaceCollision, damageBuilding } from "./building";
 import { dropCarriedFood } from "./ant/combat";
-import { logEvent } from "./session";
+import { lakeSession, logEvent } from "./session";
 import { addFoodSource, type World } from "./world";
 import { buildingRouteTarget, buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding } from "../../../shared/buildingGeometry";
 
@@ -59,9 +59,9 @@ function swim(world: World, enemy: Enemy, target: Vec2, speed: number): void {
 }
 
 export function ensureLakeResidents(world: World): void {
-  for (const lake of LAKE_DEFINITIONS) if (!world.enemies.some(e => e.type === "lakeMonster" && e.lakeId === lake.id)) {
+  for (const lake of lakeDefinitions()) if (!world.enemies.some(e => e.type === "lakeMonster" && e.lakeId === lake.id)) {
     world.enemies.push(createLakeMonster(world, lake.id));
-    world.session.lakes[lake.id].nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks;
+    lakeSession(world, lake.id).nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks;
   }
 }
 
@@ -110,7 +110,6 @@ export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: nu
 }
 
 export function createLakeMonster(world: World, lakeId: LakeId): Enemy {
-  const lake = LAKE_DEFINITIONS.find(l => l.id === lakeId)!;
   const vertex = waterPoints(lakeId)[(world.session.nextCreatureId * 37) % waterPoints(lakeId).length];
   let home: Vec2 = { ...vertex };
   outer: for (let r = 2; r <= 12; r += 2) for (let i = 0; i < 16; i++) {
@@ -150,8 +149,8 @@ function targetFor(world: World, enemy: Enemy): Ant | undefined {
 
 export function updateWildlife(world: World): void {
   if (!world.session.dangersEnabled) return;
-  for (const lake of LAKE_DEFINITIONS) {
-    const state = world.session.lakes[lake.id];
+  for (const lake of lakeDefinitions()) {
+    const state = lakeSession(world, lake.id);
     const cap = Math.min(CONFIG.lakeMonsterMaxPerLake, 1 + Math.floor(state.swallowed / 2));
     if (world.tick >= state.nextSpawnAt) {
       state.nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks;
@@ -178,14 +177,14 @@ export function updateWildlife(world: World): void {
     if (enemy.hp <= 0 || (enemy.type === "beetle" && !night)) {
       releaseCaptive(world, enemy);
       if (enemy.hp <= 0) addFoodSource(world, enemy.pos.x, enemy.pos.y, 8, "carrion");
-      if (enemy.type === "lakeMonster") world.session.lakes[enemy.lakeId!].nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks * 4;
+      if (enemy.type === "lakeMonster") lakeSession(world, enemy.lakeId!).nextSpawnAt = world.tick + CONFIG.lakeMonsterSpawnTicks * 4;
       remove.add(enemy.id);
       continue;
     }
     const captive = world.ants.find(a => a.id === enemy.captiveId);
     if (enemy.captiveId && (!captive || captive.state === "dead")) {
       if (captive && enemy.type === "lakeMonster" && isWaterAt(captive.pos.x, captive.pos.y)) {
-        world.session.lakes[enemy.lakeId!].swallowed += 1;
+        lakeSession(world, enemy.lakeId!).swallowed += 1;
         logEvent(world, "Озеро поглотило жителя. Озёрная угроза растёт.", enemy.pos);
       }
       if (captive) captive.capturedBy = undefined;
