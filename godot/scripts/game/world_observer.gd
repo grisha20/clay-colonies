@@ -21,6 +21,7 @@ var follow_button: Button
 var clear_selection_button: Button
 var start_menu: StartMenu
 var hud: GameHud
+var build: BuildController
 var population_counts: Array[int] = [0, 0]
 var player_colony: int = 0
 
@@ -112,11 +113,11 @@ func _setup_hud() -> void:
 	top_panel.name = "ObserverPanel"
 	top_panel.theme = GameHud.ink_theme()
 	top_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.86)))
-	top_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	top_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	top_panel.offset_left = 16
-	top_panel.offset_bottom = -16
-	top_panel.custom_minimum_size = Vector2(480, 0)
+	top_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	top_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	top_panel.offset_right = -16
+	top_panel.offset_top = 16
+	top_panel.custom_minimum_size = Vector2(0, 0)
 	canvas.add_child(top_panel)
 
 	var vbox = VBoxContainer.new()
@@ -128,7 +129,7 @@ func _setup_hud() -> void:
 
 	server_line_edit = LineEdit.new()
 	server_line_edit.text = ws_client.server_url
-	server_line_edit.custom_minimum_size = Vector2(220, 30)
+	server_line_edit.custom_minimum_size = Vector2(170, 30)
 	row_conn.add_child(server_line_edit)
 
 	connect_button = Button.new()
@@ -138,11 +139,16 @@ func _setup_hud() -> void:
 
 	status_label = Label.new()
 	status_label.text = "Нет соединения"
+	status_label.clip_text = true
+	status_label.custom_minimum_size = Vector2(150, 0)
 	row_conn.add_child(status_label)
 
 	# Row 2: Telemetry
 	var row_telemetry = HBoxContainer.new()
 	vbox.add_child(row_telemetry)
+	# Tick/speed/population now live in the player HUD; keep the labels for
+	# diagnostics and tests but out of the way.
+	row_telemetry.visible = false
 
 	tick_label = Label.new()
 	tick_label.text = "Шаг: 0"
@@ -187,19 +193,22 @@ func _setup_hud() -> void:
 	var btn_cycle = Button.new()
 	btn_cycle.text = "Следующий житель"
 	btn_cycle.pressed.connect(_cycle_resident_focus)
-	row_nav.add_child(btn_cycle)
+	# Second row keeps the panel narrow enough to sit beside the resource bar.
+	var row_nav2 = HBoxContainer.new()
+	vbox.add_child(row_nav2)
+	row_nav2.add_child(btn_cycle)
 
 	var btn_save = Button.new()
 	btn_save.text = "Сохранить"
 	btn_save.pressed.connect(func():
 		ws_client.send_command({"type": "saveGame"})
 		status_label.text = "Сохранено")
-	row_nav.add_child(btn_save)
+	row_nav2.add_child(btn_save)
 
 	var btn_menu = Button.new()
 	btn_menu.text = "Меню"
 	btn_menu.pressed.connect(open_start_menu)
-	row_nav.add_child(btn_menu)
+	row_nav2.add_child(btn_menu)
 
 	# Separate selection from camera following; keep the inspector on screen.
 	var insp_panel = PanelContainer.new()
@@ -209,9 +218,9 @@ func _setup_hud() -> void:
 	insp_panel.theme = GameHud.ink_theme()
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	insp_panel.offset_left = -376
-	insp_panel.offset_top = -220
+	insp_panel.offset_top = -290
 	insp_panel.offset_right = -16
-	insp_panel.offset_bottom = -16
+	insp_panel.offset_bottom = -86
 	canvas.add_child(insp_panel)
 	var inspector_box = VBoxContainer.new()
 	insp_panel.add_child(inspector_box)
@@ -236,6 +245,11 @@ func _setup_hud() -> void:
 	hud.speed_requested.connect(func(v): ws_client.send_command({"type": "setSpeed", "value": v}))
 	hud.alarm_requested.connect(func(on): ws_client.send_command({"type": "setAlarm", "colony": player_colony, "value": on}))
 
+	build = BuildController.new()
+	build.name = "BuildController"
+	add_child(build)
+	build.setup(self, world_view, ws_client, hud, canvas)
+
 	start_menu = StartMenu.new()
 	start_menu.visible = false
 	canvas.add_child(start_menu)
@@ -245,9 +259,10 @@ func _setup_hud() -> void:
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
+	help_label.text = "WASD — камера · колесо — масштаб · ЛКМ — выбрать · 1–9 — стройка и зоны · Esc/ПКМ — отмена"
 	help_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	help_label.offset_left = 18
-	help_label.offset_top = -176
+	help_label.offset_top = -112
 	help_label.add_theme_color_override("font_color", Color(1, 0.97, 0.88))
 	help_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	help_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -446,6 +461,9 @@ func _cycle_resident_focus() -> void:
 		world_view.focus_on_resident(target)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if build and build.handle_input(event, ground_point_at):
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		select_resident(resident_at_screen(event.position))
 		get_viewport().set_input_as_handled()
@@ -457,24 +475,38 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_follow_selected()
 			get_viewport().set_input_as_handled()
 
-## Hover text for whatever lies under the mouse (trees, quarries, buildings, creatures).
+## Ground point (x, z) under a screen position, or INF. The ground plane is
+## close enough for picking: hills are gentle swells.
+func ground_point_at(screen: Vector2) -> Vector2:
+	var cam = world_view.camera
+	if not cam:
+		return Vector2.INF
+	var origin = cam.project_ray_origin(screen)
+	var dir = cam.project_ray_normal(screen)
+	if dir.y > -0.01:
+		return Vector2.INF
+	var hit = origin + dir * (-origin.y / dir.y)
+	return Vector2(hit.x, hit.z)
+
+## Hover text for whatever lies under the mouse (trees, quarries, buildings,
+## creatures), or the build preview when a build tool is active.
 func _update_world_tooltip() -> void:
 	if not hud or not world_view.camera:
 		return
 	var vp = get_viewport()
 	var mouse = vp.get_mouse_position()
-	if (start_menu and start_menu.visible) or vp.gui_get_hovered_control() != null or not vp.get_visible_rect().has_point(mouse):
+	var over_ui = (start_menu and start_menu.visible) or vp.gui_get_hovered_control() != null or not vp.get_visible_rect().has_point(mouse)
+	var p = Vector2.INF if over_ui else ground_point_at(mouse)
+	if build:
+		build.update_preview(p)
+		if build.tool != "":
+			if p == Vector2.INF:
+				hud.show_tooltip("", mouse)
+			return
+	if p == Vector2.INF:
 		hud.show_tooltip("", mouse)
 		return
-	var cam = world_view.camera
-	var origin = cam.project_ray_origin(mouse)
-	var dir = cam.project_ray_normal(mouse)
-	if dir.y > -0.01:
-		hud.show_tooltip("", mouse)
-		return
-	# Ground plane is close enough for picking: hills are gentle swells.
-	var hit = origin + dir * (-origin.y / dir.y)
-	hud.show_tooltip(world_view.describe_at(Vector2(hit.x, hit.z)), mouse)
+	hud.show_tooltip(world_view.describe_at(p), mouse)
 
 func resident_at_screen(screen_position: Vector2) -> NetworkResident:
 	var camera = world_view.camera

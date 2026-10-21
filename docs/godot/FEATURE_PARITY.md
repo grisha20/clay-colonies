@@ -37,8 +37,8 @@
 | | Рыбы (4 вида) | Спрайты рыб под водой | Силуэты 4 цветов под поверхностью, поворот по heading | test_world_dressing | partial | Без виляния хвоста |
 | **Управление и UI** | Камера 3D сверху | `client/src/main.ts`, `client/src/render/surface/camera.ts` | `godot/scripts/world/world_view.gd` | tests/game/test_observer_controls.gd, GPU Forward+ | implemented | Фиксированные 52°, WASD/стрелки, плавный зум колесом 4..80, границы фокуса 480x480, лагеря из snapshot; сдвиг мышью не добавлен |
 | | Выбор и инспектор жителей | `client/src/main.ts`, `client/src/ui/gameplay.ts` | `world_observer.gd`, query-only Area3D в `network_resident.gd` | tests/game/test_observer_controls.gd + tests/integration/test_observer_ui.gd | implemented | Raycast, кольцо, стабильный ID, роль/занятие/груз, follow/F/Esc, очистка; выбор других типов объектов ещё не реализован |
-| | Рисование зон | `paintZone`, `eraseZone` | Проекция луча на землю (Raycast) | Сетка 4x4 клетки | Planned (M3) | Harvest / Forbid |
-| | Строительство | `placeBuilding`, `paintWall`, `placeGate` | Полупрозрачный 3D-предпросмотр | Валидация фундамента и цены | Planned (M3) | Запрет на воде и препятствиях |
+| | Рисование зон | `paintZone`, `eraseZone` | `build_controller.gd`: прямоугольник по сетке 4×4, зоны на земле | test_build_tools (live) | implemented | Harvest / Forbid / ластик |
+| | Строительство | `placeBuilding`, `paintWall`, `placeGate` | Предпросмотр зелёный/красный по `build_rules.gd` (паритет 1200 запросов), кисть ограды, ворота R | test_build_rules + test_build_tools | implemented | Нет отмены и сноса |
 | | Панели HUD | HTML/Canvas оверлеи | `game_hud.gd`: запасы, день/погода, скорость, тревога, задачи, предупреждения, подсказки `WorldView.describe_at` | test_game_hud + live capture_hud | implemented | Нет прироста запасов и мини-карты |
 | | Смена племени | `takeControl` (colony 0 / 1) | Кнопка переключения племени | Обновление управляемой колонии | Planned (M3) | Поддержка хотсита A/B |
 | | Технический офсет-редактор | `editor.ts` (сдвиг 2D спрайтов) | Не требуется в 3D | — | Excluded | Технический долг PixiJS |

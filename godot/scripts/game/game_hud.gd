@@ -74,6 +74,7 @@ func _build_top_bar() -> void:
 	bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	bar.position.y = 12
 	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	bar.mouse_force_pass_scroll_events = false
 	add_child(bar)
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -119,6 +120,7 @@ func _build_tasks() -> void:
 	tasks_panel.position = Vector2(16, 16)
 	tasks_panel.custom_minimum_size = Vector2(300, 0)
 	tasks_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	tasks_panel.mouse_force_pass_scroll_events = false
 	add_child(tasks_panel)
 	var box = VBoxContainer.new()
 	tasks_panel.add_child(box)

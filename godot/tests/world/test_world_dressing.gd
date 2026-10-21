@@ -80,7 +80,7 @@ func run() -> void:
 
 	# Buildings: hut is stretched over its server footprint; sites are ghosted.
 	var hut = view.active_buildings.get("hut-1")
-	check("hut_present", hut != null and hut.get_child_count() == 1)
+	check("hut_present", hut != null and hut.get_child_count() == 2 and hut.get_node_or_null("DoorLight") != null)
 	var store = view.active_buildings.get("store-1") as GeometryInstance3D
 	check("construction_ghosted", store != null and store.transparency > 0.2 and store.transparency < 0.65, str(store.transparency if store else -1))
 	snap.surface.buildings[1].stage = "built"
