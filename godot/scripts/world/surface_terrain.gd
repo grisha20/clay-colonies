@@ -47,7 +47,12 @@ static func is_inside_polygon_exact(x: float, y: float, points: Array[Vector2]) 
 # without terrain mean the authored legacy map above.
 # Each entry: {"id": String, "outline": Array[Vector2], "box": Rect2}
 static var lakes: Array = []
+# {"id", "outline": Array[Vector2], "box": Rect2, "height": float}
+static var mountains: Array = []
+# Vector4(x, y, radius, height)
+static var hills: Array = []
 static var revision: int = 0
+const MOUNTAIN_FOOT: float = 5.0
 static var _signature: String = ""
 
 static func _legacy_lakes() -> Array:
@@ -70,9 +75,25 @@ static func _ensure() -> void:
 ## Returns true when the active terrain changed.
 static func set_terrain(data: Variant) -> bool:
 	var next: Array = []
+	var next_mountains: Array = []
+	var next_hills: Array = []
 	var sig = "legacy"
 	if typeof(data) == TYPE_DICTIONARY and typeof(data.get("lakes")) == TYPE_ARRAY:
-		sig = str(data.get("seed", 0)) + ":" + JSON.stringify(data.get("lakes"))
+		sig = str(data.get("seed", 0)) + ":" + JSON.stringify([data.get("lakes"), data.get("mountains", []), data.get("hills", [])])
+		for m in data.get("mountains", []):
+			if typeof(m) != TYPE_DICTIONARY or typeof(m.get("outline")) != TYPE_ARRAY:
+				continue
+			var mo: Array[Vector2] = []
+			for pt in m.get("outline"):
+				if typeof(pt) == TYPE_DICTIONARY:
+					mo.append(Vector2(float(pt.get("x", 0.0)), float(pt.get("y", 0.0))))
+			if mo.size() >= 3:
+				var entry = _make_lake(str(m.get("id", "")), mo)
+				entry["height"] = float(m.get("height", 10.0))
+				next_mountains.append(entry)
+		for h in data.get("hills", []):
+			if typeof(h) == TYPE_DICTIONARY:
+				next_hills.append(Vector4(float(h.get("x", 0.0)), float(h.get("y", 0.0)), maxf(1.0, float(h.get("radius", 1.0))), float(h.get("height", 0.0))))
 		for lake in data.get("lakes"):
 			if typeof(lake) != TYPE_DICTIONARY or typeof(lake.get("outline")) != TYPE_ARRAY:
 				continue
@@ -88,12 +109,65 @@ static func set_terrain(data: Variant) -> bool:
 		return false
 	_signature = sig
 	lakes = next
+	mountains = next_mountains
+	hills = next_hills
 	revision += 1
 	return true
 
 static func get_lakes() -> Array:
 	_ensure()
 	return lakes
+
+static func get_mountains() -> Array:
+	_ensure()
+	return mountains
+
+static func is_mountain_at(x: float, y: float) -> bool:
+	_ensure()
+	for m in mountains:
+		var box: Rect2 = m.box
+		if x < box.position.x or y < box.position.y or x > box.end.x or y > box.end.y:
+			continue
+		if is_inside_polygon_exact(x, y, m.outline):
+			return true
+	return false
+
+## Water or rock: nobody walks or builds there (shared/surfaceTerrain.ts isTerrainBlockedAt).
+static func is_blocked_at(x: float, y: float) -> bool:
+	return is_water_at(x, y) or is_mountain_at(x, y)
+
+static func _outline_distance(x: float, y: float, outline: Array[Vector2]) -> float:
+	var p = Vector2(x, y)
+	var best = INF
+	var n = outline.size()
+	for i in range(n):
+		var a = outline[i]
+		var b = outline[(i + 1) % n]
+		var ab = b - a
+		var t = 0.0
+		var len_sq = ab.length_squared()
+		if len_sq > 0.0001:
+			t = clampf((p - a).dot(ab) / len_sq, 0.0, 1.0)
+		best = minf(best, p.distance_to(a + ab * t))
+	return best
+
+## Visual ground height, same formula as shared/surfaceTerrain.ts heightAt.
+static func height_at(x: float, y: float) -> float:
+	_ensure()
+	var h = 0.0
+	for hill in hills:
+		var d2 = ((x - hill.x) * (x - hill.x) + (y - hill.y) * (y - hill.y)) / (hill.z * hill.z)
+		if d2 < 1.0:
+			h += hill.w * (1.0 - d2) * (1.0 - d2)
+	for m in mountains:
+		var box: Rect2 = m.box
+		if x < box.position.x - MOUNTAIN_FOOT or x > box.end.x + MOUNTAIN_FOOT or y < box.position.y - MOUNTAIN_FOOT or y > box.end.y + MOUNTAIN_FOOT:
+			continue
+		var d = _outline_distance(x, y, m.outline)
+		var inside = is_inside_polygon_exact(x, y, m.outline)
+		var t = minf(1.0, 0.25 + d / 10.0) if inside else maxf(0.0, 0.25 * (1.0 - d / MOUNTAIN_FOOT))
+		h = maxf(h, float(m.height) * t * t * (3.0 - 2.0 * t))
+	return h
 
 static func is_water_at(x: float, y: float) -> bool:
 	return get_lake_id_at(x, y) != ""

@@ -562,6 +562,67 @@ static func gate(width: float, blueprint: bool) -> ArrayMesh:
 		return b.commit())
 
 
+## A rock massif filling a mountain outline: stacked lumpy boulders whose tops
+## follow SurfaceTerrain.height_at, mossy on the flanks, snow on high peaks, and
+## scree stones scattered around the foot. Built once per mountain shape.
+static func mountain(id: String, outline: Array[Vector2], peak: float) -> ArrayMesh:
+	var key = "mountain:%s:%d:%.1f:%.1f" % [id, outline.size(), outline[0].x, peak]
+	return _cached(key, func(): return _build_mountain(outline, peak))
+
+
+static func _build_mountain(outline: Array[Vector2], peak: float) -> ArrayMesh:
+	var b = Builder.new()
+	var lo = Vector2(INF, INF)
+	var hi = Vector2(-INF, -INF)
+	for p in outline:
+		lo = Vector2(minf(lo.x, p.x), minf(lo.y, p.y))
+		hi = Vector2(maxf(hi.x, p.x), maxf(hi.y, p.y))
+	var rock_a = Color(0.56, 0.54, 0.50)
+	var rock_b = Color(0.46, 0.44, 0.41)
+	var moss = Color(0.38, 0.47, 0.26)
+	var snow = Color(0.82, 0.84, 0.88)
+	var step = 3.0
+	var k = 0
+	var y = lo.y + step * 0.5
+	while y < hi.y:
+		var x = lo.x + step * 0.5 + (step * 0.5 if int((y - lo.y) / step) % 2 == 1 else 0.0)
+		while x < hi.x:
+			var jx = x + (hash3(Vector3(x, y, 1)) - 0.5) * step * 0.6
+			var jy = y + (hash3(Vector3(x, y, 2)) - 0.5) * step * 0.6
+			if SurfaceTerrain.is_inside_polygon_exact(jx, jy, outline):
+				var h = SurfaceTerrain.height_at(jx, jy)
+				var r = 2.1 + hash3(Vector3(x, y, 3)) * 1.1
+				# Visual-only skyline: smooth peaks and saddles along the ridge
+				# (the walkable/ground height stays heightAt).
+				var skyline = 0.62 + 0.5 * (0.5 + 0.5 * sin(jx * 0.19 + jy * 0.11) * cos(jy * 0.16 - jx * 0.07))
+				var top = h * skyline + 0.5 + hash3(Vector3(x, y, 4)) * 1.0
+				var tint = rock_a.lerp(rock_b, hash3(Vector3(x, y, 5)))
+				if top > peak * 1.04 and peak > 11.0:
+					tint = snow
+				elif hash3(Vector3(x, y, 6)) < 0.25 and h < peak * 0.7:
+					tint = tint.lerp(moss, 0.55)
+				# A boulder whose top reaches the local relief height.
+				var sy = maxf(0.6, top / (2.0 * r)) * 1.0
+				b.add(sphere(r, r * 2.0, 12, 7), xf(Vector3(jx, top - r * sy, jy), Vector3(1.0, sy, 0.9), Vector3(0, hash3(Vector3(x, y, 7)) * TAU, 0)), tint, MAT_MATTE, r * 0.32, k)
+				k += 1
+			x += step
+		y += step
+	# Scree: small stones spilling out around the foot.
+	var n = outline.size()
+	for i in range(n):
+		var a = outline[i]
+		var c = outline[(i + 1) % n]
+		for t in [0.25, 0.75]:
+			var p = a.lerp(c, t)
+			var out = (p - (lo + hi) * 0.5).normalized()
+			var q = p + out * (1.5 + hash3(Vector3(p.x, p.y, 8)) * 3.5)
+			if SurfaceTerrain.is_inside_polygon_exact(q.x, q.y, outline):
+				continue
+			var r = 0.35 + hash3(Vector3(q.x, q.y, 9)) * 0.45
+			b.add(sphere(r, r * 1.4, 7, 4), xf(Vector3(q.x, SurfaceTerrain.height_at(q.x, q.y) + r * 0.3, q.y)), rock_b if i % 2 == 0 else rock_a, MAT_MATTE, r * 0.4, i)
+	return b.commit()
+
+
 ## Log seats around a hearth (purely decorative), laid outside the hearth ellipse.
 static func hearth_seats() -> ArrayMesh:
 	return _cached("hearth_seats", func():

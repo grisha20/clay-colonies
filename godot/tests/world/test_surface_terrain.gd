@@ -34,6 +34,10 @@ func _init() -> void:
 	if test_terrain_from_snapshot_data():
 		passed += 1
 
+	total += 1
+	if test_parity_with_shared_terrain():
+		passed += 1
+
 	print("=== SURFACE TERRAIN RESULTS: %d/%d PASSED ===" % [passed, total])
 	if passed == total:
 		print("ALL SURFACE TERRAIN TESTS PASSED!")
@@ -122,3 +126,38 @@ func test_terrain_from_snapshot_data() -> bool:
 		return false
 	print("  PASS: test_terrain_from_snapshot_data")
 	return true
+
+func test_parity_with_shared_terrain() -> bool:
+	# Reference answers exported from shared/surfaceTerrain.ts (server/src/bench/exportTerrainParity.ts).
+	var data = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/terrain_parity.json"))
+	if typeof(data) != TYPE_DICTIONARY:
+		push_error("terrain_parity.json missing")
+		return false
+	SurfaceTerrain.set_terrain(data.terrain)
+	var bad = 0
+	var worst = 0.0
+	for s in data.samples:
+		var x = float(s.x)
+		var y = float(s.y)
+		var dh = absf(SurfaceTerrain.height_at(x, y) - float(s.height))
+		worst = maxf(worst, dh)
+		var membership_ok = SurfaceTerrain.is_water_at(x, y) == bool(s.water) and SurfaceTerrain.is_mountain_at(x, y) == bool(s.mountain)
+		if not membership_ok and _edge_distance(x, y) < 0.001:
+			# Godot Vector2 is 32-bit: a point within a millimetre of an outline may fall either side.
+			membership_ok = true
+		if not membership_ok or dh > 0.0005:
+			bad += 1
+			if bad < 5:
+				push_error("parity mismatch at %s,%s" % [x, y])
+	SurfaceTerrain.set_terrain(null)
+	if bad > 0:
+		push_error("%d of %d samples differ (worst height %.5f)" % [bad, data.samples.size(), worst])
+		return false
+	print("  PASS: test_parity_with_shared_terrain (%d samples, worst height diff %.6f)" % [data.samples.size(), worst])
+	return true
+
+func _edge_distance(x: float, y: float) -> float:
+	var best = INF
+	for shape in SurfaceTerrain.get_lakes() + SurfaceTerrain.get_mountains():
+		best = minf(best, SurfaceTerrain._outline_distance(x, y, shape.outline))
+	return best

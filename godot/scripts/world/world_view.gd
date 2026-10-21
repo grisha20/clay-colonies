@@ -56,6 +56,7 @@ var ground_decor: GroundDecor
 var ground_material: ShaderMaterial
 var water_material: ShaderMaterial
 var water_container: Node3D
+var mountain_container: Node3D
 var trail_map: TrailMap
 
 var active_buildings: Dictionary = {}  # building_id -> Node3D
@@ -155,8 +156,8 @@ func _setup_terrain() -> void:
 	plane_mesh.size = Vector2(MAP_WIDTH + GROUND_MARGIN * 2.0, MAP_HEIGHT + GROUND_MARGIN * 2.0)
 	# Small triangles keep the interpolated world position precise; one huge quad
 	# quantises it into visible square blotches in the procedural ground.
-	plane_mesh.subdivide_width = 199
-	plane_mesh.subdivide_depth = 199
+	plane_mesh.subdivide_width = 319
+	plane_mesh.subdivide_depth = 319
 	ground.mesh = plane_mesh
 	ground.position = Vector3(MAP_WIDTH * 0.5, 0.0, MAP_HEIGHT * 0.5)
 
@@ -202,6 +203,48 @@ func _apply_lake_uniforms(mat: ShaderMaterial) -> void:
 	mat.set_shader_parameter("lake_len", lens)
 	mat.set_shader_parameter("lake_box", boxes)
 	mat.set_shader_parameter("lake_count", count)
+	_apply_relief_uniforms(mat)
+
+func _apply_relief_uniforms(mat: ShaderMaterial) -> void:
+	var hill_arr = PackedVector4Array()
+	for h in SurfaceTerrain.hills.slice(0, 16):
+		hill_arr.append(h)
+	var hill_count = hill_arr.size()
+	while hill_arr.size() < 16:
+		hill_arr.append(Vector4(0, 0, 1, 0))
+	var points = PackedVector2Array()
+	var starts = PackedInt32Array()
+	var lens = PackedInt32Array()
+	var boxes = PackedVector4Array()
+	var heights = PackedFloat32Array()
+	for m in SurfaceTerrain.get_mountains():
+		var outline: Array[Vector2] = m.outline
+		if starts.size() >= 8 or points.size() + outline.size() > 256:
+			push_warning("Terrain has more mountains/points than the ground shader draws")
+			break
+		starts.append(points.size())
+		lens.append(outline.size())
+		points.append_array(PackedVector2Array(outline))
+		var box: Rect2 = m.box
+		# Padded for the foot slope and scree band.
+		boxes.append(Vector4(box.position.x - 8.0, box.position.y - 8.0, box.end.x + 8.0, box.end.y + 8.0))
+		heights.append(float(m.height))
+	var mcount = starts.size()
+	while points.size() < 256:
+		points.append(Vector2.ZERO)
+	while starts.size() < 8:
+		starts.append(0)
+		lens.append(0)
+		boxes.append(Vector4.ZERO)
+		heights.append(0.0)
+	mat.set_shader_parameter("hills", hill_arr)
+	mat.set_shader_parameter("hill_count", hill_count)
+	mat.set_shader_parameter("mountain_points", points)
+	mat.set_shader_parameter("mountain_start", starts)
+	mat.set_shader_parameter("mountain_len", lens)
+	mat.set_shader_parameter("mountain_box", boxes)
+	mat.set_shader_parameter("mountain_height", heights)
+	mat.set_shader_parameter("mountain_count", mcount)
 
 func _setup_lakes() -> void:
 	water_material = ShaderMaterial.new()
@@ -210,6 +253,22 @@ func _setup_lakes() -> void:
 	water_container.name = "WaterContainer"
 	add_child(water_container)
 	_build_water()
+	mountain_container = Node3D.new()
+	mountain_container.name = "MountainContainer"
+	add_child(mountain_container)
+	_build_mountains()
+
+## Rock massifs: one merged mesh per mountain, cached by its shape.
+func _build_mountains() -> void:
+	if not mountain_container:
+		return
+	for c in mountain_container.get_children():
+		c.queue_free()
+	for m in SurfaceTerrain.get_mountains():
+		var mi = MeshInstance3D.new()
+		mi.name = "Mountain_" + str(m.id)
+		mi.mesh = PropFactory.mountain(str(m.id), m.outline, float(m.height))
+		mountain_container.add_child(mi)
 
 ## Water surfaces cover each lake's box; the shader draws the softened pond
 ## outline from the world's terrain and discards the rest.
@@ -238,6 +297,7 @@ func apply_terrain() -> void:
 		_apply_lake_uniforms(ground_material)
 	if water_container:
 		_build_water()
+	_build_mountains()
 	ground_signature = ""
 	if ground_decor:
 		ground_decor.signature = ""
@@ -462,7 +522,7 @@ func _update_prop(id: String, node_name: String, pos: Vector3, visual: Array) ->
 	if mi.get_meta("visual_key", "") != visual[0]:
 		mi.set_meta("visual_key", visual[0])
 		mi.mesh = visual[1].call()
-	mi.position = pos
+	mi.position = _ground(pos)
 	mi.rotation = Vector3(0.0, visual[2], 0.0)
 	mi.scale = Vector3.ONE * float(visual[3])
 	return mi
@@ -486,7 +546,7 @@ func _update_moving(id: String, node_name: String, pos: Vector3, heading: Varian
 	if is_new:
 		mi.set_meta("shown_pos", pos)
 		mi.set_meta("shown_yaw", target_yaw)
-	mi.position = mi.get_meta("shown_pos", pos)
+	mi.position = _ground(mi.get_meta("shown_pos", pos))
 	mi.rotation = Vector3(0.0, mi.get_meta("shown_yaw", target_yaw), 0.0)
 	mi.set_meta("moving", true)
 
@@ -513,7 +573,7 @@ func _update_campfires(entrances: Array) -> void:
 			var camp_scene = load("res://assets/models/campfire.glb") as PackedScene
 			var camp_node: Node3D = camp_scene.instantiate() if camp_scene else Node3D.new()
 			camp_node.name = "Campfire_Colony_%d" % (i + 1)
-			camp_node.position = e_pos
+			camp_node.position = _ground(e_pos)
 			var flame = MeshInstance3D.new()
 			flame.name = "Flame"
 			flame.mesh = PropFactory.flame()
@@ -534,7 +594,7 @@ func _update_campfires(entrances: Array) -> void:
 			campfires_container.add_child(camp_node)
 			active_campfires[i] = camp_node
 		else:
-			active_campfires[i].position = e_pos
+			active_campfires[i].position = _ground(e_pos)
 
 	var camps_to_remove: Array[int] = []
 	for cid in active_campfires.keys():
@@ -573,7 +633,7 @@ func _update_buildings(buildings: Array) -> void:
 			node.set_meta("visual_key", key)
 			buildings_container.add_child(node)
 			active_buildings[b_id] = node
-		node.position = b_pos
+		node.position = _ground(b_pos)
 		# Sites and buildings under construction read as translucent ghosts
 		# that firm up with progress.
 		var fade = 0.0
@@ -686,7 +746,7 @@ func _update_fences(buildings: Array) -> void:
 			var length = a.distance_to(bpos)
 			var rails = MeshInstance3D.new()
 			rails.mesh = PropFactory.fence_rails(snappedf(length, 0.01))
-			rails.position = a
+			rails.position = _ground(a)
 			rails.rotation = Vector3(0, -atan2(bpos.z - a.z, bpos.x - a.x), 0)
 			fence_container.add_child(rails)
 
@@ -828,7 +888,7 @@ func _animate_world(delta: float) -> void:
 		var yaw = lerp_angle(float(mi.get_meta("shown_yaw", 0.0)), float(mi.get_meta("target_yaw", 0.0)), k)
 		mi.set_meta("shown_pos", shown)
 		mi.set_meta("shown_yaw", yaw)
-		mi.position = shown
+		mi.position = _ground(shown)
 		mi.rotation.y = yaw
 	for idx in active_campfires.keys():
 		var camp = active_campfires[idx]
@@ -878,7 +938,14 @@ func _process(delta: float) -> void:
 	camera_pivot.position = _clamp_focus(camera_pivot.position)
 
 func _clamp_focus(point: Vector3) -> Vector3:
-	return Vector3(clampf(point.x, 0.0, MAP_WIDTH), 0.0, clampf(point.z, 0.0, MAP_HEIGHT))
+	var x = clampf(point.x, 0.0, MAP_WIDTH)
+	var z = clampf(point.z, 0.0, MAP_HEIGHT)
+	# Follow the relief a little so hills and ridges never swallow the camera.
+	return Vector3(x, SurfaceTerrain.height_at(x, z) * 0.8, z)
+
+## Lifts a flat server position onto the visual ground (hills, mountain feet).
+func _ground(p: Vector3) -> Vector3:
+	return Vector3(p.x, p.y + SurfaceTerrain.height_at(p.x, p.z), p.z)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:

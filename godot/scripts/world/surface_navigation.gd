@@ -91,7 +91,7 @@ static func fence_contains(b: Dictionary, p: Vector2) -> bool:
 static func surface_point_open(p: Vector2, owner: String, buildings: Array, entrances: Array, map_w: float = MAP_WIDTH, map_h: float = MAP_HEIGHT) -> bool:
 	if p.x < 1.0 or p.y < 1.0 or p.x >= map_w - 1.0 or p.y >= map_h - 1.0:
 		return false
-	if SurfaceTerrain.is_water_at(p.x, p.y):
+	if SurfaceTerrain.is_blocked_at(p.x, p.y):
 		return false
 	for ent in entrances:
 		if typeof(ent) == TYPE_DICTIONARY:
@@ -126,7 +126,7 @@ static func surface_grid_line_open(from_p: Vector2, to_p: Vector2, buildings: Ar
 	_index(buildings)
 	var check_cell = func(cx: int, cy: int) -> bool:
 		var center = Vector2((cx + 0.5) * WALL_CELL_SIZE, (cy + 0.5) * WALL_CELL_SIZE)
-		if SurfaceTerrain.is_water_at(center.x, center.y):
+		if SurfaceTerrain.is_blocked_at(center.x, center.y):
 			return false
 		return not _fence_blocks(Vector2i(cx, cy), owner)
 

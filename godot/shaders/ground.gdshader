@@ -29,8 +29,20 @@ uniform vec3 stone_dug : source_color = vec3(0.56, 0.54, 0.50);
 
 varying vec2 world_xz;
 
+uniform vec3 rock : source_color = vec3(0.52, 0.50, 0.46);
+uniform vec3 scree : source_color = vec3(0.62, 0.58, 0.50);
+uniform vec3 moss : source_color = vec3(0.36, 0.44, 0.24);
+
 void vertex() {
 	world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+	// Hills and mountain feet lift the meadow; the slope normal comes from the
+	// same height function so lighting follows the relief.
+	float h = cf_height(world_xz);
+	VERTEX.y += h;
+	float e = 1.0;
+	float hx = cf_height(world_xz + vec2(e, 0.0));
+	float hz = cf_height(world_xz + vec2(0.0, e));
+	NORMAL = normalize(vec3(h - hx, e, h - hz));
 }
 
 void fragment() {
@@ -81,6 +93,16 @@ void fragment() {
 		dug *= 0.9 + 0.2 * n_fine;
 		col = mix(col, dug, m);
 		rough = mix(rough, dig_kinds[i] > 0.5 ? 0.9 : 0.7, m);
+	}
+
+	// Rocky ground: scree at the foot of each massif, bare rock with moss inside.
+	float md = cf_mountain_distance(p);
+	if (md < 7.0) {
+		float foot = 1.0 - smoothstep(0.0, 7.0 + n_mid * 2.0, md);
+		vec3 stone_col = mix(scree, rock, smoothstep(-1.0, -4.0, md)) * (0.85 + 0.3 * n_fine);
+		stone_col = mix(stone_col, moss, smoothstep(0.55, 0.8, cf_noise(p * 0.4)) * smoothstep(0.0, -3.0, md) * 0.6);
+		col = mix(col, stone_col, foot);
+		rough = mix(rough, 0.97, foot);
 	}
 
 	float ld = cf_lake_distance(p);

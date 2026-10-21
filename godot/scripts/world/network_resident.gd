@@ -222,7 +222,8 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 
 	# If initial placement, extreme teleport (>50m), stall recovery, or speed/status change, rebase directly.
 	var max_legit_travel: float = maxf(12.0, 3.0 * speed_scale * maxf(0.05, tick_interval_sec))
-	var is_extreme_teleport = (position.distance_to(new_target) > max_legit_travel)
+	# Horizontal distance: the node rides the hills, server positions are flat.
+	var is_extreme_teleport = (Vector2(position.x, position.z).distance_to(Vector2(new_target.x, new_target.z)) > max_legit_travel)
 	var was_stalled = is_network_stalled or was_stalled_pending_rebase
 	var is_speed_or_status_changed = false
 	if timeline.is_initialized and not timeline.samples.is_empty():
@@ -260,10 +261,10 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 
 func _apply_timeline_rebase() -> void:
 	# Authoritative correction at snapshot receipt, never a rendered movement step.
-	position = timeline.current_pos
-	current_pos = position
-	prev_pos = position
-	target_pos = position
+	position = _on_ground(timeline.current_pos)
+	current_pos = timeline.current_pos
+	prev_pos = current_pos
+	target_pos = current_pos
 	prev_pos_2d = Vector2(position.x, position.z)
 	route_points = [prev_pos_2d] as Array[Vector2]
 	has_waypoint = false
@@ -276,14 +277,19 @@ func _apply_timeline_rebase() -> void:
 		carry_kind = sample.carrying_resource
 	_update_movement_and_animation(0.0)
 
+## Timeline positions live on the flat server plane; the model stands on the
+## visual ground height (hills). Legacy maps are flat, so this is a no-op there.
+func _on_ground(flat: Vector3) -> Vector3:
+	return Vector3(flat.x, SurfaceTerrain.height_at(flat.x, flat.z), flat.z)
+
 func _process(delta: float) -> void:
 	if is_network_stalled or is_sim_paused:
 		_update_movement_and_animation(0.0)
 		return
 
 	var sample_res = timeline.advance_and_sample(delta, is_sim_paused, is_network_stalled)
-	position = sample_res["position"]
-	current_pos = position
+	current_pos = sample_res["position"]
+	position = _on_ground(current_pos)
 	var ground_speed = sample_res["ground_speed"]
 	current_heading = sample_res["heading"]
 	state_name = sample_res["state_name"]

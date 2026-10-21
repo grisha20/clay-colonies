@@ -12,6 +12,18 @@ uniform int lake_len[8];
 uniform vec4 lake_box[8];
 uniform int lake_count = 0;
 
+// Relief (shared/surfaceTerrain.ts heightAt): hills as vec4(x, y, radius, height),
+// mountains flattened like lakes with a peak height each.
+uniform vec4 hills[16];
+uniform int hill_count = 0;
+uniform vec2 mountain_points[256];
+uniform int mountain_start[8];
+uniform int mountain_len[8];
+uniform vec4 mountain_box[8];
+uniform float mountain_height[8];
+uniform int mountain_count = 0;
+const float CF_MOUNTAIN_FOOT = 5.0;
+
 float cf_hash(vec2 p) {
 	uvec2 q = uvec2(ivec2(floor(p)) + ivec2(65536));
 	q *= uvec2(1597334673u, 3812015801u);
@@ -79,4 +91,65 @@ float cf_lake_distance(vec2 p) {
 	}
 	float wobble = (cf_noise(p * 0.21) - 0.5) * 1.4 + (cf_noise(p * 0.9) - 0.5) * 0.35;
 	return raw + 0.55 + wobble;
+}
+
+// Signed distance to mountain i (negative inside).
+float cf_sd_mountain(vec2 p, int m) {
+	float d = 1e9;
+	float s = 1.0;
+	int first = mountain_start[m];
+	int n = mountain_len[m];
+	for (int k = 0; k < n; k++) {
+		int i = first + k;
+		int j = first + ((k == 0) ? n - 1 : k - 1);
+		vec2 vi = mountain_points[i];
+		vec2 vj = mountain_points[j];
+		vec2 e = vj - vi;
+		vec2 w = p - vi;
+		vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+		d = min(d, dot(b, b));
+		bool c1 = p.y >= vi.y;
+		bool c2 = p.y < vj.y;
+		bool c3 = e.x * w.y > e.y * w.x;
+		if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) {
+			s = -s;
+		}
+	}
+	return s * sqrt(d);
+}
+
+// Nearest mountain signed distance (1e9 when none is near).
+float cf_mountain_distance(vec2 p) {
+	float best = 1e9;
+	for (int i = 0; i < mountain_count; i++) {
+		vec4 box = mountain_box[i];
+		if (p.x > box.x && p.x < box.z && p.y > box.y && p.y < box.w) {
+			best = min(best, cf_sd_mountain(p, i));
+		}
+	}
+	return best;
+}
+
+// Ground height: heightAt / SurfaceTerrain.height_at, except that inside a
+// massif the ground stays low (t capped) so the rock meshes rise above it.
+// Nobody walks there, so only the walkable foot slope must match exactly.
+float cf_height(vec2 p) {
+	float h = 0.0;
+	for (int i = 0; i < hill_count; i++) {
+		vec4 hill = hills[i];
+		vec2 d = p - hill.xy;
+		float d2 = dot(d, d) / (hill.z * hill.z);
+		if (d2 < 1.0) {
+			h += hill.w * (1.0 - d2) * (1.0 - d2);
+		}
+	}
+	for (int i = 0; i < mountain_count; i++) {
+		vec4 box = mountain_box[i];
+		if (p.x > box.x && p.x < box.z && p.y > box.y && p.y < box.w) {
+			float sd = cf_sd_mountain(p, i);
+			float t = sd < 0.0 ? min(0.4, 0.25 - sd / 10.0) : max(0.0, 0.25 * (1.0 - sd / CF_MOUNTAIN_FOOT));
+			h = max(h, mountain_height[i] * t * t * (3.0 - 2.0 * t));
+		}
+	}
+	return h;
 }

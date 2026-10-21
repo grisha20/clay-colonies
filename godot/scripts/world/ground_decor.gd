@@ -244,7 +244,7 @@ func _compute_chunk(c: Vector2i, zones: Array) -> Dictionary:
 	for i in range(TUFTS_PER_CHUNK):
 		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
 		var shore = _shore_distance(p)
-		if shore < 0.0:
+		if shore < 0.0 or SurfaceTerrain.is_mountain_at(p.x, p.y):
 			continue
 		if shore < 3.6:
 			if rng.randf() < 0.75:
@@ -256,7 +256,7 @@ func _compute_chunk(c: Vector2i, zones: Array) -> Dictionary:
 		lists[KIND_TUFT].append([p, rng.randf(), 0.7 + rng.randf() * 0.7])
 	for i in range(FLOWERS_PER_CHUNK):
 		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
-		if _shore_distance(p) < 2.0:
+		if _shore_distance(p) < 2.0 or SurfaceTerrain.is_mountain_at(p.x, p.y):
 			continue
 		var bloom = density_noise.get_noise_2d(p.x * 1.7 + 100.0, p.y * 1.7)
 		if bloom < 0.05 or rng.randf() > _clear_zone(p, entrances, digs, yards):
@@ -264,7 +264,7 @@ func _compute_chunk(c: Vector2i, zones: Array) -> Dictionary:
 		lists[KIND_FLOWER].append([p, rng.randf(), 0.8 + rng.randf() * 0.5])
 	for i in range(PEBBLES_PER_CHUNK):
 		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
-		if _shore_distance(p) < 0.5:
+		if _shore_distance(p) < 0.5 or SurfaceTerrain.is_mountain_at(p.x, p.y):
 			continue
 		lists[KIND_PEBBLE].append([p, rng.randf(), 0.5 + rng.randf() * 1.3])
 	var buffers = []
@@ -284,7 +284,7 @@ func _pack(items: Array, center: Vector2, rng: RandomNumberGenerator, kind: int)
 		var s: float = it[2]
 		var scale = Vector3(s, s * 0.6, s * 0.8) if kind == KIND_PEBBLE else Vector3(s, s * (0.8 + 0.4 * rng.randf()), s)
 		var b = Basis(Vector3.UP, it[1] * TAU).scaled(scale)
-		var o = Vector3(p.x - center.x, 0.0, p.y - center.y)
+		var o = Vector3(p.x - center.x, SurfaceTerrain.height_at(p.x, p.y), p.y - center.y)
 		var k = i * stride
 		buf[k + 0] = b.x.x; buf[k + 1] = b.y.x; buf[k + 2] = b.z.x; buf[k + 3] = o.x
 		buf[k + 4] = b.x.y; buf[k + 5] = b.y.y; buf[k + 6] = b.z.y; buf[k + 7] = o.y

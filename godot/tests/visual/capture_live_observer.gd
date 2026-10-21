@@ -119,6 +119,18 @@ func run() -> void:
 	look(scene.world_view.colony_focus_points[1], 24.0)
 	await wait_seconds(1.5)
 	shot("live_04_camp_b")
+	var mountains = SurfaceTerrain.get_mountains()
+	if not mountains.is_empty():
+		var c: Vector2 = mountains[0].box.get_center()
+		look(Vector3(c.x, 0, c.y + 10), 40.0)
+		await wait_seconds(1.5)
+		shot("live_06_mountain")
+		look(Vector3(c.x, 0, c.y + 6), 18.0)
+		await wait_seconds(1.5)
+		shot("live_07_mountain_close")
+	look(Vector3(240, 0, 240), 80.0)
+	await wait_seconds(1.5)
+	shot("live_08_overview")
 	# Follow a carrier for a short frame sequence.
 	var target: NetworkResident = null
 	for r in scene.entity_registry.residents.values():
