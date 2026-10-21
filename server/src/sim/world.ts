@@ -1054,7 +1054,7 @@ export function worldFromSnapshot(
     zoneSets: colonies[0].zoneSets,
     wallBlocked: new Set<number>(),
     gateOwner: new Map<number, string>(),
-    objectives: restoreObjectives(snapshot.objectives),
+    objectives: restoreObjectives(snapshot.objectives, (snapshot.surface.springs?.length ?? 0) > 0),
     weather: snapshot.weather ?? createWeather(),
     ants: snapshotAnts,
     pheromones: {

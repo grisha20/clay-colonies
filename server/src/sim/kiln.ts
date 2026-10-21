@@ -2,7 +2,9 @@
 // Свободная печь зовёт ближайшего сырого жителя без ноши (с еды или без
 // дела), когда у племени есть дрова, не идёт дождь и нет тревоги. Житель
 // стоит у печи; обжиг идёт, только пока он рядом (дождь уводит его под
-// крышу — прогресс ждёт). Дрова списываются при первом подходе.
+// крышу — прогресс ждёт). Дрова списываются при первом подходе. Пауза
+// останавливает всё: житель уходит работать, прогресс и дрова сохраняются,
+// после снятия паузы он возвращается и дожигается.
 // Обожжённый не размокает под дождём, в воде растворяется медленнее и
 // крепче в бою (ant/step.ts, water.ts, fired в Ant).
 import type { Ant, Building } from "../../../shared/types";
@@ -32,8 +34,20 @@ export function updateKilns(world: World): void {
     const kilns = world.surface.buildings.filter(b => b.type === "kiln" && b.stage === "built" && b.colonyId === runtime.id);
     for (const kiln of kilns) {
       const firing = kiln.firing;
+      if (firing && c.firingPaused) {
+        // Pause: the resident goes back to work, nothing burns. A paid firing
+        // keeps its progress for the same resident; an unpaid call is dropped.
+        const ant = runtime.ants.find(a => a.id === firing.antId);
+        if (ant && ant.kilnId === kiln.id) ant.kilnId = undefined;
+        if (!firing.paid) kiln.firing = undefined;
+        continue;
+      }
       if (firing) {
         const ant = runtime.ants.find(a => a.id === firing.antId);
+        if (ant && firing.paid && ant.kilnId !== kiln.id && ant.state !== "dead" && !ant.capturedBy) {
+          // Resuming after a pause: call the same resident back to finish.
+          ant.kilnId = kiln.id;
+        }
         const timedOut = !firing.paid && world.tick - firing.calledAt > CONFIG.kilnCallTimeoutTicks;
         if (!ant || ant.state === "dead" || ant.capturedBy || timedOut) {
           if (ant) ant.kilnId = undefined;

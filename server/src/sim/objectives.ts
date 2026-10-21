@@ -5,7 +5,8 @@ import type { Objective } from "../../../shared/types";
 import type { World } from "./world";
 import { CONFIG } from "../config";
 
-export function createObjectives(): Objective[] {
+/** Goals that need springs are left out on maps without them (older saves). */
+export function createObjectives(hasSprings = true): Objective[] {
   return [
     // Пути победы: достаточно одного, у каждого своё «послевкусие».
     { id: "win-spider", text: "Одолеть паука (этап обороны)", target: 1, progress: 0, done: false, victory: true },
@@ -22,12 +23,12 @@ export function createObjectives(): Objective[] {
     { id: "fired-10", text: "Обжечь 10 жителей", target: 10, progress: 0, done: false },
     { id: "totem-1", text: "Поставить тотем рода", target: 1, progress: 0, done: false },
     { id: "spring-1", text: "Занять источник особой глины", target: 1, progress: 0, done: false }
-  ];
+  ].filter((goal) => hasSprings || goal.id !== "spring-1");
 }
 
 // Старые сохранения: сохраняем done-флаги, текст/цели берём из кода.
-export function restoreObjectives(saved: Objective[] | undefined): Objective[] {
-  const fresh = createObjectives();
+export function restoreObjectives(saved: Objective[] | undefined, hasSprings = true): Objective[] {
+  const fresh = createObjectives(hasSprings);
   if (!saved?.length) {
     return fresh;
   }

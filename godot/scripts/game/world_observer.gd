@@ -525,9 +525,39 @@ func ground_point_at(screen: Vector2) -> Vector2:
 		return Vector2.INF
 	var origin = cam.project_ray_origin(screen)
 	var dir = cam.project_ray_normal(screen)
+	return ray_ground_hit(origin, dir)
+
+
+## Where a ray meets the visible ground, raised by SurfaceTerrain.height_at
+## like the terrain mesh: march between the planes of the highest hill and
+## y=0, then bisect. A flat-plane hit was metres off on a hillside.
+static func ray_ground_hit(origin: Vector3, dir: Vector3) -> Vector2:
 	if dir.y > -0.01:
 		return Vector2.INF
-	var hit = origin + dir * (-origin.y / dir.y)
+	const TOP := 16.0
+	var t0 = maxf(0.0, (TOP - origin.y) / dir.y)
+	var t1 = -origin.y / dir.y
+	var above = func(t: float) -> bool:
+		var p = origin + dir * t
+		return p.y > SurfaceTerrain.height_at(p.x, p.z)
+	var steps = 48
+	var prev = t0
+	var hit_t = t1
+	for i in range(1, steps + 1):
+		var t = lerpf(t0, t1, float(i) / float(steps))
+		if not above.call(t):
+			var lo = prev
+			var hi = t
+			for k in range(12):
+				var mid = (lo + hi) * 0.5
+				if above.call(mid):
+					lo = mid
+				else:
+					hi = mid
+			hit_t = hi
+			break
+		prev = t
+	var hit = origin + dir * hit_t
 	return Vector2(hit.x, hit.z)
 
 ## Hover text for whatever lies under the mouse (trees, quarries, buildings,

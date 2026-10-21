@@ -60,6 +60,17 @@ func run() -> void:
 	check("hud_special_clay", hud.resource_labels.special.text == "7")
 	hud.queue_free()
 	check("totem_tool_listed", BuildController.TOOLS.any(func(t): return t[0] == "totem" and t[2] == "T"))
+
+	# Clicks land on the visible relief, not on y=0 (review 569d093, item 2).
+	SurfaceTerrain.set_terrain({"version": 1, "seed": 1, "lakes": [], "hills": [{"x": 120.0, "y": 236.0, "radius": 30.0, "height": 5.0}]})
+	var worst = 0.0
+	for target in [Vector2(120, 236), Vector2(132, 244), Vector2(104, 226)]:
+		var top = Vector3(target.x, SurfaceTerrain.height_at(target.x, target.y), target.y)
+		var dir = Vector3(0.0, -0.8, -0.6).normalized()
+		var hit = WorldObserver.ray_ground_hit(top - dir * 60.0, dir)
+		worst = maxf(worst, hit.distance_to(target))
+	check("hill_click_hits_visible_ground", worst < 0.05, str(worst))
+	SurfaceTerrain.set_terrain(null)
 	await process_frame
 	print("TERRITORY_FAILURES=%d" % failures)
 	quit(1 if failures > 0 else 0)

@@ -278,6 +278,8 @@ export type Colony = {
   /** «Праматерь решает»: priorities, clay reserve and alarm are run by the tribe AI
    *  (server/src/sim/settlementAI.ts). Missing in old saves = manual. */
   autoManage?: boolean;
+  /** The mother raised the current alarm (she may lower it). Saved, so it survives a load. */
+  alarmByMother?: boolean;
   /** Kilns call no residents while paused (the mother decides in auto mode). */
   firingPaused?: boolean;
   /** Residents fired so far in this match. */

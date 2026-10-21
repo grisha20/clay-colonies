@@ -88,6 +88,25 @@ check("objectives: kiln built, 1/10 fired", world.objectives.find(o => o.id === 
 updateKilns(world);
 check("fired resident is not called again", kiln.firing?.antId !== called!.id);
 
+// Pause in the middle of a firing stops it and resumes it (review 569d093, item 3).
+{
+  const k = kiln.firing ? kiln : undefined;
+  if (k?.firing) {
+    const ant = player.ants.find(a => a.id === k.firing!.antId)!;
+    ant.pos = { ...buildingServicePoint(k) };
+    for (let i = 0; i < 10; i++) updateKilns(world);
+    const woodPaid = c.wood, progress = k.firing!.progress;
+    c.firingPaused = true;
+    for (let i = 0; i < 50; i++) updateKilns(world);
+    check("pause: no progress, no wood, resident released", k.firing?.progress === progress && c.wood === woodPaid && !ant.kilnId && !ant.fired, `${k.firing?.progress} ${ant.kilnId}`);
+    c.firingPaused = false;
+    updateKilns(world);
+    check("resume: the same resident is called back", ant.kilnId === k.id && k.firing?.antId === ant.id);
+    for (let i = 0; i < CONFIG.kilnFiringTicks; i++) updateKilns(world);
+    check("resume: firing finishes without paying again", ant.fired === true && c.wood === woodPaid, `${c.wood} vs ${woodPaid}`);
+  } else check("pause scenario has an active firing", false);
+}
+
 // The called resident dies: the kiln frees itself.
 const second = player.ants.find(a => a.id === kiln.firing?.antId)!;
 second.state = "dead";
@@ -119,7 +138,7 @@ check("fired dissolves slower in water", (called!.dissolved ?? 0) > 0 && (called
 const snap = JSON.parse(JSON.stringify(toSnapshot(world)));
 const loaded = worldFromSnapshot(snap, genome, spider, genomeB);
 check("save keeps fired", loaded.colonies[0].ants.find(a => a.id === called!.id)?.fired === true);
-check("save keeps fired count", loaded.colonies[0].colony.firedTotal === 1);
+check("save keeps fired count", loaded.colonies[0].colony.firedTotal === c.firedTotal && (c.firedTotal ?? 0) >= 2);
 
 // Mother: no firing when hungry.
 c.autoManage = true; c.food = 1; world.tick = 100;

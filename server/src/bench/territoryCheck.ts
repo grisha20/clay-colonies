@@ -96,6 +96,12 @@ check("held spring yields special clay", c.specialClay === 1, String(c.specialCl
 const snap = JSON.parse(JSON.stringify(toSnapshot(w)));
 const loaded = worldFromSnapshot(snap, genome, spider, genomeB);
 check("save keeps springs, holder and special clay", loaded.surface.springs?.[0]?.holder === "colony-1" && loaded.colonies[0].colony.specialClay === 1);
+// Old saves without springs get no spring goal (review 569d093, item 4).
+const oldSave = JSON.parse(JSON.stringify(snap));
+delete oldSave.surface.springs;
+const oldWorld = worldFromSnapshot(oldSave, genome, spider, genomeB);
+check("old save without springs has no spring goal", !oldWorld.objectives.some(o => o.id === "spring-1") && (oldWorld.surface.springs?.length ?? 0) === 0);
+check("new world has the spring goal", loaded.objectives.some(o => o.id === "spring-1"));
 w.surface.buildings = w.surface.buildings.filter(b => b.id !== "spring-totem");
 w.tick += 100; updateSprings(w);
 check("spring lost with the totem", spring0.holder !== "colony-1");

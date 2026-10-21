@@ -61,9 +61,6 @@ function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop
 }
 
 /** One settlement-level planner. It pays normal costs through normal workers. */
-/** Alarms raised by the mother of a player tribe; only those she lowers herself. */
-const motherAlarm = new WeakMap<ColonyRuntime, boolean>();
-
 export function enemyNearCamp(world: World, runtime: ColonyRuntime): boolean {
   const camp = runtime.surfaceEntrance;
   return world.enemies.some(e => e.hp > 0 && Math.hypot(e.pos.x - camp.x, e.pos.y - camp.y) < 28);
@@ -71,7 +68,7 @@ export function enemyNearCamp(world: World, runtime: ColonyRuntime): boolean {
 
 /** Player turned the alarm on or off by hand: the mother leaves it alone. */
 export function noteManualAlarm(runtime: ColonyRuntime): void {
-  motherAlarm.delete(runtime);
+  runtime.colony.alarmByMother = false;
 }
 
 /**
@@ -85,8 +82,8 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
   const built = (type: BuildingType) => world.surface.buildings.filter(b => b.colonyId === c.id && b.type === type && b.stage === "built").length;
   const threat = enemyNearCamp(world, runtime);
   if (!isPlayer) c.alarm = threat;
-  else if (threat && !c.alarm) { c.alarm = true; motherAlarm.set(runtime, true); }
-  else if (!threat && c.alarm && motherAlarm.get(runtime)) { c.alarm = false; motherAlarm.delete(runtime); }
+  else if (threat && !c.alarm) { c.alarm = true; c.alarmByMother = true; }
+  else if (!threat && c.alarm && c.alarmByMother) { c.alarm = false; c.alarmByMother = false; }
   c.growthPaused = false;
   c.clayReserve = population < 14 ? 0 : 6;
   const foodLow = c.food < Math.max(18, population * 1.5);

@@ -61,6 +61,20 @@ at(500); updateSettlementAI(world);
 check("manual alarm kept", c.alarm === true);
 c.alarm = false;
 
+// The origin of an alarm survives save/load (review 569d093, item 1).
+world.enemies = [foe]; c.alarm = false; c.alarmByMother = false;
+at(600); updateSettlementAI(world);
+const reloaded = restore(JSON.parse(JSON.stringify(toSnapshot(world))));
+reloaded.enemies = [];
+reloaded.tick = 700; updateSettlementAI(reloaded);
+check("mother's alarm lowered after a load", reloaded.colonies[0].colony.alarm === false);
+world.enemies = []; c.alarm = true; noteManualAlarm(player);
+const reloadedManual = restore(JSON.parse(JSON.stringify(toSnapshot(world))));
+reloadedManual.enemies = [];
+reloadedManual.tick = 800; updateSettlementAI(reloadedManual);
+check("manual alarm kept after a load", reloadedManual.colonies[0].colony.alarm === true);
+c.alarm = false;
+
 // Advice appears with its cause, clears with it and stays quiet for a cooldown.
 c.advice = [];
 const food = c.food, fire = c.fire;
