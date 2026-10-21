@@ -9,7 +9,7 @@
 
 | Ассет | Исходный файл (.blend / script) | Экспортированный файл (.glb) | Автор / Происхождение | Лицензия | Статус |
 |---|---|---|---|---|---|
-| Базовый житель (Clayfolk resident) | `art/blender/resident.blend` | `godot/assets/models/resident.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_resident.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
+| Базовый житель (Clayfolk resident) | `art/blender/resident.blend` | `godot/assets/models/resident.glb` | Авторский ассет проекта Clayfolk (Codex, `generate_resident.py` + `resident_sculpt.py`) | Лицензия проекта Clayfolk | Authored / technical checks passed 22.10.2026; owner art review pending |
 | Костёр и очаг (Campfire) | `art/blender/campfire.blend` | `godot/assets/models/campfire.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_props.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
 | Хижина (Hut) | `art/blender/hut.blend` | `godot/assets/models/hut.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_props.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
 | Переносимый груз (Cargo) | `art/blender/cargo.blend` | `godot/assets/models/cargo.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_props.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
@@ -24,24 +24,26 @@
 | Озёрный монстр (Lake monster) | `art/blender/monster.blend` | `godot/assets/models/monster.glb` | Авторский ассет проекта Clayfolk | Лицензия проекта Clayfolk | Planned (M4) |
 | Рыбы (Lake fish) | `art/blender/fish.blend` | `godot/assets/models/fish.glb` | Авторский ассет проекта Clayfolk | Лицензия проекта Clayfolk | Planned (M4) |
 
-### Спецификация костей и сокетов базового жителя (M1.1)
+### Житель — обновление 22.10.2026
 
-- **Иерархия скелета (`ResidentArmature` / `Skeleton3D`)**:
-  - `Root` (опорная точка на грунте Z=0)
-    - `Hips` (таз Z=0.49м, вертикальное покачивание Z(t)=0.468+0.016*sin при ходьбе)
-      - `Spine` (торс и грудь, наклон и компенсация шага)
-        - `Head` (голова, выступающие глиняные глаза и нос)
-          - `Socket_Head` (Z=1.72м, для будущих ритуальных масок/венцов)
-        - `Socket_Cargo` (Z=0.65м, Y=-0.28м в Blender / Y=0.65м, Z=0.28м в Godot; крепление переносимых ресурсов)
-        - `UpperArm.L` -> `LowerArm.L` -> `Hand.L` (бесшовный 8-сегментный quad-loft от плеча через локоть к предплечью и кисти-рукавице; охват груза с расстоянием до сокета 0.00м)
-        - `UpperArm.R` -> `LowerArm.R` -> `Hand.R` -> `Socket_Tool_R` (симметричный органический quad-loft / крепление инструментов)
-      - `UpperLeg.L` (длина 0.23м) -> `LowerLeg.L` (длина 0.21м) -> `Foot.L` (мокасиновая лепка подошвы, строго плоская опора Z=0.000м, длина 0.22м, ширина 0.14м, лодыжка Z=0.050м)
-      - `UpperLeg.R` (длина 0.23м) -> `LowerLeg.R` (длина 0.21м) -> `Foot.R` (мокасиновая лепка подошвы, строго плоская опора Z=0.000м, длина 0.22м, ширина 0.14м, лодыжка Z=0.050м)
-  - **Элементы лепки тела и лица**:
-    - Голова, лобная дуга и нос-пуговка объединены единым материалом `ClayBody` (никаких швов и цветовых стыков на черепе).
-    - Врезные глянцевые шарики глаз `DarkEyes` (акцентные тёмные глиняные бусины).
-    - Плетёный рельефный травяной пояс `GrassCord` вокруг талии (свитый тор с 3-прядным рельефом) с передним узлом и двумя свободно свисающими концами шнура.
-    - 100% замкнутый водонепроницаемый манифольд меша (0 граничных и неманифольдных рёбер).
+[Результат, сборка, проверки и сравнение](RESIDENT_REMODEL.md). Blender 4.2.3 LTS → Godot 4.7.2 Forward+. Рост 1.74596 м, 2466 вершин / **4908 треугольников** до импортных UV-разрывов; 19 костей. GLB сохраняет тот же треугольный бюджет. Меш/узел `Resident`, armature `ResidentArmature`, Godot создаёт `Skeleton3D`.
+
+Поверхности строго: **0 ClayBody, 1 DarkEyes, 2 GrassCord**. Обычные Principled BSDF, базовые цвета нейтральные; клиент перекрашивает 0/2 и затемняет обожжённых. `resident_clay_normal.png` (512×512) создаётся скриптом, хранится в `godot/assets/textures/`, упакован в blend/GLB. Без внешних ассетов и абсолютных зависимостей. PNG, извлекаемые Godot из GLB, генерируются при импорте и не дублируются в Git.
+
+Тело/голова/нос/конечности — одна замкнутая voxel-remesh оболочка после сглаживания и decimate; глаза, пояс, узел и два конца — отдельные замкнутые компоненты того же меша. В исходной сетке 0 неманифольдных рёбер. Лёгкая асимметрия, вмятина улыбки, следы лепки в геометрии и normal-карте. Ступни с плоскими подошвами на Blender Z=0 (Godot Y=0).
+
+Иерархия имён сохранена:
+
+- Root → Hips → Spine → Head → Socket_Head.
+- Spine → UpperArm.L/R → LowerArm.L/R → Hand.L/R; Hand.R → Socket_Tool_R.
+- Hips → UpperLeg.L/R → LowerLeg.L/R → Foot.L/R.
+- Spine → Socket_Cargo.
+
+Rest: Hips Z=.49, Spine Z=.72, Head Z=1.12; Socket_Head Z=1.72, груз крепится туда с клиентским подъёмом .12. Socket_Cargo=(0,-.44,.85). Правые локоть/кисть смещены под новый силуэт: LowerArm.R=(.45,-.02,.78), Hand.R=(.485,-.07,.54), Socket_Tool_R=(.485,-.16,.50) в Blender. Слева зеркально. Socket_Tool_R следует правой кисти. Лицо смотрит в Blender -Y / Godot +Z.
+
+Пять циклов по 1 с / 30 FPS: idle (дыхание и поворот головы), walk (прежняя IK-опора, шаг .48 м/цикл), work_gather (правый удар сверху вниз), carry_idle и carry_walk (совместимость прежнего режима). В текущем коде carry-клипы используются при переноске; груз при этом находится на голове. Проверка 31 кадра каждого клипа: подошвы не проникают в землю, опора нулевая, мах обеих ног не меньше .050 м. Проверка не привязана к прежним «первым 96 вершинам».
+
+Прежний GLB архивирован в `godot/tests/fixtures/resident_before_20261022.glb`, только для сравнительной сцены. Художественное одобрение новой модели владельцем ещё не получено.
 
 ### Материалы и меши пропсов лагеря (M1.1)
 
