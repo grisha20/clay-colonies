@@ -5,7 +5,8 @@ import { loadGenome } from "./ai/genome";
 import { loadSpiderGenome } from "./ai/spiderGenome";
 import { createSocketHub } from "./net/socket";
 import { loadWorldSnapshot, saveWorldSnapshot } from "./state/snapshot";
-import { addFoodSource, createWorld, restartColony, toNetworkSnapshot } from "./sim/world";
+import { addFoodSource, createWorld, restartColony, toNetworkSnapshot, randomTerrain } from "./sim/world";
+import { LEGACY_TERRAIN } from "../../shared/surfaceTerrain";
 import { eraseColonyZone, paintColonyZone } from "./sim/zones";
 import { eraseBuildCells, paintWallCells, placeGate, placePointBuilding, isSurfaceBlockedAt } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
@@ -16,7 +17,8 @@ const genomeState = await loadGenome();
 const genomeStateB = await loadGenome(CONFIG.genomeFileB);
 const spiderGenomeState = await loadSpiderGenome();
 const loadedWorld = await loadWorldSnapshot(genomeState, spiderGenomeState, genomeStateB);
-const world = loadedWorld ?? createWorld(genomeState, spiderGenomeState, genomeStateB);
+// No save yet: the first match starts on a freshly generated map.
+const world = loadedWorld ?? createWorld(genomeState, spiderGenomeState, genomeStateB, randomTerrain());
 
 let loop: LoopController;
 const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetworkSnapshot(world, includePheromones, view), (command) => {
@@ -73,7 +75,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
   }
   if (command.type === "newGame") {
     // Новая партия: свежий мир на месте, геномы и обучение сохраняются.
-    restartColony(world);
+    restartColony(world, command.classic ? LEGACY_TERRAIN : randomTerrain(command.seed));
     loop.setSpeed(1);
   }
   if (command.type === "setSpeed") {

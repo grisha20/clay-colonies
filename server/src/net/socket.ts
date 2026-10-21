@@ -59,6 +59,10 @@ export type ClientCommand =
     }
   | {
       type: "newGame";
+      /** Map seed; omitted = random. */
+      seed?: number;
+      /** true = the authored classic map with two lakes. */
+      classic?: boolean;
     }
   | {
       type: "setView";
@@ -108,7 +112,8 @@ export function parseCommand(raw: string): ClientCommand | null {
     }
 
     if (command.type === "newGame") {
-      return { type: "newGame" };
+      const seed = typeof command.seed === "number" && Number.isInteger(command.seed) && command.seed >= 0 && command.seed < 2 ** 31 ? command.seed : undefined;
+      return { type: "newGame", seed, classic: command.classic === true };
     }
 
     if (command.type === "setView") {

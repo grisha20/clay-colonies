@@ -18,11 +18,12 @@ import {
   type Vec2,
   type WorldSnapshot
 } from "../../../shared/types";
-import { LEGACY_TERRAIN, isWaterAt, setSurfaceTerrain, type SurfaceTerrainData, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
+import { LEGACY_TERRAIN, isWaterAt, setSurfaceTerrain, type SurfaceTerrainData, isTerrainBlockedAt, campPositions, getSurfaceTerrain } from "../../../shared/surfaceTerrain";
 import { computeDirectives, createFitnessState, type ColonyDirectives, type FitnessState } from "../ai/controller";
 import type { GenomeState } from "../ai/genome";
 import type { SpiderGenomeState } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
+import { generateTerrain } from "./terrainGen";
 import { createColony, syncColonyStats } from "./colony";
 import { syncEnemyIdCounter } from "./enemy";
 import { PheromoneGrid } from "./pheromone";
@@ -180,8 +181,7 @@ function randomSurfacePosAwayFromNest(minNestDistance: number): { x: number; y: 
     };
     if (
       isSpawnableSurfacePos(pos) &&
-      !isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) &&
-      !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)
+      campPositions().every((camp) => !isWithinRadius(pos, camp, minNestDistance))
     ) {
       return pos;
     }
@@ -310,9 +310,23 @@ function makeResourceNodes(): ResourceNode[] {
   for (let index = 0; index < CONFIG.clayNodeCount; index += 1) {
     nodes.push(createResourceNode("clay", randomSurfacePosAwayFromNest(minNestDistance), CONFIG.clayNodeAmount * (0.8 + Math.random() * 0.4)));
   }
-  for (let cluster = 0; cluster < CONFIG.forestClusterCount; cluster += 1) {
-    const count = CONFIG.forestClusterMinTrees + Math.floor(Math.random() * (CONFIG.forestClusterMaxTrees - CONFIG.forestClusterMinTrees + 1));
-    pushClusteredNodes(nodes, "tree", randomClusterCenter(minNestDistance), count, CONFIG.forestClusterRadius, CONFIG.treeAmount, "mature");
+  const forests = getSurfaceTerrain().forests;
+  if (forests?.length) {
+    // Generated woodland: dense stands with a few young trees, thinning at the edge.
+    for (const forest of forests) {
+      const count = Math.round(Math.PI * forest.radius * forest.radius * forest.density);
+      for (let index = 0; index < count; index += 1) {
+        const pos = randomSurfacePosNear(forest, 0, forest.radius * Math.sqrt(Math.random()));
+        if (!isSpawnableSurfacePos(pos) || campPositions().some((camp) => isWithinRadius(pos, camp, minNestDistance + 6))) continue;
+        const young = Math.random() < 0.18;
+        nodes.push(createResourceNode("tree", pos, young ? amountForTreeGrowth("young") : CONFIG.treeAmount * (0.8 + Math.random() * 0.4), young ? "young" : "mature"));
+      }
+    }
+  } else {
+    for (let cluster = 0; cluster < CONFIG.forestClusterCount; cluster += 1) {
+      const count = CONFIG.forestClusterMinTrees + Math.floor(Math.random() * (CONFIG.forestClusterMaxTrees - CONFIG.forestClusterMinTrees + 1));
+      pushClusteredNodes(nodes, "tree", randomClusterCenter(minNestDistance), count, CONFIG.forestClusterRadius, CONFIG.treeAmount, "mature");
+    }
   }
   for (let cluster = 0; cluster < CONFIG.stoneClusterCount; cluster += 1) {
     const count = CONFIG.stoneClusterMinRocks + Math.floor(Math.random() * (CONFIG.stoneClusterMaxRocks - CONFIG.stoneClusterMinRocks + 1));
@@ -324,7 +338,7 @@ function makeResourceNodes(): ResourceNode[] {
   for (let index = 0; index < CONFIG.looseStoneCount; index += 1) {
     nodes.push(createResourceNode("loose-stone", randomSurfacePosAwayFromNest(8), CONFIG.looseStoneAmount * (0.8 + Math.random() * 0.4)));
   }
-  for (const entrance of [CONFIG.surfaceEntrance, CONFIG.surfaceEntranceB]) {
+  for (const entrance of campPositions()) {
     for (let index = 0; index < CONFIG.campBootstrapSticks; index += 1) {
       nodes.push(createResourceNode("stick", randomSurfacePosNear(entrance, CONFIG.campBootstrapMinRadius, CONFIG.campBootstrapMaxRadius), CONFIG.stickAmount));
     }
@@ -779,12 +793,12 @@ export function createWorld(
   // Placement below (resources, food, fish, deposits) asks the shared water
   // predicates, so the world's terrain must be active before anything spawns.
   setSurfaceTerrain(terrain);
-  const entrances = [CONFIG.surfaceEntrance, CONFIG.surfaceEntranceB];
+  const entrances = campPositions().slice(0, 2).map((camp) => ({ x: camp.x, y: camp.y }));
   const surface: Surface = {
     terrain,
     width: CONFIG.mapWidth,
     height: CONFIG.mapHeight,
-    entrance: CONFIG.surfaceEntrance,
+    entrance: entrances[0],
     entrances,
     foodSources: makeFoodSources(),
     carrion: makeCarrionSources(),
@@ -795,8 +809,8 @@ export function createWorld(
   ensureResourceDeposits(surface);
   const enemies: Enemy[] = [];
   const colonies = [
-    createColonyRuntime("colony-1", "dark", CONFIG.surfaceEntrance, genomeState, spiderGenomeState),
-    createColonyRuntime("colony-2", "red", CONFIG.surfaceEntranceB, genomeStateB, spiderGenomeState)
+    createColonyRuntime("colony-1", "dark", entrances[0], genomeState, spiderGenomeState),
+    createColonyRuntime("colony-2", "red", entrances[1], genomeStateB, spiderGenomeState)
   ];
 
   const world: World = {
@@ -1053,7 +1067,12 @@ export function worldFromSnapshot(
   return world;
 }
 
-export function restartColony(world: World): void {
+/** A fresh random layout for a new match (seed omitted: random). */
+export function randomTerrain(seed = Math.floor(Math.random() * 2 ** 31)): SurfaceTerrainData {
+  return generateTerrain(seed).terrain;
+}
+
+export function restartColony(world: World, terrain: SurfaceTerrainData = randomTerrain()): void {
   clearDeadAntPaths(new Set());
   clearDeadPanic(new Set());
   resetEnemyRuntime();
@@ -1061,7 +1080,8 @@ export function restartColony(world: World): void {
   const freshWorld = createWorld(
     world.colonies[0]?.genomeState ?? world.genomeState,
     world.spiderGenomeState,
-    world.colonies[1]?.genomeState ?? world.genomeState
+    world.colonies[1]?.genomeState ?? world.genomeState,
+    terrain
   );
   Object.assign(world, freshWorld);
 }

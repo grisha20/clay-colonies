@@ -26,7 +26,19 @@ export type SurfaceTerrainData = {
   mountains?: readonly MountainDefinition[];
   /** Rolling hills: walkable, only shape the ground height. */
   hills?: readonly HillDefinition[];
+  /** Camp (hearth) of each colony, in colony order. Absent: legacy camps. */
+  camps?: readonly { x: number; y: number }[];
+  /** Quarry sites for ensureResourceDeposits. Absent: legacy site list. */
+  depositSites?: readonly DepositSite[];
+  /** Woodland areas filled with trees at world creation. Absent: legacy random groves. */
+  forests?: readonly ForestDefinition[];
 };
+
+export type DepositSite = { id: string; kind: "clay" | "stone"; x: number; y: number };
+export type ForestDefinition = { x: number; y: number; radius: number; density: number };
+
+/** Camps of the authored map (CONFIG.surfaceEntrance / surfaceEntranceB). */
+export const LEGACY_CAMPS: readonly { x: number; y: number }[] = [{ x: 120, y: 240 }, { x: 360, y: 240 }];
 
 export type MountainDefinition = {
   id: string;
@@ -114,7 +126,8 @@ function sameTerrain(a: SurfaceTerrainData, b: SurfaceTerrainData): boolean {
   if (a.seed !== b.seed || a.lakes.length !== b.lakes.length || am.length !== bm.length || ah.length !== bh.length) return false;
   return a.lakes.every((lake, i) => lake.id === b.lakes[i].id && sameOutline(lake.outline, b.lakes[i].outline)) &&
     am.every((m, i) => m.id === bm[i].id && m.height === bm[i].height && sameOutline(m.outline, bm[i].outline)) &&
-    ah.every((h, i) => h.x === bh[i].x && h.y === bh[i].y && h.radius === bh[i].radius && h.height === bh[i].height);
+    ah.every((h, i) => h.x === bh[i].x && h.y === bh[i].y && h.radius === bh[i].radius && h.height === bh[i].height) &&
+    JSON.stringify([a.camps, a.depositSites, a.forests]) === JSON.stringify([b.camps, b.depositSites, b.forests]);
 }
 
 /** Installs the terrain of the world being simulated or displayed. Missing terrain means the legacy map. */
@@ -134,6 +147,17 @@ export function getSurfaceTerrain(): SurfaceTerrainData {
 /** Bumps whenever the active terrain changes; derived caches compare against it. */
 export function surfaceTerrainRevision(): number {
   return revision;
+}
+
+/** Hearth positions of the active world, colony order. */
+export function campPositions(): readonly { x: number; y: number }[] {
+  return activeTerrain.camps?.length ? activeTerrain.camps : LEGACY_CAMPS;
+}
+
+export function nearestCamp(p: { x: number; y: number }): { x: number; y: number } {
+  let best = campPositions()[0];
+  for (const camp of campPositions()) if (Math.hypot(camp.x - p.x, camp.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y)) best = camp;
+  return best;
 }
 
 export function lakeDefinitions(): readonly LakeDefinition[] {

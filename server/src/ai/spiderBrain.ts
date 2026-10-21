@@ -1,5 +1,6 @@
 import type { Ant, Enemy, FoodSource, Vec2 } from "../../../shared/types";
 import { CONFIG } from "../config";
+import { nearestCamp } from "../../../shared/surfaceTerrain";
 import { isWithinRadius } from "../sim/ant/utils";
 import { tickCache } from "../sim/cache";
 import type { World } from "../sim/world";
@@ -248,9 +249,10 @@ function ambushPoint(world: World, spider: Enemy, genome: SpiderGenome): Vec2 {
 
   const angle = genome.genes.entranceAffinity * Math.PI * 2 + spider.pos.x * 0.07;
   const radius = 12 + genome.genes.ambushPreference * 16;
+  const camp = nearestCamp(spider.pos);
   return clampSurface({
-    x: CONFIG.surfaceEntrance.x + Math.cos(angle) * radius,
-    y: CONFIG.surfaceEntrance.y + Math.sin(angle) * radius
+    x: camp.x + Math.cos(angle) * radius,
+    y: camp.y + Math.sin(angle) * radius
   });
 }
 
@@ -274,7 +276,7 @@ export function chooseMode(world: World, spider: Enemy, genome: SpiderGenome): S
   const storageWork = hasStorageWork(world, spider);
   const targetCloseness = target ? clamp01(1 - target.distance / Math.max(1, genome.genes.chaseTriggerDist)) : 0;
   const antsAround = clamp01(surfaceAntCount(world) / 8);
-  const entranceCloseness = clamp01(1 - distance(spider.pos, CONFIG.surfaceEntrance) / 35);
+  const entranceCloseness = clamp01(1 - distance(spider.pos, nearestCamp(spider.pos)) / 35);
 
   const retreatUtility =
     (mobbingFighters >= CONFIG.spiderMobRetreatCount ? CONFIG.spiderMobRetreatUtility : 0) +

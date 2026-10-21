@@ -24,6 +24,7 @@ const { CONFIG } = await import("../config");
 const { surfacePointOpen, surfaceRoute, surfaceLineOpen } = await import("../../../shared/surfaceNavigation");
 const { pointBuildingPlacement } = await import("../../../shared/buildingPlacement");
 const { isMountainAt, isTerrainBlockedAt, heightAt } = terrainModule;
+const { generateTerrain } = await import("../sim/terrainGen");
 
 let seed = 4242, passed = 0;
 const originalRandom = Math.random;
@@ -132,6 +133,57 @@ try {
     assert.equal(pointBuildingPlacement(w.surface, "colony-1", "hut", { x: 120, y: 201 }), "Основание упирается в скалы");
     for (let i = 0; i < 300; i++) step(w);
     assert.ok(w.ants.every((a) => a.layer !== "surface" || !isMountainAt(a.pos.x, a.pos.y)), "no resident inside rock");
+  });
+
+  check("Генератор: 60 случайных карт — углы, озёра, горы, связность", () => {
+    let totalAttempts = 0;
+    for (let seedNo = 1; seedNo <= 60; seedNo++) {
+      const { terrain, attempts } = generateTerrain(seedNo * 7919);
+      totalAttempts += attempts;
+      const [c1, c2] = terrain.camps!;
+      assert.ok(Math.hypot(c1.x - c2.x, c1.y - c2.y) > 300, `camps far apart (seed ${seedNo})`);
+      assert.ok(terrain.lakes.length >= 2 && terrain.lakes.length <= 4);
+      assert.ok((terrain.mountains ?? []).length >= 2);
+      setSurfaceTerrain(terrain);
+      for (const camp of terrain.camps!) {
+        for (let a = 0; a < 16; a++) assert.ok(!isTerrainBlockedAt(camp.x + Math.cos(a * Math.PI / 8) * 24, camp.y + Math.sin(a * Math.PI / 8) * 24), "camp clearing is open");
+      }
+      // Fair quarries: each camp has its own clay and stone at the same distance.
+      const sites = terrain.depositSites!;
+      for (const [i, camp] of terrain.camps!.entries()) {
+        const suffix = i === 0 ? "a" : "b";
+        for (const kind of ["clay", "stone"]) {
+          const site = sites.find((d) => d.id === `${kind}-${suffix}`)!;
+          assert.ok(site, `${kind}-${suffix} exists`);
+          const d = Math.hypot(site.x - camp.x, site.y - camp.y);
+          assert.ok(d >= 38 && d <= 50, `${kind}-${suffix} distance ${d}`);
+        }
+      }
+    }
+    setSurfaceTerrain(LEGACY_TERRAIN);
+    assert.ok(totalAttempts < 60 * 4, `generator rarely retries (${totalAttempts} attempts)`);
+    assert.deepEqual(generateTerrain(12345).terrain, generateTerrain(12345).terrain, "same seed, same map");
+  });
+
+  check("Генератор: партия на случайной карте играется и честна к обоим племенам", () => {
+    for (const mapSeed of [101, 202, 303]) {
+      const [g, s, gb] = genomes();
+      const terrain = generateTerrain(mapSeed).terrain;
+      const w = createWorld(g, s, gb, terrain);
+      assert.deepEqual(w.surface.entrances, terrain.camps!.map((c) => ({ x: c.x, y: c.y })));
+      assert.deepEqual(w.colonies.map((c) => c.surfaceEntrance), w.surface.entrances);
+      const trees = w.surface.resourceNodes.filter((n) => n.kind === "tree");
+      assert.ok(trees.length > 150, `woodland is dense (${trees.length} trees)`);
+      assert.ok(w.surface.resourceNodes.every((n) => !isTerrainBlockedAt(n.pos.x, n.pos.y)));
+      for (const camp of w.surface.entrances) {
+        const near = (kind: string) => (w.surface.deposits ?? []).filter((d) => d.kind === kind && Math.hypot(d.pos.x - camp.x, d.pos.y - camp.y) < 70).length;
+        assert.ok(near("clay") >= 1 && near("stone") >= 1, "each camp has both quarries nearby");
+        assert.ok(w.surface.buildings.filter((b) => Math.hypot(b.pos.x - camp.x, b.pos.y - camp.y) < 30).length === 3, "starter huts and store");
+      }
+      for (let i = 0; i < 400; i++) { step(w); updateWildlife(w); updateFishPopulation(w); }
+      assert.ok(w.ants.every((a) => a.layer !== "surface" || !isMountainAt(a.pos.x, a.pos.y)));
+    }
+    setSurfaceTerrain(LEGACY_TERRAIN);
   });
 
   console.log(`${passed} passed, 0 failed.`);

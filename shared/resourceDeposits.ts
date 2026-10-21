@@ -1,5 +1,5 @@
 import type { Ant, Building, ResourceDeposit, ResourceNode, Vec2 } from "./types";
-import { isWaterAt, isTerrainBlockedAt } from "./surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt, getSurfaceTerrain } from "./surfaceTerrain";
 
 export const DEPOSIT_RX = 10;
 export const DEPOSIT_RY = 6.5;
@@ -34,7 +34,9 @@ export function ensureResourceDeposits(surface: DepositSurface): void {
     return Array.from({ length: 24 }, (_, i) => i * Math.PI / 12).every(a =>
       !isTerrainBlockedAt(p.x + Math.cos(a) * (DEPOSIT_RX + 3), p.y + Math.sin(a) * (DEPOSIT_RY + 4))) && !isTerrainBlockedAt(p.x, p.y);
   };
-  for (const [id, kind, x, y] of sites) {
+  // Generated worlds carry their own quarry sites; the authored map keeps its list.
+  const siteList = getSurfaceTerrain().depositSites?.map((d) => [d.id, d.kind, d.x, d.y] as const) ?? sites;
+  for (const [id, kind, x, y] of siteList) {
     let pos: Vec2 | undefined;
     for (let radius = 0; radius <= 80 && !pos; radius += 4) for (let i = 0; i < 24; i++) {
       const p = { x: x + Math.cos(i * Math.PI / 12) * radius, y: y + Math.sin(i * Math.PI / 12) * radius };

@@ -2,7 +2,7 @@ import type { Ant, Enemy, Vec2 } from "../../../shared/types";
 import { applyMode, chooseMode, hasAvailableCarrion, isSpiderFastMode, resetSpiderBrainRuntime, type SpiderMode } from "../ai/spiderBrain";
 import { recordAndEvolveSpider, saveSpiderGenome } from "../ai/spiderGenome";
 import { CONFIG } from "../config";
-import { isWaterAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
+import { isWaterAt, isTerrainBlockedAt, campPositions, nearestCamp } from "../../../shared/surfaceTerrain";
 import { tickCache } from "./cache";
 import { isWithinRadius } from "./ant/utils";
 import { resolveSurfaceCollision } from "./building";
@@ -34,7 +34,7 @@ function randomSurfacePoint(): Vec2 {
       y: 8 + Math.random() * (CONFIG.mapHeight - 16)
     };
 
-    if (!isTerrainBlockedAt(pos.x, pos.y) && !isWithinRadius(pos, CONFIG.surfaceEntrance, CONFIG.spiderAvoidRadius * 2.5)) {
+    if (!isTerrainBlockedAt(pos.x, pos.y) && !isWithinRadius(pos, nearestCamp(pos), CONFIG.spiderAvoidRadius * 2.5)) {
       return pos;
     }
   }
@@ -59,8 +59,7 @@ function randomLairPoint(): Vec2 {
 
     if (
       !isTerrainBlockedAt(pos.x, pos.y) &&
-      !isWithinRadius(pos, CONFIG.surfaceEntrance, minNestDistance) &&
-      !isWithinRadius(pos, CONFIG.surfaceEntranceB, minNestDistance)
+      campPositions().every((camp) => !isWithinRadius(pos, camp, minNestDistance))
     ) {
       return pos;
     }
@@ -96,11 +95,12 @@ function keepAwayFromNest(enemy: Enemy, direction: Vec2, speed: number): Vec2 {
     y: enemy.pos.y + direction.y * speed
   };
   const minNestDistance = CONFIG.spiderAvoidRadius * 2.2;
-  if (!isWithinRadius(next, CONFIG.surfaceEntrance, minNestDistance)) {
+  const camp = nearestCamp(next);
+  if (!isWithinRadius(next, camp, minNestDistance)) {
     return direction;
   }
 
-  const away = normalize({ x: enemy.pos.x - CONFIG.surfaceEntrance.x, y: enemy.pos.y - CONFIG.surfaceEntrance.y });
+  const away = normalize({ x: enemy.pos.x - camp.x, y: enemy.pos.y - camp.y });
   return normalize({ x: direction.x + away.x * 3, y: direction.y + away.y * 3 });
 }
 
