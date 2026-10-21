@@ -14,6 +14,11 @@ uniform int yard_count = 0;
 uniform vec4 digs[12];
 uniform float dig_kinds[12];
 uniform int dig_count = 0;
+// Tribe land (shared/territory.ts): xy centre, z radius, w tribe (0 = A, 1 = B).
+uniform vec4 lands[12];
+uniform int land_count = 0;
+uniform vec3 land_a : source_color = vec3(0.95, 0.78, 0.28);
+uniform vec3 land_b : source_color = vec3(0.24, 0.55, 0.80);
 uniform sampler2D trail_map : filter_linear, repeat_disable;
 uniform sampler2D detail_normal : hint_normal, filter_linear_mipmap, repeat_enable;
 
@@ -85,6 +90,27 @@ void fragment() {
 	sand = mix(sand, sand_b * 0.72, soot * 0.6);
 	vec3 col = mix(grass, sand, dirt);
 	float rough = 0.94;
+
+	// Land border: the best margin of each tribe; the owner is the larger one.
+	// A soft line where the owner's land ends (or meets the other tribe's).
+	if (land_count > 0) {
+		float ma = -1e5;
+		float mb = -1e5;
+		for (int i = 0; i < land_count; i++) {
+			float m = lands[i].z - length(p - lands[i].xy);
+			if (lands[i].w > 0.5) mb = max(mb, m); else ma = max(ma, m);
+		}
+		float own = max(ma, mb);
+		if (own > -1.0) {
+			float other = min(ma, mb);
+			float edge = other > 0.0 ? min(own, (own - other) * 0.5) : own;
+			vec3 tribe_col = ma >= mb ? land_a : land_b;
+			float line = 1.0 - smoothstep(0.15, 0.75, abs(edge - 0.4));
+			float dash = 0.75 + 0.25 * step(0.5, fract((p.x + p.y) * 0.35));
+			float rim = (1.0 - smoothstep(0.0, 5.0, edge)) * step(0.0, edge);
+			col = mix(col, tribe_col, clamp(line * 0.55 * dash + rim * 0.08, 0.0, 0.7));
+		}
+	}
 
 	for (int i = 0; i < dig_count; i++) {
 		vec4 g = digs[i];

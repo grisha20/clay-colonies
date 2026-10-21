@@ -220,9 +220,10 @@ func _setup_hud() -> void:
 	insp_panel.theme = GameHud.ink_theme()
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	insp_panel.offset_left = -376
-	insp_panel.offset_top = -290
+	# Above the build bar, which spans the bottom centre.
+	insp_panel.offset_top = -362
 	insp_panel.offset_right = -16
-	insp_panel.offset_bottom = -86
+	insp_panel.offset_bottom = -158
 	canvas.add_child(insp_panel)
 	var inspector_box = VBoxContainer.new()
 	insp_panel.add_child(inspector_box)

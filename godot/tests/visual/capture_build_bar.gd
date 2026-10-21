@@ -67,10 +67,10 @@ func run() -> void:
 		if opaque < 20:
 			empty += 1
 			print("BAR empty icon ", t, " ", opaque)
-	check("all_icons_rendered", empty == 0 and build.icon_textures.size() == 10, str(empty))
+	check("all_icons_rendered", empty == 0 and build.icon_textures.size() == BuildController.TOOLS.size(), str(empty))
 	var hut_count = (build.tile_counts["hut"] as Label).text
 	check("hut_count_shown", hut_count.contains("/8"), hut_count)
-	check("state_for_all_tools", build.toolbar_state.size() == 10)
+	check("state_for_all_tools", build.toolbar_state.size() == BuildController.TOOLS.size())
 	shot("bar_01")
 	build.set_tool("hut")
 	await wait_seconds(0.5)

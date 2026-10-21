@@ -10,8 +10,36 @@ import { buildingServicePoint } from "../../../shared/buildingGeometry";
 import { placementAccessWarning } from "../../../shared/placementAccess";
 import { taskApproach } from "./taskAccess";
 import { colonyWorldView } from "./world";
+import { territoryDiscs } from "../../../shared/territory";
 
 const inaccessibleSince = new WeakMap<Building, number>();
+
+/**
+ * Next totem toward the nearest spring this tribe does not hold (free ones
+ * first): a step from the own land disc closest to it, near that disc's edge,
+ * so a chain of totems walks the border out to the spring.
+ */
+export function totemSite(world: World, index: number): Vec2 | undefined {
+  const runtime = world.colonies[index], owner = runtime.id;
+  const springs = (world.surface.springs ?? []).filter(s => s.holder !== owner);
+  if (!springs.length) return undefined;
+  const discs = territoryDiscs(world.surface).filter(d => d.owner === owner);
+  const gap = (p: Vec2) => Math.min(...discs.map(d => Math.hypot(p.x - d.x, p.y - d.y) - d.r));
+  const target = [...springs].sort((a, b) => (a.holder ? 1 : 0) - (b.holder ? 1 : 0) || gap(a.pos) - gap(b.pos))[0];
+  if (gap(target.pos) > 90) return undefined;
+  const from = [...discs].sort((a, b) => Math.hypot(target.pos.x - a.x, target.pos.y - a.y) - a.r - (Math.hypot(target.pos.x - b.x, target.pos.y - b.y) - b.r))[0];
+  const base = Math.atan2(target.pos.y - from.y, target.pos.x - from.x);
+  const scoped = colonyWorldView(world, runtime);
+  for (const back of [5, 9, 13, 17]) for (const turn of [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8]) {
+    const s = from.r - back, a = base + turn;
+    const p = { x: Math.round(from.x + Math.cos(a) * s), y: Math.round(from.y + Math.sin(a) * s) };
+    if (pointBuildingPlacement(world.surface, owner, "totem", p)) continue;
+    const plan = { type: "totem", pos: p, colonyId: owner, id: "ai-plan", stage: "built" } as Building;
+    if (!taskApproach(scoped, buildingServicePoint(plan), 2)) continue;
+    return p;
+  }
+  return undefined;
+}
 
 function settlementSites(world:World,index:number,type:"hut"|"storage"|"workshop"|"idol"|"kiln"):Vec2[] {
   const runtime=world.colonies[index],camp=runtime.surfaceEntrance,scoped=colonyWorldView(world,runtime),rival=world.colonies[world.session.playerColonyIndex??0]?.surfaceEntrance;
@@ -120,6 +148,11 @@ export function updateSettlementAI(world: World): void {
     else if (built("storage") < 2 && population >= 20 && world.tick > 6000) type = "storage";
     else if (!built("kiln") && population >= 14 && world.tick > 5000 && c.stone >= 6) type = "kiln";
     else if (!built("idol") && world.tick > CONFIG.matchMinTicks / 2 && c.clay > 35 && c.stone > 10) type = "idol";
+    const pendingTotem = buildings.some(b => b.type === "totem" && b.stage !== "built");
+    if (!type && built("workshop") && !pendingTotem && built("totem") < CONFIG.maxTotemsPerColony && world.tick > 3000 && c.clay >= 14 && c.wood >= 8 && c.stone >= 4) {
+      const site = totemSite(world, index);
+      if (site && placePointBuilding(world, index, "totem", site.x, site.y)) continue;
+    }
     if (type) {
       for (const p of settlementSites(world,index,type)) if (!placementAccessWarning(world.surface,runtime.id,[{type,pos:p,colonyId:runtime.id,id:"ai-plan",stage:"built"} as Building])&&placePointBuilding(world, index, type, p.x, p.y)) break;
       continue;

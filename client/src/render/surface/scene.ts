@@ -614,6 +614,18 @@ export function updateBuildings(scene: SurfaceScene, world: WorldSnapshot, cell:
         g.rect(x - maskR * 0.35, y - poleH + maskR * 0.35, maskR * 0.7, 1.6).fill({ color: 0x2f1812, alpha: 0.9 });
         g.circle(x, y - poleH - maskR - 2, 1.4).fill({ color: 0xef9a64, alpha: 0.9 });
       }
+    } else if (building.type === "totem") {
+      // Тотем рода: столб с масками; раздвигает землю племени (shared/territory.ts).
+      const h = 5 * cell;
+      g.zIndex = y + 3;
+      if (building.stage !== "built") {
+        g.circle(x, y, 1.6 * cell).stroke({ width: 1.6, color: darkColor, alpha: 0.7 });
+        g.rect(x - 2, y - h * building.progress, 4, h * building.progress).fill({ color: clayColor, alpha: 0.6 });
+      } else {
+        g.rect(x - 3, y - h, 6, h).fill({ color: 0x8a5429, alpha: 1 });
+        for (let i = 0; i < 3; i++) g.circle(x, y - h * (0.3 + 0.28 * i), 4.5).fill({ color: clayColor, alpha: 1 }).stroke({ width: 1, color: darkColor, alpha: 1 });
+        g.rect(x - 7, y - h - 2, 14, 3).fill({ color: building.colonyId === "colony-2" ? 0x3d8ccc : 0xf2c548, alpha: 1 });
+      }
     } else if (building.type === "kiln") {
       // Печь обжига: глиняный купол с тёмным устьем; горит, пока идёт обжиг.
       const r = 2.2 * cell;

@@ -32,6 +32,8 @@ export type SurfaceTerrainData = {
   depositSites?: readonly DepositSite[];
   /** Woodland areas filled with trees at world creation. Absent: legacy random groves. */
   forests?: readonly ForestDefinition[];
+  /** Sources of special clay. Absent: none (older generated maps). */
+  springs?: readonly { x: number; y: number }[];
 };
 
 export type DepositSite = { id: string; kind: "clay" | "stone"; x: number; y: number };

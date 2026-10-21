@@ -1,5 +1,6 @@
 import type { DepositSite, ForestDefinition, HillDefinition, LakeDefinition, MountainDefinition, SurfaceTerrainData } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
+import { LEGACY_CAMPS } from "../../../shared/surfaceTerrain";
 
 // Random world layout for a new match. Everything is derived from one seed so
 // a world can be regenerated, compared and debugged. The layout is data
@@ -65,7 +66,7 @@ export type GeneratedLayout = { terrain: SurfaceTerrainData; attempts: number };
 export function generateTerrain(seed: number): GeneratedLayout {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const terrain = tryGenerate(seed, attempt);
-    if (terrain) return { terrain, attempts: attempt + 1 };
+    if (terrain) return { terrain: { ...terrain, springs: springSites(terrain, seed) }, attempts: attempt + 1 };
   }
   throw new Error(`terrain generation failed for seed ${seed}`);
 }
@@ -179,6 +180,69 @@ function tryGenerate(seed: number, attempt: number): SurfaceTerrainData | null {
 
   const terrain: SurfaceTerrainData = { version: 1, seed, lakes, mountains, hills, camps, depositSites, forests };
   return reachable(terrain) ? terrain : null;
+}
+
+/**
+ * Sources of special clay, placed after the map is accepted with their own
+ * random stream (the map itself does not change): a "home" pair — one 85-115
+ * from each camp, mirrored through the map centre so neither tribe is luckier,
+ * reachable with one or two totems — and a contested one near the centre.
+ * Clear of water, rock and quarries, on the walkable region.
+ */
+export function springSites(terrain: SurfaceTerrainData, seed: number): { x: number; y: number }[] {
+  const rand = mulberry32((seed ^ 0x5eed5) >>> 0);
+  const camps = terrain.camps ?? LEGACY_CAMPS;
+  const outlines = [...terrain.lakes.map((l) => l.outline), ...(terrain.mountains ?? []).map((m) => m.outline)];
+  const walk = walkableFrom(terrain, camps[0]);
+  const ok = (p: P, taken: P[]) =>
+    p.x > 30 && p.y > 30 && p.x < W - 30 && p.y < H - 30 && walk.reach(p) &&
+    Array.from({ length: 8 }, (_, i) => ({ x: p.x + Math.cos(i * Math.PI / 4) * 8, y: p.y + Math.sin(i * Math.PI / 4) * 8 })).every((q) => outlines.every((o) => !insidePolygon(q, o))) &&
+    !outlines.some((o) => insidePolygon(p, o)) &&
+    camps.every((c) => dist(c, p) > 80) &&
+    (terrain.depositSites ?? []).every((d) => dist(d, p) > 20) &&
+    taken.every((t) => dist(t, p) > 60);
+  const out: P[] = [];
+  const [a, b] = camps;
+  const home = (p: P, c: P) => dist(p, c) >= 85 && dist(p, c) <= 115;
+  for (let k = 0; k < 600 && out.length < 2; k += 1) {
+    const ang = Math.atan2(H / 2 - a.y, W / 2 - a.x) + (rand() - 0.5) * 2.2, r = 85 + rand() * 30;
+    const p = { x: round1(a.x + Math.cos(ang) * r), y: round1(a.y + Math.sin(ang) * r) };
+    const q = { x: round1(W - p.x), y: round1(H - p.y) };
+    if (b && !home(q, b)) continue;
+    if (ok(p, out) && ok(q, [...out, p])) out.push(p, q);
+  }
+  for (let k = 0; k < 300 && out.length < 3; k += 1) {
+    const p = { x: round1(W / 2 + (rand() - 0.5) * 120), y: round1(H / 2 + (rand() - 0.5) * 120) };
+    if (ok(p, out)) out.push(p);
+  }
+  return out;
+}
+
+function walkableFrom(terrain: SurfaceTerrainData, from: P): { reach: (p: P) => boolean } {
+  const cell = 4, cw = Math.ceil(W / cell), ch = Math.ceil(H / cell);
+  const blocked = new Uint8Array(cw * ch);
+  const outlines = [...terrain.lakes.map((l) => l.outline), ...(terrain.mountains ?? []).map((m) => m.outline)];
+  for (let y = 0; y < ch; y += 1) for (let x = 0; x < cw; x += 1) {
+    const p = { x: (x + 0.5) * cell, y: (y + 0.5) * cell };
+    if (p.x < 2 || p.y < 2 || p.x > W - 2 || p.y > H - 2 || outlines.some((o) => insidePolygon(p, o))) blocked[y * cw + x] = 1;
+  }
+  const idx = (p: P) => Math.floor(p.y / cell) * cw + Math.floor(p.x / cell);
+  const seen = new Uint8Array(cw * ch);
+  const start = idx(from);
+  if (!blocked[start]) {
+    seen[start] = 1;
+    const queue = [start];
+    for (let head = 0; head < queue.length; head += 1) {
+      const i = queue[head], x = i % cw, y = Math.floor(i / cw);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
+        const n = ny * cw + nx;
+        if (!seen[n] && !blocked[n]) { seen[n] = 1; queue.push(n); }
+      }
+    }
+  }
+  return { reach: (p: P) => seen[idx(p)] === 1 };
 }
 
 /** Flood fill on a 4-unit grid: camps, quarries and forests must share one walkable region. */

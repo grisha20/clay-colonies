@@ -42,6 +42,8 @@ import { resetEnemyRuntime } from "./enemy";
 import { resetBuilderRuntime } from "./ant/build";
 import { taskMotionReport } from "./taskProgress";
 import { submergedClay, submergedCorpse } from "../../../shared/surfaceRemains";
+import { createSprings } from "./springs";
+import { springSites } from "./terrainGen";
 import { ensureResourceDeposits } from "../../../shared/resourceDeposits";
 
 export type ColonyRuntime = {
@@ -804,8 +806,12 @@ export function createWorld(
     carrion: makeCarrionSources(),
     resourceNodes: makeResourceNodes(),
     buildings: [],
-    fish: createInitialFishPopulation()
+    fish: createInitialFishPopulation(),
+    // Classic map: springs from the same generator rule; generated maps carry theirs.
+    springs: createSprings(terrain.springs ?? (terrain.seed === 0 ? springSites(terrain, 0) : []))
   };
+  // No tree or stone on top of a spring.
+  surface.resourceNodes = surface.resourceNodes.filter(n => !surface.springs!.some(s => Math.hypot(s.pos.x - n.pos.x, s.pos.y - n.pos.y) < 5));
   ensureResourceDeposits(surface);
   const enemies: Enemy[] = [];
   const colonies = [

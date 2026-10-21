@@ -19,7 +19,9 @@ export function createObjectives(): Objective[] {
     { id: "wall-12", text: "Построить 12 сегментов стены", target: 12, progress: 0, done: false },
     { id: "pop-20", text: "Вырастить племя до 20 жителей", target: 20, progress: 0, done: false },
     { id: "kiln-1", text: "Построить печь обжига", target: 1, progress: 0, done: false },
-    { id: "fired-10", text: "Обжечь 10 жителей", target: 10, progress: 0, done: false }
+    { id: "fired-10", text: "Обжечь 10 жителей", target: 10, progress: 0, done: false },
+    { id: "totem-1", text: "Поставить тотем рода", target: 1, progress: 0, done: false },
+    { id: "spring-1", text: "Занять источник особой глины", target: 1, progress: 0, done: false }
   ];
 }
 
@@ -73,6 +75,12 @@ function currentValue(world: World, id: string): number {
       ).length;
     case "fired-10":
       return colony.colony.firedTotal ?? 0;
+    case "totem-1":
+      return world.surface.buildings.filter(
+        (building) => building.colonyId === colony.id && building.type === "totem" && building.stage === "built"
+      ).length;
+    case "spring-1":
+      return (world.surface.springs ?? []).filter((spring) => spring.holder === colony.id).length;
     case "win-spider":
       return colony.fitness.spidersKilled;
     case "win-idol":

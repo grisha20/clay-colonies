@@ -3,7 +3,7 @@ import type { Building, Vec2 } from "./types";
 export type BuildingFootprint = { x: number; y: number; rx: number; ry: number };
 export function buildingFootprint(building: Building): BuildingFootprint | null {
   if (building.stage !== "built" || building.type === "wall" || building.type === "gate") return null;
-  const shape = building.type === "hut" ? [4, 2.3, 0.5] : building.type === "workshop" ? [4.6, 2.6, 0.6] : building.type === "storage" ? [3.4, 2.1, 0.6] : building.type === "kiln" ? [2.4, 1.7, 0.3] : [1.8, 1, 0];
+  const shape = building.type === "hut" ? [4, 2.3, 0.5] : building.type === "workshop" ? [4.6, 2.6, 0.6] : building.type === "storage" ? [3.4, 2.1, 0.6] : building.type === "kiln" ? [2.4, 1.7, 0.3] : building.type === "totem" ? [1.1, 0.8, 0] : [1.8, 1, 0];
   return { x: building.pos.x, y: building.pos.y + shape[2], rx: shape[0], ry: shape[1] };
 }
 export function insideBuilding(x: number, y: number, f: BuildingFootprint): boolean {

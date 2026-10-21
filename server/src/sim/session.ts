@@ -102,7 +102,13 @@ export function updateOutcome(world: World): void {
     return;
   }
   const idol = world.surface.buildings.some(b => b.colonyId === primary.id && b.type === "idol" && b.stage === "built");
-  if (idol && primary.colony.fire >= 0.35) s.idolProgress = Math.min(CONFIG.idolRitualTicks, s.idolProgress + 1);
+  if (idol && primary.colony.fire >= 0.35 && s.idolProgress < CONFIG.idolRitualTicks) {
+    // With springs on the map the ritual feeds on special clay: one unit per
+    // idolSpecialClayEvery ticks of progress. Older saves without springs keep the old ritual.
+    const fed = !(world.surface.springs?.length) || s.idolProgress % CONFIG.idolSpecialClayEvery !== 0;
+    if (fed) s.idolProgress += 1;
+    else if ((primary.colony.specialClay ?? 0) >= 1) { primary.colony.specialClay! -= 1; s.idolProgress += 1; }
+  }
   const elapsed = world.tick - (s.startedAt ?? 0);
   if (elapsed >= CONFIG.matchMinTicks && world.objectives.some(o => o.victory && o.done)) {
     const id = world.objectives.find(o => o.victory && o.done)!.id;

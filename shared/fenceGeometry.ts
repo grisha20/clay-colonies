@@ -1,10 +1,11 @@
+import { territoryPlacement } from "./territory";
 import { WALL_CELL_SIZE, type Building, type ResourceDeposit, type Vec2 } from "./types";
 import { depositContains } from "./resourceDeposits";
 import { buildingFootprint, insideBuilding } from "./buildingGeometry";
 import { isWaterAt, isMountainAt } from "./surfaceTerrain";
 
 export type GateAxis = "horizontal" | "vertical";
-export type FenceSurface = { width: number; height: number; entrances: Vec2[]; buildings: Building[]; deposits?: ResourceDeposit[] };
+export type FenceSurface = { width: number; height: number; entrances: Vec2[]; buildings: Building[]; deposits?: ResourceDeposit[]; springs?: { pos: Vec2 }[] };
 export const GATE_SPAN = 3;
 export function fenceCellCenters(b: Pick<Building, "pos" | "type" | "gateAxis" | "gateSpan">): Vec2[] {
   const count = b.type === "gate" && b.gateSpan === GATE_SPAN ? GATE_SPAN : 1;
@@ -38,7 +39,8 @@ export function fencePlacement(surface: FenceSurface, owner: string, pos: Vec2, 
       if (f && insideBuilding(pos.x, pos.y, { ...f, rx: f.rx + half, ry: f.ry + half })) return "Слишком близко к зданию";
     }
   }
-  return null;
+  if (surface.springs?.some(s => Math.hypot(s.pos.x - pos.x, s.pos.y - pos.y) < 6)) return "Здесь бьёт источник особой глины";
+  return territoryPlacement(surface, owner, pos);
 }
 export function gatePlacement(surface: FenceSurface, owner: string, pos: Vec2, axis: GateAxis, entranceMargin = 7): string | null {
   for (const p of fenceCellCenters({ type: "gate", pos: snapFencePosition(pos), gateAxis: axis, gateSpan: GATE_SPAN })) {

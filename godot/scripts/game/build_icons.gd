@@ -9,7 +9,7 @@ extends RefCounted
 const SIZE := Vector2i(112, 88)
 ## kind -> [ortho size, look-at height]
 const FRAMING = {
-	"hut": [6.6, 1.3], "storage": [6.4, 0.8], "workshop": [6.2, 0.9], "idol": [4.2, 1.7], "kiln": [4.6, 1.0],
+	"hut": [6.6, 1.3], "storage": [6.4, 0.8], "workshop": [6.2, 0.9], "idol": [4.2, 1.7], "kiln": [4.6, 1.0], "totem": [4.6, 2.1],
 	"wall": [4.2, 0.7], "gate": [6.2, 1.3], "post": [3.8, 1.5],
 	"harvest": [3.0, 0.3], "forbid": [3.8, 0.5], "erase": [3.8, 0.5],
 }
@@ -84,6 +84,8 @@ static func _props(kind: String) -> Array:
 			return [_mesh(PropFactory.workshop())]
 		"idol":
 			return [_mesh(PropFactory.idol())]
+		"totem":
+			return [_mesh(PropFactory.totem(WorldView.POST_COLORS[0]))]
 		"kiln":
 			var oven = _mesh(PropFactory.kiln())
 			oven.add_child(_mesh(PropFactory.kiln_embers()))

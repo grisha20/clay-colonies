@@ -1,5 +1,6 @@
 import type { Advice, BuildingType, ResourceKind, Vec2 } from "../../../shared/types";
 import { CONFIG } from "../config";
+import { territoryDiscs } from "../../../shared/territory";
 import type { ColonyRuntime, World } from "./world";
 
 /**
@@ -58,6 +59,19 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
   if (site) {
     const res = missing(site.cost, site.delivered, c)!;
     out.push({ key: `site-${res}`, severity: "info", text: `На стройку не хватает ${RESOURCE_NAMES[res]}`, pos: { ...site.pos } });
+  }
+
+  // Springs of special clay: the idol ritual feeds on it.
+  const springs = world.surface.springs ?? [];
+  if (springs.length) {
+    const discs = territoryDiscs(world.surface).filter(d => d.owner === runtime.id);
+    const gap = (p: Vec2) => Math.min(...discs.map(d => Math.hypot(p.x - d.x, p.y - d.y) - d.r));
+    const free = springs.filter(s => !s.holder).sort((a, b) => gap(a.pos) - gap(b.pos))[0];
+    if (!springs.some(s => s.holder === runtime.id) && free && gap(free.pos) < 40)
+      out.push({ key: "spring", severity: "info", text: "Рядом ничей источник особой глины — поставь тотем в его сторону", pos: { ...free.pos } });
+    const lost = springs.find(s => s.holder && s.holder !== runtime.id);
+    if (lost && count("idol") && (c.specialClay ?? 0) < 1)
+      out.push({ key: "spring-enemy", severity: "warn", text: "Соседи держат источник — ритуалу Идола нужна особая глина", pos: { ...lost.pos } });
   }
 
   if (world.weather.state === "warning") {

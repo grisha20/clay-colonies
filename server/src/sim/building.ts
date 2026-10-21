@@ -61,6 +61,9 @@ function buildingCost(type: BuildingType): { clay: number; wood: number; stone: 
   if (type === "kiln") {
     return { ...CONFIG.kilnCost };
   }
+  if (type === "totem") {
+    return { ...CONFIG.totemCost };
+  }
   if (type === "gate") {
     return { ...CONFIG.gateCost };
   }
@@ -83,6 +86,9 @@ function buildingMaxHp(type: BuildingType): number {
   if (type === "kiln") {
     return CONFIG.kilnMaxHp;
   }
+  if (type === "totem") {
+    return CONFIG.totemMaxHp;
+  }
   if (type === "gate") {
     return CONFIG.gateMaxHp;
   }
@@ -104,6 +110,9 @@ export function buildRatePerTick(type: BuildingType): number {
   }
   if (type === "kiln") {
     return 1 / CONFIG.kilnBuildTicks;
+  }
+  if (type === "totem") {
+    return 1 / CONFIG.totemBuildTicks;
   }
   if (type === "gate") {
     return 1 / CONFIG.gateBuildTicks;
@@ -152,7 +161,7 @@ function createBuilding(colonyId: string, type: BuildingType, pos: Vec2): Buildi
 export function placePointBuilding(
   world: World,
   colonyIndex: number,
-  type: "hut" | "storage" | "idol" | "workshop" | "kiln",
+  type: "hut" | "storage" | "idol" | "workshop" | "kiln" | "totem",
   x: number,
   y: number
 ): boolean {
@@ -173,7 +182,9 @@ export function placePointBuilding(
           ? CONFIG.maxWorkshopsPerColony
           : type === "kiln"
             ? CONFIG.maxKilnsPerColony
-            : CONFIG.maxStoragesPerColony;
+            : type === "totem"
+              ? CONFIG.maxTotemsPerColony
+              : CONFIG.maxStoragesPerColony;
   if (pointBuildingPlacement(world.surface, colony.id, type, pos, limit, CONFIG.buildingEntranceMargin)) return false;
   world.surface.buildings.push(createBuilding(colony.id, type, pos));
   return true;

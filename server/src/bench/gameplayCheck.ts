@@ -384,7 +384,14 @@ try {
   scenario("Идол требует ритуал; победа останавливает тик, новая партия сбрасывает итог", () => {
     const w = fresh(); assert.ok(placePointBuilding(w, 0, "idol", 105, 254)); completeBuilding(w, w.surface.buildings.at(-1)!);
     updateObjectives(w); updateOutcome(w); assert.equal(w.session.status, "playing");
+    // The ritual feeds on special clay: without it, it cannot even start.
+    assert.ok((w.surface.springs?.length ?? 0) > 0);
+    w.colonies[0].colony.specialClay = 0;
+    for (let i = 0; i < 200; i++) updateOutcome(w);
+    assert.equal(w.session.idolProgress, 0);
+    w.colonies[0].colony.specialClay = Math.ceil(CONFIG.idolRitualTicks / CONFIG.idolSpecialClayEvery);
     for (let i = 0; i < CONFIG.idolRitualTicks; i++) updateOutcome(w);
+    assert.equal(w.colonies[0].colony.specialClay, 0);
     updateObjectives(w); updateOutcome(w); assert.equal(w.session.status, "playing");
     w.tick = CONFIG.matchMinTicks; updateOutcome(w); assert.equal(w.session.status, "victory");
     const tick = w.tick; step(w); assert.equal(w.tick, tick);

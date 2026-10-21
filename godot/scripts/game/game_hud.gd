@@ -79,7 +79,7 @@ func _build_top_bar() -> void:
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	bar.add_child(row)
-	for spec in [["clay", "Глина"], ["food", "Еда"], ["wood", "Дерево"], ["stone", "Камень"], ["people", "Жители"]]:
+	for spec in [["clay", "Глина"], ["special", "Особая глина — питает ритуал Идола; её дают источники на своей земле"], ["food", "Еда"], ["wood", "Дерево"], ["stone", "Камень"], ["people", "Жители"]]:
 		var cell = HBoxContainer.new()
 		cell.tooltip_text = spec[1]
 		var icon = TextureRect.new()
@@ -173,6 +173,7 @@ func update_from_snapshot(snapshot: Dictionary, population: int) -> void:
 		for v in stock.values():
 			food += float(v)
 	resource_labels.clay.text = str(int(float(colony.get("clay", 0))))
+	resource_labels.special.text = str(int(float(colony.get("specialClay", 0))))
 	resource_labels.food.text = str(int(food))
 	resource_labels.wood.text = str(int(float(colony.get("wood", 0))))
 	resource_labels.stone.text = str(int(float(colony.get("stone", 0))))
@@ -301,6 +302,10 @@ static func make_icon(kind: String) -> ImageTexture:
 						var y = 8 + k * 6 + t + int(float(x - 4) * 0.15)
 						if y >= 0 and y < 28:
 							img.set_pixel(x, y, Color(0.55, 0.36, 0.20) if t != 0 else Color(0.70, 0.50, 0.30))
+		"special":
+			_disc(img, Vector2(14, 16), 9.0, Color(0.62, 0.15, 0.11))
+			_disc(img, Vector2(11, 13), 3.2, Color(0.95, 0.45, 0.32))
+			_disc(img, Vector2(19, 9), 2.0, Color(1.0, 0.85, 0.55))
 		"stone":
 			_disc(img, Vector2(12, 17), 8.0, Color(0.58, 0.57, 0.53))
 			_disc(img, Vector2(19, 19), 6.0, Color(0.48, 0.47, 0.44))

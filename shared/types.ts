@@ -77,7 +77,7 @@ export type ZoneType = "harvest" | "forbid";
 
 // Постройки Clayfolk. Стены сидят в клетках 2x2 мировых единицы (сетка 240x240).
 export const WALL_CELL_SIZE = 2;
-export type BuildingType = "hut" | "wall" | "gate" | "storage" | "idol" | "workshop" | "kiln";
+export type BuildingType = "hut" | "wall" | "gate" | "storage" | "idol" | "workshop" | "kiln" | "totem";
 export type BuildingStage = "site" | "inProgress" | "built";
 
 export type Building = {
@@ -282,6 +282,8 @@ export type Colony = {
   firingPaused?: boolean;
   /** Residents fired so far in this match. */
   firedTotal?: number;
+  /** Special clay from held springs; feeds the idol ritual. */
+  specialClay?: number;
   /** Current advice of the tribe mother (server/src/sim/advisor.ts), recomputed. */
   advice?: Advice[];
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).
@@ -401,7 +403,12 @@ export type Surface = {
   fish: Fish[];
   /** Lakes and other terrain of this world. Absent in saves made before v21 terrain data: legacy map. */
   terrain?: SurfaceTerrainData;
+  /** Sources of special clay (server/src/sim/springs.ts). Absent in older saves. */
+  springs?: ClaySpring[];
 };
+
+/** A source of special clay held by the tribe on whose land it lies. */
+export type ClaySpring = { id: string; pos: Vec2; holder?: string; progress: number };
 
 export type SparseGrid = {
   i: number[];

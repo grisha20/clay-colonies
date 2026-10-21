@@ -27,6 +27,8 @@ static func get_building_footprint(building: Dictionary) -> Dictionary:
 		shape = [3.4, 2.1, 0.6]
 	elif b_type == "kiln":
 		shape = [2.4, 1.7, 0.3]
+	elif b_type == "totem":
+		shape = [1.1, 0.8, 0.0]
 
 	return {
 		"x": bx,

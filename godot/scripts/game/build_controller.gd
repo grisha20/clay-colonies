@@ -16,6 +16,7 @@ const TOOLS = [
 	["wall", "Ограда", "5"], ["gate", "Ворота", "6"],
 	["harvest", "Зона добычи", "7"], ["forbid", "Запрет", "8"], ["erase", "Ластик", "9"],
 	["post", "Пост обороны", "0"],
+	["totem", "Тотем рода", "T"],
 ]
 const HINTS = {
 	"hut": "Хижина: +4 к пределу жителей",
@@ -29,6 +30,7 @@ const HINTS = {
 	"forbid": "Запрет: жители сюда не ходят · тяните прямоугольник",
 	"erase": "Ластик: снимает зоны и недостроенную ограду",
 	"post": "Пост обороны: стража ждёт здесь, у ворот или у берега",
+	"totem": "Тотем рода: раздвигает землю племени — строить можно только на своей земле; источник особой глины на своей земле питает ритуал Идола",
 }
 const OK_COLOR := Color(0.35, 0.85, 0.4, 0.45)
 const BAD_COLOR := Color(0.95, 0.25, 0.2, 0.5)
@@ -81,9 +83,11 @@ static func _flat_material(c: Color) -> StandardMaterial3D:
 const GROUPS = [
 	["Жильё и хозяйство", ["hut", "storage", "workshop", "kiln", "idol"]],
 	["Оборона", ["wall", "gate", "post"]],
-	["Зоны", ["harvest", "forbid", "erase"]],
+	["Земля и зоны", ["totem", "harvest", "forbid", "erase"]],
 ]
 const TILE_TEXT := Color(0.98, 0.93, 0.82)
+## Short captions under the pictures; the tooltip carries the full name.
+const TILE_NAMES = {"kiln": "Печь", "post": "Пост", "totem": "Тотем", "harvest": "Добыча"}
 const COST_SHORT := Color(1.0, 0.55, 0.45)
 const RES_GENITIVE = {"clay": "глины", "wood": "дерева", "stone": "камня"}
 var tile_costs: Dictionary = {}    # tool -> {res: Label}
@@ -127,7 +131,7 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 		kinds.append(spec[0])
 	icon_textures = BuildIcons.create(self, kinds)
 	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 6)
 	toolbar.add_child(row)
 	var specs: Dictionary = {}
 	for spec in TOOLS:
@@ -144,7 +148,7 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 		title.add_theme_color_override("font_color", GameHud.INK.lightened(0.25))
 		group.add_child(title)
 		var tiles = HBoxContainer.new()
-		tiles.add_theme_constant_override("separation", 5)
+		tiles.add_theme_constant_override("separation", 4)
 		group.add_child(tiles)
 		for t in GROUPS[g][1]:
 			tiles.add_child(_make_tile(specs[t]))
@@ -165,7 +169,7 @@ func _make_tile(spec: Array) -> Button:
 	b.name = "Tool_" + t
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(96, 124)
+	b.custom_minimum_size = Vector2(78, 118)
 	b.tooltip_text = "%s  [%s]" % [HINTS[t], spec[2]]
 	b.add_theme_stylebox_override("normal", _tile_style(Color(0.45, 0.34, 0.23), Color(0.27, 0.19, 0.12), 2))
 	b.add_theme_stylebox_override("hover", _tile_style(Color(0.53, 0.41, 0.28), Color(0.33, 0.24, 0.15), 2))
@@ -185,7 +189,7 @@ func _make_tile(spec: Array) -> Button:
 	pic.texture = icon_textures.get(t)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.custom_minimum_size = Vector2(88, 68)
+	pic.custom_minimum_size = Vector2(70, 60)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(pic)
 	tile_icons[t] = pic
@@ -199,8 +203,10 @@ func _make_tile(spec: Array) -> Button:
 		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pic.add_child(s)
-	var name_label = _plain_label(spec[1], 13, TILE_TEXT)
+	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 12, TILE_TEXT)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	box.add_child(name_label)
 	var cost_row = HBoxContainer.new()
 	cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -215,11 +221,11 @@ func _make_tile(spec: Array) -> Button:
 		var ic = TextureRect.new()
 		ic.texture = GameHud.make_icon(res)
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		ic.custom_minimum_size = Vector2(16, 16)
+		ic.custom_minimum_size = Vector2(14, 14)
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cost_row.add_child(ic)
-		var n = _plain_label(str(int(cost[res])), 13, TILE_TEXT)
+		var n = _plain_label(str(int(cost[res])), 12, TILE_TEXT)
 		cost_row.add_child(n)
 		costs[res] = n
 	if costs.is_empty():
@@ -343,7 +349,7 @@ func set_tool(t: String) -> void:
 	if ghost_building:
 		ghost_building.queue_free()
 		ghost_building = null
-	if t in ["hut", "storage", "workshop", "idol", "kiln", "gate", "post"]:
+	if t in ["hut", "storage", "workshop", "idol", "kiln", "totem", "gate", "post"]:
 		ghost_building = _make_ghost(t)
 		ghost_root.add_child(ghost_building)
 	_hide_ghosts()
@@ -370,6 +376,9 @@ func _make_ghost(t: String) -> Node3D:
 		"kiln":
 			node = MeshInstance3D.new()
 			node.mesh = PropFactory.kiln()
+		"totem":
+			node = MeshInstance3D.new()
+			node.mesh = PropFactory.totem(WorldView.POST_COLORS[1 if _owner() == "colony-2" else 0])
 		"idol":
 			node = MeshInstance3D.new()
 			node.mesh = PropFactory.idol()
@@ -422,7 +431,7 @@ func update_preview(p: Vector2) -> void:
 	var surface = _surface()
 	var owner = _owner()
 	match tool:
-		"hut", "storage", "workshop", "idol", "kiln":
+		"hut", "storage", "workshop", "idol", "kiln", "totem":
 			last_reason = BuildRules.point_building_placement(surface, owner, tool, p)
 			ghost_building.visible = true
 			ghost_building.position = _ground(p)
@@ -476,7 +485,7 @@ func _cost_times(kind: String, n: int) -> String:
 
 
 func _hint(reason: String, kind: String) -> void:
-	var name = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "kiln": "Печь обжига", "gate": "Ворота"}.get(kind, "")
+	var name = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "kiln": "Печь обжига", "totem": "Тотем рода", "gate": "Ворота"}.get(kind, "")
 	var text = "%s · %s" % [name, BuildRules.cost_text(kind)] if reason == "" else "%s: %s" % [name, reason]
 	hud.show_tooltip(text, observer.get_viewport().get_mouse_position())
 
@@ -555,7 +564,7 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 	var p: Vector2 = ground_point.call(event.position)
 	if p == Vector2.INF:
 		return true
-	if tool in ["hut", "storage", "workshop", "idol", "kiln", "gate", "post"]:
+	if tool in ["hut", "storage", "workshop", "idol", "kiln", "totem", "gate", "post"]:
 		if event.pressed:
 			_place_point(p, event.shift_pressed)
 		return true

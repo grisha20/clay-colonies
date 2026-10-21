@@ -141,6 +141,8 @@ try {
   check("Предпросмотр: те же решения, что у сервера, для суши, воды, костра и занятого места", () => {
     for (const type of ["hut", "storage", "workshop", "idol"] as const) for (const [pos, allowed] of [[{ x: 20, y: 20 }, true], [{ x: 240, y: 140 }, false], [{ x: 360, y: 240 }, false]] as const) {
       const w = fresh();
+      // (20, 20) is far from camp: a built totem nearby makes it tribe A's land.
+      w.surface.buildings.push({ id: "probe-totem", colonyId: w.colonies[0].id, type: "totem", stage: "built", pos: { x: 35, y: 35 }, cost: { clay: 0, wood: 0, stone: 0 }, delivered: { clay: 0, wood: 0, stone: 0 }, progress: 1, hp: 150, maxHp: 150 });
       const probes = [[pos, allowed], [w.surface.entrances[0], false], [w.surface.buildings[0].pos, false]] as const;
       for (const [probe, expected] of probes) {
         assert.equal(pointBuildingPlacement(w.surface, w.colonies[0].id, type, probe) === null, expected);

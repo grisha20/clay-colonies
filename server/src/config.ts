@@ -363,6 +363,15 @@ export const CONFIG = {
   kilnWoodPerFiring: 2,
   kilnWoodReserve: 4,
   kilnCallTimeoutTicks: 1500,
+  // Тотем рода: раздвигает землю племени (shared/territory.ts).
+  totemCost: { clay: 12, wood: 6, stone: 4 },
+  totemMaxHp: 150,
+  totemBuildTicks: 200,
+  maxTotemsPerColony: POINT_BUILDING_LIMITS.totem,
+  // Источник особой глины: единица владельцу раз в N тиков; ритуал Идола
+  // съедает единицу на каждые idolSpecialClayEvery тиков прогресса.
+  springYieldTicks: 300,
+  idolSpecialClayEvery: 60,
   // Обожжённый житель: доля урона от воды и прибавка силы.
   firedWaterFactor: 0.35,
   firedStrengthBonus: 0.3,

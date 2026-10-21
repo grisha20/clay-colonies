@@ -59,6 +59,9 @@ var water_container: Node3D
 var atmosphere: Atmosphere
 var hut_lights: Array = []
 var kiln_nodes: Array = []
+## Special clay springs (surface.springs) and the land border uniforms.
+var spring_nodes: Dictionary = {}
+var land_signature: String = ""
 var defense_posts: Array = [null, null]
 const POST_COLORS = [Color(0.95, 0.78, 0.28), Color(0.24, 0.55, 0.80)]
 var mountain_container: Node3D
@@ -82,7 +85,7 @@ var sim_speed: float = 1.0
 var _source_cache: Dictionary = {}
 ## Latest snapshot, read by describe_at for hover tooltips.
 var last_snapshot: Dictionary = {}
-const BUILDING_NAMES = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "wall": "Ограда", "gate": "Ворота", "kiln": "Печь обжига"}
+const BUILDING_NAMES = {"hut": "Хижина", "storage": "Склад", "workshop": "Мастерская", "idol": "Идол", "wall": "Ограда", "gate": "Ворота", "kiln": "Печь обжига", "totem": "Тотем рода"}
 var _prewarm: Array[Callable] = []
 ## Targets residents are working on (EntityRegistry.worked_targets): trees shake.
 var worked_targets: Dictionary = {}
@@ -378,6 +381,8 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	var t0 = Time.get_ticks_usec()
 	_update_campfires(entrances)
 	_update_mothers(snapshot)
+	_update_springs(_as_array(surface.get("springs", [])))
+	_update_land(entrances, buildings)
 	_update_buildings(buildings)
 	FramePerf.add("wv.buildings", t0)
 	t0 = Time.get_ticks_usec()
@@ -703,6 +708,62 @@ func _update_mothers(snapshot: Dictionary) -> void:
 	known_residents = current
 	residents_seen = true
 
+func _update_springs(springs: Array) -> void:
+	var seen: Dictionary = {}
+	for s in springs:
+		if typeof(s) != TYPE_DICTIONARY:
+			continue
+		var id = str(s.get("id", ""))
+		seen[id] = true
+		var node = spring_nodes.get(id) as Node3D
+		if node == null:
+			node = MeshInstance3D.new()
+			node.name = "Spring_" + id
+			(node as MeshInstance3D).mesh = PropFactory.clay_spring()
+			var flag = MeshInstance3D.new()
+			flag.name = "Flag"
+			flag.mesh = PropFactory.post_pole()
+			flag.position = Vector3(2.0, 0, -1.2)
+			flag.scale = Vector3.ONE * 0.7
+			flag.visible = false
+			node.add_child(flag)
+			buildings_container.add_child(node)
+			spring_nodes[id] = node
+		node.position = _ground(_pos3(s.get("pos", {})))
+		var holder = str(s.get("holder", ""))
+		var flag = node.get_node("Flag") as MeshInstance3D
+		flag.visible = holder != ""
+		if holder != "" and flag.get_meta("holder", "") != holder:
+			flag.set_meta("holder", holder)
+			for c in flag.get_children():
+				c.queue_free()
+			var cloth = MeshInstance3D.new()
+			cloth.mesh = PropFactory.post_cloth(POST_COLORS[1 if holder == "colony-2" else 0])
+			cloth.position = Vector3(0.05, 2.85, 0)
+			flag.add_child(cloth)
+	for id in spring_nodes.keys():
+		if not seen.has(id):
+			var n = spring_nodes[id]
+			spring_nodes.erase(id)
+			if is_instance_valid(n):
+				n.queue_free()
+
+## Land discs of both tribes for the ground shader (border line in tribe colour).
+func _update_land(entrances: Array, buildings: Array) -> void:
+	var discs = BuildRules.territory_discs({"entrances": entrances, "buildings": buildings})
+	var sig = JSON.stringify(discs)
+	if sig == land_signature or ground_material == null:
+		return
+	land_signature = sig
+	var arr = PackedVector4Array()
+	for d in discs.slice(0, 12):
+		arr.append(Vector4(float(d.x), float(d.y), float(d.r), 1.0 if str(d.owner) == "colony-2" else 0.0))
+	var count = arr.size()
+	while arr.size() < 12:
+		arr.append(Vector4(0, 0, 0, 0))
+	ground_material.set_shader_parameter("lands", arr)
+	ground_material.set_shader_parameter("land_count", count)
+
 func _update_campfires(entrances: Array) -> void:
 	var seen_campfires: Dictionary = {}
 	for i in range(entrances.size()):
@@ -762,7 +823,8 @@ func _update_buildings(buildings: Array) -> void:
 		var b_stage = str(b.get("stage", "built"))
 		var vertical = str(b.get("gateAxis", "horizontal")) == "vertical"
 		var span = GATE_SPAN if int(b.get("gateSpan", 1)) == GATE_SPAN else 1
-		var key = "%s:%s:%s:%d" % [b_type, b_stage == "built", vertical, span]
+		var colony_idx = 1 if str(b.get("colonyId", "")) == "colony-2" else 0
+		var key = "%s:%s:%s:%d:%d" % [b_type, b_stage == "built", vertical, span, colony_idx]
 
 		var node: Node3D = active_buildings.get(b_id)
 		if node != null and node.get_meta("visual_key", "") != key:
@@ -770,7 +832,7 @@ func _update_buildings(buildings: Array) -> void:
 			node.queue_free()
 			node = null
 		if node == null:
-			node = _make_building(b_type, b_stage == "built", vertical, span)
+			node = _make_building(b_type, b_stage == "built", vertical, span, colony_idx)
 			node.name = "Building_" + b_id
 			node.set_meta("visual_key", key)
 			buildings_container.add_child(node)
@@ -805,7 +867,7 @@ func _update_buildings(buildings: Array) -> void:
 	if not b_to_remove.is_empty():
 		hut_lights = hut_lights.filter(func(l): return is_instance_valid(l) and not l.is_queued_for_deletion())
 
-func _make_building(b_type: String, built: bool, vertical: bool, span: int) -> Node3D:
+func _make_building(b_type: String, built: bool, vertical: bool, span: int, colony_idx: int = 0) -> Node3D:
 	match b_type:
 		"hut":
 			var hut_scene = load("res://assets/models/hut.glb") as PackedScene
@@ -851,6 +913,10 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int) -> N
 			var w = MeshInstance3D.new()
 			w.mesh = PropFactory.workshop()
 			return w
+		"totem":
+			var totem = MeshInstance3D.new()
+			totem.mesh = PropFactory.totem(POST_COLORS[clampi(colony_idx, 0, 1)])
+			return totem
 		"kiln":
 			var oven = MeshInstance3D.new()
 			oven.mesh = PropFactory.kiln()
@@ -958,6 +1024,7 @@ func _update_ground_features(entrances: Array, buildings: Array, deposits: Array
 			"storage": r = Vector2(4.4, 3.0)
 			"idol": r = Vector2(2.6, 2.0)
 			"kiln": r = Vector2(3.4, 2.6)
+			"totem": r = Vector2(2.2, 1.8)
 		yards.append(Vector4(p.x, p.z + 0.5, r.x, r.y))
 	var digs: Array = []
 	var dig_kinds: Array = []
@@ -1051,6 +1118,10 @@ func describe_at(p: Vector2) -> String:
 		var mother = mothers[i] as Node3D
 		if mother and mother.visible and Vector2(mother.global_position.x, mother.global_position.z).distance_to(p) < 1.6:
 			return "Праматерь %s · лепит новых жителей из глины" % tribe.call("colony-%d" % (i + 1))
+	for s in _as_array(surface.get("springs", [])):
+		if typeof(s) == TYPE_DICTIONARY and Vector2(float(s.pos.x), float(s.pos.y)).distance_to(p) < 2.6:
+			var holder = str(s.get("holder", ""))
+			return "Источник особой глины · %s" % ("ничей — поставь тотем рядом" if holder == "" else "у " + tribe.call(holder))
 	for i in range(2):
 		var post = defense_posts[i] as Node3D
 		if post and post.visible and Vector2(post.position.x, post.position.z).distance_to(p) < 1.5:

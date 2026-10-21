@@ -12,13 +12,20 @@ const ZONE_CELL_SIZE := 4.0
 const GATE_SPAN := 3
 const DEPOSIT_RX := 10.0
 const DEPOSIT_RY := 6.5
-const LIMITS := {"hut": 8, "storage": 6, "workshop": 2, "idol": 1, "kiln": 2}
+const LIMITS := {"hut": 8, "storage": 6, "workshop": 2, "idol": 1, "kiln": 2, "totem": 6}
+## shared/territory.ts: a tribe's land is a disc round its camp and one round
+## each built totem; building only on own land. shared/buildingPlacement.ts
+## SPRING_CLEARANCE keeps buildings off special clay springs.
+const CAMP_TERRITORY_RADIUS := 45.0
+const TOTEM_TERRITORY_RADIUS := 36.0
+const SPRING_CLEARANCE := 6.0
 const COSTS := {
 	"hut": {"clay": 8, "wood": 5, "stone": 0},
 	"storage": {"clay": 0, "wood": 6, "stone": 4},
 	"workshop": {"clay": 8, "wood": 4, "stone": 0},
 	"idol": {"clay": 25, "wood": 0, "stone": 5},
 	"kiln": {"clay": 10, "wood": 0, "stone": 6},
+	"totem": {"clay": 12, "wood": 6, "stone": 4},
 	"wall": {"clay": 2, "wood": 0, "stone": 0},
 	"gate": {"clay": 2, "wood": 1, "stone": 0},
 }
@@ -70,7 +77,44 @@ static func point_building_placement(surface: Dictionary, owner: String, type: S
 	for b in surface.get("buildings", []):
 		if _pos(b.get("pos")).distance_to(pos) < 8.0:
 			return "Слишком близко к другой постройке"
-	return ""
+	for s in surface.get("springs", []):
+		if _pos(s.get("pos")).distance_to(pos) < SPRING_CLEARANCE + frx:
+			return "Здесь бьёт источник особой глины"
+	return territory_placement(surface, owner, pos)
+
+
+static func territory_discs(surface: Dictionary) -> Array:
+	var discs: Array = []
+	var entrances = surface.get("entrances", [])
+	for i in range(entrances.size()):
+		var c = _pos(entrances[i])
+		discs.append({"x": c.x, "y": c.y, "r": CAMP_TERRITORY_RADIUS, "owner": "colony-%d" % (i + 1)})
+	for b in surface.get("buildings", []):
+		if str(b.get("type", "")) == "totem" and str(b.get("stage", "")) == "built":
+			var p = _pos(b.get("pos"))
+			discs.append({"x": p.x, "y": p.y, "r": TOTEM_TERRITORY_RADIUS, "owner": str(b.get("colonyId", ""))})
+	return discs
+
+
+## Owner of the land at p ("" for no one's): the disc with the largest margin.
+static func territory_owner_at(discs: Array, p: Vector2) -> String:
+	var owner = ""
+	var best = 0.0
+	for d in discs:
+		var margin = float(d.r) - p.distance_to(Vector2(float(d.x), float(d.y)))
+		if margin > best:
+			best = margin
+			owner = str(d.owner)
+	return owner
+
+
+static func territory_placement(surface: Dictionary, owner: String, p: Vector2) -> String:
+	if surface.get("entrances", []).is_empty():
+		return ""
+	var at = territory_owner_at(territory_discs(surface), p)
+	if at == owner:
+		return ""
+	return "Чужая земля" if at != "" else "Вне своей земли — поставь тотем ближе"
 
 
 static func snap_fence_position(p: Vector2) -> Vector2:
@@ -120,7 +164,10 @@ static func fence_placement(surface: Dictionary, owner: String, pos: Vector2, re
 				var grown = {"x": f.x, "y": f.y, "rx": float(f.rx) + half, "ry": float(f.ry) + half}
 				if BuildingGeometry.inside_footprint(pos.x, pos.y, grown):
 					return "Слишком близко к зданию"
-	return ""
+	for s in surface.get("springs", []):
+		if _pos(s.get("pos")).distance_to(pos) < SPRING_CLEARANCE:
+			return "Здесь бьёт источник особой глины"
+	return territory_placement(surface, owner, pos)
 
 
 static func gate_cell_centers(pos: Vector2, axis: String) -> Array[Vector2]:

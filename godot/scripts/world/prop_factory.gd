@@ -562,6 +562,49 @@ static func kiln_embers() -> ArrayMesh:
 		return b.commit())
 
 
+## Totem of a tribe: a carved clay-and-wood pole with stacked masks and
+## ribbons in the tribe colour, on a ring of stones. It claims land around it.
+static func totem(color: Color) -> ArrayMesh:
+	return _cached("totem:%s" % color.to_html(), func():
+		var b = Builder.new()
+		for k in range(9):
+			var a = TAU * float(k) / 9.0
+			b.add(sphere(0.24, 0.28, 8, 4), xf(Vector3(cos(a) * 0.95, 0.08, sin(a) * 0.8)), STONE if k % 2 == 0 else STONE_DARK, MAT_MATTE, 0.08, k)
+		b.add(cyl(0.34, 0.42, 3.6, 10), xf(Vector3(0, 1.8, 0)), WOOD, MAT_MATTE, 0.05)
+		# Three stacked faces of clay, the top one with a crest.
+		for i in range(3):
+			var y = 1.2 + 1.0 * float(i)
+			var face = CLAY.lerp(CLAY_LIGHT, 0.3 * float(i))
+			b.add(cyl(0.48, 0.5, 0.75, 12), xf(Vector3(0, y, 0)), face, MAT_MATTE, 0.04, i)
+			b.add(box(Vector3(0.55, 0.12, 0.08)), xf(Vector3(0, y - 0.12, 0.46)), Color(0.12, 0.09, 0.07), MAT_MATTE)
+			for side in [-1.0, 1.0]:
+				b.add(sphere(0.08, -1.0, 6, 4), xf(Vector3(0.16 * side, y + 0.12, 0.47)), Color(0.10, 0.08, 0.07), MAT_GLOSS)
+			b.add(cyl(0.52, 0.52, 0.09, 12), xf(Vector3(0, y + 0.38, 0)), color, MAT_MATTE)
+		for k in range(5):
+			var a = -0.8 + 0.4 * k
+			_stick(b, Vector3(0, 3.6, 0), Vector3(sin(a) * 0.7, 4.3 - 0.08 * absf(k - 2.0), -0.1), 0.05, WOOD_LIGHT, k)
+			b.add(box(Vector3(0.12, 0.38, 0.04)), xf(Vector3(sin(a) * 0.72, 4.12 - 0.08 * absf(k - 2.0), -0.1)), color if k % 2 == 0 else BONE, MAT_MATTE)
+		return b.commit())
+
+
+## Spring of special clay: a glossy red-ochre pool in a rim of pale clay,
+## with bubbles on top. Special clay is redder than the common one.
+static func clay_spring() -> ArrayMesh:
+	return _cached("clay_spring", func():
+		var b = Builder.new()
+		var red = Color(0.62, 0.17, 0.12)
+		b.add(cyl(1.0, 1.08, 0.18, 18), xf(Vector3(0, 0.06, 0), Vector3(2.4, 1, 2.0)), CLAY_LIGHT.lightened(0.15), MAT_MATTE, 0.06)
+		b.add(cyl(1.0, 1.0, 0.1, 18), xf(Vector3(0, 0.16, 0), Vector3(1.8, 1, 1.45)), red, MAT_GLOSS, 0.03)
+		for k in range(6):
+			var a = TAU * float(k) / 6.0 + 0.4
+			var r = 0.4 + 0.5 * float(k % 3) / 2.0
+			b.add(sphere(0.12 + 0.04 * float(k % 2), 0.14, 8, 4), xf(Vector3(cos(a) * r, 0.22, sin(a) * r * 0.8)), red.lightened(0.25), MAT_GLOSS)
+		for k in range(10):
+			var a = TAU * float(k) / 10.0
+			b.add(sphere(0.3, 0.28, 8, 4), xf(Vector3(cos(a) * 2.35, 0.1, sin(a) * 1.95)), red.darkened(0.15) if k % 3 == 0 else CLAY, MAT_MATTE, 0.1, k)
+		return b.commit())
+
+
 static func fence_post(gate_side: bool = false) -> ArrayMesh:
 	return _cached("fence_post:%s" % gate_side, func():
 		var b = Builder.new()
