@@ -25,6 +25,7 @@ const { surfacePointOpen, surfaceRoute, surfaceLineOpen } = await import("../../
 const { pointBuildingPlacement } = await import("../../../shared/buildingPlacement");
 const { isMountainAt, isTerrainBlockedAt, heightAt } = terrainModule;
 const { generateTerrain } = await import("../sim/terrainGen");
+const { listSaves, saveGameSlot, loadGameSlot } = await import("../state/snapshot");
 
 let seed = 4242, passed = 0;
 const originalRandom = Math.random;
@@ -185,6 +186,28 @@ try {
     }
     setSurfaceTerrain(LEGACY_TERRAIN);
   });
+
+  {
+    // Save slots: a named save keeps the generated map and is listed for the start menu.
+    const [g, s2, gb] = genomes();
+    const w = createWorld(g, s2, gb, generateTerrain(555).terrain);
+    for (let i = 0; i < 30; i++) step(w);
+    assert.deepEqual(await listSaves(), []);
+    const meta = await saveGameSlot(w, "Тестовая");
+    const list = await listSaves();
+    assert.equal(list.length, 1);
+    assert.equal(list[0].name, "Тестовая");
+    assert.equal(list[0].tick, w.tick);
+    assert.equal(list[0].mapSeed, 555);
+    setSurfaceTerrain(LEGACY_TERRAIN);
+    const loaded = await loadGameSlot(meta.id, g, s2, gb);
+    assert.ok(loaded);
+    assert.equal(loaded!.tick, w.tick);
+    assert.deepEqual(loaded!.surface.terrain, w.surface.terrain);
+    assert.equal(getSurfaceTerrain().seed, 555, "loading activates the save's map");
+    assert.equal(await loadGameSlot("../snapshot", g, s2, gb), null, "ids cannot escape the saves folder");
+    passed++; console.log("PASS  Сохранения: слот сохраняет случайную карту, виден в списке и загружается");
+  }
 
   console.log(`${passed} passed, 0 failed.`);
 } finally {

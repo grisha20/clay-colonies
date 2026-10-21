@@ -19,6 +19,7 @@ var server_line_edit: LineEdit
 var connect_button: Button
 var follow_button: Button
 var clear_selection_button: Button
+var start_menu: StartMenu
 
 var selected_resident_id: String = ""
 var last_snapshot_time: float = 0.0
@@ -50,6 +51,9 @@ func _ready() -> void:
 			custom_url = all_args[i + 1]
 		elif all_args[i] == "--qa-port" and i + 1 < all_args.size():
 			custom_url = "ws://127.0.0.1:" + all_args[i + 1]
+		elif all_args[i] == "--menu-address" and i + 1 < all_args.size():
+			# Start menu pointed at a specific (e.g. isolated QA) server.
+			ws_client.server_url = all_args[i + 1]
 		elif all_args[i] == "--test-recording":
 			is_tour_mode = true
 
@@ -58,6 +62,39 @@ func _ready() -> void:
 		ws_client.connect_to_server(custom_url)
 	elif ws_client.server_url != "":
 		server_line_edit.text = ws_client.server_url
+	# The start menu greets a normal launch (main scene, no explicit server);
+	# tests and recordings that instantiate the observer directly skip it.
+	call_deferred("_maybe_open_start_menu", custom_url == "")
+
+func _maybe_open_start_menu(no_explicit_server: bool) -> void:
+	if no_explicit_server and get_tree().current_scene == self:
+		open_start_menu()
+		if ws_client.current_state == WSClient.ClientState.DISCONNECTED:
+			ws_client.connect_to_server(server_line_edit.text)
+
+func open_start_menu() -> void:
+	start_menu.address_edit.text = server_line_edit.text
+	start_menu.visible = true
+
+func close_start_menu() -> void:
+	start_menu.visible = false
+
+func _on_menu_new_game(classic: bool) -> void:
+	# Keep the running match: autosave it to a slot before the server replaces it.
+	ws_client.send_command({"type": "saveGame", "name": "Перед новой игрой"})
+	ws_client.send_command({"type": "newGame", "classic": classic})
+	select_resident(null)
+	close_start_menu()
+
+func _on_menu_load(save_id: String) -> void:
+	ws_client.send_command({"type": "loadGame", "id": save_id})
+	select_resident(null)
+	close_start_menu()
+
+func _on_menu_address(url: String) -> void:
+	server_line_edit.text = url
+	ws_client.disconnect_from_server()
+	ws_client.connect_to_server(url)
 
 func _setup_hud() -> void:
 	var canvas = CanvasLayer.new()
@@ -141,6 +178,18 @@ func _setup_hud() -> void:
 	btn_cycle.pressed.connect(_cycle_resident_focus)
 	row_nav.add_child(btn_cycle)
 
+	var btn_save = Button.new()
+	btn_save.text = "Сохранить"
+	btn_save.pressed.connect(func():
+		ws_client.send_command({"type": "saveGame"})
+		status_label.text = "Сохранено")
+	row_nav.add_child(btn_save)
+
+	var btn_menu = Button.new()
+	btn_menu.text = "Меню"
+	btn_menu.pressed.connect(open_start_menu)
+	row_nav.add_child(btn_menu)
+
 	# Separate selection from camera following; keep the inspector on screen.
 	var insp_panel = PanelContainer.new()
 	insp_panel.mouse_force_pass_scroll_events = false
@@ -168,6 +217,14 @@ func _setup_hud() -> void:
 	clear_selection_button.text = "Снять выбор (Esc)"
 	clear_selection_button.pressed.connect(func(): select_resident(null))
 	inspector_actions.add_child(clear_selection_button)
+
+	start_menu = StartMenu.new()
+	start_menu.visible = false
+	canvas.add_child(start_menu)
+	start_menu.continue_requested.connect(close_start_menu)
+	start_menu.new_game_requested.connect(_on_menu_new_game)
+	start_menu.load_requested.connect(_on_menu_load)
+	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
 	help_label.position = Vector2(16, 140)
@@ -302,6 +359,9 @@ func _on_connection_error(msg: String) -> void:
 	entity_registry.on_network_stalled()
 
 func _on_state_changed(new_state: int, status_text: String) -> void:
+	if start_menu:
+		var texts = {WSClient.ClientState.DISCONNECTED: "Нет соединения с сервером. Запустите игру (Запуск.bat) или проверьте адрес.", WSClient.ClientState.CONNECTING: "Подключаемся…", WSClient.ClientState.WAITING_FOR_SNAPSHOT: "Ожидаем состояние мира…", WSClient.ClientState.CONNECTED: "Мир загружен."}
+		start_menu.set_connected(new_state == WSClient.ClientState.CONNECTED, texts.get(new_state, status_text))
 	match new_state:
 		WSClient.ClientState.DISCONNECTED:
 			status_label.text = "Нет соединения"
@@ -321,10 +381,16 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 	entity_registry.on_network_resumed()
 	# Terrain first: resident navigation and the world view both read it.
 	var surface = snapshot.get("surface", {})
-	if SurfaceTerrain.set_terrain(surface.get("terrain") if typeof(surface) == TYPE_DICTIONARY else null):
+	var terrain = surface.get("terrain") if typeof(surface) == TYPE_DICTIONARY else null
+	if SurfaceTerrain.differs(terrain):
+		# Meadow dressing threads read the terrain: stop them before swapping it.
+		world_view.ground_decor.stop_workers()
+		SurfaceTerrain.set_terrain(terrain)
 		world_view.apply_terrain()
 	entity_registry.update_from_snapshot(snapshot)
 	world_view.update_world_entities(snapshot)
+	if start_menu:
+		start_menu.set_saves(snapshot.get("saves", []))
 
 	var tick = int(snapshot.get("tick", 0))
 	var session = snapshot.get("session", {})

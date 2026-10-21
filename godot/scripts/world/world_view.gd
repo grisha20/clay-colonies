@@ -301,6 +301,12 @@ func apply_terrain() -> void:
 	ground_signature = ""
 	if ground_decor:
 		ground_decor.signature = ""
+	# Another world: its paths have not been walked yet.
+	if trail_map:
+		trail_map.data.fill(0)
+		trail_map.last_cells.clear()
+		trail_map.dirty = true
+		trail_map.upload()
 
 func _setup_camera() -> void:
 	camera_pivot = Node3D.new()

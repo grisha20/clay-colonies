@@ -166,6 +166,18 @@ func rebuild(entrances: Array, digs: Array, yards: Array, sig: String, focus: Ve
 	_task_id = WorkerThreadPool.add_task(_compute_all.bind(order, zones, gen), false, "Clayfolk ground decor")
 
 
+## Cancels in-flight placement and waits for worker threads to finish, so the
+## terrain they read can be swapped safely.
+func stop_workers() -> void:
+	_mutex.lock()
+	_generation += 1
+	_ready_chunks.clear()
+	_remaining = 0
+	_mutex.unlock()
+	_wait_task()
+	signature = ""
+
+
 func _wait_task() -> void:
 	for id in _old_tasks:
 		WorkerThreadPool.wait_for_task_completion(id)

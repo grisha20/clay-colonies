@@ -445,6 +445,20 @@ export type NetworkViewState = {
   undergroundColonyIndex: number;
 };
 
+/** A named save slot on the server (the running match autosaves separately). */
+export type SaveMeta = {
+  id: string;
+  name: string;
+  tick: number;
+  /** Wall-clock milliseconds when saved. */
+  savedAt: number;
+  /** Map seed of the saved world; 0 = classic map. */
+  mapSeed: number;
+  population: number[];
+};
+
 export type NetworkWorldSnapshot = WorldSnapshot & {
   networkView: NetworkViewState;
+  /** Save slots available for the start menu's "Load". */
+  saves?: SaveMeta[];
 };

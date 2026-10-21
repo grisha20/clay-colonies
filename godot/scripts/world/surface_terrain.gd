@@ -71,15 +71,25 @@ static func _ensure() -> void:
 		lakes = _legacy_lakes()
 		_signature = "legacy"
 
+static func signature_of(data: Variant) -> String:
+	if typeof(data) == TYPE_DICTIONARY and typeof(data.get("lakes")) == TYPE_ARRAY:
+		return str(data.get("seed", 0)) + ":" + JSON.stringify([data.get("lakes"), data.get("mountains", []), data.get("hills", [])])
+	return "legacy"
+
+## True when data describes different terrain than the active one.
+static func differs(data: Variant) -> bool:
+	_ensure()
+	return signature_of(data) != _signature
+
 ## Installs terrain from a snapshot's surface.terrain (null/invalid -> legacy map).
-## Returns true when the active terrain changed.
+## Returns true when the active terrain changed. Callers must stop worker
+## threads that read the terrain (GroundDecor.stop_workers) before a change.
 static func set_terrain(data: Variant) -> bool:
 	var next: Array = []
 	var next_mountains: Array = []
 	var next_hills: Array = []
-	var sig = "legacy"
-	if typeof(data) == TYPE_DICTIONARY and typeof(data.get("lakes")) == TYPE_ARRAY:
-		sig = str(data.get("seed", 0)) + ":" + JSON.stringify([data.get("lakes"), data.get("mountains", []), data.get("hills", [])])
+	var sig = signature_of(data)
+	if sig != "legacy":
 		for m in data.get("mountains", []):
 			if typeof(m) != TYPE_DICTIONARY or typeof(m.get("outline")) != TYPE_ARRAY:
 				continue

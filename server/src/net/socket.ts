@@ -58,6 +58,14 @@ export type ClientCommand =
       value: number;
     }
   | {
+      type: "saveGame";
+      name?: string;
+    }
+  | {
+      type: "loadGame";
+      id: string;
+    }
+  | {
       type: "newGame";
       /** Map seed; omitted = random. */
       seed?: number;
@@ -111,6 +119,12 @@ export function parseCommand(raw: string): ClientCommand | null {
       };
     }
 
+    if (command.type === "saveGame") {
+      return { type: "saveGame", name: typeof command.name === "string" ? command.name.slice(0, 40) : undefined };
+    }
+    if (command.type === "loadGame" && typeof command.id === "string" && /^save-[a-z0-9]{1,16}$/.test(command.id)) {
+      return { type: "loadGame", id: command.id };
+    }
     if (command.type === "newGame") {
       const seed = typeof command.seed === "number" && Number.isInteger(command.seed) && command.seed >= 0 && command.seed < 2 ** 31 ? command.seed : undefined;
       return { type: "newGame", seed, classic: command.classic === true };

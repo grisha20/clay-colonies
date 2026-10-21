@@ -1073,17 +1073,21 @@ export function randomTerrain(seed = Math.floor(Math.random() * 2 ** 31)): Surfa
 }
 
 export function restartColony(world: World, terrain: SurfaceTerrainData = randomTerrain()): void {
-  clearDeadAntPaths(new Set());
-  clearDeadPanic(new Set());
-  resetEnemyRuntime();
-  resetBuilderRuntime();
-  const freshWorld = createWorld(
+  replaceWorld(world, () => createWorld(
     world.colonies[0]?.genomeState ?? world.genomeState,
     world.spiderGenomeState,
     world.colonies[1]?.genomeState ?? world.genomeState,
     terrain
-  );
-  Object.assign(world, freshWorld);
+  ));
+}
+
+/** Swaps the running world in place (new match, loaded save) after clearing per-world runtime caches. */
+export function replaceWorld(world: World, make: () => World): void {
+  clearDeadAntPaths(new Set());
+  clearDeadPanic(new Set());
+  resetEnemyRuntime();
+  resetBuilderRuntime();
+  Object.assign(world, make());
 }
 
 function normalizeEnemies(snapshot: WorldSnapshot & { enemies?: Enemy[] }): Enemy[] {

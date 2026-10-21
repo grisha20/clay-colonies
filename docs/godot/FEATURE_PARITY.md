@@ -42,3 +42,6 @@
 | | Панели HUD | HTML/Canvas оверлеи | `godot/scripts/game/world_observer.gd`, Control / CanvasLayer | Observer controls + live observer integration | partial | Подключение, население, скорость и инспектор жителя; склады, задачи партии, тревога и игровые команды ещё не реализованы |
 | | Смена племени | `takeControl` (colony 0 / 1) | Кнопка переключения племени | Обновление управляемой колонии | Planned (M3) | Поддержка хотсита A/B |
 | | Технический офсет-редактор | `editor.ts` (сдвиг 2D спрайтов) | Не требуется в 3D | — | Excluded | Технический долг PixiJS |
+| **Мир и партия** | Случайная карта | — (в 2D карта была фиксированной) | `server/src/sim/terrainGen.ts`, `surface.terrain`, `surface_terrain.gd` | check:terrain, test_surface_terrain (паритет) | implemented | Углы, озёра, хребты, холмы, леса, честные карьеры |
+| | Горы и холмы | — | Скальные массивы `PropFactory.mountain`, рельеф в `ground.gdshader` | GPU-кадры, check:terrain | implemented | Горы непроходимы, холмы визуальные |
+| | Стартовое меню и сохранения | Кнопка «Новая игра» | `start_menu.gd`, `saveGame`/`loadGame`/`newGame` | test_start_menu.gd | implemented | Автосохранение перед новой игрой |

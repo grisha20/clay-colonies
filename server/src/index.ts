@@ -4,9 +4,9 @@ import { CONFIG } from "./config";
 import { loadGenome } from "./ai/genome";
 import { loadSpiderGenome } from "./ai/spiderGenome";
 import { createSocketHub } from "./net/socket";
-import { loadWorldSnapshot, saveWorldSnapshot } from "./state/snapshot";
-import { addFoodSource, createWorld, restartColony, toNetworkSnapshot, randomTerrain } from "./sim/world";
-import { LEGACY_TERRAIN } from "../../shared/surfaceTerrain";
+import { listSaves, loadGameSlot, loadWorldSnapshot, saveGameSlot, saveWorldSnapshot } from "./state/snapshot";
+import { addFoodSource, createWorld, restartColony, toNetworkSnapshot, randomTerrain, replaceWorld } from "./sim/world";
+import { LEGACY_TERRAIN, setSurfaceTerrain } from "../../shared/surfaceTerrain";
 import { eraseColonyZone, paintColonyZone } from "./sim/zones";
 import { eraseBuildCells, paintWallCells, placeGate, placePointBuilding, isSurfaceBlockedAt } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
@@ -21,7 +21,29 @@ const loadedWorld = await loadWorldSnapshot(genomeState, spiderGenomeState, geno
 const world = loadedWorld ?? createWorld(genomeState, spiderGenomeState, genomeStateB, randomTerrain());
 
 let loop: LoopController;
-const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetworkSnapshot(world, includePheromones, view), (command) => {
+// Save slots for the start menu; refreshed after every save.
+let saves = await listSaves();
+const networkSnapshot = (view: Parameters<typeof toNetworkSnapshot>[2], includePheromones: boolean) => ({ ...toNetworkSnapshot(world, includePheromones, view), saves });
+const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkSnapshot(view, includePheromones), (command) => {
+  if (command.type === "saveGame") {
+    saveGameSlot(world, command.name)
+      .then(async (meta) => { saves = await listSaves(); console.log(`Saved slot ${meta.id} "${meta.name}" at tick ${meta.tick}`); })
+      .catch((error: unknown) => console.warn(`Could not save slot: ${(error as Error).message}`));
+    return;
+  }
+  if (command.type === "loadGame") {
+    const previousTerrain = world.surface.terrain;
+    loadGameSlot(command.id, world.colonies[0]?.genomeState ?? genomeState, world.spiderGenomeState, world.colonies[1]?.genomeState ?? genomeStateB)
+      .then((loaded) => {
+        if (!loaded) { setSurfaceTerrain(previousTerrain); return; }
+        replaceWorld(world, () => loaded);
+        setSurfaceTerrain(world.surface.terrain);
+        loop.setSpeed(1);
+        console.log(`Loaded slot ${command.id} at tick ${world.tick}`);
+      })
+      .catch((error: unknown) => { setSurfaceTerrain(previousTerrain); console.warn(`Could not load slot: ${(error as Error).message}`); });
+    return;
+  }
   if (world.session.status !== "playing" && command.type !== "newGame" && command.type !== "setSpeed" && command.type !== "setView" && command.type !== "takeControl") return;
   if (command.type === "takeControl" && command.colonyIndex !== (world.session.playerColonyIndex ?? 0)) {
     world.session.playerColonyIndex = command.colonyIndex;
@@ -101,7 +123,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => toNetwor
   }
 });
 loop = startLoop(world, (includePheromones) => {
-  hub.broadcast((view) => toNetworkSnapshot(world, includePheromones, view));
+  hub.broadcast((view) => networkSnapshot(view, includePheromones));
 });
 
 const gracefulExit = () => {
