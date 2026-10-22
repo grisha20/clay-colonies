@@ -82,7 +82,9 @@ function moveFishToward(fish: Fish, target: Vec2, speed: number): void {
   if (distance <= 0.001) {
     return;
   }
-  turnFishToward(fish, { x: dx / distance, y: dy / distance }, 0.09);
+  // Close to the float the fish turns sharply: with a lazy turn it circled the
+  // float about 2 units out and never came within the bite radius.
+  turnFishToward(fish, { x: dx / distance, y: dy / distance }, distance < 4 ? 0.5 : 0.12);
   const step = Math.min(distance * 0.16, speed);
   const next = { x: fish.pos.x + fish.heading.x * step, y: fish.pos.y + fish.heading.y * step };
   if (lakeIdAt(next.x, next.y) === fish.lakeId && lakeFieldAt(next.x, next.y) > 0.04) {
@@ -211,7 +213,14 @@ function fishingSpots(world: World): FishingSpot[] {
         // Place both points close to the common cell edge: the fisher remains dry and the float remains wet.
         const lure = { x: x + direction.x * cell * 0.22, y: y + direction.y * cell * 0.22 };
         const dry = { x: x + direction.x * cell * 0.78, y: y + direction.y * cell * 0.78 };
-        if (lakeIdAt(lure.x, lure.y) === lakeId && !lakeIdAt(dry.x, dry.y)) {
+        // Fish keep off the shallows (lakeField > 0.04 in moveFishToward):
+        // cast out until the float sits in water a fish can reach.
+        for (let k = 0; k < 10 && lakeFieldAt(lure.x, lure.y) < CONFIG.fishingLureMinDepth; k += 1) {
+          const next = { x: lure.x - direction.x * 0.5, y: lure.y - direction.y * 0.5 };
+          if (lakeIdAt(next.x, next.y) !== lakeId) break;
+          lure.x = next.x; lure.y = next.y;
+        }
+        if (lakeIdAt(lure.x, lure.y) === lakeId && lakeFieldAt(lure.x, lure.y) >= CONFIG.fishingLureMinDepth && !lakeIdAt(dry.x, dry.y)) {
           spots.push({ lakeId, stand: dry, lure });
         }
       }
@@ -255,26 +264,49 @@ function validSpot(world: World, spot: FishingSpot): boolean {
   );
 }
 
-function assignTarget(world: World, ant: Ant, fish: Fish): boolean {
-  let best: FishingSpot | undefined;
-  let bestScore = Number.POSITIVE_INFINITY;
-  for (const spot of fishingSpots(world)) {
-    if (spot.lakeId !== fish.lakeId || !validSpot(world, spot)) {
-      continue;
-    }
-    const occupied = world.ants.some(
-      (other) => other.id !== ant.id && other.job === "fish" && other.fishingStandPos && isWithinRadius(other.fishingStandPos, spot.stand, 2)
-    );
-    if (occupied) {
-      continue;
-    }
-    const score = Math.hypot(ant.pos.x - spot.stand.x, ant.pos.y - spot.stand.y) +
-      Math.hypot(fish.pos.x - spot.lure.x, fish.pos.y - spot.lure.y) * 0.3;
-    if (score < bestScore && taskApproach(world,spot.stand)) {
-      bestScore = score;
-      best = spot;
-    }
+/**
+ * Best stand for this ant and fish, scored in ticks: the walk to the stand
+ * plus the fish's swim to the lure (it swims slower than a resident walks, so
+ * a stand by the fish beats one by the camp). Stands near a lake monster of
+ * that lake are skipped: it chased fishers off before the fish ever arrived.
+ */
+/** Stands usable right now: open, not forbidden, no monster at the lure, not taken by another fisher. */
+function openSpots(world: World, exceptAnt?: string): FishingSpot[] {
+  const monsters = world.enemies.filter(e => e.hp > 0 && e.type === "lakeMonster");
+  const taken = world.ants.filter(o => o.id !== exceptAnt && o.job === "fish" && o.fishingStandPos).map(o => o.fishingStandPos!);
+  return fishingSpots(world).filter(spot =>
+    validSpot(world, spot) &&
+    !monsters.some(m => m.lakeId === spot.lakeId && Math.hypot(m.pos.x - spot.lure.x, m.pos.y - spot.lure.y) < CONFIG.fishingMonsterClearance) &&
+    !taken.some(p => isWithinRadius(p, spot.stand, 2)));
+}
+
+function bestSpot(world: World, ant: Ant, fish: Fish, open = openSpots(world, ant.id), verify = true): { spot: FishingSpot; score: number } | undefined {
+  const scored: Array<{ spot: FishingSpot; score: number }> = [];
+  for (const spot of open) {
+    if (spot.lakeId !== fish.lakeId) continue;
+    const swim = Math.hypot(fish.pos.x - spot.lure.x, fish.pos.y - spot.lure.y);
+    if (swim > CONFIG.fishingMaxSwim) continue;
+    // Fish keep wandering while the fisher walks, so a short walk counts more
+    // than a fish that happens to be close right now.
+    scored.push({ spot, score: Math.hypot(ant.pos.x - spot.stand.x, ant.pos.y - spot.stand.y) / CONFIG.workerSurfaceSpeed + swim / CONFIG.fishLureSpeed * 0.35 });
   }
+  scored.sort((a, b) => a.score - b.score);
+  // Reachability is the expensive part: check only the few best stands.
+  return verify ? scored.slice(0, 4).find(s => taskApproach(world, s.spot.stand)) : scored[0];
+}
+
+/** Interrupted by a scare or a shower: keep the fish and stand, stop the cast. */
+export function pauseFishing(world: World, ant: Ant): void {
+  const target = world.surface.fish.find((fish) => fish.id === ant.fishingTargetId);
+  if (target?.targetAntId === ant.id && target.state === "lured") {
+    target.lurePos = undefined;
+    target.state = "swim";
+  }
+  ant.fishingTicks = 0;
+}
+
+function assignTarget(world: World, ant: Ant, fish: Fish, found = bestSpot(world, ant, fish)): boolean {
+  const best = found?.spot;
   if (!best) {
     return false;
   }
@@ -327,19 +359,18 @@ export function assignFishingJobs(world: World): void {
     if (retained >= cap || availableFish.length === 0 || foragersLeft(world) <= CONFIG.minForagers) {
       break;
     }
-    let bestIndex = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < availableFish.length; index += 1) {
-      const fish = availableFish[index];
-      const distance = (ant.pos.x - fish.pos.x) ** 2 + (ant.pos.y - fish.pos.y) ** 2;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = index;
+    // Pick the fish and stand that land a catch soonest, not just the nearest fish.
+    // Rank by distance only; check reachability for the best few fish.
+    const open = openSpots(world, ant.id);
+    const ranked = availableFish.map((fish, index) => ({ index, found: bestSpot(world, ant, fish, open, false) }))
+      .filter(r => r.found).sort((x, y) => x.found!.score - y.found!.score);
+    for (const r of ranked.slice(0, 3)) {
+      const found = bestSpot(world, ant, availableFish[r.index], open);
+      if (found && assignTarget(world, ant, availableFish[r.index], found)) {
+        availableFish.splice(r.index, 1);
+        retained += 1;
+        break;
       }
-    }
-    if (bestIndex >= 0 && assignTarget(world, ant, availableFish[bestIndex])) {
-      availableFish.splice(bestIndex, 1);
-      retained += 1;
     }
   }
 }

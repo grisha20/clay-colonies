@@ -412,13 +412,21 @@ export const CONFIG = {
   // Рыбалка: постоянная популяция в каждом озере, видимый подход рыбы к поплавку и медленное восстановление.
   fishPerLake: 16,
   fishSwimSpeed: 0.075,
-  fishLureSpeed: 0.14,
+  fishLureSpeed: 0.22,
+  /** Stands whose lure lies this close to a lake monster (or 0.6× to its lair) are skipped. */
+  fishingMonsterClearance: 16,
+  /** A fish farther than this from a stand's lure is not worth that stand. */
+  fishingMaxSwim: 30,
+  /** A lake monster still in the water scares residents only within this radius (on land: 11). */
+  lakeMonsterScareRadius: 6,
+  /** Floats are cast at least this deep (lakeField): fish refuse the shallows. */
+  fishingLureMinDepth: 0.09,
   fishTurnEveryTicks: 70,
   fishWanderAngle: 0.42,
   fishTurnBlend: 0.18,
   fishShoreLookAhead: 4,
   fishingStandRadius: 1.15,
-  fishingBiteRadius: 0.8,
+  fishingBiteRadius: 1.2,
   fishingMinCastTicks: 70,
   fishRespawnMinTicks: 1100,
   fishRespawnMaxTicks: 1900,

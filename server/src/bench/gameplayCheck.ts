@@ -50,13 +50,15 @@ function fresh() {
 }
 
 try {
-  scenario("Рыбалка: бегство разрывает заброс, освобождает рыбу и не оставляет леску через карту",()=>{
+  scenario("Рыбалка: бегство прерывает заброс, рыба и место сохраняются, леска не тянется через карту",()=>{
     const w=fresh(),c=w.colonies[0],a=c.ants[0],scoped=colonyWorldView(w,c),fish=w.surface.fish[0];
     a.job="fish";a.pos={x:182,y:161.12};a.state="idle";a.carrying=0;a.fishingStandPos={...a.pos};a.fishingLurePos={x:182,y:158.88};a.fishingTargetId=fish.id;a.fishingTicks=20;
     fish.targetAntId=a.id;fish.state="lured";fish.lurePos={...a.fishingLurePos};assert.equal(fishingCastActive(a),true);
     c.colony.alarm=true;scoped.enemies=[];stepAnt(scoped,a);
-    assert.equal(a.fishingLurePos,undefined);assert.equal(a.fishingTargetId,undefined);assert.equal(fish.targetAntId,undefined);assert.equal(fish.state,"swim");
-    c.colony.alarm=false;c.colony.rods=1;c.colony.priorities.fish=1;assignFishingJobs(scoped);assert.ok(a.fishingStandPos,"fishing can be assigned again after danger");assert.equal(a.fishingTicks,0);
+    // Paused, not dropped: the fish stops coming to the float, the fisher keeps fish and stand.
+    assert.equal(a.fishingTicks,0);assert.equal(fish.state,"swim");assert.equal(fish.lurePos,undefined);
+    assert.equal(a.fishingTargetId,fish.id);assert.equal(fish.targetAntId,a.id);assert.ok(a.fishingStandPos,"stand kept for after the danger");
+    c.colony.alarm=false;c.colony.rods=1;c.colony.priorities.fish=1;assignFishingJobs(scoped);assert.ok(a.fishingStandPos,"fishing continues after danger");assert.equal(a.fishingTicks,0);
     a.pos={x:400,y:400};a.state="idle";a.job="fish";a.fishingTicks=20;a.fishingStandPos={x:182,y:161.12};a.fishingLurePos={x:182,y:158.88};assert.equal(fishingCastActive(a),false);
   });
   scenario("Дождь: еда и топливо сдаются до сушки, профессии и строительный груз сохраняются", () => {

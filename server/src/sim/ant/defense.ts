@@ -140,7 +140,10 @@ export function moveToSafety(world: World, ant: Ant): boolean {
   const rememberedId = refuge?.enemyId;
   const remembered = rememberedId && world.enemies.find(e => e.id === rememberedId && e.hp > 0);
   const home = world.surface.entrance;
-  const danger = world.enemies.find(e => e.hp > 0 && dist(e.pos, ant.pos) < 11) ??
+  // A lake monster still in the water only scares from close by (it grabs at
+  // the shore); one that came out on land is as dangerous as anything else.
+  const scareRadius = (e: { type: string; pos: Vec2 }) => e.type === "lakeMonster" && isWaterAt(e.pos.x, e.pos.y) ? CONFIG.lakeMonsterScareRadius : 11;
+  const danger = world.enemies.find(e => e.hp > 0 && dist(e.pos, ant.pos) < scareRadius(e)) ??
     (remembered && (world.tick < refuge!.until || dist(remembered.pos, home) < 14) ? remembered : undefined);
   if (!danger) { refuges.delete(ant); refuge = undefined; }
   if (!world.colony.alarm && !danger && (ant.rescuedUntil ?? 0) <= world.tick) return false;

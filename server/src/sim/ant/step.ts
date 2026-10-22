@@ -16,7 +16,7 @@ import {
   moveHungryToFood,
   moveSearching
 } from "./forage";
-import { moveFishing, releaseFish } from "../fishing";
+import { moveFishing, releaseFish, pauseFishing } from "../fishing";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { consumeFoodStock } from "../foodStock";
 import { dissolveAnt } from "../water";
@@ -46,7 +46,9 @@ export function updateWaterExposure(ant: Ant, world?: World): boolean {
 
 export function stepSurface(world: World, ant: Ant): void {
   const hadCast=ant.job==="fish"||!!ant.fishingTargetId;
-  if (moveToSafety(world, ant) || moveToRainShelter(world, ant) || moveDefending(world, ant)) {if(hadCast)releaseFish(world,ant);return;}
+  // A scare or a shower only pauses a fisher: the fish and stand are kept and
+  // the cast resumes afterwards (dropping them left fishers idle and re-queued).
+  if (moveToSafety(world, ant) || moveToRainShelter(world, ant) || moveDefending(world, ant)) {if(hadCast)pauseFishing(world,ant);return;}
   if (moveToKiln(world, ant)) return;
   if (
     (ant.forageRole === "scout" || (ant.forageRole === "forager" && !!world.colony.activeFoodTargetId)) &&
