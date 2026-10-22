@@ -343,6 +343,10 @@ def verify(mesh,arm):
     return stats
 
 def main():
+    if (ROOT/'art/blender/resident_v3.blend').exists() and '--rebuild-from-hunyuan' not in sys.argv:
+        raise SystemExit('resident_v3.blend is the authored sculpt/paint source. '
+                         'Use export_resident_v3.py to export it. '
+                         'Only --rebuild-from-hunyuan explicitly discards the art edits.')
     mesh,original,scale=prepare();counts=textures_and_materials(mesh,original)
     release_arm_contacts(mesh)
     source_tree=KDTree(len(original))
