@@ -9,9 +9,10 @@ import { CONFIG } from "../config";
 export function createObjectives(hasSprings = true): Objective[] {
   return [
     // Пути победы: достаточно одного, у каждого своё «послевкусие».
-    { id: "win-spider", text: "Одолеть паука (этап обороны)", target: 1, progress: 0, done: false, victory: true },
-    { id: "win-bigrain", text: "Пережить Большой дождь с костром", target: 1, progress: 0, done: false, victory: true },
-    { id: "win-idol", text: "Завершить ритуал Идола у живого костра", target: CONFIG.idolRitualTicks, progress: 0, done: false, victory: true },
+    { id: "win-dominance", text: `Держать ${CONFIG.dominanceSprings} источника особой глины сутки`, target: CONFIG.dominanceTicks, progress: 0, done: false, victory: true },
+    { id: "win-idol", text: "Завершить ритуал Идола (живой костёр и особая глина)", target: CONFIG.idolRitualTicks, progress: 0, done: false, victory: true },
+    { id: "win-bigrain", text: "Пережить Великий ливень сильнее соседей", target: 1, progress: 0, done: false, victory: true },
+    { id: "win-spider", text: "Одолеть паука", target: 1, progress: 0, done: false },
     // Обучение: ведёт новичка по петле.
     { id: "clay-40", text: "Запасти 40 глины", target: 40, progress: 0, done: false },
     { id: "stone-25", text: "Запасти 25 камня", target: 25, progress: 0, done: false },
@@ -23,7 +24,7 @@ export function createObjectives(hasSprings = true): Objective[] {
     { id: "fired-10", text: "Обжечь 10 жителей", target: 10, progress: 0, done: false },
     { id: "totem-1", text: "Поставить тотем рода", target: 1, progress: 0, done: false },
     { id: "spring-1", text: "Занять источник особой глины", target: 1, progress: 0, done: false }
-  ].filter((goal) => hasSprings || goal.id !== "spring-1");
+  ].filter((goal) => hasSprings || (goal.id !== "spring-1" && goal.id !== "win-dominance"));
 }
 
 // Старые сохранения: сохраняем done-флаги, текст/цели берём из кода.
@@ -87,7 +88,11 @@ function currentValue(world: World, id: string): number {
     case "win-idol":
       return world.session.idolProgress;
     case "win-bigrain":
-      return world.weather.bigRainDone && world.weather.bigRainSurvived ? 1 : 0;
+      // Older saves: the early Big Rain survived with the fire, as before.
+      if ((world.weather.bigRainAt ?? CONFIG.bigRainAtTicks) < CONFIG.bigRainAtTicks) return world.weather.bigRainDone && world.weather.bigRainSurvived ? 1 : 0;
+      return world.session.finaleWon ? 1 : 0;
+    case "win-dominance":
+      return world.session.dominance?.holder === colony.id ? world.tick - world.session.dominance.since : 0;
     default:
       return 0;
   }

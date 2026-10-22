@@ -44,10 +44,12 @@ try {
     assert.ok(moveBuilding(scoped, a)); assert.ok(Math.abs(a.carrying - 0.28) < 0.00001);
     a.pos = { ...site.pos }; moveBuilding(scoped, a); assert.equal(site.delivered.wood, site.cost.wood);
   });
-  check("Партия: первый паук/дождь не завершают 12 минут; финал на 2–3 часах", () => {
-    const w = fresh(); w.objectives.find(o => o.id === "win-spider")!.done = true; w.tick = 7200;
-    updateOutcome(w); assert.equal(w.session.status, "playing"); w.tick = CONFIG.matchMinTicks - 1; updateOutcome(w); assert.equal(w.session.status, "playing");
-    w.tick++; updateOutcome(w); assert.equal(w.session.status, "victory");
+  check("Партия: паук больше не победа; победа не раньше минимума; предел — три часа", () => {
+    const w = fresh(); w.objectives.find(o => o.id === "win-spider")!.done = true; w.tick = CONFIG.matchMinTicks + 10;
+    updateOutcome(w); assert.equal(w.session.status, "playing");
+    const d = w.objectives.find(o => o.id === "win-dominance")!; d.done = true; w.tick = CONFIG.matchMinTicks - 1;
+    updateOutcome(w); assert.equal(w.session.status, "playing");
+    w.tick = CONFIG.matchMinTicks; updateOutcome(w); assert.equal(w.session.status, "victory");
     const s = fresh(); s.tick = CONFIG.matchMaxTicks; updateOutcome(s); assert.equal(s.session.status, "victory");
   });
   check("Вода: недоступная еда в озере исключается из памяти, а обход имеет безопасные сегменты", () => {

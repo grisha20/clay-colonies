@@ -286,6 +286,9 @@ export type Colony = {
   firedTotal?: number;
   /** Special clay from held springs; feeds the idol ritual. */
   specialClay?: number;
+  /** AI siege of a rival totem (server/src/sim/settlementAI.ts). */
+  war?: { targetId: string; since: number };
+  warCooldownUntil?: number;
   /** Current advice of the tribe mother (server/src/sim/advisor.ts), recomputed. */
   advice?: Advice[];
   // Приоритеты работ: ЦЕЛЕВОЕ ЧИСЛО ЛЮДЕЙ на занятии (не веса).
@@ -388,6 +391,12 @@ export type SessionState = {
   nextBeetlesAt: number;
   nextCreatureId: number;
   idolProgress: number;
+  /** Tribe holding at least CONFIG.dominanceSprings springs, and since when. */
+  dominance?: { holder: string; since: number };
+  /** Tribe scores during and after the Great Rain finale (colony order). */
+  finaleScores?: number[];
+  /** Set when the finale was decided: the player's tribe came out ahead. */
+  finaleWon?: boolean;
   stats: { born: number; lost: number; rescued: number; raidsSurvived: number };
   events: Array<{ tick: number; text: string; pos?: Vec2 }>;
 };

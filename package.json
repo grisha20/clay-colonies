@@ -25,6 +25,7 @@
     "check:mother": "tsx server/src/bench/motherCheck.ts",
     "check:kiln": "tsx server/src/bench/kilnCheck.ts",
     "check:territory": "tsx server/src/bench/territoryCheck.ts",
+    "check:dominance": "tsx server/src/bench/dominanceCheck.ts",
     "check:navparity": "tsx server/src/bench/navParityCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },

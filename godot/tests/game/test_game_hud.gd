@@ -52,7 +52,7 @@ func run() -> void:
 	check("speed_button_follows_server", hud.speed_buttons[5].button_pressed and not hud.speed_buttons[1].button_pressed)
 	check("alarm_button_follows_server", hud.alarm_button.button_pressed)
 	check("tasks_listed", hud.tasks_box.get_child_count() == 3)
-	check("raid_and_rain_alerts", hud.alert_panel.visible and hud.alert_label.text.contains("набег") and hud.alert_label.text.contains("Дождь") and hud.alert_label.text.contains("Большой дождь"), hud.alert_label.text)
+	check("raid_and_rain_alerts", hud.alert_panel.visible and hud.alert_label.text.contains("набег") and hud.alert_label.text.contains("Дождь") and hud.alert_label.text.contains("Великий ливень"), hud.alert_label.text)
 	var asked = []
 	hud.speed_requested.connect(func(v): asked.append(v))
 	hud.speed_buttons[20].pressed.emit()

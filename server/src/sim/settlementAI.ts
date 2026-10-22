@@ -10,7 +10,8 @@ import { buildingServicePoint } from "../../../shared/buildingGeometry";
 import { placementAccessWarning } from "../../../shared/placementAccess";
 import { taskApproach } from "./taskAccess";
 import { colonyWorldView } from "./world";
-import { territoryDiscs } from "../../../shared/territory";
+import { territoryDiscs, TOTEM_TERRITORY_RADIUS } from "../../../shared/territory";
+import { logEvent } from "./session";
 
 const inaccessibleSince = new WeakMap<Building, number>();
 
@@ -90,14 +91,58 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
   // Firing burns wood: hold it while a building site still waits for wood, or when hungry.
   const siteNeedsWood = world.surface.buildings.some(b => b.colonyId === c.id && b.stage !== "built" && b.cost.wood > b.delivered.wood);
   c.firingPaused = foodLow || (siteNeedsWood && c.wood < 12);
+  const atWar = !isPlayer && !!c.war;
   c.priorities = {
     clay: foodLow ? 1 : c.clay < 45 ? 3 : 1,
     wood: c.wood < 30 ? 2 : 1,
     stone: built("workshop") && c.stone < 24 ? 2 : 0,
     build: foodLow ? 1 : 3,
-    guard: threat ? Math.min(5, Math.floor(population / 4)) : population >= 15 ? 2 : 1,
+    guard: atWar ? Math.max(CONFIG.aiWarMinGuards, Math.floor(population / 3)) : threat ? Math.min(5, Math.floor(population / 4)) : population >= 15 ? 2 : 1,
     fish: !foodLow && built("workshop") && c.rods > 0 && population >= 20 ? 1 : 0
   };
+}
+
+/** Rival totem worth besieging: the player's built totem nearest a spring it holds or blocks. */
+function warTarget(world: World, index: number): Building | undefined {
+  const me = world.colonies[index], player = world.colonies[world.session.playerColonyIndex ?? 0];
+  if (!player || player.id === me.id) return undefined;
+  const springs = world.surface.springs ?? [];
+  const totems = world.surface.buildings.filter(b => b.colonyId === player.id && b.type === "totem" && b.stage === "built");
+  const score = (t: Building) => Math.min(...springs.filter(s => s.holder !== me.id).map(s => Math.hypot(s.pos.x - t.pos.x, s.pos.y - t.pos.y)), Infinity);
+  return totems.filter(t => score(t) < TOTEM_TERRITORY_RADIUS + 6).sort((a, b) => score(a) - score(b))[0];
+}
+
+/**
+ * War of an AI tribe: when stronger, it moves its defence post next to a
+ * player's totem by a spring and sends more guards; they break the totem
+ * (siege.ts). Gives up after aiWarMaxTicks, then rests. True while at war.
+ */
+export function updateWar(world: World, index: number): boolean {
+  const runtime = world.colonies[index], c = runtime.colony;
+  const player = world.colonies[world.session.playerColonyIndex ?? 0];
+  if (!c.war) {
+    if (!player || world.tick < CONFIG.aiWarAfterTicks || world.tick < (c.warCooldownUntil ?? 0)) return false;
+    // Enough people to field the war party (guards are raised once at war).
+    const alive = (r: typeof runtime) => r.ants.filter(a => a.state !== "dead").length;
+    if (alive(runtime) < CONFIG.aiWarMinGuards * 3 || alive(runtime) < alive(player) * 0.8) return false;
+    const target = warTarget(world, index);
+    if (!target) return false;
+    c.war = { targetId: target.id, since: world.tick };
+    logEvent(world, "Соседи идут осаждать тотем у источника!", target.pos);
+  }
+  const target = world.surface.buildings.find(b => b.id === c.war!.targetId && b.stage === "built");
+  if (!target || world.tick - c.war.since > CONFIG.aiWarMaxTicks) {
+    c.war = undefined;
+    c.warCooldownUntil = world.tick + CONFIG.aiWarCooldownTicks;
+    return false;
+  }
+  // Post right next to the totem, on the side facing home, so guards stand in siege range.
+  const camp = runtime.surfaceEntrance, base = Math.atan2(camp.y - target.pos.y, camp.x - target.pos.x);
+  for (const back of [2.2, 2.8, 1.6]) for (const turn of [0, 0.6, -0.6, 1.2, -1.2, 2.0, -2.0, Math.PI]) {
+    const p = { x: target.pos.x + Math.cos(base + turn) * back, y: target.pos.y + Math.sin(base + turn) * back };
+    if (!isSurfaceBlockedAt(world, p.x, p.y, runtime.id)) { c.defensePost = p; return true; }
+  }
+  return true;
 }
 
 export function updateSettlementAI(world: World): void {
@@ -110,6 +155,8 @@ export function updateSettlementAI(world: World): void {
       continue;
     }
     runTribeLogic(world, runtime, false);
+    // War is decided in any weather (fired guards do not fear rain).
+    const atWar = updateWar(world, index);
     const c = runtime.colony, camp = runtime.surfaceEntrance, population = runtime.ants.length;
     let buildings = world.surface.buildings.filter(b => b.colonyId === c.id);
     const built = (type: BuildingType) => buildings.filter(b => b.type === type && b.stage === "built").length;
@@ -136,6 +183,7 @@ export function updateSettlementAI(world: World): void {
       }
     }
     buildings = world.surface.buildings.filter(b => b.colonyId === c.id);
+    if (atWar) continue;
     const postCandidates=[{x:camp.x+sign*9,y:camp.y+5},...buildings.filter(b=>b.type==="gate"&&b.stage==="built").map(b=>({x:b.pos.x,y:b.pos.y+(b.pos.y<camp.y?4:-4)})),{x:camp.x,y:camp.y+5}];
     c.defensePost=postCandidates.find(p=>!isSurfaceBlockedAt(world,p.x,p.y,runtime.id)&&taskApproach(scoped,p))??c.defensePost;
     if (reachablePending) continue;

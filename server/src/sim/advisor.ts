@@ -74,6 +74,18 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
       out.push({ key: "spring-enemy", severity: "warn", text: "Соседи держат источник — ритуалу Идола нужна особая глина", pos: { ...lost.pos } });
   }
 
+  // War over the land.
+  const besieged = own.find(b => b.type === "totem" && b.stage === "built" &&
+    world.colonies.some(r => r.id !== runtime.id && r.ants.some(a => a.state !== "dead" && a.job === "guard" && Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) < 8)));
+  if (besieged) out.push({ key: "siege", severity: "danger", text: "Соседи осаждают тотем — поставь пост обороны рядом с ним", pos: { ...besieged.pos } });
+  const dom = world.session.dominance;
+  if (dom && dom.holder !== runtime.id) {
+    const left = Math.max(0, CONFIG.dominanceTicks - (world.tick - dom.since));
+    const target = (world.surface.springs ?? []).find(s => s.holder === dom.holder);
+    out.push({ key: "dominance", severity: "danger", text: `Соседи держат ${CONFIG.dominanceSprings} источника — через ${Math.ceil(left / 600)} ч. игры они победят. Осади их тотем постом обороны`, pos: target ? { ...target.pos } : undefined });
+  }
+  if (world.weather.bigRainActive && (world.weather.bigRainAt ?? CONFIG.bigRainAtTicks) >= CONFIG.bigRainAtTicks) out.push({ key: "finale", severity: "warn", text: "Великий ливень! Держите костёр живым — по окончании победит сильнейшее племя" });
+
   if (world.weather.state === "warning") {
     const rawCount = ants.filter(a => !a.fired).length;
     out.push({ key: "rain", severity: rawCount ? "warn" : "info", text: rawCount ? `Тучи собираются — ${rawCount} сырых жителей размокнут без крыши` : "Тучи собираются — скоро дождь" });

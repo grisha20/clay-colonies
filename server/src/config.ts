@@ -98,7 +98,8 @@ export const CONFIG = {
   rainShelterHutRadius: 5,
   rainFireDecayMult: 3,
   wallRepairHpPerClay: 40,
-  bigRainAtTicks: 15000,
+  // Великий ливень — финал партии (~1 ч 40 мин при 1×): после него счёт племён решает исход.
+  bigRainAtTicks: 60000,
   bigRainTicks: 2400,
   bigRainFireGoal: 0.5,
   // Идол — «хитрая» победа: дорогая статуя из глины и камня.
@@ -363,6 +364,19 @@ export const CONFIG = {
   kilnWoodPerFiring: 2,
   kilnWoodReserve: 4,
   kilnCallTimeoutTicks: 1500,
+  // Господство: держать столько источников столько тиков подряд.
+  dominanceSprings: 2,
+  dominanceTicks: 6000,
+  // Осада тотема стражей (server/src/sim/siege.ts).
+  siegeRange: 5,
+  siegeDamagePerGuard: 0.06,
+  // Рукопашная стражи против чужих стражников у своего поста (за удар).
+  guardMeleeDamage: 60,
+  // Война ИИ-соседа за тотемы игрока.
+  aiWarAfterTicks: 12000,
+  aiWarMinGuards: 4,
+  aiWarMaxTicks: 5000,
+  aiWarCooldownTicks: 4000,
   // Тотем рода: раздвигает землю племени (shared/territory.ts).
   totemCost: { clay: 12, wood: 6, stone: 4 },
   totemMaxHp: 150,
@@ -418,7 +432,8 @@ export const CONFIG = {
   guardPatrolRadius: 11,
   guardEngageRadius: 26,
   raidFirstAt: 7200,
-  matchMinTicks: 72000,
+  // Раньше этого победы не засчитываются; финал (Великий ливень) сам задаёт конец партии.
+  matchMinTicks: 36000,
   matchMaxTicks: 108000,
   raidEveryTicks: 6000,
   raidWarningTicks: 600,

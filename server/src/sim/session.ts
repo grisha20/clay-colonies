@@ -109,12 +109,62 @@ export function updateOutcome(world: World): void {
     if (fed) s.idolProgress += 1;
     else if ((primary.colony.specialClay ?? 0) >= 1) { primary.colony.specialClay! -= 1; s.idolProgress += 1; }
   }
+  updateDominance(world);
   const elapsed = world.tick - (s.startedAt ?? 0);
+  const rivalDominates = s.dominance && s.dominance.holder !== primary.id && world.tick - s.dominance.since >= CONFIG.dominanceTicks;
+  if (elapsed >= CONFIG.matchMinTicks && rivalDominates) {
+    finish(world, "defeat", "Соседи завладели источниками особой глины");
+    return;
+  }
+  // Finale: when the Great Rain is over, the stronger tribe wins the match.
+  // Saves from before the finale had an early Big Rain: it stays a plain goal there.
+  const finaleRain = isFinaleRain(world);
+  if (finaleRain && world.weather.bigRainDone && s.finaleWon === undefined) {
+    s.finaleScores = world.colonies.map((_, i) => tribeScore(world, i));
+    const mine = s.finaleScores[s.playerColonyIndex ?? 0] ?? 0;
+    const best = Math.max(...s.finaleScores.filter((_, i) => i !== (s.playerColonyIndex ?? 0)), 0);
+    s.finaleWon = (world.weather.bigRainSurvived ?? false) && mine >= best;
+    if (!s.finaleWon) {
+      finish(world, "defeat", world.weather.bigRainSurvived ? `Великий ливень кончился: соседи сильнее (${mine} против ${best})` : "Великий ливень погасил костёр племени");
+      return;
+    }
+  }
+  if (finaleRain && world.weather.bigRainActive) s.finaleScores = world.colonies.map((_, i) => tribeScore(world, i));
   if (elapsed >= CONFIG.matchMinTicks && world.objectives.some(o => o.victory && o.done)) {
     const id = world.objectives.find(o => o.victory && o.done)!.id;
-    finish(world, "victory", id === "win-idol" ? "Ритуал Идола завершён" : id === "win-spider" ? "Паук повержен" : "Племя пережило Большой дождь");
+    finish(world, "victory", id === "win-idol" ? "Ритуал Идола завершён" : id === "win-dominance" ? "Племя завладело источниками особой глины" : "Племя пережило Великий ливень сильнее соседей");
   } else if (elapsed >= CONFIG.matchMaxTicks) {
     finish(world, "victory", "Три часа пройдены: племя выжило и сохранило поселение");
+  }
+}
+
+/** The Big Rain of this match is the late finale (not the early rain of older saves). */
+export function isFinaleRain(world: World): boolean {
+  return (world.weather.bigRainAt ?? CONFIG.bigRainAtTicks) >= CONFIG.bigRainAtTicks;
+}
+
+/** Tribe strength for the finale: land and springs first, then the people. */
+export function tribeScore(world: World, index: number): number {
+  const runtime = world.colonies[index];
+  if (!runtime) return 0;
+  const alive = runtime.ants.filter(a => a.state !== "dead");
+  const springs = (world.surface.springs ?? []).filter(s => s.holder === runtime.id).length;
+  const totems = world.surface.buildings.filter(b => b.colonyId === runtime.id && b.type === "totem" && b.stage === "built").length;
+  return Math.round(springs * 30 + totems * 8 + alive.length * 2 + alive.filter(a => a.fired).length);
+}
+
+/** Who holds enough springs, and since when (reset when the holder changes). */
+export function updateDominance(world: World): void {
+  const s = world.session;
+  const springs = world.surface.springs ?? [];
+  const counts = new Map<string, number>();
+  for (const spring of springs) if (spring.holder) counts.set(spring.holder, (counts.get(spring.holder) ?? 0) + 1);
+  const holder = [...counts.entries()].find(([, n]) => n >= CONFIG.dominanceSprings)?.[0];
+  if (!holder) { s.dominance = undefined; return; }
+  if (s.dominance?.holder !== holder) {
+    s.dominance = { holder, since: world.tick };
+    const tribe = world.colonies.findIndex(c => c.id === holder) === 1 ? "B" : "A";
+    logEvent(world, `Племя ${tribe} держит ${CONFIG.dominanceSprings} источника: сутки — и победа.`, springs.find(sp => sp.holder === holder)?.pos);
   }
 }
 

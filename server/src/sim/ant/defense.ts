@@ -2,7 +2,7 @@ import type { Ant, Vec2 } from "../../../../shared/types";
 import { isWaterAt, lakeDefinitions, surfaceTerrainRevision, isTerrainBlockedAt } from "../../../../shared/surfaceTerrain";
 import { CONFIG } from "../../config";
 import type { World } from "../world";
-import { isWallBlockedAt, isSurfaceBlockedAt } from "../building";
+import { isWallBlockedAt, isSurfaceBlockedAt, nearestDropPoint } from "../building";
 import { surfaceRoute } from "../../../../shared/surfaceNavigation";
 import { moveSurfaceToward, tryCrossLayer } from "./movement";
 import { dissolveAnt } from "../water";
@@ -47,7 +47,10 @@ export function moveDefending(world: World, ant: Ant): boolean {
   if (ant.job !== "guard" || ant.carrying > 0) return false;
   const post = world.colony.defensePost ?? world.surface.entrance;
   if (ant.energy < CONFIG.refuelEnergyThreshold) {
-    if (dist(ant.pos, world.surface.entrance) > 4) moveSurfaceToward(world, ant, world.surface.entrance, true, false);
+    // Eat at the nearest own storage or the hearth: a storage by the border
+    // feeds a far post without the long walk home.
+    const kitchen = nearestDropPoint(world, ant.pos);
+    if (dist(ant.pos, kitchen) > 4) moveSurfaceToward(world, ant, kitchen, true, false);
     else if (world.colony.food >= CONFIG.workerMealCost) { consumeFoodStock(world.colony, CONFIG.workerMealCost); ant.energy = CONFIG.maxEnergy; }
     ant.state = "return";
     return true;
@@ -56,6 +59,11 @@ export function moveDefending(world: World, ant: Ant): boolean {
     .sort((a, b) => Number(!!b.captiveId) - Number(!!a.captiveId) || dist(a.pos, ant.pos) - dist(b.pos, ant.pos))[0];
   const intruder = world.colonies.filter(c => c.id !== ant.colonyId).flatMap(c => c.ants).find(a => a.state !== "dead" && !a.capturedBy && dist(a.pos, post) < 20 && dist(a.pos, ant.pos) <= CONFIG.waterShotRange && world.tick >= CONFIG.colonyGraceTicks);
   const water = !!world.colony.waterWeapons;
+  // Without water weapons guards still fight rival guards at their post hand to
+  // hand (a siege of a totem is decided here); peaceful passers-by are left alone.
+  const rivalGuard = water || world.tick < CONFIG.colonyGraceTicks ? undefined : world.colonies.filter(c => c.id !== ant.colonyId).flatMap(c => c.ants)
+    .filter(a => a.state !== "dead" && !a.capturedBy && a.job === "guard" && dist(a.pos, post) < 20 && dist(a.pos, ant.pos) <= CONFIG.waterShotRange)
+    .sort((a, b) => dist(a.pos, ant.pos) - dist(b.pos, ant.pos))[0];
   if (water && (ant.waterAmmo ?? 0) <= 0) {
     ant.refillPos ??= waterBanks().filter(p => !isWallBlockedAt(world, p.x, p.y, ant.colonyId))
       .sort((a, b) => dist(a, ant.pos) - dist(b, ant.pos))[0];
@@ -73,7 +81,7 @@ export function moveDefending(world: World, ant: Ant): boolean {
     }
     return true;
   }
-  if (target || (water && intruder)) {
+  if (target || (water && intruder) || rivalGuard) {
     const enemy = target ?? intruder!;
     const distance = dist(ant.pos, enemy.pos);
     ant.heading = { x: (enemy.pos.x - ant.pos.x) / Math.max(0.01, distance), y: (enemy.pos.y - ant.pos.y) / Math.max(0.01, distance) };
@@ -92,6 +100,15 @@ export function moveDefending(world: World, ant: Ant): boolean {
         ant.state = "fight";
         if (markMelee(ant, target.pos, world.tick)) { target.hp -= 22 * ant.strength; target.lastHitColonyId = ant.colonyId; }
       } else if (dist(target.pos, post) < CONFIG.guardEngageRadius) moveSurfaceToward(world, ant, target.pos, false);
+    } else if (rivalGuard) {
+      if (distance <= 1.6) {
+        settleMeleePosition(world, ant, rivalGuard.pos, 1.6);
+        ant.state = "fight";
+        if (markMelee(ant, rivalGuard.pos, world.tick)) {
+          rivalGuard.energy -= CONFIG.guardMeleeDamage * ant.strength;
+          if (rivalGuard.energy <= 0) rivalGuard.state = "dead";
+        }
+      } else moveSurfaceToward(world, ant, rivalGuard.pos, false);
     }
     return true;
   }

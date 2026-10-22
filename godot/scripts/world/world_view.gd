@@ -708,6 +708,46 @@ func _update_mothers(snapshot: Dictionary) -> void:
 	known_residents = current
 	residents_seen = true
 
+## A besieged totem leans as it loses strength and throws clay dust when hit.
+func _update_totem_siege(node: Node3D, b: Dictionary) -> void:
+	var max_hp = maxf(1.0, float(b.get("maxHp", 1.0)))
+	var hp = float(b.get("hp", max_hp))
+	var damage = clampf(1.0 - hp / max_hp, 0.0, 1.0)
+	node.rotation.z = damage * 0.32
+	node.rotation.x = damage * 0.12
+	var last = float(node.get_meta("last_hp", hp))
+	node.set_meta("last_hp", hp)
+	if hp < last - 0.01:
+		var dust = node.get_node_or_null("SiegeDust") as CPUParticles3D
+		if dust == null:
+			dust = CPUParticles3D.new()
+			dust.name = "SiegeDust"
+			dust.one_shot = true
+			dust.emitting = false
+			dust.amount = 18
+			dust.lifetime = 0.8
+			dust.explosiveness = 0.85
+			dust.direction = Vector3(0, 1, 0)
+			dust.spread = 80.0
+			dust.initial_velocity_min = 1.0
+			dust.initial_velocity_max = 2.4
+			dust.gravity = Vector3(0, -3.0, 0)
+			dust.scale_amount_min = 0.08
+			dust.scale_amount_max = 0.18
+			var m = SphereMesh.new()
+			m.radius = 0.5
+			m.height = 1.0
+			m.radial_segments = 6
+			m.rings = 3
+			var mat = StandardMaterial3D.new()
+			mat.albedo_color = Color(0.72, 0.45, 0.30)
+			m.material = mat
+			dust.mesh = m
+			dust.position = Vector3(0, 1.6, 0)
+			node.add_child(dust)
+		if not dust.emitting:
+			dust.restart()
+
 func _update_springs(springs: Array) -> void:
 	var seen: Dictionary = {}
 	for s in springs:
@@ -840,6 +880,8 @@ func _update_buildings(buildings: Array) -> void:
 		node.position = _ground(b_pos)
 		# Sites and buildings under construction read as translucent ghosts
 		# that firm up with progress.
+		if b_type == "totem" and b_stage == "built":
+			_update_totem_siege(node, b)
 		if b_type == "kiln" and b_stage == "built":
 			# Fire in the mouth while a resident is being fired (wood paid).
 			var firing = b.get("firing")
