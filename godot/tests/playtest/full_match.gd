@@ -150,7 +150,7 @@ func defend(c: Dictionary) -> void:
 	# A totem of ours losing strength: post by it, more guards (hands on), then back to the mother.
 	var hurt = own("totem", true).filter(func(t): return float(t.hp) < float(t.maxHp) - 1.0)
 	var war = colony(1).get("war")
-	if not hurt.is_empty() and defending == "":
+	if not hurt.is_empty() and defending == "" and war != null:
 		var t = hurt[0]
 		var tp = Vector2(float(t.pos.x), float(t.pos.y))
 		var post = spot_toward("post", tp, (camp() - tp).angle(), [3.0, 4.0])
@@ -276,6 +276,7 @@ func record_state() -> void:
 		"houses_a": own("hut", true).filter(func(h): return int(h.get("level", 1)) >= 2).size(),
 		"houses_b": surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-2" and b.type == "hut" and int(b.get("level", 1)) >= 2).size(),
 		"cap_a": int(c.get("nestCapacity", 0)),
+		"deaths_a": c.get("deaths", {}), "deaths_b": c2.get("deaths", {}),
 		"dominance": s.get("dominance"), "finale": s.get("finaleScores"), "war_b": c2.get("war"), "auto": bool(c.get("autoManage", false)),
 		"advice": c.get("advice", []).map(func(a): return str(a.key)),
 		"motion": motion, "objectives": objectives, "status": str(s.get("status", "")),

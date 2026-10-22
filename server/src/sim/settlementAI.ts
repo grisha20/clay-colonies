@@ -204,7 +204,7 @@ export function updateSettlementAI(world: World): void {
     else if (!built("idol") && world.tick > CONFIG.matchMinTicks / 2 && c.clay > 35 && c.stone > 10) type = "idol";
     // Houses of the clan once the huts are maxed and special clay allows.
     const smallHut = buildings.find(b => b.type === "hut" && b.stage === "built" && (b.level ?? 1) < 2);
-    if (smallHut && built("hut") >= CONFIG.maxHutsPerColony && upgradeHut(world, index, smallHut.id)) continue;
+    if (smallHut && population >= c.nestCapacity - 1 && upgradeHut(world, index, smallHut.id)) continue;
     const pendingTotem = buildings.some(b => b.type === "totem" && b.stage !== "built");
     if (!type && built("workshop") && !pendingTotem && built("totem") < CONFIG.maxTotemsPerColony && world.tick > 3000 && c.clay >= 14 && c.wood >= 8 && c.stone >= 4) {
       const site = totemSite(world, index);

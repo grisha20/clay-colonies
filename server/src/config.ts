@@ -390,8 +390,8 @@ export const CONFIG = {
   // Источник особой глины: единица владельцу раз в N тиков; ритуал Идола
   // съедает единицу на каждые idolSpecialClayEvery тиков прогресса.
   springYieldTicks: 300,
-  // 1800 / 30 = 60 особой глины на ритуал.
-  idolSpecialClayEvery: 30,
+  // 1800 / 20 = 90 особой глины на ритуал (с одним источником ~27 000 тиков).
+  idolSpecialClayEvery: 20,
   // Дом рода: улучшение хижины — больше мест, тратит особую глину.
   hutUpgradeCost: { clay: 12, wood: 6, special: 8 },
   houseLevelPopulation: 2,

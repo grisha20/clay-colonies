@@ -114,8 +114,11 @@ function nodeById(world: World, id?: string): ResourceNode | undefined {
 
 export function assignHarvestJobs(world: World): void {
   const live = world.ants.filter((ant) => ant.state !== "dead" && !ant.capturedBy);
+  // A tribe shrunk below the minimum may still dig clay when it has none:
+  // without clay the mother molds nobody and the tribe could never recover.
+  const recovery = live.length < CONFIG.harvestMinWorkers && world.colony.clay < CONFIG.newResidentClayCost * 3 && world.colony.food >= 10;
   const economyReady =
-    live.length >= CONFIG.harvestMinWorkers && world.colony.food >= CONFIG.harvestMinFood;
+    (live.length >= CONFIG.harvestMinWorkers && world.colony.food >= CONFIG.harvestMinFood) || recovery;
 
   // Учёт текущих сборщиков и освобождение лишних.
   const counts: Record<ResourceKind, number> = { clay: 0, wood: 0, stone: 0 };
@@ -173,7 +176,7 @@ export function assignHarvestJobs(world: World): void {
     const harvesterCap = priorityCount(world, kind);
     let need = harvesterCap - counts[kind];
     for (const ant of live) {
-      if (need <= 0 || foragersLeft(world) <= CONFIG.minForagers) {
+      if (need <= 0 || foragersLeft(world) <= (recovery ? 1 : CONFIG.minForagers)) {
         break;
       }
       if (

@@ -15,6 +15,8 @@ const { loadGenome } = await import("../ai/genome");
 const { loadSpiderGenome } = await import("../ai/spiderGenome");
 const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
 const { upgradeHut, hutUpgradeRefusal } = await import("../sim/building");
+const { deathCause } = await import("../sim/step");
+const { updateAdvisor } = await import("../sim/advisor");
 const { generateTerrain } = await import("../sim/terrainGen");
 const { step } = await import("../sim/step");
 const { CONFIG } = await import("../config");
@@ -169,7 +171,7 @@ const totemAt = (w: ReturnType<typeof fresh>, owner: string, pos: { x: number; y
   check("all three springs need a day, time held is kept", w.session.dominance?.required === CONFIG.dominanceAllTicks && w.session.dominance.since === 20000);
   w.tick = 20000 + CONFIG.dominanceAllTicks; updateObjectives(w);
   check("objective counts all-spring time double", w.objectives.find(o => o.id === "win-dominance")!.done === true);
-  check("ritual needs 60 special clay", CONFIG.idolRitualTicks / CONFIG.idolSpecialClayEvery === 60);
+  check("ritual needs 90 special clay", CONFIG.idolRitualTicks / CONFIG.idolSpecialClayEvery === 90);
 }
 {
   // The neighbour is outnumbered but the player leads by the springs: war anyway.
@@ -215,6 +217,35 @@ const totemAt = (w: ReturnType<typeof fresh>, owner: string, pos: { x: number; y
   const saved = worldFromSnapshot(JSON.parse(JSON.stringify(toSnapshot(w))), genome, spider, genomeB);
   check("save keeps the house", saved.surface.buildings.find(b => b.id === hut.id)?.level === 2);
   void cap0;
+}
+
+// Round 3: death causes, recovery of a shrunk tribe, "the tribe melts" advice.
+{
+  const base = { ...fresh().colonies[0].ants[0] };
+  const ant = (patch: object) => ({ ...base, state: "dead" as const, energy: 100, dissolved: 0, waterExposure: 0, capturedBy: undefined, melee: undefined, ...patch });
+  check("death in rain", deathCause(ant({ dissolved: 1, pos: { x: 1, y: 1 } })) === "rain");
+  check("death in a fight", deathCause(ant({ energy: 0, melee: { to: { x: 0, y: 0 }, until: 5 } })) === "fight");
+  check("death from hunger", deathCause(ant({ energy: 0 })) === "hunger");
+}
+{
+  const w = fresh();
+  const A = w.colonies[0], c = A.colony;
+  A.ants = A.ants.slice(0, 4);
+  for (const a of A.ants) { a.job = "forage"; a.state = "search"; a.carrying = 0; }
+  c.clay = 0; c.food = 100; c.priorities = { ...c.priorities, clay: 1 };
+  w.tick = 500;
+  for (let i = 0; i < 30; i++) step(w);
+  check("shrunk tribe without clay still digs it", A.ants.some(a => a.job === "harvest"), A.ants.map(a => a.job).join(","));
+}
+{
+  const w = fresh();
+  const A = w.colonies[0];
+  w.tick = 100; updateAdvisor(w);
+  for (let i = 0; i < 6; i++) A.ants[i].state = "dead";
+  w.tick = 101; step(w);
+  check("deaths counted by cause", Object.values(A.colony.deaths ?? {}).reduce((x, y) => x + y, 0) >= 6, JSON.stringify(A.colony.deaths));
+  w.tick = 200; updateAdvisor(w);
+  check("advice: the tribe melts", (A.colony.advice ?? []).some(a => a.key === "losses"), JSON.stringify((A.colony.advice ?? []).map(a => a.text)));
 }
 
 for (const f of ["./.dominance-snapshot.json", "./.dominance-genome-a.json", "./.dominance-genome-b.json", "./.dominance-genome-spider.json"]) fs.rmSync(f, { force: true });

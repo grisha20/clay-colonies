@@ -8,7 +8,7 @@ import { territoryPlacement } from "./territory";
 export const SPRING_CLEARANCE = 6;
 
 export type PointBuilding = "hut" | "storage" | "workshop" | "idol" | "kiln" | "totem";
-export const POINT_BUILDING_LIMITS = { hut: 8, storage: 6, workshop: 2, idol: 1, kiln: 2, totem: 6 };
+export const POINT_BUILDING_LIMITS = { hut: 8, storage: 6, workshop: 2, idol: 1, kiln: 2, totem: 8 };
 export function pointBuildingPlacement(surface: { width: number; height: number; entrances: Vec2[]; buildings: Building[]; deposits?: ResourceDeposit[]; springs?: { pos: Vec2 }[] }, owner: string, type: PointBuilding, pos: Vec2, limit = POINT_BUILDING_LIMITS[type], entranceMargin = 7): string | null {
   if (pos.x < 2 || pos.y < 2 || pos.x > surface.width - 2 || pos.y > surface.height - 2) return "За границей карты";
   if (surface.entrances.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < entranceMargin)) return "Слишком близко к костру";

@@ -1,3 +1,5 @@
+import type { Ant } from "../../../shared/types";
+import { isWaterAt } from "../../../shared/surfaceTerrain";
 import { computeDirectives, updateFitness } from "../ai/controller";
 import { CONFIG } from "../config";
 import { stepAnt, clearDeadAntPaths } from "./ant";
@@ -77,9 +79,20 @@ function scentFoodSources(world: World): void {
   }
 }
 
+/** Why a resident died, judged from what is left on it. */
+export function deathCause(ant: Ant): string {
+  const washed = (ant.dissolved ?? 0) >= 1 || (ant.waterExposure ?? 0) >= CONFIG.waterExposureDeathTicks;
+  if (washed) return isWaterAt(ant.pos.x, ant.pos.y) || ant.capturedBy ? "water" : "rain";
+  if (ant.capturedBy) return "creature";
+  if (ant.energy <= 0) return ant.state === "dead" && ant.melee ? "fight" : "hunger";
+  return "creature";
+}
+
 function removeDeadAndSyncSurface(world: World, colony: ColonyRuntime): void {
   for (const ant of colony.ants) {
     if (ant.state === "dead") {
+      const cause = deathCause(ant);
+      colony.colony.deaths = { ...(colony.colony.deaths ?? {}), [cause]: (colony.colony.deaths?.[cause] ?? 0) + 1 };
       const scoped = colonyWorldView(world, colony);
       if ((ant.dissolved ?? 0) < 1) addAntCorpse(scoped, ant);
       addClayRemains(scoped, ant);

@@ -17,6 +17,10 @@ const RESOURCE_NAMES: Record<ResourceKind, string> = { clay: "глины", wood:
 const ORDER: Record<Advice["severity"], number> = { danger: 0, warn: 1, info: 2 };
 
 const clearedAt = new WeakMap<ColonyRuntime, Map<string, number>>();
+/** Recent totals of deaths, one per advisor pass (to tell "the tribe melts"). */
+const lossHistory = new WeakMap<ColonyRuntime, number[]>();
+const LOSS_WINDOW = 12;
+const CAUSE_NAMES: Record<string, string> = { water: "в воде", rain: "под дождём", fight: "в бою", hunger: "от голода", creature: "от зверей" };
 
 type Raw = Omit<Advice, "since">;
 
@@ -29,6 +33,15 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
   const out: Raw[] = [];
 
   if (!c.queenAlive) out.push({ key: "mother", severity: "danger", text: "Праматерь погибла — новых жителей не будет" });
+  // The tribe melts: many deaths in the last ~1200 ticks, with the main cause.
+  const history = lossHistory.get(runtime) ?? [];
+  const deaths = c.deaths ?? {};
+  const total = Object.values(deaths).reduce((sum, n) => sum + n, 0);
+  const lost = history.length ? total - history[0] : 0;
+  if (lost >= 5) {
+    const main = Object.entries(deaths).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+    out.push({ key: "losses", severity: "danger", text: `Племя тает: погибло ${lost} за короткое время, больше всего ${CAUSE_NAMES[main] ?? ""}`.trim() });
+  }
   const enemy = world.enemies.find(e => e.hp > 0 && e.type !== "lakeMonster" && Math.hypot(e.pos.x - camp.x, e.pos.y - camp.y) < 28);
   if (enemy) out.push({ key: "enemy", severity: "danger", text: "Враг у лагеря — стража, к костру!", pos: { ...enemy.pos } });
   const monster = world.enemies.find(e => e.hp > 0 && e.type === "lakeMonster" && ants.some(a => Math.hypot(a.pos.x - e.pos.x, a.pos.y - e.pos.y) < 10));
@@ -113,6 +126,10 @@ function nearest(points: Vec2[], to: Vec2): Vec2 | undefined {
 export function updateAdvisor(world: World): void {
   if (world.tick % ADVICE_EVERY !== 0) return;
   for (const runtime of world.colonies) {
+    const history = lossHistory.get(runtime) ?? [];
+    history.push(Object.values(runtime.colony.deaths ?? {}).reduce((sum, n) => sum + n, 0));
+    if (history.length > LOSS_WINDOW) history.shift();
+    lossHistory.set(runtime, history);
     const c = runtime.colony;
     const previous = new Map((c.advice ?? []).map(a => [a.key, a]));
     const cleared = clearedAt.get(runtime) ?? new Map<string, number>();

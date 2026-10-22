@@ -288,6 +288,8 @@ export type Colony = {
   firedTotal?: number;
   /** Special clay from held springs; feeds the idol ritual. */
   specialClay?: number;
+  /** Residents lost by cause: water, rain, fight, hunger, creature (step.ts removeDead). */
+  deaths?: Record<string, number>;
   /** AI siege of a rival totem (server/src/sim/settlementAI.ts). */
   war?: { targetId: string; since: number };
   warCooldownUntil?: number;

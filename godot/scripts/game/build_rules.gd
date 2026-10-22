@@ -12,7 +12,7 @@ const ZONE_CELL_SIZE := 4.0
 const GATE_SPAN := 3
 const DEPOSIT_RX := 10.0
 const DEPOSIT_RY := 6.5
-const LIMITS := {"hut": 8, "storage": 6, "workshop": 2, "idol": 1, "kiln": 2, "totem": 6}
+const LIMITS := {"hut": 8, "storage": 6, "workshop": 2, "idol": 1, "kiln": 2, "totem": 8}
 ## shared/territory.ts: a tribe's land is a disc round its camp and one round
 ## each built totem; building only on own land. shared/buildingPlacement.ts
 ## SPRING_CLEARANCE keeps buildings off special clay springs.

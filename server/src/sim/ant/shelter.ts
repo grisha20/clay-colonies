@@ -47,7 +47,9 @@ export function moveToRainShelter(world: World, ant: Ant): boolean {
   // Combat and escaping a nearby captor take precedence over weather.
   const post = world.colony.defensePost ?? world.surface.entrance;
   if (world.enemies.some(e => e.hp > 0 && (dist(e.pos, ant.pos) < 11 || ant.job === "guard" && dist(e.pos, post) < CONFIG.guardEngageRadius))) return false;
-  if (ant.job === "guard" && world.tick >= CONFIG.colonyGraceTicks && world.colonies.some(c => c.id !== ant.colonyId && c.ants.some(a => a.state !== "dead" && !a.capturedBy && dist(a.pos, post) < 20))) return false;
+  // Only fired guards hold a post against rival guards in the rain: raw clay
+  // standing there dissolves (playtest 22.10: 164 of 170 deaths were rain at sieges).
+  if (ant.job === "guard" && ant.fired && world.tick >= CONFIG.colonyGraceTicks && world.colonies.some(c => c.id !== ant.colonyId && c.ants.some(a => a.state !== "dead" && !a.capturedBy && dist(a.pos, post) < 20))) return false;
   if (ant.carrying > 0 && ant.job !== "build") {
     // Unload food/fuel on the way in; construction cargo remains reserved.
     // Use the existing camp delivery, retaining the suspended profession.
