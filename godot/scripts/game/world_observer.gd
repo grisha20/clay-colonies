@@ -568,7 +568,16 @@ func _update_world_tooltip() -> void:
 		return
 	var vp = get_viewport()
 	var mouse = vp.get_mouse_position()
-	var over_ui = (start_menu and start_menu.visible) or vp.gui_get_hovered_control() != null or not vp.get_visible_rect().has_point(mouse)
+	var hovered = vp.gui_get_hovered_control()
+	var over_ui = (start_menu and start_menu.visible) or hovered != null or not vp.get_visible_rect().has_point(mouse)
+	# HUD hints (build tiles, buttons, resource cells) go through the same
+	# panel as world hover text: Godot's own tooltip popup did not show up.
+	var ui_tip = _ui_tooltip(hovered)
+	if ui_tip != "":
+		if build:
+			build.update_preview(Vector2.INF)
+		hud.show_tooltip(ui_tip, mouse)
+		return
 	var p = Vector2.INF if over_ui else ground_point_at(mouse)
 	if build:
 		build.update_preview(p)
@@ -580,6 +589,16 @@ func _update_world_tooltip() -> void:
 		hud.show_tooltip("", mouse)
 		return
 	hud.show_tooltip(world_view.describe_at(p), mouse)
+
+## Tooltip text of the hovered control or its nearest ancestor that has one.
+static func _ui_tooltip(control: Control) -> String:
+	var c: Node = control
+	while c is Control:
+		var tip = (c as Control).tooltip_text
+		if tip != "":
+			return tip
+		c = c.get_parent()
+	return ""
 
 func resident_at_screen(screen_position: Vector2) -> NetworkResident:
 	var camera = world_view.camera

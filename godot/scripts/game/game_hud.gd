@@ -292,7 +292,16 @@ func show_tooltip(text: String, screen_pos: Vector2) -> void:
 	tooltip_label.text = text
 	tooltip_panel.visible = true
 	tooltip_panel.reset_size()
-	tooltip_panel.position = screen_pos + Vector2(18, 18)
+	# Keep it on screen: near the right or bottom edge (build bar, inspector)
+	# it opens to the left / above the cursor instead.
+	var view = get_viewport().get_visible_rect().size if get_viewport() else Vector2(1920, 1080)
+	var size = tooltip_panel.size
+	var pos = screen_pos + Vector2(18, 18)
+	if pos.x + size.x > view.x - 4:
+		pos.x = screen_pos.x - size.x - 12
+	if pos.y + size.y > view.y - 4:
+		pos.y = screen_pos.y - size.y - 12
+	tooltip_panel.position = Vector2(maxf(4, pos.x), maxf(4, pos.y))
 
 
 ## Small hand-drawn resource icons (no texture assets needed).
