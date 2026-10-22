@@ -155,5 +155,7 @@ for (const seed of [4242, 911028219, 714183925]) {
   check("spider bites hurt a warrior less", 1000 - brave.energy < (1000 - plain.energy) * 0.8 && plain.energy < 1000, `plain ${(1000 - plain.energy).toFixed(0)}, warrior ${(1000 - brave.energy).toFixed(0)}`);
 }
 
+const fs = await import("node:fs");
+for (const f of ["./.hunt-snapshot.json", "./.hunt-genome-a.json", "./.hunt-genome-b.json", "./.hunt-genome-spider.json"]) fs.rmSync(f, { force: true });
 console.log(failures ? `FAILURES: ${failures}` : "ALL PASSED");
 process.exit(failures ? 1 : 0);
