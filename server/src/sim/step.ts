@@ -115,8 +115,11 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     return;
   }
   const progress = toolCraftProgress.get(colony.colony) ?? { ticks: 0, next: colony.colony.axes <= 0 ? "axe" : colony.colony.picks <= 0 ? "pick" : "rod" };
-  const wantsAxe = colony.colony.axes < CONFIG.maxAxes;
-  const wantsPick = colony.colony.picks < CONFIG.maxPicks;
+  // Caps grow with the tribe: three tools for a whole village starved it of wood.
+  const extra = Math.floor(colony.ants.filter(a => a.state !== "dead").length / CONFIG.toolCapPerResidents);
+  const maxAxes = CONFIG.maxAxes + extra, maxPicks = CONFIG.maxPicks + extra;
+  const wantsAxe = colony.colony.axes < maxAxes;
+  const wantsPick = colony.colony.picks < maxPicks;
   const wantsRod = colony.colony.rods < CONFIG.maxRods;
   if (!wantsAxe && !wantsPick && !wantsRod) {
     progress.ticks = 0;
@@ -142,10 +145,10 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     colony.colony.wood -= cost.wood;
     colony.colony.stone -= cost.stone;
     if (next === "axe") {
-      colony.colony.axes = Math.min(CONFIG.maxAxes, colony.colony.axes + 1);
+      colony.colony.axes = Math.min(maxAxes, colony.colony.axes + 1);
       progress.next = "pick";
     } else if (next === "pick") {
-      colony.colony.picks = Math.min(CONFIG.maxPicks, colony.colony.picks + 1);
+      colony.colony.picks = Math.min(maxPicks, colony.colony.picks + 1);
       progress.next = "rod";
     } else {
       colony.colony.rods = Math.min(CONFIG.maxRods, colony.colony.rods + 1);

@@ -362,7 +362,8 @@ export const CONFIG = {
   maxKilnsPerColony: POINT_BUILDING_LIMITS.kiln,
   kilnFiringTicks: 400,
   kilnWoodPerFiring: 2,
-  kilnWoodReserve: 4,
+  // Firing never burns the hearth's last wood.
+  kilnWoodReserve: 8,
   kilnCallTimeoutTicks: 1500,
   // Господство: держать столько источников столько тиков подряд.
   dominanceSprings: 2,
@@ -394,6 +395,8 @@ export const CONFIG = {
   rodCost: { wood: 2, stone: 0 },
   toolCraftTicks: 200,
   maxAxes: 3,
+  // One more axe and pick may be made for every this many residents.
+  toolCapPerResidents: 10,
   maxPicks: 3,
   maxRods: 4,
   dropPointRadius: 3,

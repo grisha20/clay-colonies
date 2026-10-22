@@ -95,64 +95,150 @@ func place(type: String) -> bool:
 func pending_sites() -> int:
 	return surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-1" and b.stage != "built").size()
 
-func set_priorities() -> void:
-	var p = pop()
-	var c = colony()
-	var unit = maxi(1, int(p / 8))
-	var pr = {"clay": 2 * unit, "wood": 2 * unit, "stone": unit, "build": unit + (1 if pending_sites() > 0 else 0), "guard": unit, "fish": mini(int(c.get("rods", 0)), unit)}
-	var raid = snap().get("session", {}).get("raid", {})
-	if str(raid.get("phase", "")) != "peace":
-		pr.guard = 2 * unit + 1
-	var total = 0
-	for v in pr.values():
-		total += v
-	# Leave hands for food: never assign more than 70% of the tribe.
-	while total > int(p * 0.7) and total > 0:
-		for k in ["fish", "stone", "build", "wood", "clay", "guard"]:
-			if pr[k] > 0 and total > int(p * 0.7):
-				pr[k] -= 1
-				total -= 1
-	var current = c.get("priorities", {})
-	var changed = false
-	for k in pr.keys():
-		if int(current.get(k, -1)) != pr[k]:
-			changed = true
-	if changed:
-		scene.priority_panel.priorities_requested.emit(pr)
-		decide("priorities %s" % JSON.stringify(pr))
+func springs() -> Array:
+	return surface().get("springs", [])
+
+func held_springs(owner := "colony-1") -> int:
+	return springs().filter(func(sp): return str(sp.get("holder", "")) == owner).size()
+
+## A free spot for kind at distance radii from c toward ang (± turns).
+func spot_toward(kind: String, c: Vector2, ang: float, radii: Array) -> Vector2:
+	for r in radii:
+		for turn in [0.0, 0.2, -0.2, 0.4, -0.4, 0.7, -0.7, 1.0, -1.0, 1.4, -1.4]:
+			var q = c + Vector2(cos(ang + turn), sin(ang + turn)) * float(r)
+			var reason = BuildRules.post_placement(surface(), "colony-1", q) if kind == "post" else BuildRules.point_building_placement(surface(), "colony-1", kind, q)
+			if reason == "":
+				return q
+	return Vector2.INF
+
+func place_at(type: String, p: Vector2, why: String) -> bool:
+	if p == Vector2.INF:
+		return false
+	scene.build.set_tool(type)
+	scene.build._place_point(p, false)
+	scene.build.set_tool("")
+	decide("place %s at %d,%d (%s)" % [type, int(p.x), int(p.y), why])
+	return true
+
+## Next spring to reach: the nearest one not ours (free first).
+func target_spring() -> Dictionary:
+	var best: Dictionary = {}
+	var best_d = INF
+	for sp in springs():
+		if str(sp.get("holder", "")) == "colony-1":
+			continue
+		var d = Vector2(float(sp.pos.x), float(sp.pos.y)).distance_to(camp()) + (200.0 if str(sp.get("holder", "")) != "" else 0.0)
+		if d < best_d:
+			best_d = d
+			best = sp
+	return best
+
+## Step the land toward a spring: a totem near the edge of our disc closest to it.
+func totem_toward(sp: Dictionary) -> bool:
+	var target = Vector2(float(sp.pos.x), float(sp.pos.y))
+	var discs = BuildRules.territory_discs(surface()).filter(func(d): return str(d.owner) == "colony-1")
+	if discs.is_empty():
+		return false
+	discs.sort_custom(func(a, b): return Vector2(a.x, a.y).distance_to(target) - float(a.r) < Vector2(b.x, b.y).distance_to(target) - float(b.r))
+	var from = Vector2(float(discs[0].x), float(discs[0].y))
+	return place_at("totem", spot_toward("totem", from, (target - from).angle(), [float(discs[0].r) - 5, float(discs[0].r) - 9, float(discs[0].r) - 13]), "toward spring %s" % str(sp.id))
+
+var defending := ""
+var besieging := ""
+
+func defend(c: Dictionary) -> void:
+	# A totem of ours losing strength: post by it, more guards (hands on), then back to the mother.
+	var hurt = own("totem", true).filter(func(t): return float(t.hp) < float(t.maxHp) - 1.0)
+	var war = colony(1).get("war")
+	if not hurt.is_empty() and defending == "":
+		var t = hurt[0]
+		var tp = Vector2(float(t.pos.x), float(t.pos.y))
+		var post = spot_toward("post", tp, (camp() - tp).angle(), [3.0, 4.0])
+		if post != Vector2.INF:
+			scene.ws_client.send_command({"type": "setDefensePost", "x": post.x, "y": post.y, "colony": 0})
+			var pr = c.get("priorities", {}).duplicate()
+			pr["guard"] = maxi(int(pr.get("guard", 0)), int(pop() / 3))
+			scene.priority_panel.priorities_requested.emit(pr)
+			defending = str(t.id)
+			decide("DEFEND totem %s: post next to it, guards %d" % [defending, int(pr.guard)])
+	elif defending != "" and war == null:
+		var home = camp() + (Vector2(240, 240) - camp()).normalized() * 14.0
+		scene.ws_client.send_command({"type": "setDefensePost", "x": home.x, "y": home.y, "colony": 0})
+		scene.priority_panel.auto_manage_requested.emit(true)
+		decide("war over (%s): post home, work back to the mother" % defending)
+		defending = ""
+
+func besiege() -> void:
+	# The neighbours hold two springs: besiege their totem by one of them.
+	var dom = snap().get("session", {}).get("dominance")
+	var rival_dom = typeof(dom) == TYPE_DICTIONARY and str(dom.get("holder", "")) == "colony-2"
+	if rival_dom and besieging == "" and defending == "":
+		var theirs = surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-2" and b.type == "totem" and b.stage == "built")
+		var best: Dictionary = {}
+		var best_d = INF
+		for t in theirs:
+			for sp in springs():
+				if str(sp.get("holder", "")) != "colony-2":
+					continue
+				var d = Vector2(float(t.pos.x), float(t.pos.y)).distance_to(Vector2(float(sp.pos.x), float(sp.pos.y)))
+				if d < best_d:
+					best_d = d
+					best = t
+		if not best.is_empty():
+			var tp = Vector2(float(best.pos.x), float(best.pos.y))
+			var post = spot_toward("post", tp, (camp() - tp).angle(), [2.5, 3.5, 4.5])
+			if post != Vector2.INF:
+				scene.ws_client.send_command({"type": "setDefensePost", "x": post.x, "y": post.y, "colony": 0})
+				var pr = colony().get("priorities", {}).duplicate()
+				pr["guard"] = maxi(int(pr.get("guard", 0)), int(pop() / 3))
+				scene.priority_panel.priorities_requested.emit(pr)
+				besieging = str(best.id)
+				decide("BESIEGE rival totem %s (they hold two springs)" % besieging)
+	elif besieging != "":
+		var still = surface().get("buildings", []).any(func(b): return str(b.id) == besieging)
+		if not still or not rival_dom:
+			var home = camp() + (Vector2(240, 240) - camp()).normalized() * 14.0
+			scene.ws_client.send_command({"type": "setDefensePost", "x": home.x, "y": home.y, "colony": 0})
+			scene.priority_panel.auto_manage_requested.emit(true)
+			decide("siege over (%s %s): post home, work back to the mother" % [besieging, "fell" if not still else "no longer needed"])
+			besieging = ""
 
 func policy() -> void:
 	var c = colony()
 	var clay = float(c.get("clay", 0))
 	var wood = float(c.get("wood", 0))
 	var stone = float(c.get("stone", 0))
-	set_priorities()
+	defend(c)
+	besiege()
 	var huts = own("hut").size()
 	if pending_sites() == 0:
+		var sp = target_spring()
 		if own("workshop").is_empty() and wood >= 4:
 			place("workshop")
-		elif huts < 3 + int(pop() / 6) and clay >= 8 and wood >= 5 and huts < 8:
+		elif huts < 3 and clay >= 8 and wood >= 5:
 			place("hut")
-		elif not own("workshop", true).is_empty() and own("idol").is_empty() and clay >= 25 and stone >= 5:
+		elif not own("workshop", true).is_empty() and own("kiln").is_empty() and clay >= 10 and stone >= 6:
+			place("kiln")
+		elif not sp.is_empty() and own("totem").size() < 6 and clay >= 14 and wood >= 8 and stone >= 4 and (held_springs() == 0 or (held_springs() < 2 and int(snap().get("tick", 0)) > 15000)):
+			totem_toward(sp)
+		elif held_springs() >= 1 and own("idol").is_empty() and clay >= 25 and stone >= 5:
 			place("idol")
-		elif own("storage").size() < 2 and wood >= 6 and stone >= 4:
+		elif own("storage").size() < 1 and wood >= 6 and stone >= 4:
 			place("storage")
-	# Defence post on the camp side facing the map centre.
-	if c.get("defensePost") == null or not shots_taken.has("post_set"):
+		elif huts < 8 and huts < 3 + int(pop() / 6) and clay >= 8 and wood >= 5:
+			place("hut")
+		elif held_springs() >= 1 and own("storage").size() < 2 and wood >= 6 and stone >= 4 and not own("totem", true).is_empty():
+			# A storage by the frontier totem feeds guards at a far post.
+			var t = own("totem", true)[-1]
+			place_at("storage", spot_toward("storage", Vector2(float(t.pos.x), float(t.pos.y)), (camp() - Vector2(float(t.pos.x), float(t.pos.y))).angle(), [10, 14, 18]), "frontier storage")
+	# Defence post on the camp side facing the map centre (once).
+	if not shots_taken.has("post_set"):
 		var toward = (Vector2(240, 240) - camp()).normalized()
 		var p = camp() + toward * 14.0
 		if BuildRules.post_placement(surface(), "colony-1", p) == "":
 			scene.ws_client.send_command({"type": "setDefensePost", "x": p.x, "y": p.y, "colony": 0})
 			shots_taken["post_set"] = true
 			decide("defence post toward centre")
-	var raid = snap().get("session", {}).get("raid", {})
-	var alarm = bool(c.get("alarm", false))
-	if str(raid.get("phase", "")) == "attack" and not alarm:
-		scene.hud.alarm_requested.emit(true)
-		decide("alarm ON during raid")
-	elif str(raid.get("phase", "")) != "attack" and alarm:
-		scene.hud.alarm_requested.emit(false)
-		decide("alarm OFF after raid")
 
 func record_state() -> void:
 	var c = colony()
@@ -174,6 +260,12 @@ func record_state() -> void:
 		"b_buildings": surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-2" and b.stage == "built").size(),
 		"weather": str(snap().get("weather", {}).get("state", "")), "raid": str(s.get("raid", {}).get("phase", "")),
 		"idol_progress": int(s.get("idolProgress", 0)), "enemies": snap().get("enemies", []).size(),
+		"special": int(c.get("specialClay", 0)), "special_b": int(c2.get("specialClay", 0)),
+		"springs": springs().map(func(sp): return str(sp.get("holder", "-"))),
+		"totems_a": own("totem", true).size(), "totems_b": surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-2" and b.type == "totem" and b.stage == "built").size(),
+		"kiln": own("kiln", true).size(), "fired_a": int(c.get("firedTotal", 0)), "fired_b": int(c2.get("firedTotal", 0)),
+		"dominance": s.get("dominance"), "finale": s.get("finaleScores"), "war_b": c2.get("war"), "auto": bool(c.get("autoManage", false)),
+		"advice": c.get("advice", []).map(func(a): return str(a.key)),
 		"motion": motion, "objectives": objectives, "status": str(s.get("status", "")),
 	})
 
@@ -252,6 +344,26 @@ func run() -> void:
 		if own("hut", true).size() >= 3:
 			scene.world_view.focus_on_colony(0)
 			await shot("m1_first_new_hut")
+		var burning = own("kiln", true).filter(func(k): return typeof(k.get("firing")) == TYPE_DICTIONARY and bool(k.firing.get("paid", false)))
+		if not burning.is_empty():
+			scene.world_view.camera_pivot.position = Vector3(float(burning[0].pos.x), 0, float(burning[0].pos.y))
+			scene.world_view.target_camera_distance = 14.0
+			await shot("m6_kiln")
+		if held_springs() >= 1:
+			var sp = springs().filter(func(x): return str(x.get("holder", "")) == "colony-1")[0]
+			scene.world_view.camera_pivot.position = Vector3(float(sp.pos.x), 0, float(sp.pos.y))
+			scene.world_view.target_camera_distance = 40.0
+			await shot("m7_spring_held")
+		if defending != "":
+			var dt = own("totem", true).filter(func(t): return str(t.id) == defending)
+			if not dt.is_empty():
+				scene.world_view.camera_pivot.position = Vector3(float(dt[0].pos.x), 0, float(dt[0].pos.y))
+				scene.world_view.target_camera_distance = 20.0
+				await shot("m8_siege_defence")
+		if bool(snap().get("weather", {}).get("bigRainActive", false)) and int(snap().get("tick", 0)) > 50000:
+			scene.world_view.focus_on_colony(0)
+			scene.world_view.target_camera_distance = 40.0
+			await shot("m9_great_rain")
 		if scene.world_view.atmosphere.darkness > 0.95:
 			await shot("m2_first_night")
 		if str(snap().get("weather", {}).get("state", "")) == "rain":
@@ -269,8 +381,8 @@ func run() -> void:
 			await shot("z_end")
 			write("end", {"status": status, "reason": str(snap().get("session", {}).get("reason", "")), "stats": snap().get("session", {}).get("stats", {})})
 			break
-		if Time.get_ticks_msec() - start_real > 40 * 60 * 1000:
-			write("end", {"status": "timeout", "reason": "40 real minutes"})
+		if Time.get_ticks_msec() - start_real > 60 * 60 * 1000:
+			write("end", {"status": "timeout", "reason": "60 real minutes"})
 			break
 	frame_report("final")
 	scene.ws_client.send_command({"type": "setSpeed", "value": 1})

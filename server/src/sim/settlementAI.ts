@@ -87,18 +87,25 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
   else if (!threat && c.alarm && c.alarmByMother) { c.alarm = false; c.alarmByMother = false; }
   c.growthPaused = false;
   c.clayReserve = population < 14 ? 0 : 6;
+  // Work in proportion to the tribe and its needs (a fixed small table left
+  // a 47-strong tribe with two woodcutters, no fire and 1500 food).
   const foodLow = c.food < Math.max(18, population * 1.5);
-  // Firing burns wood: hold it while a building site still waits for wood, or when hungry.
-  const siteNeedsWood = world.surface.buildings.some(b => b.colonyId === c.id && b.stage !== "built" && b.cost.wood > b.delivered.wood);
-  c.firingPaused = foodLow || (siteNeedsWood && c.wood < 12);
+  const foodRich = c.food > population * 20;
+  const fireLow = c.fire < 0.6 || c.wood < 6;
+  const sites = world.surface.buildings.filter(b => b.colonyId === c.id && b.stage !== "built");
+  const siteNeedsWood = sites.some(b => b.cost.wood > b.delivered.wood);
+  // Firing burns wood: hold it while the hearth or a building site needs it, or when hungry.
+  c.firingPaused = foodLow || fireLow || (siteNeedsWood && c.wood < 12);
   const atWar = !isPlayer && !!c.war;
+  const share = (f: number) => Math.max(1, Math.round(population * f));
+  const scale = foodLow ? 0.5 : 1;
   c.priorities = {
-    clay: foodLow ? 1 : c.clay < 45 ? 3 : 1,
-    wood: c.wood < 30 ? 2 : 1,
-    stone: built("workshop") && c.stone < 24 ? 2 : 0,
-    build: foodLow ? 1 : 3,
+    clay: Math.round((c.clay < 40 ? share(0.12) : c.clay < 120 ? share(0.05) : 1) * scale),
+    wood: Math.round((c.wood < 40 || siteNeedsWood ? share(0.2) + (fireLow ? 2 : 0) : share(0.08)) * (fireLow ? 1 : scale)),
+    stone: built("workshop") ? Math.round((c.stone < 30 ? share(0.08) : c.stone < 80 ? share(0.03) : 0) * scale) : 0,
+    build: foodLow ? 1 : sites.length ? Math.min(8, share(0.1) + 1) : 1,
     guard: atWar ? Math.max(CONFIG.aiWarMinGuards, Math.floor(population / 3)) : threat ? Math.min(5, Math.floor(population / 4)) : population >= 15 ? 2 : 1,
-    fish: !foodLow && built("workshop") && c.rods > 0 && population >= 20 ? 1 : 0
+    fish: !foodRich && built("workshop") && c.rods > 0 && population >= 12 ? Math.min(c.rods, share(0.08)) : 0
   };
 }
 
