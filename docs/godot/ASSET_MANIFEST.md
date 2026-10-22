@@ -10,6 +10,7 @@
 | Ассет | Исходный файл (.blend / script) | Экспортированный файл (.glb) | Автор / Происхождение | Лицензия | Статус |
 |---|---|---|---|---|---|
 | Базовый житель (Clayfolk resident) | `art/blender/resident.blend` | `godot/assets/models/resident.glb` | Авторский ассет проекта Clayfolk (Codex, `generate_resident.py` + `resident_sculpt.py`) | Лицензия проекта Clayfolk | Authored / technical checks passed 22.10.2026; owner art review pending |
+| Житель v3 — кандидат Hunyuan | `art/source/resident_hunyuan/`, `art/blender/prepare_resident_v3.py`, `resident_v3.blend` | `godot/assets/models/resident_v3.glb` | AI-generated Tencent Hunyuan 3D, предоставлен владельцем; подготовка/риг Codex | Условия сайта Hunyuan, редакция 26.05.2025, §5.3; подробности ниже | QA opt-in `--resident-v3`; нынешнюю модель не заменяет; одобрение владельца ожидается |
 | Костёр и очаг (Campfire) | `art/blender/campfire.blend` | `godot/assets/models/campfire.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_props.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
 | Хижина (Hut) | `art/blender/hut.blend` | `godot/assets/models/hut.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_props.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
 | Переносимый груз (Cargo) | `art/blender/cargo.blend` | `godot/assets/models/cargo.glb` | Авторский ассет проекта Clayfolk (`art/blender/generate_props.py`) | Лицензия проекта Clayfolk | Created / verified (M1) |
@@ -25,6 +26,10 @@
 | Рыбы (Lake fish) | `art/blender/fish.blend` | `godot/assets/models/fish.glb` | Авторский ассет проекта Clayfolk | Лицензия проекта Clayfolk | Planned (M4) |
 
 ### Житель — обновление 22.10.2026
+
+**Кандидат v3 из Hunyuan, 22.10.2026:** [отчёт и сравнение](RESIDENT_V3.md). Исходная внешность и UV сохранены; общий масштаб, сварка дубликатов и локальная чистка слипшегося контакта за правой рукой, лишних граней и мелких дырок у ступней. Итог 7674 треугольника, 3827 Blender-вершин, рост 1.75 м; те же имена/иерархия 19 костей и три поверхности. Координаты rig подогнаны под Hunyuan, не совпадают с rest текущей модели ниже. Пять циклов по 1 с. Albedo/normal/roughness — 2048², PNG упакованы в blend/GLB; Godot импортирует с VRAM-сжатием и mipmaps, текстуры общие для экземпляров. Племя A сохраняет цвет исходника, B и обжиг получают относительный tint; код действует только при явном выборе v3.
+
+**Происхождение v3:** AI-generated на `3d.hunyuan.tencent.com` владельцем/Claude; исходник и четыре референса предоставлены владельцем. Проверено 22.10.2026 по ссылке из подвала сайта: [официальное соглашение](https://rule.tencent.com/rule/202501080004), редакция 26.05.2025. §5.3 оставляет права на результат пользователю/законному правообладателю; запрета коммерческого применения результатов в этой редакции нет. §3.3 требует явного обозначения AI-происхождения, §3.6(1)/§5.6 — сохранения обозначений и сведений о правах. Это условия сайта, не лицензия открытых весов. Исходник сохранён без изменений; производная модель содержит AI/source/terms metadata. При распространении сохранить этот кредит в документации/credits игры. Полный разбор и ограничение доступа к сервису (§1.1) — в отчёте v3.
 
 [Результат, сборка, проверки и сравнение](RESIDENT_REMODEL.md). Blender 4.2.3 LTS → Godot 4.7.2 Forward+. Рост 1.74596 м, 2466 вершин / **4908 треугольников** до импортных UV-разрывов; 19 костей. GLB сохраняет тот же треугольный бюджет. Меш/узел `Resident`, armature `ResidentArmature`, Godot создаёт `Skeleton3D`.
 

@@ -1,0 +1,64 @@
+{
+  "triangles": 7674,
+  "material_triangles": [
+    5952,
+    208,
+    1514
+  ],
+  "vertices": 3827,
+  "scale": 1.746588693957115,
+  "nonmanifold_edges": 0,
+  "source_head_and_finger_positions_preserved": true,
+  "actions": {
+    "carry_idle": {
+      "minimum_z": -2.583394831390251e-09,
+      "maximum_edge_ratio": 1.800758363701031,
+      "loop_seam": 0.0,
+      "stance_error": 0.0,
+      "swing_clearance": {
+        "L": 0.0,
+        "R": 0.0
+      }
+    },
+    "carry_walk": {
+      "minimum_z": -3.8671281288316095e-08,
+      "maximum_edge_ratio": 3.54144151094019,
+      "loop_seam": 0.0,
+      "stance_error": 3.8671281288316095e-08,
+      "swing_clearance": {
+        "L": 0.05161987617611885,
+        "R": 0.051619887351989746
+      }
+    },
+    "idle": {
+      "minimum_z": -2.583394831390251e-09,
+      "maximum_edge_ratio": 1.800758363701031,
+      "loop_seam": 0.0,
+      "stance_error": 0.0,
+      "swing_clearance": {
+        "L": 0.0,
+        "R": 0.0
+      }
+    },
+    "walk": {
+      "minimum_z": -3.8671281288316095e-08,
+      "maximum_edge_ratio": 3.54144151094019,
+      "loop_seam": 0.0,
+      "stance_error": 3.8671281288316095e-08,
+      "swing_clearance": {
+        "L": 0.05161987617611885,
+        "R": 0.051619887351989746
+      }
+    },
+    "work_gather": {
+      "minimum_z": -2.583394831390251e-09,
+      "maximum_edge_ratio": 4.865820007554558,
+      "loop_seam": 0.0,
+      "stance_error": 0.0,
+      "swing_clearance": {
+        "L": 0.0,
+        "R": 0.0
+      }
+    }
+  }
+}

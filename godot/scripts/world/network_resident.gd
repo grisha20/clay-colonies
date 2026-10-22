@@ -62,6 +62,9 @@ var prev_pos_2d: Vector2 = Vector2.ZERO
 
 # Visual nodes
 var model_instance: Node3D
+## Candidate is opt-in until the owner approves the comparison. Per-instance
+## override also lets review scenes display the current and candidate together.
+var use_resident_v3: bool = "--resident-v3" in OS.get_cmdline_user_args()
 var anim_player: AnimationPlayer
 var skeleton: Skeleton3D
 var mesh_instance: MeshInstance3D
@@ -104,7 +107,9 @@ const COLONY_CORDS = {
 	"default": Color(0.82, 0.76, 0.57, 1.0)
 }
 
-func _init() -> void:
+func _init(candidate_v3: int = -1) -> void:
+	if candidate_v3 >= 0:
+		use_resident_v3 = candidate_v3 == 1
 	_setup_visuals()
 	_setup_selection()
 
@@ -151,7 +156,7 @@ func _ready() -> void:
 
 func _setup_visuals() -> void:
 	# Load resident GLB model
-	var resident_scene = load("res://assets/models/resident.glb") as PackedScene
+	var resident_scene = load("res://assets/models/resident_v3.glb" if use_resident_v3 else "res://assets/models/resident.glb") as PackedScene
 	if resident_scene:
 		model_instance = resident_scene.instantiate()
 		add_child(model_instance)
@@ -239,6 +244,11 @@ func _tint_surface(index: int, col: Color, roughness: float = -1.0) -> void:
 	var mat = mesh_instance.mesh.surface_get_material(index)
 	if mat and mat is StandardMaterial3D:
 		var custom_mat = mat.duplicate() as StandardMaterial3D
+		if use_resident_v3:
+			# Source texture already contains tribe A's clay/ochre. A stays at
+			# unity; other tribes use a relative tint, preserving baked detail.
+			var reference: Color = COLONY_COLORS["colony-1"] if index == 0 else COLONY_CORDS["colony-1"]
+			col = Color(col.r / reference.r, col.g / reference.g, col.b / reference.b)
 		custom_mat.albedo_color = col
 		if roughness >= 0.0:
 			custom_mat.roughness = roughness

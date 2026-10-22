@@ -1,0 +1,15 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== RUNNING GODOT QA NETWORK CLIENT INTEGRATION TEST ===
+[Test QA] Target QA Server URL: ws://127.0.0.1:8811
+[Step 1] Connecting to QA server at ws://127.0.0.1:8811...
+[Step 2] Connection establishing... Receiving live server snapshots...
+  PASS: Received 12 live snapshots from QA server!
+  PASS: Carriers verified for both tribes: Colony 1 has 1, Colony 2 has 1
+  PASS: Both tribes verified in registry: Colony 1 has 8 residents, Colony 2 has 8 residents (Total: 16)
+  PASS: Resident motion verified: 2 moving actors, 2 aligned with heading (+Z)
+  PASS: Cargo retained across frames: Colony 1 has 1, Colony 2 has 1
+[Step 3] Testing live disconnect and reconnect...
+  PASS: Reconnection successful! Zero duplicate resident IDs: registry size 16 matches snapshot 16
+  PASS: All test nodes and resources freed cleanly with zero leaks.
+=== GODOT QA NETWORK CLIENT INTEGRATION TEST: ALL PASSED (EXIT CODE 0) ===

@@ -48,6 +48,10 @@ func run() -> void:
 	scene.world_view.focus_on_colony(0)
 	for i in range(120):
 		await process_frame
+		# Benchmark consistently when another window receives focus. Normal
+		# gameplay caps background windows at 20 FPS, which is not asset cost.
+		Engine.max_fps = 0
+	print("PROBE_SETUP residents=%d candidate_v3=%s render=%s" % [scene.entity_registry.residents.size(), "--resident-v3" in args, RenderingServer.get_current_rendering_method()])
 	FramePerf.totals.clear()
 	FramePerf.take_frame()
 	var deltas: Array[float] = []
@@ -60,6 +64,7 @@ func run() -> void:
 	var t_start = Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t_start < int(seconds * 1000.0):
 		await process_frame
+		Engine.max_fps = 0
 		var now = Time.get_ticks_usec()
 		var d = float(now - last) / 1000.0
 		last = now
@@ -92,4 +97,5 @@ func run() -> void:
 	if gaps.size() > 2:
 		print("PROBE snapshot_gap p50=%.0fms p95=%.0fms max=%.0fms count=%d" % [gaps[gaps.size() / 2], gaps[int(gaps.size() * 0.95)], gaps[gaps.size() - 1], gaps.size()])
 	print("PROBE sections:\n" + FramePerf.report())
+	print("PROBE_END residents=%d video_memory_bytes=%d" % [scene.entity_registry.residents.size(), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)])
 	quit(0)

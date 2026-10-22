@@ -1,0 +1,31 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Vulkan 1.4.341 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4070
+
+PROBE_SETUP residents=90 candidate_v3=false render=forward_plus
+HITCH t=0.1s frame=31.6ms packets=0 bytes=0 tick=12384 residents=90 frame.animate_world=26.5
+HITCH t=0.2s frame=33.4ms packets=1 bytes=92269 tick=12384 residents=90 frame.animate_world=25.1
+HITCH t=0.2s frame=44.3ms packets=0 bytes=0 tick=12385 residents=90 frame.animate_world=28.6 reg.resident_update=4.4 snap.registry=5.3 snap.world_view=2.9 snap.panels=1.0 net.apply=9.5
+HITCH t=0.2s frame=37.4ms packets=0 bytes=0 tick=12385 residents=90 frame.animate_world=30.7
+HITCH t=0.3s frame=45.1ms packets=0 bytes=0 tick=12386 residents=90 frame.animate_world=29.1 reg.resident_update=4.8 snap.registry=5.8 snap.world_view=2.9 snap.panels=1.1 net.apply=10.1
+HITCH t=0.3s frame=33.2ms packets=0 bytes=0 tick=12386 residents=90 frame.animate_world=26.4
+HITCH t=0.4s frame=33.2ms packets=1 bytes=92552 tick=12386 residents=90 frame.animate_world=26.7
+HITCH t=0.4s frame=44.1ms packets=0 bytes=0 tick=12387 residents=90 frame.animate_world=28.1 reg.resident_update=4.4 snap.registry=5.3 snap.world_view=2.9 snap.panels=1.0 net.apply=9.4
+HITCH t=0.5s frame=32.2ms packets=1 bytes=92403 tick=12387 residents=90 frame.animate_world=26.4
+PROBE frames=1976 avg=10.12ms p50=10.01 p95=13.37 p99=19.26 max=45.09 hitches(>25ms)=9
+PROBE snapshot_gap p50=110ms p95=111ms max=124ms count=184
+PROBE sections:
+frame.animate_world avg=0.55ms max=30.68ms n=1976
+net.apply avg=8.10ms max=15.73ms n=184
+snap.panels avg=1.34ms max=7.50ms n=184
+snap.registry avg=3.44ms max=7.15ms n=184
+snap.world_view avg=3.07ms max=4.98ms n=184
+wv.trails avg=0.41ms max=0.76ms n=184
+frame.tooltip avg=0.06ms max=0.68ms n=1976
+wv.buildings avg=0.28ms max=0.53ms n=184
+reg.resident_update avg=0.03ms max=0.37ms n=16280
+reg.work_index avg=0.16ms max=0.32ms n=184
+frame.inspector avg=0.01ms max=0.19ms n=1976
+wv.ground_features avg=0.08ms max=0.16ms n=184
+wv.fences avg=0.01ms max=0.09ms n=184
+reg.set_work avg=0.00ms max=0.08ms n=16280
+PROBE_END residents=84 video_memory_bytes=467781664

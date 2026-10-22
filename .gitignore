@@ -34,6 +34,8 @@ __pycache__/
 
 # PNGs extracted by Godot from the embedded resident GLB textures.
 godot/assets/models/resident_resident_clay_normal.png*
+godot/assets/models/resident_v3_*.png*
+!godot/assets/models/resident_v3_*.png.import
 godot/tests/fixtures/resident_before_20261022_*normal.png*
 
 # Временные файлы check:slice

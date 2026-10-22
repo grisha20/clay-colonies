@@ -25,7 +25,19 @@ func run() -> void:
 		check("surface %d is %s" % [i,expected[i]], mat is StandardMaterial3D and mat.resource_name == expected[i])
 		var arrays = mesh.surface_get_arrays(i)
 		triangles += arrays[Mesh.ARRAY_INDEX].size() / 3
-	check("triangle budget <= 5000", triangles > 0 and triangles <= 5000)
+	var budget = 8000 if r.use_resident_v3 else 5000
+	check("triangle budget <= %d" % budget, triangles > 0 and triangles <= budget)
+	if r.use_resident_v3:
+		var current = NetworkResident.new(0)
+		check("explicit current model remains available in candidate QA", not current.use_resident_v3 and current.mesh_instance.mesh.surface_get_material(0).albedo_texture == null)
+		current.free()
+		var shared = NetworkResident.new(1)
+		check("instances share mesh and texture resources", shared.mesh_instance.mesh == mesh and shared.mesh_instance.mesh.surface_get_material(0).albedo_texture == mesh.surface_get_material(0).albedo_texture)
+		shared.free()
+		for i in range(3):
+			var mat = mesh.surface_get_material(i) as StandardMaterial3D
+			check("v3 textured PBR surface %d" % i, mat.albedo_texture != null and mat.normal_texture != null and mat.metallic == 0.)
+			check("v3 texture <= 2K surface %d" % i, mat.albedo_texture.get_width() <= 2048 and mat.albedo_texture.get_height() <= 2048)
 	var bounds = mesh.get_aabb()
 	check("height 1.70..1.80 and soles at zero", absf(bounds.position.y) < .001 and bounds.end.y > 1.70 and bounds.end.y < 1.80)
 	var parents = {"Root":"", "Hips":"Root", "Spine":"Hips", "Head":"Spine", "Socket_Head":"Head", "Socket_Cargo":"Spine", "Socket_Tool_R":"Hand.R"}
