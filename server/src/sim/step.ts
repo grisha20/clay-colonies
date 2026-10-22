@@ -1,5 +1,8 @@
 import type { Ant } from "../../../shared/types";
 import { isWaterAt } from "../../../shared/surfaceTerrain";
+import { surfaceRoute } from "../../../shared/surfaceNavigation";
+import { rainShelterPoint } from "./ant/shelter";
+import { isSheltered } from "./weather";
 import { computeDirectives, updateFitness } from "../ai/controller";
 import { CONFIG } from "../config";
 import { stepAnt, clearDeadAntPaths } from "./ant";
@@ -79,9 +82,35 @@ function scentFoodSources(world: World): void {
   }
 }
 
+/**
+ * Debug journal of deaths (CLAYFOLK_DEATH_LOG=1, e.g. on a QA server): one JSON
+ * line per dead resident with what it did, where, how wet, how far from the
+ * hearth and its rain shelter point, and whether a route there exists.
+ */
+const DEATH_LOG = process.env.CLAYFOLK_DEATH_LOG === "1";
+function logDeath(world: World, colony: ColonyRuntime, ant: Ant, cause: string): void {
+  const scoped = colonyWorldView(world, colony);
+  const home = colony.surfaceEntrance;
+  const shelter = rainShelterPoint(scoped, ant);
+  const route = shelter ? surfaceRoute(world.surface, ant.pos, shelter, colony.id) : null;
+  const post = colony.colony.defensePost;
+  const nearestEnemy = world.enemies.filter(e => e.hp > 0).map(e => ({ type: e.type, d: Math.round(Math.hypot(e.pos.x - ant.pos.x, e.pos.y - ant.pos.y)) })).sort((x, y) => x.d - y.d)[0];
+  console.log("[death] " + JSON.stringify({
+    tick: world.tick, colony: colony.id, id: ant.id, cause, job: ant.job, state: ant.state, role: ant.forageRole,
+    fired: !!ant.fired, carrying: ant.carrying, carryKind: ant.carryKind, kiln: ant.kilnId,
+    pos: { x: Math.round(ant.pos.x), y: Math.round(ant.pos.y) }, wet: Math.round(ant.waterExposure ?? 0), dissolved: +(ant.dissolved ?? 0).toFixed(2), energy: Math.round(ant.energy),
+    weather: world.weather.state, bigRain: !!world.weather.bigRainActive, alarm: !!colony.colony.alarm, war: !!world.colonies.some(c => c.colony.war),
+    distHome: Math.round(Math.hypot(ant.pos.x - home.x, ant.pos.y - home.y)), sheltered: isSheltered(scoped, ant.pos),
+    shelterDist: shelter ? Math.round(Math.hypot(ant.pos.x - shelter.x, ant.pos.y - shelter.y)) : null, routeToShelter: route ? route.length : null,
+    postDist: post ? Math.round(Math.hypot(ant.pos.x - post.x, ant.pos.y - post.y)) : null, inWater: isWaterAt(ant.pos.x, ant.pos.y), enemy: nearestEnemy ?? null
+  }));
+}
+
 /** Why a resident died, judged from what is left on it. */
-export function deathCause(ant: Ant): string {
+export function deathCause(ant: Ant, tick = 0): string {
   const washed = (ant.dissolved ?? 0) >= 1 || (ant.waterExposure ?? 0) >= CONFIG.waterExposureDeathTicks;
+  // Dissolved by rival water shots shortly before (not by rain or a lake).
+  if (washed && ant.shotAt !== undefined && tick - ant.shotAt <= 300) return "shot";
   if (washed) return isWaterAt(ant.pos.x, ant.pos.y) || ant.capturedBy ? "water" : "rain";
   if (ant.capturedBy) return "creature";
   if (ant.energy <= 0) return ant.state === "dead" && ant.melee ? "fight" : "hunger";
@@ -91,8 +120,9 @@ export function deathCause(ant: Ant): string {
 function removeDeadAndSyncSurface(world: World, colony: ColonyRuntime): void {
   for (const ant of colony.ants) {
     if (ant.state === "dead") {
-      const cause = deathCause(ant);
+      const cause = deathCause(ant, world.tick);
       colony.colony.deaths = { ...(colony.colony.deaths ?? {}), [cause]: (colony.colony.deaths?.[cause] ?? 0) + 1 };
+      if (DEATH_LOG) logDeath(world, colony, ant, cause);
       const scoped = colonyWorldView(world, colony);
       if ((ant.dissolved ?? 0) < 1) addAntCorpse(scoped, ant);
       addClayRemains(scoped, ant);

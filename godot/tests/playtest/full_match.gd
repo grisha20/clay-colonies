@@ -10,6 +10,7 @@ var scene: WorldObserver
 var out := "user://playtest"
 var log_file: FileAccess
 var speed := 20
+var map_seed := -1
 var seen_events: Dictionary = {}
 var shots_taken: Dictionary = {}
 var start_real := 0
@@ -308,6 +309,8 @@ func run() -> void:
 			out = args[i + 1]
 		elif args[i] == "--speed" and i + 1 < args.size():
 			speed = int(args[i + 1])
+		elif args[i] == "--seed" and i + 1 < args.size():
+			map_seed = int(args[i + 1])
 	DirAccess.make_dir_recursive_absolute(out)
 	log_file = FileAccess.open(out.path_join("playtest.jsonl"), FileAccess.WRITE)
 	start_real = Time.get_ticks_msec()
@@ -317,6 +320,12 @@ func run() -> void:
 	scene.ws_client.connect_to_server("ws://127.0.0.1:" + port)
 	while scene.entity_registry.residents.is_empty():
 		await frames(1)
+	if map_seed >= 0:
+		# Replay a given map: a new game with that seed (same command as the menu).
+		scene.ws_client.send_command({"type": "newGame", "seed": map_seed})
+		while int(surface().get("terrain", {}).get("seed", -1)) != map_seed or int(snap().get("tick", 99999)) > 200:
+			await frames(1)
+		await frames(30)
 	var terrain = surface().get("terrain", {})
 	write("start", {"seed": int(terrain.get("seed", 0)), "lakes": terrain.get("lakes", []).size(), "mountains": terrain.get("mountains", []).size(), "camp_a": [camp().x, camp().y]})
 	scene.world_view.focus_on_colony(0)

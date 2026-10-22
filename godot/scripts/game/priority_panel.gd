@@ -9,6 +9,7 @@ extends PanelContainer
 signal priorities_requested(priorities: Dictionary)
 signal auto_manage_requested(enabled: bool)
 signal firing_requested(paused: bool)
+signal water_requested
 
 const KEYS = ["clay", "wood", "stone", "build", "guard", "fish"]
 const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка"}
@@ -22,6 +23,9 @@ var firing_row: HBoxContainer
 var firing_label: Label
 var firing_button: Button
 var firing_paused := false
+## Water shooting for the guards (colony.waterWeapons, trainWaterWeapons command).
+var water_button: Button
+const WATER_COST := {"wood": 6, "stone": 4}
 var rows_box: VBoxContainer
 var priorities: Dictionary = {}
 var free_for_plus: int = 0
@@ -70,6 +74,11 @@ func _ready() -> void:
 	firing_row.add_child(firing_button)
 	firing_row.visible = false
 	box.add_child(firing_row)
+	water_button = Button.new()
+	water_button.name = "WaterButton"
+	water_button.focus_mode = Control.FOCUS_NONE
+	water_button.pressed.connect(func(): water_requested.emit())
+	box.add_child(water_button)
 	rows_box = VBoxContainer.new()
 	rows_box.add_theme_constant_override("separation", 2)
 	box.add_child(rows_box)
@@ -152,6 +161,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	var alarm = bool(colony.get("alarm", false))
 	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0))}
 	_update_firing(snapshot, colony, colony_id)
+	_update_water(snapshot, colony, colony_id)
 	var auto = bool(colony.get("autoManage", false))
 	if auto != auto_manage:
 		auto_manage = auto
@@ -245,6 +255,23 @@ func _update_firing(snapshot: Dictionary, colony: Dictionary, colony_id: String)
 	firing_row.visible = kilns > 0
 	firing_label.text = "Обожжено %d из %d%s" % [fired, total, " · печь горит" if burning > 0 else ""]
 	firing_button.text = "Обжиг на паузе" if firing_paused else "Обжиг идёт"
+
+
+func _update_water(snapshot: Dictionary, colony: Dictionary, colony_id: String) -> void:
+	var shop = false
+	var surface = snapshot.get("surface", {})
+	if typeof(surface) == TYPE_DICTIONARY:
+		for b in surface.get("buildings", []):
+			if typeof(b) == TYPE_DICTIONARY and str(b.get("type", "")) == "workshop" and str(b.get("stage", "")) == "built" and str(b.get("colonyId", "")) == colony_id:
+				shop = true
+	var trained = bool(colony.get("waterWeapons", false))
+	water_button.visible = shop or trained
+	if trained:
+		water_button.text = "Стража стреляет водой"
+		water_button.disabled = true
+	else:
+		water_button.text = "Обучить стражу водяной стрельбе (%d дерево, %d камень)" % [WATER_COST.wood, WATER_COST.stone]
+		water_button.disabled = float(colony.get("wood", 0)) < WATER_COST.wood or float(colony.get("stone", 0)) < WATER_COST.stone
 
 
 func _update_mode() -> void:

@@ -97,6 +97,8 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
   // Firing burns wood: hold it while the hearth or a building site needs it, or when hungry.
   c.firingPaused = foodLow || fireLow || (siteNeedsWood && c.wood < 12);
   const atWar = !isPlayer && !!c.war;
+  // Water shooting for the guards once a workshop and stock allow (same rule for every tribe).
+  if (isPlayer && !c.waterWeapons && built("workshop") && c.wood >= 16 && c.stone >= 12 && world.tick > 12000) trainWaterWeapons(world, world.colonies.indexOf(runtime));
   const share = (f: number) => Math.max(1, Math.round(population * f));
   const scale = foodLow ? 0.5 : 1;
   c.priorities = {

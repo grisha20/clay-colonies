@@ -55,6 +55,19 @@ func run() -> void:
 	panel.firing_requested.connect(func(v): asked.append(v))
 	panel.firing_button.pressed.emit()
 	check("firing_pause_request", asked == [true], str(asked))
+	var s2 = snap(null, ants)
+	s2.surface.buildings.append({"id": "w1", "type": "workshop", "stage": "built", "colonyId": "colony-1", "pos": {"x": 150, "y": 150}})
+	s2.colonies[0].colony["wood"] = 20
+	s2.colonies[0].colony["stone"] = 20
+	panel.update_from_snapshot(s2, 0)
+	check("water_button_offered", panel.water_button.visible and not panel.water_button.disabled, panel.water_button.text)
+	var water_asked = [0]
+	panel.water_requested.connect(func(): water_asked[0] += 1)
+	panel.water_button.pressed.emit()
+	check("water_request", water_asked[0] == 1)
+	s2.colonies[0].colony["waterWeapons"] = true
+	panel.update_from_snapshot(s2, 0)
+	check("water_trained_shown", panel.water_button.disabled and panel.water_button.text == "Стража стреляет водой", panel.water_button.text)
 	panel.queue_free()
 
 	var reg = EntityRegistry.new()

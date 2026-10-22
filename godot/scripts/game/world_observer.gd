@@ -257,6 +257,7 @@ func _setup_hud() -> void:
 	priority_panel.priorities_requested.connect(func(pr): ws_client.send_command({"type": "setPriorities", "colony": player_colony, "priorities": pr}))
 	priority_panel.auto_manage_requested.connect(func(on): ws_client.send_command({"type": "setAutoManage", "colony": player_colony, "value": on}))
 	priority_panel.firing_requested.connect(func(paused): ws_client.send_command({"type": "setFiring", "colony": player_colony, "paused": paused}))
+	priority_panel.water_requested.connect(func(): ws_client.send_command({"type": "trainWaterWeapons", "colony": player_colony}))
 
 	advice_feed = AdviceFeed.new()
 	canvas.add_child(advice_feed)

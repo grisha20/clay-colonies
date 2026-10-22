@@ -92,7 +92,11 @@ export function moveDefending(world: World, ant: Ant): boolean {
         ant.waterAmmo = (ant.waterAmmo ?? 0) - 1;
         ant.shot = { from: { ...ant.pos }, to: { ...enemy.pos }, until: world.tick + 5 };
         if (target) { target.hp -= CONFIG.waterShotDamage * ant.strength; target.lastHitColonyId = ant.colonyId; }
-        else dissolveAnt(intruder!, CONFIG.waterShotExposure, world);
+        else {
+          // Fired clay holds a water shot like it holds lake water.
+          dissolveAnt(intruder!, CONFIG.waterShotExposure * (intruder!.fired ? CONFIG.firedWaterFactor : 1), world);
+          intruder!.shotAt = world.tick;
+        }
       }
     } else if (target) {
       if (distance <= 4 && shotIsClear(world, ant.pos, target.pos)) {

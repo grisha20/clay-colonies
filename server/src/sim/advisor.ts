@@ -20,7 +20,7 @@ const clearedAt = new WeakMap<ColonyRuntime, Map<string, number>>();
 /** Recent totals of deaths, one per advisor pass (to tell "the tribe melts"). */
 const lossHistory = new WeakMap<ColonyRuntime, number[]>();
 const LOSS_WINDOW = 12;
-const CAUSE_NAMES: Record<string, string> = { water: "в воде", rain: "под дождём", fight: "в бою", hunger: "от голода", creature: "от зверей" };
+const CAUSE_NAMES: Record<string, string> = { water: "в воде", rain: "под дождём", shot: "от водяных выстрелов", fight: "в бою", hunger: "от голода", creature: "от зверей" };
 
 type Raw = Omit<Advice, "since">;
 
@@ -91,6 +91,9 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
       out.push({ key: "spring-enemy", severity: "warn", text: "Соседи держат источник — ритуалу Идола нужна особая глина", pos: { ...lost.pos } });
   }
 
+  // Rival guards shoot water: answer with water shooting and fired guards.
+  if (!c.waterWeapons && world.colonies.some(r => r.id !== runtime.id && r.colony.waterWeapons) && count("workshop", true))
+    out.push({ key: "water-guns", severity: "warn", text: "Соседи стреляют водой — обучи стражу водяной стрельбе; обожжённые держат удар" });
   // War over the land.
   const besieged = own.find(b => b.type === "totem" && b.stage === "built" &&
     world.colonies.some(r => r.id !== runtime.id && r.ants.some(a => a.state !== "dead" && a.job === "guard" && Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) < 8)));

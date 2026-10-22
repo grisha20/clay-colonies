@@ -180,6 +180,8 @@ export type Ant = {
   dissolved?: number;
   /** Fired in a kiln: no rain erosion, slower in water, stronger. Missing = raw clay. */
   fired?: boolean;
+  /** Tick of the last water shot taken (death cause "shot"). */
+  shotAt?: number;
   /** Kiln that called this resident for firing. */
   kilnId?: string;
   capturedBy?: string;

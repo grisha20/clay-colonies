@@ -24,7 +24,7 @@ const { updateSiege } = await import("../sim/siege");
 const { updateSprings } = await import("../sim/springs");
 const { updateOutcome, tribeScore } = await import("../sim/session");
 const { updateObjectives } = await import("../sim/objectives");
-const { updateWar } = await import("../sim/settlementAI");
+const { updateWar, updateSettlementAI } = await import("../sim/settlementAI");
 const { territoryOwnerAt } = await import("../../../shared/territory");
 const { buildingServicePoint } = await import("../../../shared/buildingGeometry");
 
@@ -219,6 +219,17 @@ const totemAt = (w: ReturnType<typeof fresh>, owner: string, pos: { x: number; y
   void cap0;
 }
 
+// Round 4: water shooting for the player's guards too.
+{
+  const w = fresh();
+  const A = w.colonies[0], c = A.colony;
+  const shop = { id: "shop-test", colonyId: A.id, type: "workshop" as const, stage: "built" as const, pos: { x: A.surfaceEntrance.x + 20, y: A.surfaceEntrance.y }, cost: { clay: 0, wood: 0, stone: 0 }, delivered: { clay: 0, wood: 0, stone: 0 }, progress: 1, hp: 100, maxHp: 100 };
+  w.surface.buildings.push(shop);
+  c.autoManage = true; c.wood = 30; c.stone = 30; c.waterWeapons = false;
+  w.tick = 12100; updateSettlementAI(w);
+  check("mother trains the player's guards in water shooting", Boolean(c.waterWeapons as boolean | undefined) && c.wood === 30 - CONFIG.waterTrainingCost.wood);
+}
+
 // Round 3: death causes, recovery of a shrunk tribe, "the tribe melts" advice.
 {
   const base = { ...fresh().colonies[0].ants[0] };
@@ -226,6 +237,8 @@ const totemAt = (w: ReturnType<typeof fresh>, owner: string, pos: { x: number; y
   check("death in rain", deathCause(ant({ dissolved: 1, pos: { x: 1, y: 1 } })) === "rain");
   check("death in a fight", deathCause(ant({ energy: 0, melee: { to: { x: 0, y: 0 }, until: 5 } })) === "fight");
   check("death from hunger", deathCause(ant({ energy: 0 })) === "hunger");
+  check("death from water shots", deathCause(ant({ waterExposure: CONFIG.waterExposureDeathTicks, shotAt: 1000, pos: { x: 1, y: 1 } }), 1100) === "shot");
+  check("old shot is not the cause", deathCause(ant({ dissolved: 1, shotAt: 100, pos: { x: 1, y: 1 } }), 1100) === "rain");
 }
 {
   const w = fresh();
