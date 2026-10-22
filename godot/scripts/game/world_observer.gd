@@ -24,6 +24,11 @@ var hud: GameHud
 var build: BuildController
 var priority_panel: PriorityPanel
 var advice_feed: AdviceFeed
+## The mother's head over the map, speaking her advice (replaces the advice list on screen).
+var mother_speaker: MotherSpeaker
+## Settings menu behind the ⚙ button (connection, camp and lake shortcuts, save, controls).
+var settings_panel: PanelContainer
+var insp_panel: PanelContainer
 var population_counts: Array[int] = [0, 0]
 var player_colony: int = 0
 
@@ -107,20 +112,20 @@ func _setup_hud() -> void:
 	canvas.name = "HUD"
 	add_child(canvas)
 
-	# Main HUD Control panel at top
+	# Settings menu (2D-style ⚙): connection, camp and lake shortcuts, save and
+	# the controls help. Hidden until the ⚙ button in the quick panel opens it.
 	var top_panel = PanelContainer.new()
 	top_panel.mouse_force_pass_scroll_events = false
-	# Connection, camera shortcuts and save live in a compact strip at the
-	# bottom-left; the top belongs to the player HUD (stores, tasks, alerts).
 	top_panel.name = "ObserverPanel"
 	top_panel.theme = GameHud.ink_theme()
-	top_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.86)))
+	top_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.97)))
 	top_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	top_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	top_panel.offset_right = -16
-	top_panel.offset_top = 16
+	top_panel.offset_top = 66
 	top_panel.custom_minimum_size = Vector2(0, 0)
-	canvas.add_child(top_panel)
+	top_panel.visible = false
+	settings_panel = top_panel
 
 	var vbox = VBoxContainer.new()
 	top_panel.add_child(vbox)
@@ -212,17 +217,17 @@ func _setup_hud() -> void:
 	btn_menu.pressed.connect(open_start_menu)
 	row_nav2.add_child(btn_menu)
 
-	# Separate selection from camera following; keep the inspector on screen.
-	var insp_panel = PanelContainer.new()
+	# Resident card at the bottom left above the build bar, as in 2D; shown
+	# only while a resident is selected.
+	insp_panel = PanelContainer.new()
 	insp_panel.mouse_force_pass_scroll_events = false
 	insp_panel.name = "ResidentInspector"
 	insp_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.9)))
 	insp_panel.theme = GameHud.ink_theme()
-	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	insp_panel.offset_left = -376
-	# Above the build bar, which spans the bottom centre.
+	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	insp_panel.offset_left = 16
 	insp_panel.offset_top = -362
-	insp_panel.offset_right = -16
+	insp_panel.offset_right = 376
 	insp_panel.offset_bottom = -158
 	canvas.add_child(insp_panel)
 	var inspector_box = VBoxContainer.new()
@@ -247,26 +252,31 @@ func _setup_hud() -> void:
 	canvas.add_child(hud)
 	hud.speed_requested.connect(func(v): ws_client.send_command({"type": "setSpeed", "value": v}))
 	hud.alarm_requested.connect(func(on): ws_client.send_command({"type": "setAlarm", "colony": player_colony, "value": on}))
+	hud.settings_requested.connect(func(): settings_panel.visible = not settings_panel.visible)
 
 	priority_panel = PriorityPanel.new()
 	canvas.add_child(priority_panel)
-	priority_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	priority_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	priority_panel.offset_left = 16
-	priority_panel.offset_bottom = -140
+	# Works on the right under the quick panel, like the 2D priorities.
+	priority_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	priority_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	priority_panel.offset_right = -16
+	priority_panel.offset_top = 66
 	priority_panel.priorities_requested.connect(func(pr): ws_client.send_command({"type": "setPriorities", "colony": player_colony, "priorities": pr}))
 	priority_panel.auto_manage_requested.connect(func(on): ws_client.send_command({"type": "setAutoManage", "colony": player_colony, "value": on}))
 	priority_panel.firing_requested.connect(func(paused): ws_client.send_command({"type": "setFiring", "colony": player_colony, "paused": paused}))
 	priority_panel.water_requested.connect(func(): ws_client.send_command({"type": "trainWaterWeapons", "colony": player_colony}))
 	priority_panel.warrior_requested.connect(func(): ws_client.send_command({"type": "initiateWarrior", "colony": player_colony}))
 
-	advice_feed = AdviceFeed.new()
-	canvas.add_child(advice_feed)
-	advice_feed.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	advice_feed.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	advice_feed.offset_right = -16
-	advice_feed.offset_top = 140
-	advice_feed.show_requested.connect(func(p): world_view.focus_on_point(p))
+	mother_speaker = MotherSpeaker.new()
+	canvas.add_child(mother_speaker)
+	mother_speaker.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	mother_speaker.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	mother_speaker.offset_top = 64
+	mother_speaker.offset_left = -270
+	mother_speaker.offset_right = 270
+	mother_speaker.show_requested.connect(func(p): world_view.focus_on_point(p))
+	# The settings menu opens above the works panel.
+	canvas.add_child(settings_panel)
 
 	build = BuildController.new()
 	build.name = "BuildController"
@@ -281,20 +291,11 @@ func _setup_hud() -> void:
 	start_menu.load_requested.connect(_on_menu_load)
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
-	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
-	help_label.text = "WASD, зажатое колесо — камера · зажатая ПКМ — поворот · колесо — масштаб\nЛКМ — выбрать · 1–9, 0 — стройка и зоны · Esc/ПКМ — отмена · Home — север вверх"
-	# Bottom-right under the inspector: the picture build bar fills the bottom centre.
-	help_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	help_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	help_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	help_label.offset_right = -18
-	help_label.offset_bottom = -14
-	help_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	help_label.add_theme_font_size_override("font_size", 13)
-	help_label.add_theme_color_override("font_color", Color(1, 0.97, 0.88))
-	help_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	help_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	canvas.add_child(help_label)
+	help_label.name = "ControlsHelp"
+	help_label.text = "WASD, зажатое колесо — камера · зажатая ПКМ — поворот\nколесо — масштаб · Home — север вверх · ЛКМ — выбрать\n1–9, 0 — стройка и зоны · Esc/ПКМ — отмена"
+	help_label.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(HSeparator.new())
+	vbox.add_child(help_label)
 	_update_inspector()
 
 func _connect_signals() -> void:
@@ -475,6 +476,8 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		priority_panel.update_from_snapshot(snapshot, player_colony)
 	if advice_feed:
 		advice_feed.update_from_snapshot(snapshot, player_colony)
+	if mother_speaker:
+		mother_speaker.update_from_snapshot(snapshot, player_colony)
 	if build:
 		build.update_from_snapshot(snapshot, player_colony)
 	FramePerf.add("snap.panels", t0)
@@ -659,6 +662,7 @@ func _update_inspector() -> void:
 	var valid = is_instance_valid(target)
 	follow_button.disabled = not valid
 	clear_selection_button.disabled = not valid
+	insp_panel.visible = valid
 	if not valid:
 		inspector_label.text = "Житель не выбран\nЩёлкните по жителю, чтобы узнать его занятие и груз."
 		return

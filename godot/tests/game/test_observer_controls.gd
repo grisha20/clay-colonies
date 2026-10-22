@@ -86,6 +86,10 @@ func run() -> void:
 	key(KEY_S, false)
 	check(view.camera_pivot.position.x == 480 and view.camera_pivot.position.z == 480, "keyboard pan moves and stays in map")
 	view.camera_pivot.position = Vector3(110, 0, 235)
+	# The address field lives in the ⚙ settings menu: open it first.
+	scene.hud.settings_requested.emit()
+	check(scene.settings_panel.visible, "gear opens the settings menu")
+	await process_frame
 	scene.server_line_edit.grab_focus()
 	var before_typing = view.camera_pivot.position
 	key(KEY_W, true)

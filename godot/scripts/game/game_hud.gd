@@ -7,6 +7,7 @@ extends Control
 
 signal speed_requested(value: int)
 signal alarm_requested(on: bool)
+signal settings_requested
 
 const PARCHMENT := Color(0.95, 0.89, 0.74, 0.94)
 const INK := Color(0.30, 0.20, 0.12)
@@ -22,6 +23,8 @@ var tooltip_panel: PanelContainer
 var tooltip_label: Label
 var speed_buttons: Dictionary = {}
 var alarm_button: Button
+var settings_button: Button
+var quick_panel: PanelContainer
 var alarm_on: bool = false
 var tasks_signature: String = ""
 
@@ -94,7 +97,21 @@ func _build_top_bar() -> void:
 	row.add_child(VSeparator.new())
 	weather_label = _label("День · ясно", 18)
 	row.add_child(weather_label)
-	row.add_child(VSeparator.new())
+	# Like the 2D client: pause, speed, alarm and the settings menu sit in their
+	# own small panel at the top right; the stores stay in the middle.
+	quick_panel = PanelContainer.new()
+	quick_panel.name = "QuickPanel"
+	quick_panel.add_theme_stylebox_override("panel", panel_style())
+	quick_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	quick_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	quick_panel.offset_right = -16
+	quick_panel.offset_top = 12
+	quick_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	quick_panel.mouse_force_pass_scroll_events = false
+	add_child(quick_panel)
+	row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	quick_panel.add_child(row)
 	for spec in [[0, "Пауза"], [1, "1×"], [5, "5×"], [20, "20×"]]:
 		var b = Button.new()
 		b.text = spec[1]
@@ -111,6 +128,12 @@ func _build_top_bar() -> void:
 	alarm_button.tooltip_text = "Все жители бросают работу и бегут защищать лагерь"
 	alarm_button.pressed.connect(func(): alarm_requested.emit(not alarm_on))
 	row.add_child(alarm_button)
+	settings_button = Button.new()
+	settings_button.text = "⚙"
+	settings_button.focus_mode = Control.FOCUS_NONE
+	settings_button.tooltip_text = "Меню: сохранить, лагеря и озёра, сервер, управление"
+	settings_button.pressed.connect(func(): settings_requested.emit())
+	row.add_child(settings_button)
 
 
 func _build_tasks() -> void:
@@ -136,7 +159,8 @@ func _build_alert() -> void:
 	alert_panel.add_theme_stylebox_override("panel", panel_style(Color(0.62, 0.20, 0.14, 0.92)))
 	alert_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	alert_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	alert_panel.position.y = 70
+	# Below the mother's portrait at the top centre.
+	alert_panel.position.y = 214
 	alert_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	alert_panel.visible = false
 	add_child(alert_panel)
