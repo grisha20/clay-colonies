@@ -26,6 +26,8 @@ const COSTS := {
 	"idol": {"clay": 25, "wood": 0, "stone": 5},
 	"kiln": {"clay": 10, "wood": 0, "stone": 6},
 	"totem": {"clay": 12, "wood": 6, "stone": 4},
+	# server/src/config.ts hutUpgradeCost: house of the clan.
+	"house": {"clay": 12, "wood": 6, "stone": 0, "special": 8},
 	"wall": {"clay": 2, "wood": 0, "stone": 0},
 	"gate": {"clay": 2, "wood": 1, "stone": 0},
 }
@@ -115,6 +117,32 @@ static func territory_placement(surface: Dictionary, owner: String, p: Vector2) 
 	if at == owner:
 		return ""
 	return "Чужая земля" if at != "" else "Вне своей земли — поставь тотем ближе"
+
+
+## Own built hut under p for the house upgrade, and why it can't be upgraded
+## ("" = can). Same checks as server/src/sim/building.ts hutUpgradeRefusal.
+static func house_target(surface: Dictionary, colony: Dictionary, owner: String, p: Vector2) -> Array:
+	var best: Dictionary = {}
+	var best_d = 4.5
+	for b in surface.get("buildings", []):
+		if str(b.get("type", "")) != "hut":
+			continue
+		var d = _pos(b.get("pos")).distance_to(p)
+		if d < best_d:
+			best_d = d
+			best = b
+	if best.is_empty() or str(best.get("colonyId", "")) != owner:
+		return [best, "Наведите на свою хижину"]
+	if str(best.get("stage", "")) != "built":
+		return [best, "Хижина ещё строится"]
+	if int(best.get("level", 1)) >= 2:
+		return [best, "Это уже дом рода"]
+	var cost: Dictionary = COSTS.house
+	if float(colony.get("specialClay", 0)) < float(cost.special):
+		return [best, "Не хватает особой глины"]
+	if float(colony.get("clay", 0)) < float(cost.clay) or float(colony.get("wood", 0)) < float(cost.wood):
+		return [best, "Не хватает глины или дерева"]
+	return [best, ""]
 
 
 static func snap_fence_position(p: Vector2) -> Vector2:
@@ -233,7 +261,7 @@ static func rect_cells(surface: Dictionary, a: Vector2, b: Vector2, cell: float)
 static func cost_text(kind: String) -> String:
 	var c: Dictionary = COSTS.get(kind, {})
 	var parts: PackedStringArray = []
-	for res in [["clay", "глина"], ["wood", "дерево"], ["stone", "камень"]]:
+	for res in [["clay", "глина"], ["wood", "дерево"], ["stone", "камень"], ["special", "особая глина"]]:
 		if int(c.get(res[0], 0)) > 0:
 			parts.append("%d %s" % [int(c[res[0]]), res[1]])
 	return ", ".join(parts)

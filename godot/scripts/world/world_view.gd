@@ -864,7 +864,8 @@ func _update_buildings(buildings: Array) -> void:
 		var vertical = str(b.get("gateAxis", "horizontal")) == "vertical"
 		var span = GATE_SPAN if int(b.get("gateSpan", 1)) == GATE_SPAN else 1
 		var colony_idx = 1 if str(b.get("colonyId", "")) == "colony-2" else 0
-		var key = "%s:%s:%s:%d:%d" % [b_type, b_stage == "built", vertical, span, colony_idx]
+		var level = int(b.get("level", 1))
+		var key = "%s:%s:%s:%d:%d:%d" % [b_type, b_stage == "built", vertical, span, colony_idx, level]
 
 		var node: Node3D = active_buildings.get(b_id)
 		if node != null and node.get_meta("visual_key", "") != key:
@@ -872,7 +873,7 @@ func _update_buildings(buildings: Array) -> void:
 			node.queue_free()
 			node = null
 		if node == null:
-			node = _make_building(b_type, b_stage == "built", vertical, span, colony_idx)
+			node = _make_building(b_type, b_stage == "built", vertical, span, colony_idx, level)
 			node.name = "Building_" + b_id
 			node.set_meta("visual_key", key)
 			buildings_container.add_child(node)
@@ -909,7 +910,7 @@ func _update_buildings(buildings: Array) -> void:
 	if not b_to_remove.is_empty():
 		hut_lights = hut_lights.filter(func(l): return is_instance_valid(l) and not l.is_queued_for_deletion())
 
-func _make_building(b_type: String, built: bool, vertical: bool, span: int, colony_idx: int = 0) -> Node3D:
+func _make_building(b_type: String, built: bool, vertical: bool, span: int, colony_idx: int = 0, level: int = 1) -> Node3D:
 	match b_type:
 		"hut":
 			var hut_scene = load("res://assets/models/hut.glb") as PackedScene
@@ -929,6 +930,14 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 			door.visible = false
 			root.add_child(door)
 			hut_lights.append(door)
+			if level >= 2:
+				# House of the clan: a bigger home with a chimney, a tribe band and a mask.
+				hut.scale = HUT_SCALE * 1.18
+				var decor = MeshInstance3D.new()
+				decor.name = "HouseDecor"
+				decor.mesh = PropFactory.house_decor(POST_COLORS[clampi(colony_idx, 0, 1)])
+				decor.scale = Vector3(1.18, 1.18, 1.18)
+				root.add_child(decor)
 			return root
 		"wall":
 			var post = MeshInstance3D.new()
@@ -1178,7 +1187,8 @@ func describe_at(p: Vector2) -> String:
 		var bp = _pos3(b.get("pos"))
 		var reach = 1.4 if str(b.get("type", "")) in ["wall", "gate"] else 4.0
 		if Vector2(bp.x, bp.z + 0.5).distance_to(p) < reach:
-			var text = "%s %s" % [BUILDING_NAMES.get(str(b.get("type", "")), "Постройка"), tribe.call(str(b.get("colonyId", "")))]
+			var b_name = "Дом рода" if str(b.get("type", "")) == "hut" and int(b.get("level", 1)) >= 2 else BUILDING_NAMES.get(str(b.get("type", "")), "Постройка")
+			var text = "%s %s" % [b_name, tribe.call(str(b.get("colonyId", "")))]
 			if str(b.get("stage", "built")) != "built":
 				text += " · строится %d%%" % int(clampf(float(b.get("progress", 0.0)), 0.0, 1.0) * 100.0)
 			elif float(b.get("maxHp", 0)) > 0:

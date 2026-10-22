@@ -9,7 +9,7 @@ extends RefCounted
 const SIZE := Vector2i(112, 88)
 ## kind -> [ortho size, look-at height]
 const FRAMING = {
-	"hut": [6.6, 1.3], "storage": [6.4, 0.8], "workshop": [6.2, 0.9], "idol": [4.2, 1.7], "kiln": [4.6, 1.0], "totem": [4.6, 2.1],
+	"hut": [6.6, 1.3], "storage": [6.4, 0.8], "workshop": [6.2, 0.9], "idol": [4.2, 1.7], "kiln": [4.6, 1.0], "totem": [4.6, 2.1], "house": [7.4, 1.6],
 	"wall": [4.2, 0.7], "gate": [6.2, 1.3], "post": [3.8, 1.5],
 	"harvest": [3.0, 0.3], "forbid": [3.8, 0.5], "erase": [3.8, 0.5],
 }
@@ -86,6 +86,16 @@ static func _props(kind: String) -> Array:
 			return [_mesh(PropFactory.idol())]
 		"totem":
 			return [_mesh(PropFactory.totem(WorldView.POST_COLORS[0]))]
+		"house":
+			var scene_h = load("res://assets/models/hut.glb") as PackedScene
+			var list = []
+			if scene_h:
+				var hut = scene_h.instantiate() as Node3D
+				hut.scale = WorldView.HUT_SCALE * 1.18
+				hut.position = Vector3(0, 0, 0.5)
+				list.append(hut)
+			list.append(_mesh(PropFactory.house_decor(WorldView.POST_COLORS[0]), Vector3.ZERO, Vector3.ZERO, Vector3.ONE * 1.18))
+			return list
 		"kiln":
 			var oven = _mesh(PropFactory.kiln())
 			oven.add_child(_mesh(PropFactory.kiln_embers()))

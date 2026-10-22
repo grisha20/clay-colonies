@@ -605,6 +605,30 @@ static func clay_spring() -> ArrayMesh:
 		return b.commit())
 
 
+## House of the clan (hut level 2): a clay chimney, a band of the tribe colour
+## round the wall and a clan mask over the door. Added on top of the hut model.
+static func house_decor(color: Color) -> ArrayMesh:
+	return _cached("house_decor:%s" % color.to_html(), func():
+		var b = Builder.new()
+		var clay = CLAY.darkened(0.08)
+		b.add(cyl(0.28, 0.36, 1.4, 10), xf(Vector3(-0.9, 3.0, -0.5)), clay, MAT_MATTE, 0.06)
+		b.add(cyl(0.34, 0.34, 0.12, 10), xf(Vector3(-0.9, 3.72, -0.5)), clay.darkened(0.2), MAT_MATTE)
+		b.add(cyl(0.2, 0.2, 0.06, 10), xf(Vector3(-0.9, 3.78, -0.5)), Color(0.12, 0.09, 0.07), MAT_MATTE)
+		# Tribe band low round the wall.
+		for k in range(28):
+			var a = TAU * float(k) / 28.0
+			b.add(box(Vector3(0.42, 0.16, 0.08)), xf(Vector3(cos(a) * 2.36, 0.55, 0.5 + sin(a) * 1.82), Vector3.ONE, Vector3(0, -a + PI / 2, 0)), color if k % 2 == 0 else color.darkened(0.2), MAT_MATTE)
+		# Clan mask over the doorway.
+		b.add(cyl(0.34, 0.36, 0.1, 12), xf(Vector3(0, 1.75, 2.42), Vector3(1, 1, 1), Vector3(PI / 2, 0, 0)), CLAY_LIGHT, MAT_MATTE, 0.04)
+		for side in [-1.0, 1.0]:
+			b.add(sphere(0.06, -1.0, 6, 4), xf(Vector3(0.12 * side, 1.82, 2.5)), Color(0.1, 0.08, 0.07), MAT_GLOSS)
+		b.add(box(Vector3(0.2, 0.04, 0.03)), xf(Vector3(0, 1.66, 2.5)), Color(0.1, 0.08, 0.07), MAT_MATTE)
+		for k in range(5):
+			var a = -0.9 + 0.45 * k
+			_stick(b, Vector3(0, 2.05, 2.42), Vector3(sin(a) * 0.45, 2.45 - 0.05 * absf(k - 2.0), 2.42), 0.03, WOOD_LIGHT, k)
+		return b.commit())
+
+
 static func fence_post(gate_side: bool = false) -> ArrayMesh:
 	return _cached("fence_post:%s" % gate_side, func():
 		var b = Builder.new()

@@ -196,7 +196,7 @@ func update_from_snapshot(snapshot: Dictionary, population: int) -> void:
 
 
 ## server/src/config.ts dominanceTicks: holding two springs this long wins.
-const DOMINANCE_TICKS := 6000
+const DOMINANCE_TICKS := 12000
 
 ## shared/dayCycle.ts: a 6000-tick day, night from 4200, 300-tick dusk/dawn.
 const DAY_TICKS := 6000
@@ -272,10 +272,11 @@ func _update_alert(session: Dictionary, weather: Variant, tick: int, colony: Dic
 			lines.append("Великий ливень! Счёт племён: A %d — B %d. Сильнейший победит." % [int(scores[0]), int(scores[1])])
 	var dom = session.get("dominance")
 	if typeof(dom) == TYPE_DICTIONARY:
-		var left = maxi(0, DOMINANCE_TICKS - (tick - int(dom.get("since", tick))))
+		var left = maxi(0, int(dom.get("required", DOMINANCE_TICKS)) - (tick - int(dom.get("since", tick))))
 		var player = int(session.get("playerColonyIndex", 0))
 		var mine = str(dom.get("holder", "")) == ("colony-2" if player == 1 else "colony-1")
-		lines.append(("Мы держим 2 источника: победа через %d с." if mine else "Соседи держат 2 источника: поражение через %d с. Осадите их тотем!") % int(left / 10))
+		var count = int(dom.get("count", 2))
+		lines.append(("Мы держим %d источника: победа через %d с." if mine else "Соседи держат %d источника: поражение через %d с. Осадите их тотем!") % [count, int(left / 10)])
 	if bool(colony.get("alarm", false)):
 		lines.append("Тревога включена: работа остановлена.")
 	if str(session.get("status", "playing")) != "playing":

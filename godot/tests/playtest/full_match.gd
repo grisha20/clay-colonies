@@ -231,6 +231,15 @@ func policy() -> void:
 			# A storage by the frontier totem feeds guards at a far post.
 			var t = own("totem", true)[-1]
 			place_at("storage", spot_toward("storage", Vector2(float(t.pos.x), float(t.pos.y)), (camp() - Vector2(float(t.pos.x), float(t.pos.y))).angle(), [10, 14, 18]), "frontier storage")
+	# Houses of the clan once the huts are maxed (keep special clay for the ritual too).
+	if own("hut", true).size() >= 8 and float(c.get("specialClay", 0)) >= 20 and clay >= 12 and wood >= 6:
+		var small = own("hut", true).filter(func(h): return int(h.get("level", 1)) < 2)
+		if not small.is_empty():
+			var hp = Vector2(float(small[0].pos.x), float(small[0].pos.y))
+			scene.build.set_tool("house")
+			scene.build._place_point(hp, false)
+			scene.build.set_tool("")
+			decide("upgrade hut %s to a house of the clan" % str(small[0].id))
 	# Defence post on the camp side facing the map centre (once).
 	if not shots_taken.has("post_set"):
 		var toward = (Vector2(240, 240) - camp()).normalized()
@@ -264,6 +273,9 @@ func record_state() -> void:
 		"springs": springs().map(func(sp): return str(sp.get("holder", "-"))),
 		"totems_a": own("totem", true).size(), "totems_b": surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-2" and b.type == "totem" and b.stage == "built").size(),
 		"kiln": own("kiln", true).size(), "fired_a": int(c.get("firedTotal", 0)), "fired_b": int(c2.get("firedTotal", 0)),
+		"houses_a": own("hut", true).filter(func(h): return int(h.get("level", 1)) >= 2).size(),
+		"houses_b": surface().get("buildings", []).filter(func(b): return b.colonyId == "colony-2" and b.type == "hut" and int(b.get("level", 1)) >= 2).size(),
+		"cap_a": int(c.get("nestCapacity", 0)),
 		"dominance": s.get("dominance"), "finale": s.get("finaleScores"), "war_b": c2.get("war"), "auto": bool(c.get("autoManage", false)),
 		"advice": c.get("advice", []).map(func(a): return str(a.key)),
 		"motion": motion, "objectives": objectives, "status": str(s.get("status", "")),

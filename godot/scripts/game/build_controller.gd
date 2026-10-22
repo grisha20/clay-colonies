@@ -17,6 +17,7 @@ const TOOLS = [
 	["harvest", "Зона добычи", "7"], ["forbid", "Запрет", "8"], ["erase", "Ластик", "9"],
 	["post", "Пост обороны", "0"],
 	["totem", "Тотем рода", "T"],
+	["house", "Дом рода", "U"],
 ]
 const HINTS = {
 	"hut": "Хижина: +4 к пределу жителей",
@@ -30,6 +31,7 @@ const HINTS = {
 	"forbid": "Запрет: жители сюда не ходят · тяните прямоугольник",
 	"erase": "Ластик: снимает зоны и недостроенную ограду",
 	"post": "Пост обороны: стража ждёт здесь, у ворот или у берега",
+	"house": "Дом рода: щёлкните по своей хижине — вдвое больше мест для жителей; нужна особая глина",
 	"totem": "Тотем рода: раздвигает землю племени — строить можно только на своей земле; источник особой глины на своей земле питает ритуал Идола",
 }
 const OK_COLOR := Color(0.35, 0.85, 0.4, 0.45)
@@ -81,15 +83,15 @@ static func _flat_material(c: Color) -> StandardMaterial3D:
 
 
 const GROUPS = [
-	["Жильё и хозяйство", ["hut", "storage", "workshop", "kiln", "idol"]],
+	["Жильё и хозяйство", ["hut", "house", "storage", "workshop", "kiln", "idol"]],
 	["Оборона", ["wall", "gate", "post"]],
 	["Земля и зоны", ["totem", "harvest", "forbid", "erase"]],
 ]
 const TILE_TEXT := Color(0.98, 0.93, 0.82)
 ## Short captions under the pictures; the tooltip carries the full name.
-const TILE_NAMES = {"kiln": "Печь", "post": "Пост", "totem": "Тотем", "harvest": "Добыча"}
+const TILE_NAMES = {"kiln": "Печь", "post": "Пост", "totem": "Тотем", "harvest": "Добыча", "house": "Дом рода"}
 const COST_SHORT := Color(1.0, 0.55, 0.45)
-const RES_GENITIVE = {"clay": "глины", "wood": "дерева", "stone": "камня"}
+const RES_GENITIVE = {"clay": "глины", "wood": "дерева", "stone": "камня", "special": "особой глины"}
 var tile_costs: Dictionary = {}    # tool -> {res: Label}
 var tile_counts: Dictionary = {}   # tool -> Label
 var tile_icons: Dictionary = {}    # tool -> TextureRect
@@ -215,7 +217,7 @@ func _make_tile(spec: Array) -> Button:
 	box.add_child(cost_row)
 	var costs: Dictionary = {}
 	var cost: Dictionary = BuildRules.COSTS.get(t, {})
-	for res in ["clay", "wood", "stone"]:
+	for res in ["clay", "wood", "stone", "special"]:
 		if int(cost.get(res, 0)) <= 0:
 			continue
 		var ic = TextureRect.new()
@@ -274,7 +276,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 		var short: Array = []
 		var cost: Dictionary = BuildRules.COSTS.get(t, {})
 		for res in tile_costs[t].keys():
-			var lack = float(colony.get(res, 0.0)) < float(cost.get(res, 0))
+			var lack = float(colony.get("specialClay" if res == "special" else res, 0.0)) < float(cost.get(res, 0))
 			if lack:
 				short.append(res)
 			(tile_costs[t][res] as Label).add_theme_color_override("font_color", COST_SHORT if lack else TILE_TEXT)
@@ -468,6 +470,17 @@ func update_preview(p: Vector2) -> void:
 				marks.append([c, ok])
 			_set_marks(marks)
 			hud.show_tooltip("Ограда · %d секц. · %s" % [ok_count, _cost_times("wall", ok_count)] if drag_start != Vector2.INF else HINTS.wall, observer.get_viewport().get_mouse_position())
+		"house":
+			var target = BuildRules.house_target(surface, observer.world_view.last_snapshot.get("colonies", [{}])[observer.player_colony].get("colony", {}), owner, p)
+			last_reason = target[1]
+			var hut: Dictionary = target[0]
+			ghost_ring.visible = not hut.is_empty()
+			if not hut.is_empty():
+				var hp = BuildRules._pos(hut.get("pos"))
+				ghost_ring.position = _ground(Vector2(hp.x, hp.y + 0.5), 0.08)
+				ghost_ring.scale = Vector3(4.6, 1.0, 2.9)
+				ghost_ring.material_override = _overlay_ok if last_reason == "" else _overlay_bad
+			hud.show_tooltip("Дом рода · %s" % BuildRules.cost_text("house") if last_reason == "" else "Дом рода: " + last_reason, observer.get_viewport().get_mouse_position())
 		"harvest", "forbid", "erase":
 			var a = drag_start if drag_start != Vector2.INF else p
 			_show_rect(a, p)
@@ -564,7 +577,7 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 	var p: Vector2 = ground_point.call(event.position)
 	if p == Vector2.INF:
 		return true
-	if tool in ["hut", "storage", "workshop", "idol", "kiln", "totem", "gate", "post"]:
+	if tool in ["hut", "storage", "workshop", "idol", "kiln", "totem", "gate", "post", "house"]:
 		if event.pressed:
 			_place_point(p, event.shift_pressed)
 		return true
@@ -587,6 +600,14 @@ static func _hotkey_matches(event: InputEventKey, key: String) -> bool:
 func _place_point(p: Vector2, keep_tool: bool) -> void:
 	var surface = _surface()
 	var colony = int(observer.player_colony)
+	if tool == "house":
+		var target = BuildRules.house_target(surface, observer.world_view.last_snapshot.get("colonies", [{}])[colony].get("colony", {}), _owner(), p)
+		if target[1] != "":
+			return
+		ws_client.send_command({"type": "upgradeHut", "buildingId": str(target[0].get("id", "")), "colony": colony})
+		if not keep_tool:
+			set_tool("")
+		return
 	if tool == "post":
 		if BuildRules.post_placement(surface, _owner(), p) != "":
 			return
