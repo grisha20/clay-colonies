@@ -178,9 +178,11 @@ func _setup_visuals() -> void:
 		_apply_colony_color()
 		_play_anim(AnimState.IDLE)
 
-## v3: a woven basket on the back, below the overhanging head; the load heaps
-## out of its top. Model space (Godot): the back is -Z.
-const BASKET_CENTER := Vector3(0.0, 0.70, -0.50)
+## v3: a woven basket against the back, below the overhanging head, its top
+## leaning in like the back does (0.30 m deep at the waist, 0.20 m at the
+## shoulders); rope straps over the shoulders. Model space (Godot): back is -Z.
+const BASKET_CENTER := Vector3(0.0, 0.70, -0.39)
+const BASKET_TILT := 0.16
 
 func _setup_cargo_prop() -> void:
 	if use_resident_v3 and skeleton.find_bone("Spine") >= 0:
@@ -206,18 +208,26 @@ func _setup_back_basket() -> void:
 	skeleton.add_child(bone_attachment_cargo)
 	# Undo the bone's rest frame so the basket stands upright in model space.
 	var rest_inv = skeleton.get_bone_global_rest(spine).affine_inverse()
-	var basket = MeshInstance3D.new()
+	var basket = Node3D.new()
 	basket.name = "Basket"
-	basket.mesh = PropFactory.back_basket()
-	basket.transform = rest_inv * Transform3D(Basis(), BASKET_CENTER)
+	basket.transform = rest_inv * Transform3D(Basis(Vector3.RIGHT, BASKET_TILT), BASKET_CENTER)
 	bone_attachment_cargo.add_child(basket)
+	var weave = MeshInstance3D.new()
+	weave.name = "Weave"
+	weave.mesh = PropFactory.back_basket()
+	basket.add_child(weave)
+	var straps = MeshInstance3D.new()
+	straps.name = "Straps"
+	straps.mesh = PropFactory.basket_straps()
+	straps.transform = rest_inv
+	bone_attachment_cargo.add_child(straps)
 	cargo_prop = Node3D.new()
 	cargo_prop.name = "CargoProp"
-	bone_attachment_cargo.add_child(cargo_prop)
+	basket.add_child(cargo_prop)
 	cargo_prop.visible = false
 	cargo_load = MeshInstance3D.new()
 	cargo_load.name = "Load"
-	cargo_load.transform = rest_inv * Transform3D(Basis().scaled(Vector3.ONE * 1.5), BASKET_CENTER + Vector3(0, PropFactory.BASKET_HEIGHT * 0.5 + 0.08, 0))
+	cargo_load.position = Vector3(0, PropFactory.BASKET_HEIGHT * 0.5, 0)
 	cargo_prop.add_child(cargo_load)
 	_refresh_cargo_load()
 
@@ -256,7 +266,15 @@ func _refresh_cargo_load() -> void:
 	if not cargo_load or kind == cargo_load_kind:
 		return
 	cargo_load_kind = kind
-	cargo_load.mesh = PropFactory.carry_load(kind)
+	if not use_resident_v3:
+		cargo_load.mesh = PropFactory.carry_load(kind)
+	elif kind == "wood":
+		cargo_load.mesh = PropFactory.basket_firewood()
+		cargo_load.transform = Transform3D(Basis(), Vector3(0, PropFactory.BASKET_HEIGHT * 0.5, 0))
+	else:
+		# Heaped over the rim, larger than life for the far camera.
+		cargo_load.mesh = PropFactory.carry_load(kind)
+		cargo_load.transform = Transform3D(Basis().scaled(Vector3.ONE * 1.35), Vector3(0, PropFactory.BASKET_HEIGHT * 0.5 + 0.07, 0))
 
 ## Visible work from EntityRegistry.work_for: pose, facing and tool.
 func set_work(w: Dictionary) -> void:

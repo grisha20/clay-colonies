@@ -26,6 +26,12 @@ func shot(name: String, text: String, focus: Vector3, distance: float, angle: fl
 	wv.camera.rotation_degrees.x = -angle
 	wv.target_camera_distance = distance
 	wv.camera_distance = distance
+	# Close-ups aim above the ground: stop WorldView clamping the focus to it.
+	wv.set_process(distance > 5.0)
+	if distance <= 5.0:
+		wv.camera_pivot.rotation.y = yaw
+		var rad = deg_to_rad(angle)
+		wv.camera.position = Vector3(0, sin(rad) * distance, cos(rad) * distance)
 	await frames(20)
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_jpg(out.path_join(name + ".jpg"), .92)
@@ -113,6 +119,10 @@ func run() -> void:
 	await shot("carry_back", "v3 · корзина за спиной · со спины", c + Vector3(0, .9, 0), 12.5, 14.)
 	for r in carriers: r.rotation.y = PI * .5
 	await shot("carry_side", "v3 · корзина за спиной · сбоку", c + Vector3(0, .9, 0), 12.5, 8.)
+	var close = carriers[0]
+	for spec in [["carry_close_side", PI * .5, "сбоку"], ["carry_close_front", 0., "спереди"], ["carry_close_back", PI * .8, "со спины"]]:
+		close.rotation.y = spec[1]
+		await shot(spec[0], "v3 · корзина, лямки, дрова · " + spec[2], close.position + Vector3(0, .8, 0), 3.2, 12.)
 	for i in range(carriers.size()): carriers[i].rotation.y = [0., PI, PI * .5, -PI * .5, PI * .25, -PI * .75][i]
 	await shot("carry_game", "v3 · носильщики · игровая камера 15 м", c + Vector3(0, .5, 0), 15., 52., 0., 70.)
 	scene.ws_client.disconnect_from_server(); scene.free()

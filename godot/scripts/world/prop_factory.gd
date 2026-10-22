@@ -773,8 +773,35 @@ static func back_basket() -> ArrayMesh:
 			b.add(cyl(r1, r0, h, 12), xf(Vector3(0, -BASKET_HEIGHT * 0.5 + h * (k + 0.5), 0)), col, MAT_MATTE, 0.01, float(k))
 		b.add(cyl(0.18, 0.18, 0.04, 12), xf(Vector3(0, BASKET_HEIGHT * 0.5, 0)), THATCH.darkened(0.4), MAT_MATTE, 0.01)
 		b.add(cyl(0.125, 0.125, 0.02, 10), xf(Vector3(0, -BASKET_HEIGHT * 0.5, 0)), THATCH.darkened(0.45), MAT_MATTE)
+		return b.commit())
+
+
+## Rope straps of the back basket, in resident v3 model space: from the
+## basket rim up over each shoulder and down onto the chest.
+static func basket_straps() -> ArrayMesh:
+	return _cached("basket_straps", func():
+		var b = Builder.new()
+		var rope = THATCH.darkened(0.5)
 		for sx in [-1.0, 1.0]:
-			b.add(box(Vector3(0.05, 0.26, 0.025)), xf(Vector3(0.09 * sx, BASKET_HEIGHT * 0.5 + 0.06, 0.15), Vector3.ONE, Vector3(-0.55, 0, 0)), WOOD.darkened(0.15), MAT_MATTE)
+			# Measured on the v3 mesh: shoulder top ~0.97 at x 0.24 (the head sits
+			# right on it), chest front 0.13/0.18/0.23 at heights 0.88/0.80/0.72.
+			var pts = [Vector3(0.11 * sx, 0.87, -0.23), Vector3(0.18 * sx, 0.95, -0.17), Vector3(0.24 * sx, 0.99, -0.04),
+				Vector3(0.24 * sx, 0.98, 0.07), Vector3(0.19 * sx, 0.88, 0.15), Vector3(0.15 * sx, 0.78, 0.2), Vector3(0.13 * sx, 0.70, 0.245), Vector3(0.12 * sx, 0.6, 0.275)]
+			for i in range(pts.size() - 1):
+				_stick(b, pts[i], pts[i + 1], 0.022, rope, float(i))
+		return b.commit())
+
+
+## Firewood standing upright in the back basket (origin at the rim centre).
+## Other loads reuse carry_load, heaped over the rim.
+static func basket_firewood() -> ArrayMesh:
+	return _cached("basket_firewood", func():
+		var b = Builder.new()
+		var logs = [[Vector3(-0.06, 0, 0.02), Vector3(-0.09, 0, 0.0)], [Vector3(0.06, 0, -0.01), Vector3(0.1, 0, -0.03)], [Vector3(0.0, 0, -0.07), Vector3(0.01, 0, -0.1)], [Vector3(0.0, 0, 0.07), Vector3(-0.02, 0, 0.1)]]
+		for i in range(logs.size()):
+			var foot: Vector3 = logs[i][0] + Vector3(0, -0.2, 0)
+			var top: Vector3 = logs[i][1] + Vector3(0, 0.26 + 0.05 * (i % 2), 0)
+			_stick(b, foot, top, 0.045, WOOD if i % 2 == 0 else WOOD_LIGHT, float(i))
 		return b.commit())
 
 

@@ -92,7 +92,7 @@ func run() -> void:
 		check("basket_on_back", a.bone_attachment_cargo.bone_name == "Spine" and a.bone_attachment_cargo.get_node_or_null("Basket") != null)
 		var basket = (a.bone_attachment_cargo.get_node("Basket") as Node3D)
 		var at = a.skeleton.global_transform.affine_inverse() * basket.global_transform.origin
-		check("basket_behind_below_head", at.z < -0.4 and at.y > 0.5 and at.y < 0.9, str(at))
+		check("basket_behind_below_head", at.z < -0.3 and at.y > 0.5 and at.y < 0.9, str(at))
 	a.set_work({"kind": "dig", "target": Vector3(51, 0, 50)})
 	a._update_movement_and_animation(0.0)
 	check("clay_dug_by_hand", not a.tool_prop.visible)
@@ -104,7 +104,7 @@ func run() -> void:
 		a.carrying_amount = 2
 		a.carry_kind = kind
 		a._update_movement_and_animation(0.0)
-		var expected = PropFactory.carry_load("food" if kind == "fruit" else kind)
+		var expected = PropFactory.basket_firewood() if a.use_resident_v3 and kind == "wood" else PropFactory.carry_load("food" if kind == "fruit" else kind)
 		check("carries_" + kind, a.cargo_prop.visible and a.cargo_load.mesh == expected)
 	a.set_work({"kind": "chop", "target": Vector3(50, 0, 50)})
 	a._update_movement_and_animation(0.0)
