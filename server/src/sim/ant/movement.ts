@@ -65,8 +65,20 @@ export function surfaceRouteTarget(world: World, ant: Ant, target: Vec2): Vec2 {
   }
   if (!route) {
     if (surfaceLineOpen(world.surface, ant.pos, target, ant.colonyId)) {markTaskPath(ant,true);return target;}
-    const points = surfaceRoute(world.surface, ant.pos, target, ant.colonyId);
-    route = { target: { ...target }, points: points ?? [], until: world.tick + 300, geometry };
+    let points = surfaceRoute(world.surface, ant.pos, target, ant.colonyId);
+    let until = world.tick + 300;
+    // Far targets behind ridges or lakes can exhaust the search budget: walk
+    // to a stage point part of the way and plan the rest from there.
+    if (!points) {
+      const d = distance(ant.pos, target);
+      for (const frac of [0.5, 0.3, 0.15]) {
+        if (d * frac < 20) break;
+        const stage = { x: ant.pos.x + (target.x - ant.pos.x) * frac, y: ant.pos.y + (target.y - ant.pos.y) * frac };
+        const partial = surfaceRoute(world.surface, ant.pos, stage, ant.colonyId);
+        if (partial) { points = partial; until = world.tick + 120; break; }
+      }
+    }
+    route = { target: { ...target }, points: points ?? [], until, geometry };
     safeRoutes.set(ant.id, route);
   }
   while (route.points.length > 1 && distance(ant.pos, route.points[0]) < 1 && surfaceLineOpen(world.surface, ant.pos, route.points[1], ant.colonyId)) route.points.shift();

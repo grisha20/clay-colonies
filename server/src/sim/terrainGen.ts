@@ -138,13 +138,23 @@ function tryGenerate(seed: number, attempt: number): SurfaceTerrainData | null {
       if (!placed) return null;
     }
   }
+  // The two corners without a camp are "wild edges": each gets a remote rich
+  // quarry and a dense wood, so the far corners are worth an expedition
+  // instead of being empty grass.
+  const wildCorners: P[] = diagonal
+    ? [{ x: 72, y: H - 72 }, { x: W - 72, y: 72 }]
+    : [{ x: 72, y: 72 }, { x: W - 72, y: H - 72 }];
   const extra: Array<[string, "clay" | "stone"]> = [["clay-central", "clay"], ["stone-central", "stone"], ["stone-remote", "stone"], ["clay-remote", "clay"]];
   for (const [id, kind] of extra) {
-    for (let k = 0; k < 120; k += 1) {
+    for (let k = 0; k < 160; k += 1) {
       const central = id.endsWith("central");
+      const wild = wildCorners[id === "stone-remote" ? 0 : 1];
+      // Try the wild corner first, then anywhere far from the camps.
       const p = central
         ? { x: round1(W / 2 + range(-70, 70)), y: round1(H / 2 + range(-70, 70)) }
-        : { x: round1(range(30, W - 30)), y: round1(range(30, H - 30)) };
+        : k < 80
+          ? { x: round1(wild.x + range(-40, 40)), y: round1(wild.y + range(-40, 40)) }
+          : { x: round1(range(30, W - 30)), y: round1(range(30, H - 30)) };
       if (!central && camps.some((c) => dist(c, p) < 120)) continue;
       if (siteFree(p)) { depositSites.push({ id, kind, x: p.x, y: p.y }); break; }
     }
@@ -154,6 +164,18 @@ function tryGenerate(seed: number, attempt: number): SurfaceTerrainData | null {
   const forests: ForestDefinition[] = [];
   const forestFree = (c: P, r: number) => camps.every((camp) => dist(camp, c) > r + 22) && blockers.every((o) => !insidePolygon(c, o.outline) && dist(o.c, c) > o.r * 0.5) &&
     depositSites.every((d) => dist(d, c) > r * 0.6 + 14);
+  // A dense wood and a grove in each wild corner.
+  for (const wild of wildCorners) {
+    for (const [rMin, rMax, density] of [[28, 38, 0.012], [9, 14, 0.024]] as const) {
+      for (let k = 0; k < 60; k += 1) {
+        const c = { x: wild.x + range(-38, 38), y: wild.y + range(-38, 38) }, r = range(rMin, rMax);
+        if (c.x < 20 || c.y < 20 || c.x > W - 20 || c.y > H - 20) continue;
+        if (!forestFree(c, r) || forests.some((f) => dist(f, c) < f.radius + r * 0.6)) continue;
+        forests.push({ x: round1(c.x), y: round1(c.y), radius: round1(r), density });
+        break;
+      }
+    }
+  }
   for (let i = 0, tries = 0; i < 7 && tries < 400; tries += 1) {
     const c = { x: range(30, W - 30), y: range(30, H - 30) }, r = range(26, 46);
     if (!forestFree(c, r) || forests.some((f) => dist(f, c) < f.radius + r * 0.6)) continue;

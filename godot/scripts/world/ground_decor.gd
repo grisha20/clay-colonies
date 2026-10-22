@@ -23,7 +23,22 @@ const KIND_TUFT := 0
 const KIND_FLOWER := 1
 const KIND_REED := 2
 const KIND_PEBBLE := 3
-const LABELS = ["Tufts", "Flowers", "Reeds", "Pebbles"]
+## Larger dressing readable from the game camera (15–25 m): leafy shrubs,
+## mossy boulders, fern patches, fallen logs, mushroom rings. Purely visual —
+## nothing here is a resource or an obstacle on the server.
+const KIND_SHRUB := 4
+const KIND_BOULDER := 5
+const KIND_FERN := 6
+const KIND_LOG := 7
+const KIND_MUSHROOM := 8
+const KIND_COUNT := 9
+## Kinds drawn with their own vertex colours (no per-instance tint / wind).
+const SOLID_KINDS = [KIND_PEBBLE, KIND_SHRUB, KIND_BOULDER, KIND_LOG, KIND_MUSHROOM]
+const SHRUBS_PER_CHUNK: int = 44
+const BOULDERS_PER_CHUNK: int = 12
+const FERNS_PER_CHUNK: int = 130
+const MUSHROOMS_PER_CHUNK: int = 12
+const LABELS = ["Tufts", "Flowers", "Reeds", "Pebbles", "Shrubs", "Boulders", "Ferns", "Logs", "Mushrooms"]
 const FLOWER_TINTS = [Color(1.0, 0.92, 0.35), Color(0.98, 0.97, 0.92), Color(0.95, 0.55, 0.7), Color(0.6, 0.65, 1.0), Color(1.0, 0.6, 0.25)]
 
 var map_size := Vector2(480, 480)
@@ -54,6 +69,11 @@ func _ready() -> void:
 		_blade_mesh(3, 0.3, 0.06, Color(0.26, 0.44, 0.16), Color(0.48, 0.66, 0.28), true, Color(1, 1, 1, 0)),
 		_blade_mesh(7, 1.05, 0.07, Color(0.28, 0.40, 0.18), Color(0.58, 0.64, 0.30), true, Color(0.36, 0.22, 0.12)),
 		pb.commit(),
+		_shrub_mesh(),
+		_boulder_mesh(),
+		_blade_mesh(9, 0.95, 0.1, Color(0.17, 0.33, 0.12), Color(0.42, 0.62, 0.24), false, Color.WHITE),
+		_log_mesh(),
+		_mushroom_mesh(),
 	]
 	density_noise.seed = 1337
 	density_noise.frequency = 0.035
@@ -99,6 +119,44 @@ func _blade_mesh(blades: int, height: float, width: float, root: Color, tip: Col
 	var mesh = st.commit()
 	mesh.surface_set_material(0, grass_material)
 	return mesh
+
+
+static func _shrub_mesh() -> ArrayMesh:
+	var b = PropFactory.Builder.new()
+	var greens = [Color(0.24, 0.42, 0.17), Color(0.30, 0.50, 0.20), Color(0.20, 0.36, 0.15)]
+	var lobes = [[Vector3(0, 0.32, 0), 0.42], [Vector3(0.3, 0.24, 0.1), 0.32], [Vector3(-0.26, 0.22, -0.12), 0.3], [Vector3(0.05, 0.22, 0.3), 0.28]]
+	for i in range(lobes.size()):
+		var r: float = lobes[i][1]
+		b.add(PropFactory.sphere(r, r * 1.6, 8, 5), Transform3D(Basis(), lobes[i][0]), greens[i % 3], PropFactory.MAT_MATTE, 0.08, float(i))
+	return b.commit()
+
+
+static func _boulder_mesh() -> ArrayMesh:
+	var b = PropFactory.Builder.new()
+	b.add(PropFactory.sphere(0.5, 0.62, 8, 5), Transform3D(Basis().scaled(Vector3(1.2, 1, 0.9)), Vector3(0, 0.18, 0)), Color(0.55, 0.54, 0.50), PropFactory.MAT_MATTE, 0.12)
+	b.add(PropFactory.sphere(0.3, 0.36, 7, 4), Transform3D(Basis(), Vector3(0.5, 0.08, 0.2)), Color(0.47, 0.46, 0.43), PropFactory.MAT_MATTE, 0.08, 2.0)
+	b.add(PropFactory.sphere(0.42, 0.2, 8, 4), Transform3D(Basis().scaled(Vector3(1.1, 1, 0.85)), Vector3(-0.05, 0.47, 0)), Color(0.36, 0.48, 0.24), PropFactory.MAT_MATTE, 0.06, 3.0)
+	return b.commit()
+
+
+static func _log_mesh() -> ArrayMesh:
+	var b = PropFactory.Builder.new()
+	PropFactory._stick(b, Vector3(-0.85, 0.14, 0), Vector3(0.85, 0.12, 0.05), 0.15, Color(0.40, 0.28, 0.17))
+	b.add(PropFactory.cyl(0.12, 0.12, 0.02, 8), Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(0.86, 0.12, 0.05)), Color(0.78, 0.62, 0.40), PropFactory.MAT_MATTE)
+	b.add(PropFactory.sphere(0.12, 0.08, 6, 3), Transform3D(Basis(), Vector3(0.1, 0.28, 0)), Color(0.36, 0.50, 0.24), PropFactory.MAT_MATTE, 0.03)
+	b.add(PropFactory.sphere(0.09, 0.06, 6, 3), Transform3D(Basis(), Vector3(-0.45, 0.27, 0.02)), Color(0.36, 0.50, 0.24), PropFactory.MAT_MATTE, 0.03, 1.0)
+	return b.commit()
+
+
+static func _mushroom_mesh() -> ArrayMesh:
+	var b = PropFactory.Builder.new()
+	var spots = [[Vector3(0, 0, 0), 1.0], [Vector3(0.22, 0, 0.1), 0.75], [Vector3(-0.15, 0, 0.2), 0.6]]
+	for i in range(spots.size()):
+		var p: Vector3 = spots[i][0]
+		var s: float = spots[i][1]
+		b.add(PropFactory.cyl(0.03 * s, 0.04 * s, 0.16 * s, 6), Transform3D(Basis(), p + Vector3(0, 0.08 * s, 0)), Color(0.93, 0.90, 0.82), PropFactory.MAT_MATTE)
+		b.add(PropFactory.sphere(0.1 * s, 0.09 * s, 8, 4), Transform3D(Basis(), p + Vector3(0, 0.17 * s, 0)), Color(0.80, 0.18, 0.12), PropFactory.MAT_GLOSS, 0.0, float(i))
+	return b.commit()
 
 
 static func _clear_zone(p: Vector2, entrances: Array, digs: Array, yards: Array) -> float:
@@ -252,7 +310,9 @@ func _compute_chunk(c: Vector2i, zones: Array) -> Dictionary:
 	rng.seed = 9173 + c.x * 131 + c.y * 7919
 	var origin = Vector2(c.x * CHUNK, c.y * CHUNK)
 	var center = _chunk_center(c)
-	var lists = [[], [], [], []]
+	var lists = []
+	for k in range(KIND_COUNT):
+		lists.append([])
 	for i in range(TUFTS_PER_CHUNK):
 		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
 		var shore = _shore_distance(p)
@@ -279,15 +339,40 @@ func _compute_chunk(c: Vector2i, zones: Array) -> Dictionary:
 		if _shore_distance(p) < 0.5 or SurfaceTerrain.is_mountain_at(p.x, p.y):
 			continue
 		lists[KIND_PEBBLE].append([p, rng.randf(), 0.5 + rng.randf() * 1.3])
+	# Shrubs and ferns grow in patches (noise), boulders and logs lie alone,
+	# mushrooms hide in the shrub patches.
+	var open_land = func(p: Vector2, shore_min: float) -> float:
+		if _shore_distance(p) < shore_min or SurfaceTerrain.is_mountain_at(p.x, p.y):
+			return 0.0
+		return _clear_zone(p, entrances, digs, yards)
+	for i in range(SHRUBS_PER_CHUNK):
+		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
+		var patch = density_noise.get_noise_2d(p.x * 0.8 + 300.0, p.y * 0.8)
+		if patch > -0.05 and rng.randf() < open_land.call(p, 2.5):
+			lists[KIND_SHRUB].append([p, rng.randf(), 0.7 + rng.randf() * 0.7])
+			if patch > 0.2 and lists[KIND_MUSHROOM].size() < MUSHROOMS_PER_CHUNK and rng.randf() < 0.45:
+				lists[KIND_MUSHROOM].append([p + Vector2(rng.randf_range(-1.2, 1.2), rng.randf_range(-1.2, 1.2)), rng.randf(), 0.8 + rng.randf() * 0.6])
+	for i in range(BOULDERS_PER_CHUNK):
+		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
+		if rng.randf() < open_land.call(p, 1.5) * 0.8:
+			lists[KIND_BOULDER].append([p, rng.randf(), 0.5 + rng.randf() * 1.0])
+	for i in range(FERNS_PER_CHUNK):
+		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
+		if density_noise.get_noise_2d(p.x * 1.3 - 200.0, p.y * 1.3) > 0.08 and rng.randf() < open_land.call(p, 2.0):
+			lists[KIND_FERN].append([p, rng.randf(), 0.8 + rng.randf() * 0.6])
+	if rng.randf() < 0.55:
+		var p = origin + Vector2(rng.randf() * CHUNK, rng.randf() * CHUNK)
+		if open_land.call(p, 3.0) > 0.9:
+			lists[KIND_LOG].append([p, rng.randf(), 0.8 + rng.randf() * 0.5])
 	var buffers = []
-	for kind in range(4):
+	for kind in range(KIND_COUNT):
 		buffers.append(_pack(lists[kind], center, rng, kind))
 	return {"chunk": c, "center": center, "buffers": buffers, "counts": lists.map(func(l): return l.size()), "gen": 0}
 
 
 ## Raw MultiMesh buffer: 12 floats of transform (+4 custom data when used).
 func _pack(items: Array, center: Vector2, rng: RandomNumberGenerator, kind: int) -> PackedFloat32Array:
-	var stride = 12 if kind == KIND_PEBBLE else 16
+	var stride = 12 if kind in SOLID_KINDS else 16
 	var buf = PackedFloat32Array()
 	buf.resize(items.size() * stride)
 	for i in range(items.size()):
@@ -321,13 +406,13 @@ func _apply_chunk(item: Dictionary) -> void:
 			old.queue_free()
 	chunk_nodes[c] = []
 	var center: Vector2 = item.center
-	for kind in range(4):
+	for kind in range(KIND_COUNT):
 		var count: int = item.counts[kind]
 		if count == 0:
 			continue
 		var mm = MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_custom_data = kind != KIND_PEBBLE
+		mm.use_custom_data = not kind in SOLID_KINDS
 		mm.mesh = meshes[kind]
 		mm.instance_count = count
 		mm.buffer = item.buffers[kind]
@@ -338,7 +423,7 @@ func _apply_chunk(item: Dictionary) -> void:
 		mmi.visibility_range_end = VISIBLE_RANGE * (1.4 if kind == KIND_REED else 1.0)
 		mmi.visibility_range_end_margin = 20.0
 		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if kind == KIND_REED else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if kind in [KIND_REED, KIND_SHRUB, KIND_BOULDER, KIND_LOG] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mmi)
 		chunk_nodes[c].append(mmi)
 		instance_count += count
