@@ -11,8 +11,8 @@ signal auto_manage_requested(enabled: bool)
 signal firing_requested(paused: bool)
 signal water_requested
 
-const KEYS = ["clay", "wood", "stone", "build", "guard", "fish"]
-const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка"}
+const KEYS = ["clay", "wood", "stone", "build", "guard", "fish", "hunt"]
+const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка", "hunt": "Охота"}
 
 var header: Label
 var mode_button: Button
@@ -85,7 +85,7 @@ func _ready() -> void:
 
 
 static func count_jobs(snapshot: Dictionary, colony_id: String) -> Dictionary:
-	var counts = {"clay": 0, "wood": 0, "stone": 0, "build": 0, "guard": 0, "fish": 0, "food": 0}
+	var counts = {"clay": 0, "wood": 0, "stone": 0, "build": 0, "guard": 0, "fish": 0, "hunt": 0, "food": 0}
 	var nodes: Dictionary = {}
 	var surface = snapshot.get("surface", {})
 	if typeof(surface) == TYPE_DICTIONARY:
@@ -101,6 +101,8 @@ static func count_jobs(snapshot: Dictionary, colony_id: String) -> Dictionary:
 				counts.guard += 1
 			"fish":
 				counts.fish += 1
+			"hunt":
+				counts.hunt += 1
 			"harvest":
 				var kind = str(ant.get("carryKind", ""))
 				if not kind in ["clay", "wood", "stone"]:
@@ -144,7 +146,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	for k in KEYS:
 		assigned += int(priorities[k])
 	free_for_plus = maxi(0, population - scouts - assigned)
-	var alive = {"clay": false, "wood": false, "stone": false, "fish": false}
+	var alive = {"clay": false, "wood": false, "stone": false, "fish": false, "hunt": false}
 	var loose_stone = false
 	var surface = snapshot.get("surface", {})
 	for n in surface.get("resourceNodes", []):
@@ -157,9 +159,12 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	for f in surface.get("fish", []):
 		if str(f.get("state", "")) != "respawning":
 			alive.fish = true
+	for a in surface.get("animals", []):
+		if str(a.get("state", "")) != "dead":
+			alive.hunt = true
 	var food = float(colony.get("food", 0.0))
 	var alarm = bool(colony.get("alarm", false))
-	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0))}
+	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0)), "hunt": int(colony.get("spears", 0))}
 	_update_firing(snapshot, colony, colony_id)
 	_update_water(snapshot, colony, colony_id)
 	var auto = bool(colony.get("autoManage", false))
@@ -197,7 +202,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 		row.add_child(actual)
 		if tools.has(k):
 			var t = Label.new()
-			t.text = "  %s: %d" % [{"wood": "топоры", "stone": "кирки", "fish": "удочки"}[k], tools[k]]
+			t.text = "  %s: %d" % [{"wood": "топоры", "stone": "кирки", "fish": "удочки", "hunt": "копья"}[k], tools[k]]
 			t.add_theme_font_size_override("font_size", 13)
 			t.add_theme_color_override("font_color", GameHud.INK.lightened(0.3))
 			row.add_child(t)
@@ -220,6 +225,8 @@ static func unmet_reason(k: String, target: int, count: int, alive: Dictionary, 
 		return "Тревога: рабочие у костра"
 	if (gather or k == "fish") and not bool(alive.get(k, true)):
 		return "Источник иссяк"
+	if k == "hunt" and not bool(alive.get(k, true)):
+		return "Дичи поблизости нет"
 	if gather and population < 8:
 		return "Для добычи нужно 8 жителей"
 	if gather and food < 30.0:
@@ -228,6 +235,8 @@ static func unmet_reason(k: String, target: int, count: int, alive: Dictionary, 
 		return "Стройка ждёт запаса 15 еды"
 	if k == "fish" and int(tools.get("fish", 0)) < target:
 		return "Не хватает удочек"
+	if k == "hunt" and int(tools.get("hunt", 0)) < target:
+		return "Не хватает копий: их делает мастерская"
 	if k == "stone" and int(tools.get("stone", 0)) == 0 and not loose_stone:
 		return "Нужна кирка из мастерской"
 	return "Нет фронта работ или свободных жителей" if k == "build" else "Ждёт свободного жителя или сдачи груза"

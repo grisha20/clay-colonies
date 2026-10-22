@@ -764,6 +764,47 @@ static func tool(kind: String) -> ArrayMesh:
 			"fish":
 				_stick(b, Vector3(0, -0.08, 0), Vector3(0, 1.5, 0.3), 0.028, WOOD_LIGHT)
 				b.add(sphere(0.045, -1.0, 6, 4), xf(Vector3(0, 1.5, 0.3)), BERRY, MAT_GLOSS)
+			"hunt":
+				# Spear: long shaft held near its middle, flint head bound with cord.
+				_stick(b, Vector3(0, -0.55, 0), Vector3(0, 1.15, 0), 0.035, WOOD_LIGHT)
+				b.add(cyl(0.0, 0.075, 0.28, 5), xf(Vector3(0, 1.28, 0)), STONE_DARK, MAT_MATTE, 0.02)
+				b.add(cyl(0.05, 0.05, 0.08, 6), xf(Vector3(0, 1.12, 0)), THATCH.darkened(0.3), MAT_MATTE)
+		return b.commit())
+
+
+## Game animals of the meadows (server Surface.animals), facing +Z.
+const DEER_COAT := Color(0.58, 0.40, 0.24)
+const DEER_BELLY := Color(0.86, 0.74, 0.58)
+
+static func deer() -> ArrayMesh:
+	return _cached("deer", func():
+		var b = Builder.new()
+		b.add(sphere(0.32, 0.5, 10, 6), xf(Vector3(0, 0.82, 0), Vector3(1, 0.9, 1.8)), DEER_COAT, MAT_MATTE, 0.03)
+		b.add(sphere(0.22, 0.3, 8, 5), xf(Vector3(0, 0.74, 0.05), Vector3(1, 0.7, 1.6)), DEER_BELLY, MAT_MATTE, 0.02, 1.0)
+		_stick(b, Vector3(0, 0.95, 0.45), Vector3(0, 1.3, 0.62), 0.11, DEER_COAT, 2.0)
+		b.add(sphere(0.16, 0.24, 8, 5), xf(Vector3(0, 1.36, 0.72), Vector3(1, 0.9, 1.4)), DEER_COAT, MAT_MATTE, 0.02, 3.0)
+		b.add(sphere(0.05, -1.0, 6, 4), xf(Vector3(0, 1.32, 0.92)), Color(0.12, 0.08, 0.06), MAT_GLOSS)
+		for sx in [-1.0, 1.0]:
+			b.add(sphere(0.06, 0.12, 6, 4), xf(Vector3(0.12 * sx, 1.5, 0.66), Vector3(0.6, 1.6, 0.4)), DEER_COAT.darkened(0.15), MAT_MATTE)
+			# Antlers: a beam and two tines.
+			_stick(b, Vector3(0.06 * sx, 1.48, 0.7), Vector3(0.22 * sx, 1.85, 0.62), 0.03, BONE.darkened(0.2))
+			_stick(b, Vector3(0.16 * sx, 1.72, 0.64), Vector3(0.3 * sx, 1.8, 0.78), 0.022, BONE.darkened(0.2))
+			for fz in [-1.0, 1.0]:
+				_stick(b, Vector3(0.15 * sx, 0.7, 0.36 * fz), Vector3(0.15 * sx, 0.04, 0.38 * fz), 0.06, DEER_COAT.darkened(0.1), sx + fz)
+		b.add(sphere(0.07, 0.12, 6, 4), xf(Vector3(0, 0.95, -0.58)), DEER_BELLY, MAT_MATTE)
+		return b.commit())
+
+
+static func hare() -> ArrayMesh:
+	return _cached("hare", func():
+		var b = Builder.new()
+		var fur = Color(0.62, 0.55, 0.45)
+		b.add(sphere(0.2, 0.3, 8, 5), xf(Vector3(0, 0.24, 0), Vector3(1, 0.9, 1.3)), fur, MAT_MATTE, 0.03)
+		b.add(sphere(0.13, 0.2, 8, 5), xf(Vector3(0, 0.4, 0.22)), fur, MAT_MATTE, 0.02, 1.0)
+		for sx in [-1.0, 1.0]:
+			b.add(sphere(0.04, 0.2, 6, 4), xf(Vector3(0.05 * sx, 0.6, 0.18), Vector3(0.8, 1.6, 0.5), Vector3(-0.3, 0, 0.15 * sx)), fur.darkened(0.1), MAT_MATTE)
+		b.add(sphere(0.06, -1.0, 6, 4), xf(Vector3(0, 0.3, -0.24)), Color(0.95, 0.93, 0.88), MAT_MATTE)
+		b.add(sphere(0.03, -1.0, 6, 4), xf(Vector3(0, 0.42, 0.34)), Color(0.12, 0.08, 0.06), MAT_GLOSS)
 		return b.commit())
 
 

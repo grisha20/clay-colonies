@@ -973,13 +973,15 @@ export function worldFromSnapshot(
         axes: Math.max(CONFIG.startingAxes, colonySnapshot.colony.axes ?? 0),
         picks: colonySnapshot.colony.picks ?? 0,
         rods: colonySnapshot.colony.rods ?? 0,
+        spears: colonySnapshot.colony.spears ?? 0,
         priorities: {
           clay: colonySnapshot.colony.priorities?.clay ?? 1,
           wood: colonySnapshot.colony.priorities?.wood ?? 1,
           stone: colonySnapshot.colony.priorities?.stone ?? 1,
           build: colonySnapshot.colony.priorities?.build ?? 1,
           guard: colonySnapshot.colony.priorities?.guard ?? 1,
-          fish: colonySnapshot.colony.priorities?.fish ?? 1
+          fish: colonySnapshot.colony.priorities?.fish ?? 1,
+          hunt: colonySnapshot.colony.priorities?.hunt ?? 0
         },
         autoManage: colonySnapshot.colony.autoManage ?? false,
         foundedTick: colonySnapshot.colony.foundedTick ?? 0,
@@ -1003,7 +1005,7 @@ export function worldFromSnapshot(
         state: ant.state === "dead" ? "dead" : ant.carrying > 0 ? "carry" : "search",
         colonyId: colonySnapshot.id,
         strength: ant.strength ?? 1,
-        job: (["forage", "idle", "harvest", "build", "guard", "fish"] as Array<Ant["job"]>).includes(ant.job) ? ant.job : "forage",
+        job: (["forage", "idle", "harvest", "build", "guard", "fish", "hunt"] as Array<Ant["job"]>).includes(ant.job) ? ant.job : "forage",
         preferredTask: undefined,
         broodId: undefined,
         carryingBrood: undefined,

@@ -407,6 +407,35 @@ export const CONFIG = {
   toolCapPerResidents: 10,
   maxPicks: 3,
   maxRods: 4,
+  // Охота: копья из мастерской, стада дичи на лугах (server/src/sim/hunting.ts).
+  spearCost: { wood: 3, stone: 2 },
+  maxSpears: 2,
+  /** Herds of deer (each deerPerHerd) and lone hares on a map. */
+  deerHerds: 4,
+  deerPerHerd: 4,
+  hares: 8,
+  deerHp: 2,
+  hareHp: 1,
+  /** Meat a hunter carries home from a kill. */
+  deerMeat: 8,
+  hareMeat: 3,
+  deerFleeRadius: 10,
+  hareFleeRadius: 5,
+  deerFleeSpeed: 1.25,
+  hareFleeSpeed: 1.45,
+  animalGrazeSpeed: 0.12,
+  animalRange: 20,
+  animalFleeTicks: 60,
+  animalRespawnTicks: 2400,
+  /** A hunter throws within this range, once per cooldown; nearer throws hit more often. */
+  spearRange: 7,
+  spearCooldownTicks: 36,
+  spearHitNear: 0.8,
+  spearHitFar: 0.4,
+  /** Hunters run faster than other residents. */
+  hunterSpeedFactor: 1.25,
+  /** Only game this close to the camp is worth a trip. */
+  huntRange: 170,
   dropPointRadius: 3,
 
   // Рыбалка: постоянная популяция в каждом озере, видимый подход рыбы к поплавку и медленное восстановление.

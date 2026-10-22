@@ -145,6 +145,11 @@ export function surfaceMoveSpeed(world: World, ant: Ant): number {
     ? CONFIG.workerSurfaceSpeed + CONFIG.antMobSpeedBonus
     : CONFIG.workerSurfaceSpeed;
 
+  // Охотники бегают быстрее остальных: дичь иначе не догнать.
+  if (ant.job === "hunt") {
+    speed *= CONFIG.hunterSpeedFactor;
+  }
+
   // Слабый костёр: племя вялое (огонь — сердце поселения).
   if ((world.colony.fire ?? 1) < CONFIG.fireLowThreshold) {
     speed *= CONFIG.fireLowSpeedFactor;

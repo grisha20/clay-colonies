@@ -484,6 +484,18 @@ func update_world_entities(snapshot: Dictionary) -> void:
 		p.y = 0.03
 		_update_moving(fish_id, "Fish_" + fish_id, p, fish.get("heading", {}), ["fish:" + species, func(): return PropFactory.fish(species), 0.0, 1.0], Vector3(1.0, 0.25, 1.0))
 
+	# Game of the meadows: deer herds and hares (hunted for meat).
+	for animal in _as_array(surface.get("animals", [])):
+		if typeof(animal) != TYPE_DICTIONARY or str(animal.get("state", "")) == "dead":
+			continue
+		var aid = str(animal.get("id", ""))
+		if aid.is_empty():
+			continue
+		seen_node_ids[aid] = true
+		var akind = str(animal.get("kind", "deer"))
+		var avisual = ["hare", func(): return PropFactory.hare(), 0.0, 1.0] if akind == "hare" else ["deer", func(): return PropFactory.deer(), 0.0, 1.0]
+		_update_moving(aid, "Animal_" + aid, _pos3(animal.get("pos", {})), animal.get("heading", {}), avisual, Vector3.ONE)
+
 	for enode in _as_array(snapshot.get("enemies", [])):
 		if typeof(enode) != TYPE_DICTIONARY:
 			continue
@@ -1308,6 +1320,11 @@ func describe_at(p: Vector2) -> String:
 		if typeof(e) == TYPE_DICTIONARY and _pos3(e.get("pos")).distance_to(Vector3(p.x, 0, p.y)) < 2.2:
 			var n = {"spider": "Паук", "beetle": "Жук", "lakeMonster": "Озёрный монстр"}.get(str(e.get("type", "")), "Зверь")
 			return "%s · здоровье %d / %d" % [n, int(float(e.get("hp", 0))), int(float(e.get("maxHp", 0)))]
+	var surface_now = last_snapshot.get("surface", {})
+	if typeof(surface_now) == TYPE_DICTIONARY:
+		for a in _as_array(surface_now.get("animals", [])):
+			if typeof(a) == TYPE_DICTIONARY and str(a.get("state", "")) != "dead" and _pos3(a.get("pos")).distance_to(Vector3(p.x, 0, p.y)) < 1.8:
+				return "%s · дичь: охотники с копьями приносят мясо" % ("Заяц" if str(a.get("kind", "")) == "hare" else "Олень")
 	for i in range(2):
 		var mother = mothers[i] as Node3D
 		if mother and mother.visible and Vector2(mother.global_position.x, mother.global_position.z).distance_to(p) < 1.6:

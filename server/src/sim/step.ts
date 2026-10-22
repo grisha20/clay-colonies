@@ -34,6 +34,7 @@ import {
 import { consumeFoodStock } from "./foodStock";
 import { updateRaids, updateOutcome, announceDusk } from "./session";
 import { updateWildlife } from "./wildlife";
+import { assignHuntJobs, updateAnimals } from "./hunting";
 import { updateSettlementAI } from "./settlementAI";
 import { updateAdvisor } from "./advisor";
 import { updateKilns } from "./kiln";
@@ -41,7 +42,7 @@ import { updateSprings } from "./springs";
 import { updateSiege } from "./siege";
 
 let scentOffsets: { dx: number; dy: number; falloff: number }[] | null = null;
-type ToolKind = "axe" | "pick" | "rod";
+type ToolKind = "axe" | "pick" | "rod" | "spear";
 const toolCraftProgress = new WeakMap<ColonyRuntime["colony"], { ticks: number; next: ToolKind }>();
 
 function getScentOffsets(radius: number): { dx: number; dy: number; falloff: number }[] {
@@ -164,18 +165,20 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
   const wantsAxe = colony.colony.axes < maxAxes;
   const wantsPick = colony.colony.picks < maxPicks;
   const wantsRod = colony.colony.rods < CONFIG.maxRods;
-  if (!wantsAxe && !wantsPick && !wantsRod) {
+  const maxSpears = CONFIG.maxSpears + extra;
+  const wantsSpear = (colony.colony.spears ?? 0) < maxSpears;
+  if (!wantsAxe && !wantsPick && !wantsRod && !wantsSpear) {
     progress.ticks = 0;
     toolCraftProgress.set(colony.colony, progress);
     return;
   }
-  const order: ToolKind[] = ["axe", "pick", "rod"];
-  const wanted = (tool: ToolKind): boolean => tool === "axe" ? wantsAxe : tool === "pick" ? wantsPick : wantsRod;
+  const order: ToolKind[] = ["axe", "pick", "rod", "spear"];
+  const wanted = (tool: ToolKind): boolean => tool === "axe" ? wantsAxe : tool === "pick" ? wantsPick : tool === "rod" ? wantsRod : wantsSpear;
   let next = progress.next;
   for (let offset = 0; offset < order.length && !wanted(next); offset += 1) {
     next = order[(order.indexOf(next) + 1) % order.length];
   }
-  const cost = next === "axe" ? CONFIG.axeCost : next === "pick" ? CONFIG.pickCost : CONFIG.rodCost;
+  const cost = next === "axe" ? CONFIG.axeCost : next === "pick" ? CONFIG.pickCost : next === "rod" ? CONFIG.rodCost : CONFIG.spearCost;
   if (colony.colony.wood < cost.wood || colony.colony.stone < cost.stone) {
     progress.next = next;
     progress.ticks = 0;
@@ -193,8 +196,11 @@ function updateWorkshops(world: World, colony: ColonyRuntime): void {
     } else if (next === "pick") {
       colony.colony.picks = Math.min(maxPicks, colony.colony.picks + 1);
       progress.next = "rod";
-    } else {
+    } else if (next === "rod") {
       colony.colony.rods = Math.min(CONFIG.maxRods, colony.colony.rods + 1);
+      progress.next = "spear";
+    } else {
+      colony.colony.spears = Math.min(maxSpears, (colony.colony.spears ?? 0) + 1);
       progress.next = "axe";
     }
     progress.ticks = 0;
@@ -285,6 +291,7 @@ export function step(world: World): void {
         assignBuildJobs(scopedWorld);
         assignGuardJobs(scopedWorld);
         assignFishingJobs(scopedWorld);
+        assignHuntJobs(scopedWorld);
       }
       updateTickCache(scopedWorld);
       profiler.measure("stepAnt", () => {
@@ -299,6 +306,7 @@ export function step(world: World): void {
   profiler.measure("phase.updateWorldSurfaceCache", () => updateWorldSurfaceCache(world));
   profiler.measure("phase.updateEnemies", () => updateEnemies(world));
   updateWildlife(world);
+  profiler.measure("phase.animals", () => updateAnimals(world));
 
   profiler.measure("phase.colonies.after", () => {
     for (const colony of world.colonies) {

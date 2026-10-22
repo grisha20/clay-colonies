@@ -167,8 +167,12 @@ static func build_work_index(snapshot: Dictionary) -> Dictionary:
 	var nodes: Dictionary = {}
 	var sites: Dictionary = {}
 	var alarms: Dictionary = {}
+	var animals: Dictionary = {}
 	var surface = snapshot.get("surface", {})
 	if typeof(surface) == TYPE_DICTIONARY:
+		for a in surface.get("animals", []):
+			if typeof(a) == TYPE_DICTIONARY and str(a.get("state", "")) != "dead":
+				animals[str(a.get("id", ""))] = a
 		for n in surface.get("resourceNodes", []):
 			if typeof(n) == TYPE_DICTIONARY:
 				nodes[str(n.get("id", ""))] = n
@@ -180,7 +184,7 @@ static func build_work_index(snapshot: Dictionary) -> Dictionary:
 			alarms[str(c.get("id", ""))] = bool(c.colony.get("alarm", false))
 	var weather = snapshot.get("weather", {})
 	var clear = typeof(weather) != TYPE_DICTIONARY or str(weather.get("state", "clear")) == "clear"
-	return {"nodes": nodes, "sites": sites, "alarms": alarms, "clear": clear}
+	return {"nodes": nodes, "sites": sites, "alarms": alarms, "clear": clear, "animals": animals}
 
 static func _pos2(d: Variant) -> Vector2:
 	if typeof(d) != TYPE_DICTIONARY:
@@ -233,4 +237,11 @@ static func work_for(ant: Dictionary, index: Dictionary) -> Dictionary:
 			if lure == Vector2.INF or int(ant.get("fishingTicks", 0)) <= 0:
 				return {}
 			return {"kind": "fish", "target": Vector3(lure.x, 0.0, lure.y)}
+		"hunt":
+			# Standing within spear range of the game: aim and throw.
+			var prey = index.get("animals", {}).get(str(ant.get("huntTargetId", "")))
+			if prey == null or state != "idle":
+				return {}
+			var pp = _pos2(prey.get("pos"))
+			return {"kind": "hunt", "target": Vector3(pp.x, 0.0, pp.y), "target_id": str(prey.get("id", ""))}
 	return {}

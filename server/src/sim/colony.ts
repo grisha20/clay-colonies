@@ -24,7 +24,8 @@ export function createColony(
     axes: CONFIG.startingAxes,
     picks: 0,
     rods: 0,
-    priorities: { clay: 1, wood: 1, stone: 1, build: 1, guard: 1, fish: 1 },
+    spears: 0,
+    priorities: { clay: 1, wood: 1, stone: 1, build: 1, guard: 1, fish: 1, hunt: 0 },
     autoManage: true,
     population: {
       workers: CONFIG.startingWorkers,

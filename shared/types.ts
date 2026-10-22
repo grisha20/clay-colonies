@@ -157,7 +157,13 @@ export type Ant = {
   colonyId: string;
   role: "worker";
   strength: number;
-  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard" | "fish";
+  job?: "forage" | "nurse" | "dig" | "carryDirt" | "idle" | "harvest" | "build" | "guard" | "fish" | "hunt";
+  /** Hunter: the game animal being stalked (Surface.animals). */
+  huntTargetId?: string;
+  /** Tick of the hunter's last spear throw (client plays the throw). */
+  huntThrowAt?: number;
+  /** Initiated warrior: a guard made stronger with special clay (bigger, masked). */
+  warrior?: boolean;
   carryKind?: "food" | FoodKind | ResourceKind;
   harvestNodeId?: string;
   // Прогресс многоударной добычи у текущего узла (в тиках «долбления»).
@@ -274,6 +280,8 @@ export type Colony = {
   axes: number;
   picks: number;
   rods: number;
+  /** Hunting spears (workshop). Absent in older saves: 0. */
+  spears?: number;
   alarm?: boolean;
   defensePost?: Vec2;
   waterWeapons?: boolean;
@@ -306,6 +314,8 @@ export type Colony = {
     build: number;
     guard: number;
     fish: number;
+    /** Hunters (needs spears). Absent in older saves: 0. */
+    hunt?: number;
   };
   zones?: {
     version: number;
@@ -355,6 +365,23 @@ export type Fish = {
   targetAntId?: string;
   lurePos?: Vec2;
   respawnAt?: number;
+};
+
+/** Game animals of the meadows: they flee from residents and are hunted for meat. */
+export type GameAnimalKind = "deer" | "hare";
+export type GameAnimal = {
+  id: string;
+  kind: GameAnimalKind;
+  pos: Vec2;
+  heading: Vec2;
+  hp: number;
+  state: "graze" | "flee" | "dead";
+  /** Centre of its herd range: it grazes around here and respawns here. */
+  home: Vec2;
+  fleeUntil?: number;
+  respawnAt?: number;
+  /** Tick of the last spear hit (client flinch). */
+  hitAt?: number;
 };
 
 export type Enemy = {
@@ -422,6 +449,8 @@ export type Surface = {
   deposits?: ResourceDeposit[];
   buildings: Building[];
   fish: Fish[];
+  /** Game animals (server/src/sim/hunting.ts). Absent in older saves: created on load. */
+  animals?: GameAnimal[];
   /** Lakes and other terrain of this world. Absent in saves made before v21 terrain data: legacy map. */
   terrain?: SurfaceTerrainData;
   /** Sources of special clay (server/src/sim/springs.ts). Absent in older saves. */

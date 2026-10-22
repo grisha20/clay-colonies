@@ -27,6 +27,7 @@
     "check:territory": "tsx server/src/bench/territoryCheck.ts",
     "check:dominance": "tsx server/src/bench/dominanceCheck.ts",
     "check:navparity": "tsx server/src/bench/navParityCheck.ts",
+    "check:hunt": "tsx server/src/bench/huntCheck.ts",
     "bench:crowd": "tsx server/src/bench/crowdBench.ts"
   },
   "devDependencies": {

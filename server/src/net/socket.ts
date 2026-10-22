@@ -54,7 +54,7 @@ export type ClientCommand =
   | {
       type: "setPriorities";
       colonyIndex: number;
-      priorities: { clay: number; wood: number; stone: number; build: number; guard: number; fish: number };
+      priorities: { clay: number; wood: number; stone: number; build: number; guard: number; fish: number; hunt: number };
     }
   | {
       type: "setSpeed";
@@ -166,7 +166,8 @@ export function parseCommand(raw: string): ClientCommand | null {
           stone: clampWeight(raw.stone),
           build: clampWeight(raw.build),
           guard: clampWeight(raw.guard),
-          fish: clampWeight(raw.fish)
+          fish: clampWeight(raw.fish),
+          hunt: clampWeight(raw.hunt ?? 0)
         }
       };
     }

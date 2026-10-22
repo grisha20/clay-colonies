@@ -101,13 +101,17 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
   if (isPlayer && !c.waterWeapons && built("workshop") && c.wood >= 16 && c.stone >= 12 && world.tick > 12000) trainWaterWeapons(world, world.colonies.indexOf(runtime));
   const share = (f: number) => Math.max(1, Math.round(population * f));
   const scale = foodLow ? 0.5 : 1;
+  const camp = runtime.surfaceEntrance;
+  const gameNear = (world.surface.animals ?? []).some(a => a.state !== "dead" && Math.hypot(a.pos.x - camp.x, a.pos.y - camp.y) <= CONFIG.huntRange);
   c.priorities = {
     clay: Math.round((c.clay < 40 ? share(0.12) : c.clay < 120 ? share(0.05) : 1) * scale),
     wood: Math.round((c.wood < 40 || siteNeedsWood ? share(0.2) + (fireLow ? 2 : 0) : share(0.08)) * (fireLow ? 1 : scale)),
     stone: built("workshop") ? Math.round((c.stone < 30 ? share(0.08) : c.stone < 80 ? share(0.03) : 0) * scale) : 0,
     build: foodLow ? 1 : sites.length ? Math.min(8, share(0.1) + 1) : 1,
     guard: atWar ? Math.max(CONFIG.aiWarMinGuards, Math.floor(population / 3)) : threat ? Math.min(5, Math.floor(population / 4)) : population >= 15 ? 2 : 1,
-    fish: !foodRich && built("workshop") && c.rods > 0 && population >= 12 ? Math.min(c.rods, share(0.08)) : 0
+    fish: !foodRich && built("workshop") && c.rods > 0 && population >= 12 ? Math.min(c.rods, share(0.08)) : 0,
+    // Hunting while game is near and the stores are not overflowing.
+    hunt: !foodRich && (c.spears ?? 0) > 0 && population >= 10 && gameNear ? Math.min(c.spears ?? 0, share(0.08)) : 0
   };
 }
 

@@ -17,6 +17,7 @@ import {
   moveSearching
 } from "./forage";
 import { moveFishing, releaseFish, pauseFishing } from "../fishing";
+import { moveHunting } from "../hunting";
 import { isWaterAt } from "../../../../shared/surfaceTerrain";
 import { consumeFoodStock } from "../foodStock";
 import { dissolveAnt } from "../water";
@@ -59,7 +60,7 @@ export function stepSurface(world: World, ant: Ant): void {
     ant.state = "search";
   }
 
-  if (ant.carryKind !== "fish" && (ant.state === "return" || ant.state === "carry" || ant.carrying > 0) && tryCrossLayer(world, ant)) {
+  if (ant.carryKind !== "fish" && ant.job !== "hunt" && (ant.state === "return" || ant.state === "carry" || ant.carrying > 0) && tryCrossLayer(world, ant)) {
     return;
   }
 
@@ -80,6 +81,10 @@ export function stepSurface(world: World, ant: Ant): void {
   }
 
   if (ant.job === "fish" && moveFishing(world, ant)) {
+    return;
+  }
+
+  if (ant.job === "hunt" && moveHunting(world, ant)) {
     return;
   }
 

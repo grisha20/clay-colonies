@@ -80,6 +80,8 @@ var work: Dictionary = {}
 var colony_color_applied: String = ""
 ## Kiln-fired: darker, redder, glazed clay (server Ant.fired).
 var fired: bool = false
+## Initiated warrior (server Ant.warrior).
+var warrior: bool = false
 var kiln_called: bool = false
 const FIRED_TINT := Color(0.50, 0.21, 0.12)
 var chips: CPUParticles3D
@@ -318,6 +320,11 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 
 	role = data.get("role", "worker")
 	job_name = data.get("job", "")
+	warrior = bool(data.get("warrior", false))
+	# Hunters and warriors are the strong ones of the tribe: a head taller.
+	var big = 1.15 if (job_name == "hunt" or warrior) and use_resident_v3 else 1.0
+	if model_instance and not is_equal_approx(model_instance.scale.x, big):
+		model_instance.scale = Vector3.ONE * big
 	state_name = data.get("state", "idle")
 	var raw_carrying = data.get("carrying", 0)
 	if typeof(raw_carrying) in [TYPE_INT, TYPE_FLOAT]:
@@ -526,6 +533,9 @@ func _update_tool(working: bool) -> void:
 	var kind = str(work.get("kind", "")) if working else ""
 	if kind == "dig" or kind == "gather":
 		kind = ""  # Clay, sticks and pebbles are taken with bare hands.
+	# A hunter keeps the spear in hand while stalking, not only when throwing.
+	if kind == "" and job_name == "hunt" and carrying_amount <= 0:
+		kind = "hunt"
 	if kind != tool_kind:
 		tool_kind = kind
 		tool_prop.mesh = PropFactory.tool(kind) if kind != "" else null
@@ -536,6 +546,8 @@ func _update_tool(working: bool) -> void:
 ## everything and just stands while fishing.
 func _work_clip() -> String:
 	var kind = str(work.get("kind", ""))
+	if kind == "hunt":
+		kind = "chop"  # the spear throw reuses the overhead swing
 	if anim_player and anim_player.has_animation("work_" + kind):
 		return "work_" + kind
 	return "idle" if kind == "fish" else "work_gather"
