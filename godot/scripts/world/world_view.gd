@@ -504,6 +504,17 @@ func update_world_entities(snapshot: Dictionary) -> void:
 		else:
 			visual = ["spider", func(): return PropFactory.spider(false), 0.0, 1.0]
 		_update_moving(eid, "Enemy_" + eid, p, enode.get("heading", {}), visual, scale)
+		# A fresh bite or blow (server attackAt): lunge at what was hit.
+		var attack_at = int(enode.get("attackAt", -1000))
+		if attack_at >= 0 and int(snapshot.get("tick", 0)) - attack_at <= 6:
+			var mi = active_world_nodes.get(eid) as Node3D
+			if mi and anim_time >= float(mi.get_meta("lunge_until", 0.0)) - 0.15:
+				mi.set_meta("lunge_until", anim_time + LUNGE_TIME)
+				var ap = enode.get("attackPos", {})
+				if typeof(ap) == TYPE_DICTIONARY:
+					var to = Vector2(float(ap.get("x", p.x)) - p.x, float(ap.get("y", p.z)) - p.z)
+					if to.length() > 0.05:
+						mi.set_meta("target_yaw", atan2(to.x, to.y))
 
 	var markers_to_remove: Array[String] = []
 	for mid in active_world_nodes.keys():
@@ -860,6 +871,11 @@ func _update_campfires(entrances: Array) -> void:
 		if is_instance_valid(cn):
 			cn.queue_free()
 
+const LUNGE_TIME := 0.45
+const HIT_SHAKE_TIME := 0.35
+## Buildings shaking from a blow: id -> [node, base position].
+var shaking_buildings: Dictionary = {}
+
 const GATE_OPEN_RADIUS := 3.0
 const GATE_OPEN_ANGLE := 1.7
 ## Built gates of the snapshot whose leaves animate: [node, ...].
@@ -888,6 +904,55 @@ func _update_gate_targets(buildings: Array, ants: Array) -> void:
 				break
 		node.set_meta("gate_target", 1.0 if near else 0.0)
 		swinging_gates.append(node)
+
+func _hit_building(b_id: String, node: Node3D) -> void:
+	node.set_meta("hit_until", anim_time + HIT_SHAKE_TIME)
+	shaking_buildings[b_id] = [node, node.position]
+	var dust = node.get_node_or_null("HitDust") as CPUParticles3D
+	if dust == null:
+		dust = CPUParticles3D.new()
+		dust.name = "HitDust"
+		dust.one_shot = true
+		dust.emitting = false
+		dust.amount = 14
+		dust.lifetime = 0.6
+		dust.explosiveness = 0.9
+		dust.direction = Vector3.UP
+		dust.spread = 70.0
+		dust.initial_velocity_min = 1.0
+		dust.initial_velocity_max = 2.4
+		dust.gravity = Vector3(0, -5.0, 0)
+		dust.scale_amount_min = 0.6
+		dust.scale_amount_max = 1.2
+		var chip = BoxMesh.new()
+		chip.size = Vector3(0.09, 0.06, 0.08)
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = Color(0.62, 0.46, 0.30)
+		mat.roughness = 0.95
+		chip.material = mat
+		dust.mesh = chip
+		dust.position = Vector3(0, 0.9, 0)
+		node.add_child(dust)
+	dust.restart()
+
+func _animate_hits() -> void:
+	if shaking_buildings.is_empty():
+		return
+	for b_id in shaking_buildings.keys():
+		var entry = shaking_buildings[b_id]
+		var node = entry[0] as Node3D
+		if not is_instance_valid(node):
+			shaking_buildings.erase(b_id)
+			continue
+		var left = float(node.get_meta("hit_until", 0.0)) - anim_time
+		if left <= 0.0:
+			node.position = entry[1]
+			node.rotation.z = 0.0
+			shaking_buildings.erase(b_id)
+			continue
+		var k = left / HIT_SHAKE_TIME
+		node.position = entry[1] + Vector3(sin(anim_time * 70.0), 0.0, cos(anim_time * 55.0)) * 0.06 * k
+		node.rotation.z = sin(anim_time * 60.0) * 0.04 * k
 
 func _animate_gates(delta: float) -> void:
 	for node in swinging_gates:
@@ -935,6 +1000,12 @@ func _update_buildings(buildings: Array) -> void:
 			buildings_container.add_child(node)
 			active_buildings[b_id] = node
 		node.position = _ground(b_pos)
+		# A blow (hp dropped since the last snapshot): shake and puff dust.
+		var hp = float(b.get("hp", -1.0))
+		var prev_hp = float(node.get_meta("hp", hp))
+		node.set_meta("hp", hp)
+		if b_stage == "built" and hp >= 0.0 and hp < prev_hp - 0.01:
+			_hit_building(b_id, node)
 		# Sites and buildings under construction read as translucent ghosts
 		# that firm up with progress.
 		if b_type == "totem" and b_stage == "built":
@@ -1363,6 +1434,7 @@ func _queue_prewarm() -> void:
 func _animate_world(delta: float) -> void:
 	anim_time += delta
 	_animate_gates(delta)
+	_animate_hits()
 	if atmosphere:
 		atmosphere.advance(delta)
 	var night = atmosphere.darkness if atmosphere else 0.0
@@ -1386,6 +1458,14 @@ func _animate_world(delta: float) -> void:
 		mi.set_meta("shown_yaw", yaw)
 		mi.position = _ground(shown)
 		mi.rotation.y = yaw
+		var lunge = float(mi.get_meta("lunge_until", 0.0)) - anim_time
+		if lunge > 0.0:
+			# Rear up and strike forward, then settle back.
+			var push = sin((1.0 - lunge / LUNGE_TIME) * PI)
+			mi.position += Vector3(sin(yaw), 0.0, cos(yaw)) * 0.45 * push
+			mi.rotation.x = -0.35 * push
+		elif mi.rotation.x != 0.0:
+			mi.rotation.x = 0.0
 	# Trees being chopped shudder at each blow; base stays planted (mesh origin is the root).
 	for id in worked_targets.keys():
 		if worked_targets[id] != "chop":

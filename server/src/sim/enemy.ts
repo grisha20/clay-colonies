@@ -432,6 +432,7 @@ export function updateEnemies(world: World): void {
       if (enemy.hp > 0 && ant.state !== "dead" && !ant.capturedBy && !isStartPeriod && isWithinRadius(ant.pos, enemy.pos, attackRadius)) {
         const hadEnergy = ant.energy > 0;
         ant.energy -= damage;
+        enemy.attackAt = world.tick; enemy.attackPos = { x: ant.pos.x, y: ant.pos.y };
         if (ant.energy <= 0) {
           ant.state = "dead";
           if (hadEnergy) {

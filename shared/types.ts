@@ -381,6 +381,10 @@ export type Enemy = {
   raid?: boolean;
   targetColonyId?: string;
   lastHitColonyId?: string;
+  /** Tick of the last bite or blow (a resident, a fence or a gate): the client plays a lunge. */
+  attackAt?: number;
+  /** What that blow landed on, for facing the lunge. */
+  attackPos?: Vec2;
 };
 
 export type SessionState = {

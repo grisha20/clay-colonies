@@ -144,10 +144,13 @@ export function moveToSafety(world: World, ant: Ant): boolean {
     (remembered && (world.tick < refuge!.until || dist(remembered.pos, home) < 14) ? remembered : undefined);
   if (!danger) { refuges.delete(ant); refuge = undefined; }
   if (!world.colony.alarm && !danger && (ant.rescuedUntil ?? 0) <= world.tick) return false;
-  if (!world.colony.alarm && danger?.type === "spider" && ant.carrying <= 0 &&
+  // A spider at the hearth is a call to arms, alarm or not: hands without cargo
+  // and with strength left defend the mother; the rest take cover. During a
+  // raid more of them rally than for a stray spider.
+  if (danger?.type === "spider" && ant.carrying <= 0 && ant.energy > CONFIG.refuelEnergyThreshold &&
       (danger.raid || world.ants.filter(a => a.state !== "dead").length > 10) &&
       dist(danger.pos, world.surface.entrance) < CONFIG.guardEngageRadius &&
-      (ant.state === "fight" || world.ants.filter(a => a.state === "fight" && a.job !== "guard").length < CONFIG.defenseMaxHelpers)) return false;
+      (ant.state === "fight" || world.ants.filter(a => a.state === "fight" && a.job !== "guard").length < CONFIG.defenseMaxHelpers * (danger.raid ? 2 : 1))) return false;
   tryCrossLayer(world, ant);
   ant.state = ant.carrying > 0 ? "carry" : "return";
   if (danger) {

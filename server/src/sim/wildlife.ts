@@ -15,7 +15,7 @@ import { lakeSession, logEvent } from "./session";
 import { addFoodSource, type World } from "./world";
 import { buildingRouteTarget, buildingFootprint, insideBuilding, crossesBuilding, outsideBuilding } from "../../../shared/buildingGeometry";
 
-const routes = new WeakMap<Enemy, { target: Vec2; points: Vec2[]; until: number }>();
+const routes = new WeakMap<Enemy, { target: Vec2; points: Vec2[]; until: number; blocked?: boolean }>();
 const foundationRoutes = new WeakMap<Enemy, { target: Vec2; point: Vec2 }>();
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 const swimPlans = new WeakMap<Enemy, { target: Vec2; points: Vec2[] }>();
@@ -80,14 +80,19 @@ export function nearestDryPosition(world: World, point: Vec2): Vec2 | null {
 export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: number, breakWalls = false): void {
   if (enemy.type === "lakeMonster") { moveAmphibian(world, enemy, target, speed); return; }
   let next = target;
-  if (!breakWalls) {
+  // Raiders walk around fences and lone gates like anyone else; they only
+  // smash through when the camp is closed off (no route at all).
+  let smash = false;
+  {
     let route = routes.get(enemy);
     if (!route || world.tick >= route.until || dist(route.target, target) > 4) {
-      route = { target: { ...target }, points: calculateSurfacePath(world, enemy.pos, target, "enemy") ?? [], until: world.tick + 40 };
+      const points = calculateSurfacePath(world, enemy.pos, target, "enemy");
+      route = { target: { ...target }, points: points ?? [], until: world.tick + 40, blocked: points === null };
       routes.set(enemy, route);
     }
     while (route.points.length && dist(enemy.pos, route.points[0]) < 1.5) route.points.shift();
     next = route.points[0] ?? target;
+    smash = breakWalls && !!route.blocked;
   }
   let foundationRoute = foundationRoutes.get(enemy);
   if (foundationRoute && (dist(foundationRoute.target, next) > 0.2 || dist(enemy.pos, foundationRoute.point) < 1.2)) { foundationRoutes.delete(enemy); foundationRoute = undefined; }
@@ -98,9 +103,13 @@ export function moveCreature(world: World, enemy: Enemy, target: Vec2, speed: nu
   if (d < 0.01) return;
   const step = Math.min(speed, d);
   const candidate = { x: enemy.pos.x + (next.x - enemy.pos.x) / d * step, y: enemy.pos.y + (next.y - enemy.pos.y) / d * step };
-  if (breakWalls) {
+  if (smash) {
     const wall = world.surface.buildings.find(b => b.stage === "built" && (b.type === "wall" || b.type === "gate") && fenceContains(b, candidate));
-    if (wall) { damageBuilding(world, wall, CONFIG.raidBuildingDamage); return; }
+    if (wall) {
+      damageBuilding(world, wall, CONFIG.raidBuildingDamage);
+      enemy.attackAt = world.tick; enemy.attackPos = { ...wall.pos };
+      return;
+    }
   }
   if (isTerrainBlockedAt(candidate.x, candidate.y)) return;
   const before = { ...enemy.pos };

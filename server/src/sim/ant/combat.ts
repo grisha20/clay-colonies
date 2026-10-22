@@ -358,8 +358,15 @@ export function moveFighting(world: World, ant: Ant): boolean {
   const enoughMob = alertNearSpider && freeWorkerCountNearSpider(world, nearest.index) >= CONFIG.antMobCount;
   const mobThreat =
     enoughMob && (ant.state === "fight" || defenderCountForSpider(world, nearest.index) < CONFIG.defenseMaxHelpers);
+  // A raider at the hearth: rally to the mother even before it bites anyone.
+  const raider = world.enemies[nearest.index];
+  const home = world.surface.entrance;
+  const raidThreat = !!raider.raid && ant.carrying <= 0 && ant.energy > CONFIG.refuelEnergyThreshold &&
+    Math.hypot(raider.pos.x - home.x, raider.pos.y - home.y) < CONFIG.guardEngageRadius &&
+    nearest.distance <= CONFIG.guardEngageRadius &&
+    (ant.state === "fight" || defenderCountForSpider(world, nearest.index) < CONFIG.defenseMaxHelpers * 2);
 
-  if (!starving && !defensiveThreat && !mobThreat) {
+  if (!starving && !defensiveThreat && !mobThreat && !raidThreat) {
     if (alertNearSpider) {
       retreatFromSpiderToEntrance(world, ant, world.enemies[nearest.index].pos);
       return true;

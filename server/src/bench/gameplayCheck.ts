@@ -375,11 +375,40 @@ try {
     const w = fresh(); w.tick = CONFIG.raidFirstAt - CONFIG.raidWarningTicks; updateRaids(w); assert.equal(w.session.raid.phase, "warning");
     w.tick = CONFIG.raidFirstAt; updateRaids(w); assert.equal(w.session.raid.phase, "attack");
     const e = w.enemies.find(e => e.raid)!;
+    // A lone fence section is walked around, not smashed.
     paintWallCells(w, 0, [wallCellIndexAt(140, 240)]); const wall = w.surface.buildings.at(-1)!; completeBuilding(w, wall);
     e.pos = { x: 143, y: 241 };
-    for (let i = 0; i < 100; i++) moveCreature(w, e, { x: 120, y: 241 }, 0.9, true);
-    assert.ok(!w.surface.buildings.some(b => b.id === wall.id));
+    for (let i = 0; i < 100; i++) { w.tick++; moveCreature(w, e, { x: 120, y: 241 }, 0.9, true); }
+    assert.ok(w.surface.buildings.some(b => b.id === wall.id) && Math.hypot(e.pos.x - 120, e.pos.y - 241) < 3, "lone section survives, spider gets past");
+    // A closed ring around the target is smashed through. Built directly from
+    // copies of the section: placement rules (land, margins) are not the point.
+    const ringIds = new Set<string>();
+    const cellCenter = (v: number) => Math.floor(v / 2) * 2 + 1;
+    for (let k = -10; k <= 10; k += 2) for (const [x, y] of [[200 + k, 231], [200 + k, 251], [190, 241 + k], [210, 241 + k]]) {
+      const id = `ring-${cellCenter(x)}-${cellCenter(y)}`;
+      if (ringIds.has(id)) continue;
+      ringIds.add(id);
+      w.surface.buildings = [...w.surface.buildings, { ...wall, id, pos: { x: cellCenter(x), y: cellCenter(y) }, hp: wall.maxHp }];
+    }
+    e.pos = { x: 225, y: 241 };
+    for (let i = 0; i < 400; i++) { w.tick++; moveCreature(w, e, { x: 200, y: 241 }, 0.9, true); }
+    assert.ok([...ringIds].some(id => !w.surface.buildings.some(b => b.id === id)), "closed ring gets a breach");
+    assert.ok((e.attackAt ?? -1) > 0, "smashing is a visible blow");
     w.tick = w.session.raid.until; updateRaids(w); assert.equal(w.session.raid.phase, "peace"); assert.equal(w.session.stats.raidsSurvived, 1);
+  });
+  scenario("Паук у очага во время набега: жители встают на защиту, а не разбегаются", () => {
+    const w = fresh(), c = w.colonies[0], scoped = colonyWorldView(w, c);
+    w.tick = CONFIG.raidFirstAt - CONFIG.raidWarningTicks; updateRaids(w);
+    w.tick = CONFIG.raidFirstAt; updateRaids(w);
+    const e = w.enemies.find(x => x.raid)!;
+    e.pos = { x: c.surfaceEntrance.x + 7, y: c.surfaceEntrance.y + 1 };
+    c.colony.alarm = true;
+    const hands = c.ants.filter(a => a.state !== "dead").slice(0, 4);
+    for (const [i, a] of hands.entries()) { a.carrying = 0; a.energy = 900; a.job = "forage"; a.pos = { x: c.surfaceEntrance.x + 12, y: c.surfaceEntrance.y - 6 + i * 3 }; }
+    const startDist = hands.map(a => Math.hypot(a.pos.x - e.pos.x, a.pos.y - e.pos.y));
+    for (let i = 0; i < 30; i++) { w.tick++; scoped.tick = w.tick; for (const a of hands) stepAnt(scoped, a); }
+    const rallied = hands.filter((a, i) => a.state === "fight" || Math.hypot(a.pos.x - e.pos.x, a.pos.y - e.pos.y) < startDist[i] - 1).length;
+    assert.ok(rallied >= 3, `rallied ${rallied}/4`);
   });
   scenario("Идол требует ритуал; победа останавливает тик, новая партия сбрасывает итог", () => {
     const w = fresh(); assert.ok(placePointBuilding(w, 0, "idol", 105, 254)); completeBuilding(w, w.surface.buildings.at(-1)!);
