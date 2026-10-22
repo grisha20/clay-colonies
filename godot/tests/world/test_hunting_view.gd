@@ -54,6 +54,14 @@ func run() -> void:
 	r.set_work({})
 	r._update_movement_and_animation(1.0)
 	check("forager_normal_size_no_spear", is_equal_approx(r.model_instance.scale.x, 1.0) and not r.tool_prop.visible)
+	check("forager_no_gear", r.gear_nodes.is_empty())
+	var brave = hunter_data.duplicate(); brave["job"] = "guard"; brave["warrior"] = true
+	r.update_from_ant_data(brave, .1, 1.)
+	r._update_movement_and_animation(0.0)
+	check("warrior_bigger_with_spear", r.model_instance.scale.x > 1.1 and r.tool_prop.visible and r.tool_prop.mesh == PropFactory.tool("hunt"))
+	check("warrior_headband_and_pauldron", r.gear_kind == "warrior" and r.gear_nodes.size() == 2 and r.skeleton.get_node_or_null("GearHead") != null and r.skeleton.get_node_or_null("GearSpine") != null)
+	r.update_from_ant_data(hunter_data, .1, 1.)
+	check("hunter_headband_only", r.gear_kind == "hunter" and r.gear_nodes.size() == 1)
 	r.queue_free()
 
 	var panel = PriorityPanel.new()
@@ -66,6 +74,17 @@ func run() -> void:
 			if c is Label:
 				texts.append((c as Label).text)
 	check("hunt_row_with_spears", "Охота" in texts and texts.any(func(t): return t.contains("копья: 1")), str(texts))
+	var guard = hunter_data.duplicate(); guard["job"] = "guard"; guard["id"] = "ant-g"
+	var s = snap([deer], [hunter_data, guard])
+	panel.update_from_snapshot(s, 0)
+	check("warrior_button_needs_special_clay", panel.warrior_button.disabled and panel.warrior_button.text.contains("особой глины"), panel.warrior_button.text)
+	s.colonies[0].colony["specialClay"] = 5
+	panel.update_from_snapshot(s, 0)
+	check("warrior_button_ready", not panel.warrior_button.disabled and panel.warrior_button.text.begins_with("Посвятить воина"), panel.warrior_button.text)
+	var asked = [0]
+	panel.warrior_requested.connect(func(): asked[0] += 1)
+	panel.warrior_button.pressed.emit()
+	check("warrior_request", asked[0] == 1)
 	panel.queue_free()
 	await process_frame
 	print("HUNT_VIEW_FAILURES=%d" % failures)

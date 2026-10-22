@@ -100,5 +100,60 @@ for (const seed of [4242, 911028219, 714183925]) {
   check("no spears, no hunters", (c.priorities.hunt ?? 0) === 0);
 }
 
+// Warriors.
+{
+  const { initiateWarrior, warriorRefusal, warriorCap, damageTaken } = await import("../sim/warriors");
+  const { assignGuardJobs } = await import("../sim/economy");
+  const { colonyWorldView } = await import("../sim/world");
+  const w = fresh();
+  const A = w.colonies[0], c = A.colony;
+  c.autoManage = false; c.specialClay = 0; c.spears = 0;
+  for (const a of A.ants) a.job = "forage";
+  check("no initiation without special clay", warriorRefusal(A) !== null && !initiateWarrior(w, 0));
+  c.specialClay = 10; c.spears = 0;
+  check("no initiation without a spear", (warriorRefusal(A) ?? "").includes("копьё"));
+  c.spears = 2;
+  check("no initiation without a guard", (warriorRefusal(A) ?? "").includes("стражник"));
+  A.ants[0].job = "guard"; A.ants[1].job = "guard";
+  const s0 = A.ants[0].strength;
+  const made = initiateWarrior(w, 0);
+  check("initiation makes a stronger warrior and costs clay and a spear", !!made && made.warrior === true && made.strength > s0 + 0.5 && c.specialClay === 10 - CONFIG.warriorCost.specialClay && c.spears === 1,
+    `strength ${made?.strength}, clay ${c.specialClay}, spears ${c.spears}`);
+  check("warrior takes less damage", damageTaken(made!, 100) < 100 && damageTaken(A.ants.find(a => !a.warrior)!, 100) === 100);
+  const cap = warriorCap(A);
+  for (let i = 0; i < 10; i++) { c.specialClay = 99; c.spears = 9; for (const a of A.ants) if (!a.warrior) { a.job = "guard"; break; } initiateWarrior(w, 0); }
+  check("warriors are capped by tribe size", A.ants.filter(a => a.warrior).length === cap, `${A.ants.filter(a => a.warrior).length} / cap ${cap}`);
+  c.priorities.guard = 1;
+  assignGuardJobs(colonyWorldView(w, A));
+  check("a warrior stays on guard when guards are cut", A.ants.filter(a => a.job === "guard").every(a => a.warrior) && A.ants.some(a => a.warrior && a.job === "guard"));
+  const restored = worldFromSnapshot(JSON.parse(JSON.stringify(toSnapshot(w))), genome, spider, genomeB);
+  check("save keeps warriors", restored.colonies[0].ants.filter(a => a.warrior).length === A.ants.filter(a => a.warrior).length);
+}
+{
+  const w = fresh();
+  const A = w.colonies[0], c = A.colony;
+  c.autoManage = true; c.specialClay = 6; c.spears = 1;
+  A.ants[0].job = "guard";
+  w.session.raid.phase = "attack"; w.session.raid.targetColonyId = A.id;
+  w.tick = 100; updateSettlementAI(w);
+  check("the mother initiates a warrior during a raid", A.ants.some(a => a.warrior));
+}
+{
+  // A spider bites a warrior less than a plain guard.
+  const { updateEnemies } = await import("../sim/enemy");
+  const { createSpider } = await import("../sim/enemy");
+  const { updateTickCache } = await import("../sim/cache");
+  const w = fresh();
+  const A = w.colonies[0];
+  for (let i = 0; A.ants.length < 14; i++) A.ants.push({ ...A.ants[i % A.ants.length], id: `more-${i}`, pos: { x: 300, y: 300 } });
+  const [plain, brave] = A.ants;
+  brave.warrior = true;
+  const s = createSpider(); s.pos = { x: 200, y: 200 }; s.raid = true; s.targetColonyId = A.id; w.enemies = [s];
+  plain.pos = { x: 200.5, y: 200 }; brave.pos = { x: 199.5, y: 200 }; plain.energy = 1000; brave.energy = 1000;
+  updateWorldSurfaceCache(w);
+  for (let i = 0; i < 5; i++) { w.tick++; plain.pos = { x: 200.5, y: 200 }; brave.pos = { x: 199.5, y: 200 }; s.pos = { x: 200, y: 200 }; updateWorldSurfaceCache(w); updateEnemies(w); }
+  check("spider bites hurt a warrior less", 1000 - brave.energy < (1000 - plain.energy) * 0.8 && plain.energy < 1000, `plain ${(1000 - plain.energy).toFixed(0)}, warrior ${(1000 - brave.energy).toFixed(0)}`);
+}
+
 console.log(failures ? `FAILURES: ${failures}` : "ALL PASSED");
 process.exit(failures ? 1 : 0);

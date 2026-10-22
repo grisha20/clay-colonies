@@ -70,7 +70,19 @@ func run() -> void:
 	hunter.rotation.y = PI * 0.5
 	hunter.anim_player.play("walk"); hunter.anim_player.seek(0.3, true); hunter.anim_player.advance(0.); hunter.anim_player.speed_scale = 0.
 	plain.rotation.y = PI * 0.5
+	var brave = NetworkResident.new()
+	scene.add_child(brave)
+	brave.update_from_ant_data({"id": "warrior", "colonyId": "colony-1", "pos": {"x": c.x - 4.2, "y": c.z}, "state": "idle", "job": "guard", "warrior": true, "tick": 1}, .1, 1.)
+	brave.set_process(false); brave.position = c + Vector3(-4.2, 0, 0)
+	brave._update_movement_and_animation(0.0)
+	brave.rotation.y = PI * 0.5
 	await shot("hunt_side", c + Vector3(1, .9, 0), 8.5, 12.)
+	for spec in [["warrior_front", 0.0], ["warrior_back", PI], ["warrior_three_quarter", PI * 0.3]]:
+		brave.rotation.y = spec[1]
+		hunter.visible = false
+		await shot(spec[0], brave.position + Vector3(0, 1.0, 0), 3.6, 10.)
+	hunter.visible = true
+	brave.rotation.y = PI * 0.5
 	hunter.set_work({"kind": "hunt", "target": c + Vector3(2.5, 0, 0)})
 	hunter._update_movement_and_animation(0.0)
 	hunter.anim_player.seek(0.35, true); hunter.anim_player.advance(0.); hunter.anim_player.speed_scale = 0.

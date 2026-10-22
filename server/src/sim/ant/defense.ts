@@ -10,6 +10,7 @@ import { consumeFoodStock } from "../foodStock";
 import { markMelee, settleMeleePosition } from "../melee";
 import { campShelterPoints } from "../../../../shared/campShelter";
 import { taskApproach } from "../taskAccess";
+import { damageTaken } from "../warriors";
 
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 const refuges = new WeakMap<Ant, { enemyId: string; origin: Vec2; goal: Vec2; until: number }>();
@@ -109,7 +110,7 @@ export function moveDefending(world: World, ant: Ant): boolean {
         settleMeleePosition(world, ant, rivalGuard.pos, 1.6);
         ant.state = "fight";
         if (markMelee(ant, rivalGuard.pos, world.tick)) {
-          rivalGuard.energy -= CONFIG.guardMeleeDamage * ant.strength;
+          rivalGuard.energy -= damageTaken(rivalGuard, CONFIG.guardMeleeDamage * ant.strength);
           if (rivalGuard.energy <= 0) rivalGuard.state = "dead";
         }
       } else moveSurfaceToward(world, ant, rivalGuard.pos, false);

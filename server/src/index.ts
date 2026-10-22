@@ -11,6 +11,7 @@ import { eraseColonyZone, paintColonyZone } from "./sim/zones";
 import { eraseBuildCells, paintWallCells, placeGate, placePointBuilding, isSurfaceBlockedAt, upgradeHut } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
 import { trainWaterWeapons, prepareSandboxGuard } from "./sim/session";
+import { initiateWarrior } from "./sim/warriors";
 import { createObjectives } from "./sim/objectives";
 import { noteManualAlarm } from "./sim/settlementAI";
 
@@ -73,6 +74,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
     if (c) c.colony.defensePost = { x: command.x, y: command.y };
   }
   if (command.type === "trainWaterWeapons") trainWaterWeapons(world, command.colonyIndex);
+  if (command.type === "initiateWarrior") initiateWarrior(world, command.colonyIndex);
   if (command.type === "setGrowth") {
     const c = world.colonies[command.colonyIndex];
     if (c) { c.colony.growthPaused = command.paused; c.colony.clayReserve = command.reserve; c.colony.autoManage = false; }

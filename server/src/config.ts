@@ -436,6 +436,14 @@ export const CONFIG = {
   hunterSpeedFactor: 1.25,
   /** Only game this close to the camp is worth a trip. */
   huntRange: 170,
+  // Воины: стражник, посвящённый особой глиной и копьём (server/src/sim/warriors.ts).
+  warriorCost: { specialClay: 4, spears: 1 },
+  warriorStrengthBonus: 0.8,
+  /** Share of incoming damage a warrior actually takes. */
+  warriorDamageTaken: 0.6,
+  warriorSpeedFactor: 1.1,
+  /** One more warrior for every this many residents (1 always). */
+  warriorsPerResidents: 8,
   dropPointRadius: 3,
 
   // Рыбалка: постоянная популяция в каждом озере, видимый подход рыбы к поплавку и медленное восстановление.

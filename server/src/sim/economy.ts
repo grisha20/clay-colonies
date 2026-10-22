@@ -225,7 +225,8 @@ export function assignGuardJobs(world: World): void {
   const wantGuards = priorityCount(world, "guard");
 
   let guards = 0;
-  for (const ant of live) {
+  // Warriors are the last to be sent back to other work.
+  for (const ant of [...live].sort((a, b) => Number(!!b.warrior) - Number(!!a.warrior))) {
     if (ant.job !== "guard") {
       continue;
     }

@@ -1,3 +1,4 @@
+import { initiateWarrior, warriorRefusal } from "./warriors";
 import type { Building, BuildingType, Vec2 } from "../../../shared/types";
 import { isWaterAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
@@ -113,6 +114,13 @@ function runTribeLogic(world: World, runtime: ColonyRuntime, isPlayer: boolean):
     // Hunting while game is near and the stores are not overflowing.
     hunt: !foodRich && (c.spears ?? 0) > 0 && population >= 10 && gameNear ? Math.min(c.spears ?? 0, share(0.08)) : 0
   };
+  // Initiate a warrior when the tribe is threatened (war, siege of its totem,
+  // raid, enemy at the hearth) or special clay piles up beyond other needs.
+  const besieged = world.colonies.some(r => r.id !== runtime.id && r.colony.war && world.surface.buildings.some(b => b.id === r.colony.war!.targetId && b.colonyId === c.id));
+  const raided = world.session.raid.phase === "attack" && world.session.raid.targetColonyId === c.id;
+  if ((atWar || besieged || raided || threat || (c.specialClay ?? 0) >= CONFIG.warriorCost.specialClay * 6) && !warriorRefusal(runtime)) {
+    initiateWarrior(world, world.colonies.indexOf(runtime));
+  }
 }
 
 /** Rival totem worth besieging: the player's built totem nearest a spring it holds or blocks. */

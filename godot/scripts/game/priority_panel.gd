@@ -10,6 +10,7 @@ signal priorities_requested(priorities: Dictionary)
 signal auto_manage_requested(enabled: bool)
 signal firing_requested(paused: bool)
 signal water_requested
+signal warrior_requested
 
 const KEYS = ["clay", "wood", "stone", "build", "guard", "fish", "hunt"]
 const LABELS = {"clay": "Глина", "wood": "Дерево", "stone": "Камень", "build": "Стройка", "guard": "Стража", "fish": "Рыбалка", "hunt": "Охота"}
@@ -25,6 +26,10 @@ var firing_button: Button
 var firing_paused := false
 ## Water shooting for the guards (colony.waterWeapons, trainWaterWeapons command).
 var water_button: Button
+## Warrior initiation (server/src/sim/warriors.ts; same cost and cap rules).
+var warrior_button: Button
+const WARRIOR_COST := {"specialClay": 4, "spears": 1}
+const WARRIORS_PER_RESIDENTS := 8
 const WATER_COST := {"wood": 6, "stone": 4}
 var rows_box: VBoxContainer
 var priorities: Dictionary = {}
@@ -79,6 +84,12 @@ func _ready() -> void:
 	water_button.focus_mode = Control.FOCUS_NONE
 	water_button.pressed.connect(func(): water_requested.emit())
 	box.add_child(water_button)
+	warrior_button = Button.new()
+	warrior_button.name = "WarriorButton"
+	warrior_button.focus_mode = Control.FOCUS_NONE
+	warrior_button.tooltip_text = "Стражник у костра проходит посвящение: сильнее бьёт, меньше получает урона, носит копьё и перья. Праматерь посвящает сама, когда племени грозят."
+	warrior_button.pressed.connect(func(): warrior_requested.emit())
+	box.add_child(warrior_button)
 	rows_box = VBoxContainer.new()
 	rows_box.add_theme_constant_override("separation", 2)
 	box.add_child(rows_box)
@@ -167,6 +178,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	var tools = {"wood": int(colony.get("axes", 0)), "stone": int(colony.get("picks", 0)), "fish": int(colony.get("rods", 0)), "hunt": int(colony.get("spears", 0))}
 	_update_firing(snapshot, colony, colony_id)
 	_update_water(snapshot, colony, colony_id)
+	_update_warrior(snapshot, colony, colony_id)
 	var auto = bool(colony.get("autoManage", false))
 	if auto != auto_manage:
 		auto_manage = auto
@@ -281,6 +293,40 @@ func _update_water(snapshot: Dictionary, colony: Dictionary, colony_id: String) 
 	else:
 		water_button.text = "Обучить стражу водяной стрельбе (%d дерево, %d камень)" % [WATER_COST.wood, WATER_COST.stone]
 		water_button.disabled = float(colony.get("wood", 0)) < WATER_COST.wood or float(colony.get("stone", 0)) < WATER_COST.stone
+
+
+## Mirrors warriorRefusal: cap 1 + one per 8 residents, special clay, a spear, a guard.
+static func warrior_refusal(snapshot: Dictionary, colony: Dictionary, colony_id: String) -> String:
+	var alive = 0
+	var warriors = 0
+	var guards = 0
+	for ant in snapshot.get("ants", []):
+		if typeof(ant) != TYPE_DICTIONARY or str(ant.get("colonyId", "")) != colony_id or str(ant.get("state", "")) == "dead":
+			continue
+		alive += 1
+		if bool(ant.get("warrior", false)):
+			warriors += 1
+		elif str(ant.get("job", "")) == "guard":
+			guards += 1
+	if warriors >= 1 + alive / WARRIORS_PER_RESIDENTS:
+		return "Воинов столько, сколько племя может прокормить"
+	if float(colony.get("specialClay", 0)) < WARRIOR_COST.specialClay:
+		return "Нужно %d особой глины" % WARRIOR_COST.specialClay
+	if int(colony.get("spears", 0)) < WARRIOR_COST.spears:
+		return "Нужно копьё из мастерской"
+	if guards == 0:
+		return "Нет стражника для посвящения"
+	return ""
+
+
+func _update_warrior(snapshot: Dictionary, colony: Dictionary, colony_id: String) -> void:
+	var warriors = 0
+	for ant in snapshot.get("ants", []):
+		if typeof(ant) == TYPE_DICTIONARY and str(ant.get("colonyId", "")) == colony_id and bool(ant.get("warrior", false)) and str(ant.get("state", "")) != "dead":
+			warriors += 1
+	var reason = warrior_refusal(snapshot, colony, colony_id)
+	warrior_button.disabled = reason != ""
+	warrior_button.text = ("Посвятить воина (%d особой глины, копьё) · воинов: %d" % [WARRIOR_COST.specialClay, warriors]) if reason == "" else ("Воинов: %d · %s" % [warriors, reason])
 
 
 func _update_mode() -> void:

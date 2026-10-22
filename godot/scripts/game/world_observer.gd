@@ -258,6 +258,7 @@ func _setup_hud() -> void:
 	priority_panel.auto_manage_requested.connect(func(on): ws_client.send_command({"type": "setAutoManage", "colony": player_colony, "value": on}))
 	priority_panel.firing_requested.connect(func(paused): ws_client.send_command({"type": "setFiring", "colony": player_colony, "paused": paused}))
 	priority_panel.water_requested.connect(func(): ws_client.send_command({"type": "trainWaterWeapons", "colony": player_colony}))
+	priority_panel.warrior_requested.connect(func(): ws_client.send_command({"type": "initiateWarrior", "colony": player_colony}))
 
 	advice_feed = AdviceFeed.new()
 	canvas.add_child(advice_feed)
@@ -662,7 +663,7 @@ func _update_inspector() -> void:
 		inspector_label.text = "Житель не выбран\nЩёлкните по жителю, чтобы узнать его занятие и груз."
 		return
 	follow_button.text = "Не следовать (F)" if world_view.focused_target == target else "Следовать (F)"
-	var tasks = {"idle": "отдых", "forage": "поиск еды", "nurse": "уход за потомством", "dig": "копание", "carryDirt": "перенос грунта", "harvest": "добыча", "build": "строительство", "guard": "охрана", "fish": "рыбалка"}
+	var tasks = {"idle": "отдых", "forage": "поиск еды", "nurse": "уход за потомством", "dig": "копание", "carryDirt": "перенос грунта", "harvest": "добыча", "build": "строительство", "guard": "охрана", "fish": "рыбалка", "hunt": "охота с копьём"}
 	var resources = {"clay": "глина", "wood": "дерево", "stone": "камень", "water": "вода", "food": "еда", "fish": "рыба", "meat": "мясо"}
 	var cargo = "нет"
 	if target.carrying_amount > 0:
@@ -671,7 +672,8 @@ func _update_inspector() -> void:
 	var clay_state = "обожжён — дождь не страшен" if target.fired else "сырая — боится дождя и воды"
 	if target.kiln_called:
 		clay_state = "идёт к печи на обжиг"
-	inspector_label.text = "%s · племя %s (%s)\nГлина: %s\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
-		resident_name(target.ant_id), tribe, target.ant_id, clay_state,
+	var rank = " · воин" if target.warrior else (" · охотник" if target.job_name == "hunt" else "")
+	inspector_label.text = "%s%s · племя %s (%s)\nГлина: %s\nЗанятие: %s\nГруз: %s\nПозиция: %.1f, %.1f" % [
+		resident_name(target.ant_id), rank, tribe, target.ant_id, clay_state,
 		tasks.get(target.job_name, target.job_name if not target.job_name.is_empty() else "нет"),
 		cargo, target.position.x, target.position.z]

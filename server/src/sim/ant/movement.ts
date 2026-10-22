@@ -148,6 +148,8 @@ export function surfaceMoveSpeed(world: World, ant: Ant): number {
   // Охотники бегают быстрее остальных: дичь иначе не догнать.
   if (ant.job === "hunt") {
     speed *= CONFIG.hunterSpeedFactor;
+  } else if (ant.warrior) {
+    speed *= CONFIG.warriorSpeedFactor;
   }
 
   // Слабый костёр: племя вялое (огонь — сердце поселения).

@@ -772,6 +772,38 @@ static func tool(kind: String) -> ArrayMesh:
 		return b.commit())
 
 
+## Hunter / warrior headband in resident v3 model space (front +Z): a leather
+## band round the head with feathers at the back — one for a hunter, three in
+## the tribe's colours for a warrior.
+static func headband(kind: String, colony_id: String) -> ArrayMesh:
+	return _cached("headband:%s:%s" % [kind, colony_id], func():
+		var b = Builder.new()
+		var leather = Color(0.36, 0.22, 0.13)
+		# Head ~0.45 round, centre ~1.33 high: the band sits just above the brow.
+		b.add(cyl(0.44, 0.45, 0.08, 20), xf(Vector3(0, 1.48, -0.06)), leather, MAT_MATTE, 0.01)
+		var tribe = Color(0.95, 0.78, 0.28) if colony_id == "colony-1" else Color(0.24, 0.55, 0.80)
+		var feathers = [[0.0, Color(0.95, 0.94, 0.9)]] if kind == "hunter" else [[-0.32, tribe], [0.0, Color(0.82, 0.18, 0.12)], [0.32, tribe]]
+		for f in feathers:
+			var tilt: float = f[0]
+			# Tucked into the band at the back of the head.
+			var base = Vector3(sin(tilt) * 0.36, 1.5, -0.5 * cos(tilt) - 0.02)
+			var tip = base + Vector3(sin(tilt) * 0.16, 0.44 if kind == "warrior" else 0.34, -0.2)
+			_stick(b, base, tip, 0.012, Color(0.9, 0.86, 0.75))
+			b.add(sphere(0.06, 0.34 if kind == "warrior" else 0.26, 6, 4), Transform3D(Basis(Vector3.RIGHT, -0.35).rotated(Vector3.FORWARD, -tilt), base.lerp(tip, 0.62)), f[1], MAT_MATTE)
+		return b.commit())
+
+
+## Warrior's leather pauldron on the left shoulder (model space).
+static func pauldron() -> ArrayMesh:
+	return _cached("pauldron", func():
+		var b = Builder.new()
+		var leather = Color(0.40, 0.25, 0.14)
+		b.add(sphere(0.17, 0.12, 10, 5), xf(Vector3(-0.27, 0.95, 0.0), Vector3(1.0, 1.0, 1.15), Vector3(0, 0, 0.5)), leather, MAT_MATTE, 0.02)
+		b.add(sphere(0.05, -1.0, 6, 4), xf(Vector3(-0.3, 1.0, 0.13)), BONE, MAT_MATTE)
+		_stick(b, Vector3(-0.2, 0.98, 0.18), Vector3(0.16, 0.74, 0.25), 0.02, leather.darkened(0.2))
+		return b.commit())
+
+
 ## Game animals of the meadows (server Surface.animals), facing +Z.
 const DEER_COAT := Color(0.58, 0.40, 0.24)
 const DEER_BELLY := Color(0.86, 0.74, 0.58)

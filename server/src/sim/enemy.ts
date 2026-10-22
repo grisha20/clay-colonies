@@ -9,6 +9,7 @@ import { resolveSurfaceCollision } from "./building";
 import { addFoodSource, type World } from "./world";
 import { moveCreature } from "./wildlife";
 import { markMelee } from "./melee";
+import { damageTaken } from "./warriors";
 
 const enemyQueryScratch: Ant[] = [];
 
@@ -431,7 +432,7 @@ export function updateEnemies(world: World): void {
     for (const ant of attackCandidates) {
       if (enemy.hp > 0 && ant.state !== "dead" && !ant.capturedBy && !isStartPeriod && isWithinRadius(ant.pos, enemy.pos, attackRadius)) {
         const hadEnergy = ant.energy > 0;
-        ant.energy -= damage;
+        ant.energy -= damageTaken(ant, damage);
         enemy.attackAt = world.tick; enemy.attackPos = { x: ant.pos.x, y: ant.pos.y };
         if (ant.energy <= 0) {
           ant.state = "dead";

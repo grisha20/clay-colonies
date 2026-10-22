@@ -16,6 +16,7 @@ import {
 } from "./movement";
 import { isColonyStarving, isColonyWarHungry } from "./colony-state";
 import { markMelee, settleMeleePosition } from "../melee";
+import { damageTaken } from "../warriors";
 
 const combatQueryScratch: Ant[] = [];
 
@@ -259,9 +260,9 @@ export function handleEnemyColonyCombat(world: World, ant: Ant): boolean {
     dropCarriedFood(world, ant);
     ant.state = "fight";
     ant.heading = normalize({ x: nearest.ant.pos.x - ant.pos.x, y: nearest.ant.pos.y - ant.pos.y });
-    nearest.ant.energy -= CONFIG.antVsAntDamage * ant.strength;
+    nearest.ant.energy -= damageTaken(nearest.ant, CONFIG.antVsAntDamage * ant.strength);
     markMelee(ant, nearest.ant.pos, world.tick);
-    ant.energy -= CONFIG.antVsAntDamage * 0.55 * nearest.ant.strength;
+    ant.energy -= damageTaken(ant, CONFIG.antVsAntDamage * 0.55 * nearest.ant.strength);
     if (nearest.ant.energy <= 0) {
       nearest.ant.state = "dead";
     }

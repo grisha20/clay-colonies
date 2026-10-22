@@ -233,6 +233,37 @@ func _setup_back_basket() -> void:
 	cargo_prop.add_child(cargo_load)
 	_refresh_cargo_load()
 
+## Headband and feathers (hunter: one, warrior: three in tribe colours, plus a
+## leather pauldron) on the Head and Spine bones of the v3 model.
+var gear_kind: String = ""
+var gear_nodes: Array[Node] = []
+
+func _update_gear() -> void:
+	var kind = "warrior" if warrior else ("hunter" if job_name == "hunt" else "")
+	if kind == gear_kind or not skeleton or not use_resident_v3:
+		return
+	gear_kind = kind
+	for n in gear_nodes:
+		if is_instance_valid(n):
+			n.queue_free()
+	gear_nodes.clear()
+	if kind == "":
+		return
+	for spec in [["Head", PropFactory.headband(kind, colony_id)], ["Spine", PropFactory.pauldron() if kind == "warrior" else null]]:
+		var bone = skeleton.find_bone(spec[0])
+		if bone < 0 or spec[1] == null:
+			continue
+		var holder = BoneAttachment3D.new()
+		holder.name = "Gear" + spec[0]
+		holder.bone_name = spec[0]
+		skeleton.add_child(holder)
+		var mi = MeshInstance3D.new()
+		mi.name = "Gear"
+		mi.mesh = spec[1]
+		mi.transform = skeleton.get_bone_global_rest(bone).affine_inverse()
+		holder.add_child(mi)
+		gear_nodes.append(holder)
+
 func _setup_head_cargo() -> void:
 	# Legacy model: loads ride on the head; the camera looks down from the south,
 	# so anything held at the chest vanishes behind the round body.
@@ -325,6 +356,7 @@ func update_from_ant_data(data: Dictionary, tick_interval_sec: float, speed_scal
 	var big = 1.15 if (job_name == "hunt" or warrior) and use_resident_v3 else 1.0
 	if model_instance and not is_equal_approx(model_instance.scale.x, big):
 		model_instance.scale = Vector3.ONE * big
+	_update_gear()
 	state_name = data.get("state", "idle")
 	var raw_carrying = data.get("carrying", 0)
 	if typeof(raw_carrying) in [TYPE_INT, TYPE_FLOAT]:
@@ -533,8 +565,8 @@ func _update_tool(working: bool) -> void:
 	var kind = str(work.get("kind", "")) if working else ""
 	if kind == "dig" or kind == "gather":
 		kind = ""  # Clay, sticks and pebbles are taken with bare hands.
-	# A hunter keeps the spear in hand while stalking, not only when throwing.
-	if kind == "" and job_name == "hunt" and carrying_amount <= 0:
+	# A hunter keeps the spear in hand while stalking, a warrior always.
+	if kind == "" and (job_name == "hunt" or warrior) and carrying_amount <= 0:
 		kind = "hunt"
 	if kind != tool_kind:
 		tool_kind = kind

@@ -2,6 +2,7 @@ import type { Advice, BuildingType, ResourceKind, Vec2 } from "../../../shared/t
 import { CONFIG } from "../config";
 import { territoryDiscs } from "../../../shared/territory";
 import type { ColonyRuntime, World } from "./world";
+import { warriorRefusal } from "./warriors";
 
 /**
  * The tribe mother speaks up when something needs the player, like the advisor
@@ -94,6 +95,10 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
   // Rival guards shoot water: answer with water shooting and fired guards.
   if (!c.waterWeapons && world.colonies.some(r => r.id !== runtime.id && r.colony.waterWeapons) && count("workshop", true))
     out.push({ key: "water-guns", severity: "warn", text: "Соседи стреляют водой — обучи стражу водяной стрельбе; обожжённые держат удар" });
+  // Threatened and able to make a warrior (the mother does it herself when she decides).
+  const rivalWar = world.colonies.some(r => r.id !== runtime.id && !!r.colony.war);
+  if (!c.autoManage && rivalWar && !ants.some(a => a.warrior) && !warriorRefusal(runtime))
+    out.push({ key: "warriors", severity: "warn", text: "Соседи воюют — посвяти стражника в воины: копьё и 4 особой глины" });
   // War over the land.
   const besieged = own.find(b => b.type === "totem" && b.stage === "built" &&
     world.colonies.some(r => r.id !== runtime.id && r.ants.some(a => a.state !== "dead" && a.job === "guard" && Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) < 8)));
