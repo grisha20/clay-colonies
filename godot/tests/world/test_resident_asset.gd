@@ -58,17 +58,23 @@ func run() -> void:
 		front = front and vertex.z > 0
 	check("eyes face Godot +Z", front)
 	r.anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
-	for clip in ["idle", "walk", "carry_idle", "carry_walk", "work_gather"]:
+	var clips = ["idle", "walk", "carry_idle", "carry_walk", "work_gather"]
+	if r.use_resident_v3:
+		clips += ["work_chop", "work_mine", "work_build", "work_dig", "work_fish"]
+	for clip in clips:
 		check("clip " + clip, r.anim_player.has_animation(clip))
 		if r.anim_player.has_animation(clip):
 			var anim = r.anim_player.get_animation(clip)
 			check("loop and 1s " + clip, anim.loop_mode == Animation.LOOP_LINEAR and absf(anim.length-1.) < .001)
 	var hand = r.skeleton.find_bone("Socket_Tool_R")
-	r.anim_player.play("work_gather")
+	# v3: the axe swing from beside the head to the trunk (strike at 0.3-0.4 s).
+	var strike_clip = "work_chop" if r.use_resident_v3 else "work_gather"
+	var strike_at = .35 if r.use_resident_v3 else .5
+	r.anim_player.play(strike_clip)
 	r.anim_player.seek(0.,true)
 	r.anim_player.advance(0.)
 	var a = r.skeleton.get_bone_global_pose(hand).origin
-	r.anim_player.seek(.5,true)
+	r.anim_player.seek(strike_at,true)
 	r.anim_player.advance(0.)
 	var b = r.skeleton.get_bone_global_pose(hand).origin
 	check("right hand strike moves > 0.4m", a.distance_to(b) > .4)

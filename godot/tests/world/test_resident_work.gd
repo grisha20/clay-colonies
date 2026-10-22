@@ -84,6 +84,15 @@ func run() -> void:
 	var facing = Vector3(sin(a.rotation.y), 0, cos(a.rotation.y))
 	check("faces_the_tree", facing.dot(Vector3(-1, 0, 0)) > 0.95, "facing=%s" % facing)
 	check("chips_fly", a.chips != null and a.chips.emitting)
+	if a.use_resident_v3:
+		for kind in ["chop", "mine", "build", "dig", "gather", "fish"]:
+			a.set_work({"kind": kind, "target": Vector3(50, 0, 50)})
+			a._update_movement_and_animation(0.0)
+			check("job_clip_" + kind, a.anim_player.current_animation == "work_" + kind, a.anim_player.current_animation)
+		check("basket_on_back", a.bone_attachment_cargo.bone_name == "Spine" and a.bone_attachment_cargo.get_node_or_null("Basket") != null)
+		var basket = (a.bone_attachment_cargo.get_node("Basket") as Node3D)
+		var at = a.skeleton.global_transform.affine_inverse() * basket.global_transform.origin
+		check("basket_behind_below_head", at.z < -0.4 and at.y > 0.5 and at.y < 0.9, str(at))
 	a.set_work({"kind": "dig", "target": Vector3(51, 0, 50)})
 	a._update_movement_and_animation(0.0)
 	check("clay_dug_by_hand", not a.tool_prop.visible)

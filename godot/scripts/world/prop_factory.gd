@@ -754,6 +754,30 @@ static func tool(kind: String) -> ArrayMesh:
 		return b.commit())
 
 
+const BASKET_HEIGHT := 0.36
+
+## Woven back basket of resident v3, centred on its middle; +Z faces the back
+## of the resident. Bands of light and dark straw, a thick rim, two straps
+## rising towards the shoulders.
+static func back_basket() -> ArrayMesh:
+	return _cached("back_basket", func():
+		var b = Builder.new()
+		var bands = 5
+		for k in range(bands):
+			var u0 = float(k) / bands
+			var u1 = float(k + 1) / bands
+			var r0 = lerpf(0.12, 0.165, u0)
+			var r1 = lerpf(0.12, 0.165, u1)
+			var h = BASKET_HEIGHT / bands
+			var col = THATCH.darkened(0.12 if k % 2 == 0 else 0.3)
+			b.add(cyl(r1, r0, h, 12), xf(Vector3(0, -BASKET_HEIGHT * 0.5 + h * (k + 0.5), 0)), col, MAT_MATTE, 0.01, float(k))
+		b.add(cyl(0.18, 0.18, 0.04, 12), xf(Vector3(0, BASKET_HEIGHT * 0.5, 0)), THATCH.darkened(0.4), MAT_MATTE, 0.01)
+		b.add(cyl(0.125, 0.125, 0.02, 10), xf(Vector3(0, -BASKET_HEIGHT * 0.5, 0)), THATCH.darkened(0.45), MAT_MATTE)
+		for sx in [-1.0, 1.0]:
+			b.add(box(Vector3(0.05, 0.26, 0.025)), xf(Vector3(0.09 * sx, BASKET_HEIGHT * 0.5 + 0.06, 0.15), Vector3.ONE, Vector3(-0.55, 0, 0)), WOOD.darkened(0.15), MAT_MATTE)
+		return b.commit())
+
+
 ## What a resident carries, sized like the old cargo prop (~0.35 m) and
 ## centred on the Socket_Cargo bone: logs, a stone, a clay ball, berries, fish, meat.
 static func carry_load(kind: String) -> ArrayMesh:

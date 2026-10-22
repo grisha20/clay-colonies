@@ -62,9 +62,10 @@ var prev_pos_2d: Vector2 = Vector2.ZERO
 
 # Visual nodes
 var model_instance: Node3D
-## Candidate is opt-in until the owner approves the comparison. Per-instance
-## override also lets review scenes display the current and candidate together.
-var use_resident_v3: bool = "--resident-v3" in OS.get_cmdline_user_args()
+## Resident v3 (Hunyuan, approved by the owner 22.10.2026) is the default;
+## --resident-legacy loads the previous procedural model. Per-instance override
+## lets review scenes display both together.
+var use_resident_v3: bool = not "--resident-legacy" in OS.get_cmdline_user_args()
 var anim_player: AnimationPlayer
 var skeleton: Skeleton3D
 var mesh_instance: MeshInstance3D
@@ -177,9 +178,52 @@ func _setup_visuals() -> void:
 		_apply_colony_color()
 		_play_anim(AnimState.IDLE)
 
+## v3: a woven basket on the back, below the overhanging head; the load heaps
+## out of its top. Model space (Godot): the back is -Z.
+const BASKET_CENTER := Vector3(0.0, 0.70, -0.50)
+
 func _setup_cargo_prop() -> void:
-	# Loads ride on the head: the camera looks down from the south, so anything
-	# held at the chest vanishes behind the round body of anyone walking north.
+	if use_resident_v3 and skeleton.find_bone("Spine") >= 0:
+		_setup_back_basket()
+	else:
+		_setup_head_cargo()
+	var tool_bone_idx = skeleton.find_bone("Socket_Tool_R")
+	if tool_bone_idx >= 0:
+		var tool_attachment = BoneAttachment3D.new()
+		tool_attachment.name = "ToolAttachment"
+		tool_attachment.bone_name = "Socket_Tool_R"
+		skeleton.add_child(tool_attachment)
+		tool_prop = MeshInstance3D.new()
+		tool_prop.name = "Tool"
+		tool_prop.visible = false
+		tool_attachment.add_child(tool_prop)
+
+func _setup_back_basket() -> void:
+	var spine = skeleton.find_bone("Spine")
+	bone_attachment_cargo = BoneAttachment3D.new()
+	bone_attachment_cargo.name = "CargoAttachment"
+	bone_attachment_cargo.bone_name = "Spine"
+	skeleton.add_child(bone_attachment_cargo)
+	# Undo the bone's rest frame so the basket stands upright in model space.
+	var rest_inv = skeleton.get_bone_global_rest(spine).affine_inverse()
+	var basket = MeshInstance3D.new()
+	basket.name = "Basket"
+	basket.mesh = PropFactory.back_basket()
+	basket.transform = rest_inv * Transform3D(Basis(), BASKET_CENTER)
+	bone_attachment_cargo.add_child(basket)
+	cargo_prop = Node3D.new()
+	cargo_prop.name = "CargoProp"
+	bone_attachment_cargo.add_child(cargo_prop)
+	cargo_prop.visible = false
+	cargo_load = MeshInstance3D.new()
+	cargo_load.name = "Load"
+	cargo_load.transform = rest_inv * Transform3D(Basis().scaled(Vector3.ONE * 1.5), BASKET_CENTER + Vector3(0, PropFactory.BASKET_HEIGHT * 0.5 + 0.08, 0))
+	cargo_prop.add_child(cargo_load)
+	_refresh_cargo_load()
+
+func _setup_head_cargo() -> void:
+	# Legacy model: loads ride on the head; the camera looks down from the south,
+	# so anything held at the chest vanishes behind the round body.
 	var cargo_bone_idx = skeleton.find_bone("Socket_Head")
 	if cargo_bone_idx < 0:
 		cargo_bone_idx = skeleton.find_bone("Socket_Cargo")
@@ -204,16 +248,6 @@ func _setup_cargo_prop() -> void:
 		_refresh_cargo_load()
 	else:
 		push_warning("[NetworkResident] Socket_Cargo bone not found in Skeleton3D")
-	var tool_bone_idx = skeleton.find_bone("Socket_Tool_R")
-	if tool_bone_idx >= 0:
-		var tool_attachment = BoneAttachment3D.new()
-		tool_attachment.name = "ToolAttachment"
-		tool_attachment.bone_name = "Socket_Tool_R"
-		skeleton.add_child(tool_attachment)
-		tool_prop = MeshInstance3D.new()
-		tool_prop.name = "Tool"
-		tool_prop.visible = false
-		tool_attachment.add_child(tool_prop)
 
 func _refresh_cargo_load() -> void:
 	var kind = carry_kind
@@ -403,7 +437,7 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 
 	var target_state = AnimState.IDLE
 	if working:
-		target_state = AnimState.WORK_GATHER if work.kind != "fish" else AnimState.IDLE
+		target_state = AnimState.WORK_GATHER if _work_clip() != "idle" else AnimState.IDLE
 		# Face the tree, rock, pit, site or fishing spot being worked.
 		var to = work.target - Vector3(position.x, 0.0, position.z)
 		to.y = 0.0
@@ -414,7 +448,7 @@ func _update_movement_and_animation(ground_speed: float) -> void:
 	else:
 		target_state = AnimState.CARRY_WALK if is_carrying else AnimState.WALK
 
-	if current_anim_state != target_state:
+	if current_anim_state != target_state or (target_state == AnimState.WORK_GATHER and anim_player and anim_player.current_animation != _work_clip()):
 		_play_anim(target_state)
 
 	# Synchronize animation step frequency to real ground speed
@@ -479,6 +513,15 @@ func _update_tool(working: bool) -> void:
 		tool_prop.mesh = PropFactory.tool(kind) if kind != "" else null
 	tool_prop.visible = kind != ""
 
+## One clip per job when the model has it (v3: work_chop, work_mine, work_build,
+## work_dig, work_gather, work_fish); the legacy model swings work_gather for
+## everything and just stands while fishing.
+func _work_clip() -> String:
+	var kind = str(work.get("kind", ""))
+	if anim_player and anim_player.has_animation("work_" + kind):
+		return "work_" + kind
+	return "idle" if kind == "fish" else "work_gather"
+
 func _play_anim(new_state: AnimState) -> void:
 	current_anim_state = new_state
 	if not anim_player:
@@ -497,7 +540,7 @@ func _play_anim(new_state: AnimState) -> void:
 		AnimState.CARRY_WALK:
 			clip_name = "walk"
 		AnimState.WORK_GATHER:
-			clip_name = "work_gather"
+			clip_name = _work_clip()
 
 	if anim_player.has_animation(clip_name):
 		# Preserve playback position to maintain alternating foot cycle

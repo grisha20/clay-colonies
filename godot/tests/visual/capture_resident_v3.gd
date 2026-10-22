@@ -66,8 +66,8 @@ func run() -> void:
 	var args = OS.get_cmdline_user_args()
 	for i in range(args.size()):
 		if args[i]=="--qa-port" and i+1<args.size(): port=args[i+1]
-	if port.is_empty() or not "--resident-v3" in args:
-		push_error("Require --qa-port <isolated port> --resident-v3")
+	if port.is_empty():
+		push_error("Require --qa-port <isolated port>")
 		quit(2);return
 	DirAccess.make_dir_recursive_absolute(out)
 	scene=load("res://scenes/game/world_observer.tscn").instantiate()
@@ -114,7 +114,7 @@ func run() -> void:
 		fresh.rotation.y=spec[1]
 		await shot(spec[0],"Hunyuan v3 · проверка внешности",fresh.position+Vector3(0,.88,0),3.0,18.)
 	fresh.rotation.y=0.
-	fresh.anim_player.play("work_gather")
+	fresh.anim_player.play("work_chop")
 	for t in [0.,.25,.5,.75]:
 		fresh.anim_player.seek(t,true);fresh.anim_player.advance(0.)
 		await shot("strike_"+str(int(t*100)),"Hunyuan v3 · проверка плеч и повязки · удар",fresh.position+Vector3(0,.88,0),3.2,18.)
