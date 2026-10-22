@@ -657,13 +657,26 @@ static func gate(width: float, blueprint: bool) -> ArrayMesh:
 		var half = width * 0.5
 		_stick(b, Vector3(-half - 0.4, 2.55, 0), Vector3(half + 0.4, 2.55, 0), 0.14, WOOD_LIGHT)
 		b.add(box(Vector3(width + 1.0, 0.18, 0.5)), xf(Vector3(0, 2.75, 0)), THATCH, MAT_MATTE, 0.06)
-		if not blueprint:
-			for side in [-1.0, 1.0]:
-				for k in range(4):
-					var x = side * (half - 0.3 - 0.42 * k) * 0.95
-					_stick(b, Vector3(x, 0.08, 0), Vector3(x, 1.75, 0), 0.11, WOOD if k % 2 == 0 else WOOD_LIGHT, k)
-				_stick(b, Vector3(side * 0.15, 0.6, 0.1), Vector3(side * (half - 0.2), 0.6, 0.1), 0.06, WOOD)
-				_stick(b, Vector3(side * 0.15, 1.35, 0.1), Vector3(side * (half - 0.2), 1.35, 0.1), 0.06, WOOD)
+		return b.commit())
+
+
+## Hinge x of a gate leaf (from the gate centre) for gate_leaf().
+static func gate_hinge(width: float) -> float:
+	return width * 0.5 - 0.1
+
+
+## One swinging leaf of a built gate, hinge at the origin; side +1 is the
+## right leaf (boards run towards -X, the gate centre), -1 the left one.
+static func gate_leaf(width: float, side: float) -> ArrayMesh:
+	return _cached("gate_leaf:%.2f:%d" % [width, int(side)], func():
+		var b = Builder.new()
+		var half = width * 0.5
+		var hinge = gate_hinge(width)
+		for k in range(4):
+			var x = side * ((half - 0.3 - 0.42 * k) * 0.95 - hinge)
+			_stick(b, Vector3(x, 0.08, 0), Vector3(x, 1.75, 0), 0.11, WOOD if k % 2 == 0 else WOOD_LIGHT, k)
+		_stick(b, Vector3(side * (0.15 - hinge), 0.6, 0.1), Vector3(side * -0.1, 0.6, 0.1), 0.06, WOOD)
+		_stick(b, Vector3(side * (0.15 - hinge), 1.35, 0.1), Vector3(side * -0.1, 1.35, 0.1), 0.06, WOOD)
 		return b.commit())
 
 

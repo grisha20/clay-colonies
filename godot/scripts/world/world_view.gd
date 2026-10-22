@@ -394,6 +394,7 @@ func update_world_entities(snapshot: Dictionary) -> void:
 	_update_springs(_as_array(surface.get("springs", [])))
 	_update_land(entrances, buildings)
 	_update_buildings(buildings)
+	_update_gate_targets(buildings, _as_array(snapshot.get("ants", [])))
 	FramePerf.add("wv.buildings", t0)
 	t0 = Time.get_ticks_usec()
 	_update_fences(buildings)
@@ -859,6 +860,51 @@ func _update_campfires(entrances: Array) -> void:
 		if is_instance_valid(cn):
 			cn.queue_free()
 
+const GATE_OPEN_RADIUS := 3.0
+const GATE_OPEN_ANGLE := 1.7
+## Built gates of the snapshot whose leaves animate: [node, ...].
+var swinging_gates: Array[Node3D] = []
+
+## A gate opens while a resident of its tribe stands within GATE_OPEN_RADIUS.
+func _update_gate_targets(buildings: Array, ants: Array) -> void:
+	swinging_gates.clear()
+	for b in buildings:
+		if typeof(b) != TYPE_DICTIONARY or str(b.get("type", "")) != "gate" or str(b.get("stage", "")) != "built":
+			continue
+		var node = active_buildings.get(str(b.get("id", ""))) as Node3D
+		if node == null or not node.has_meta("gate_open"):
+			continue
+		var owner = str(b.get("colonyId", ""))
+		var gp = b.get("pos", {})
+		var gx = float(gp.get("x", 0.0))
+		var gy = float(gp.get("y", 0.0))
+		var near = false
+		for a in ants:
+			if typeof(a) != TYPE_DICTIONARY or str(a.get("colonyId", "")) != owner:
+				continue
+			var ap = a.get("pos", {})
+			if typeof(ap) == TYPE_DICTIONARY and Vector2(float(ap.get("x", 0.0)) - gx, float(ap.get("y", 0.0)) - gy).length_squared() < GATE_OPEN_RADIUS * GATE_OPEN_RADIUS:
+				near = true
+				break
+		node.set_meta("gate_target", 1.0 if near else 0.0)
+		swinging_gates.append(node)
+
+func _animate_gates(delta: float) -> void:
+	for node in swinging_gates:
+		if not is_instance_valid(node):
+			continue
+		var open = float(node.get_meta("gate_open", 0.0))
+		var target = float(node.get_meta("gate_target", 0.0))
+		if is_equal_approx(open, target):
+			continue
+		open = move_toward(open, target, delta * 2.5)
+		node.set_meta("gate_open", open)
+		var leaves = node.get_node_or_null("Leaves")
+		if leaves:
+			var angle = GATE_OPEN_ANGLE * (0.5 - 0.5 * cos(open * PI))
+			(leaves.get_node("LeafL") as Node3D).rotation.y = -angle
+			(leaves.get_node("LeafR") as Node3D).rotation.y = angle
+
 func _update_buildings(buildings: Array) -> void:
 	var seen_b_ids: Dictionary = {}
 	for b in buildings:
@@ -959,6 +1005,22 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 			gate.rotation = Vector3(0, PI * 0.5 if vertical else 0.0, 0)
 			var root = Node3D.new()
 			root.add_child(gate)
+			if built:
+				# Leaves swing open while a resident of the owner tribe is close:
+				# the server lets the owner through and stops everyone else.
+				var width = float(span) * WALL_CELL_SIZE
+				var leaves = Node3D.new()
+				leaves.name = "Leaves"
+				leaves.rotation = gate.rotation
+				root.add_child(leaves)
+				for spec in [["LeafL", -1.0], ["LeafR", 1.0]]:
+					var leaf = MeshInstance3D.new()
+					leaf.name = spec[0]
+					leaf.mesh = PropFactory.gate_leaf(width, spec[1])
+					leaf.position = Vector3(spec[1] * PropFactory.gate_hinge(width), 0, 0)
+					leaves.add_child(leaf)
+				root.set_meta("gate_open", 0.0)
+				root.set_meta("gate_target", 0.0)
 			var half = float(span) * WALL_CELL_SIZE * 0.5 + 0.2
 			for side in [-1.0, 1.0]:
 				var post = MeshInstance3D.new()
@@ -1300,6 +1362,7 @@ func _queue_prewarm() -> void:
 ## Per-frame life: gliding creatures, flickering fires, water speed.
 func _animate_world(delta: float) -> void:
 	anim_time += delta
+	_animate_gates(delta)
 	if atmosphere:
 		atmosphere.advance(delta)
 	var night = atmosphere.darkness if atmosphere else 0.0
