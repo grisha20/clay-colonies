@@ -111,7 +111,7 @@ export function updateOutcome(world: World): void {
   }
   updateDominance(world);
   const elapsed = world.tick - (s.startedAt ?? 0);
-  const rivalDominates = s.dominance && s.dominance.holder !== primary.id && world.tick - s.dominance.since >= CONFIG.dominanceTicks;
+  const rivalDominates = s.dominance && s.dominance.holder !== primary.id && world.tick - s.dominance.since >= (s.dominance.required ?? CONFIG.dominanceTicks);
   if (elapsed >= CONFIG.matchMinTicks && rivalDominates) {
     finish(world, "defeat", "Соседи завладели источниками особой глины");
     return;
@@ -161,10 +161,14 @@ export function updateDominance(world: World): void {
   for (const spring of springs) if (spring.holder) counts.set(spring.holder, (counts.get(spring.holder) ?? 0) + 1);
   const holder = [...counts.entries()].find(([, n]) => n >= CONFIG.dominanceSprings)?.[0];
   if (!holder) { s.dominance = undefined; return; }
+  const count = counts.get(holder) ?? 0;
+  // All springs: a day is enough; two of them: two days.
+  const required = count >= springs.length && springs.length > CONFIG.dominanceSprings ? CONFIG.dominanceAllTicks : CONFIG.dominanceTicks;
+  if (s.dominance?.holder === holder) { s.dominance.count = count; s.dominance.required = required; }
   if (s.dominance?.holder !== holder) {
-    s.dominance = { holder, since: world.tick };
+    s.dominance = { holder, since: world.tick, count, required };
     const tribe = world.colonies.findIndex(c => c.id === holder) === 1 ? "B" : "A";
-    logEvent(world, `Племя ${tribe} держит ${CONFIG.dominanceSprings} источника: сутки — и победа.`, springs.find(sp => sp.holder === holder)?.pos);
+    logEvent(world, `Племя ${tribe} держит ${count} источника: ${required >= CONFIG.dominanceTicks ? "двое суток" : "сутки"} — и победа.`, springs.find(sp => sp.holder === holder)?.pos);
   }
 }
 

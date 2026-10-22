@@ -170,12 +170,13 @@ function updateSurfaceRoyalPair(world: World, colony: ColonyRuntime): void {
 
   colony.colony.reproductionCooldown = Math.max(0, (colony.colony.reproductionCooldown ?? CONFIG.broodLayCooldownTicks) - 1);
   // Лимит населения: базовая доля мира + бонус за достроенные хижины племени.
-  const builtHuts = world.surface.buildings.filter(
-    (building) => building.colonyId === colony.id && building.type === "hut" && building.stage === "built"
-  ).length;
+  // A house of the clan (level 2) holds twice the residents of a hut.
+  const hutPlaces = world.surface.buildings
+    .filter((building) => building.colonyId === colony.id && building.type === "hut" && building.stage === "built")
+    .reduce((sum, hut) => sum + CONFIG.hutPopulationBonus * ((hut.level ?? 1) >= 2 ? CONFIG.houseLevelPopulation : 1), 0);
   const perColonyCap =
     Math.floor(CONFIG.maxPopulation / Math.max(1, world.colonies.length)) +
-    builtHuts * CONFIG.hutPopulationBonus;
+    hutPlaces;
   colony.colony.nestCapacity = perColonyCap;
   if (colony.ants.length >= perColonyCap) {
     return;

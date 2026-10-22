@@ -94,6 +94,8 @@ export type Building = {
   progress: number;
   hp: number;
   maxHp: number;
+  /** Hut level: 2 = house of the clan (upgraded with special clay). Missing = 1. */
+  level?: number;
   /** Kiln: the resident being fired (server/src/sim/kiln.ts). */
   firing?: { antId: string; progress: number; calledAt: number; paid: boolean };
 };
@@ -392,7 +394,7 @@ export type SessionState = {
   nextCreatureId: number;
   idolProgress: number;
   /** Tribe holding at least CONFIG.dominanceSprings springs, and since when. */
-  dominance?: { holder: string; since: number };
+  dominance?: { holder: string; since: number; count?: number; required?: number };
   /** Tribe scores during and after the Great Rain finale (colony order). */
   finaleScores?: number[];
   /** Set when the finale was decided: the player's tribe came out ahead. */

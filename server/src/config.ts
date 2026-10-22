@@ -366,8 +366,10 @@ export const CONFIG = {
   kilnWoodReserve: 8,
   kilnCallTimeoutTicks: 1500,
   // Господство: держать столько источников столько тиков подряд.
+  // Господство: 2 источника двое суток или все 3 сутки (playtest 22.10: сутки было слишком легко).
   dominanceSprings: 2,
-  dominanceTicks: 6000,
+  dominanceTicks: 12000,
+  dominanceAllTicks: 6000,
   // Осада тотема стражей (server/src/sim/siege.ts).
   siegeRange: 5,
   siegeDamagePerGuard: 0.06,
@@ -376,6 +378,8 @@ export const CONFIG = {
   // Война ИИ-соседа за тотемы игрока.
   aiWarAfterTicks: 12000,
   aiWarMinGuards: 4,
+  // Против лидера (игрок держит 2 источника) сосед воюет, не глядя на численность.
+  aiWarLeaderMinAlive: 8,
   aiWarMaxTicks: 5000,
   aiWarCooldownTicks: 4000,
   // Тотем рода: раздвигает землю племени (shared/territory.ts).
@@ -386,7 +390,11 @@ export const CONFIG = {
   // Источник особой глины: единица владельцу раз в N тиков; ритуал Идола
   // съедает единицу на каждые idolSpecialClayEvery тиков прогресса.
   springYieldTicks: 300,
-  idolSpecialClayEvery: 60,
+  // 1800 / 30 = 60 особой глины на ритуал.
+  idolSpecialClayEvery: 30,
+  // Дом рода: улучшение хижины — больше мест, тратит особую глину.
+  hutUpgradeCost: { clay: 12, wood: 6, special: 8 },
+  houseLevelPopulation: 2,
   // Обожжённый житель: доля урона от воды и прибавка силы.
   firedWaterFactor: 0.35,
   firedStrengthBonus: 0.3,

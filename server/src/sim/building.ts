@@ -269,6 +269,32 @@ export function eraseBuildCells(world: World, colonyIndex: number, cells: number
   }
 }
 
+/** Refusal for upgrading a hut to a house of the clan, or null. */
+export function hutUpgradeRefusal(world: World, colonyIndex: number, building: Building | undefined): string | null {
+  const colony = world.colonies[colonyIndex];
+  if (!colony || !building || building.type !== "hut" || building.colonyId !== colony.id) return "Нужна своя хижина";
+  if (building.stage !== "built") return "Хижина ещё строится";
+  if ((building.level ?? 1) >= 2) return "Это уже дом рода";
+  const c = colony.colony, cost = CONFIG.hutUpgradeCost;
+  if ((c.specialClay ?? 0) < cost.special) return "Не хватает особой глины";
+  if (c.clay < cost.clay || c.wood < cost.wood) return "Не хватает глины или дерева";
+  return null;
+}
+
+/** Upgrade a built hut to a house of the clan: paid from stock at once. */
+export function upgradeHut(world: World, colonyIndex: number, buildingId: string): boolean {
+  const building = world.surface.buildings.find(b => b.id === buildingId);
+  if (hutUpgradeRefusal(world, colonyIndex, building)) return false;
+  const c = world.colonies[colonyIndex].colony, cost = CONFIG.hutUpgradeCost;
+  c.specialClay = (c.specialClay ?? 0) - cost.special;
+  c.clay -= cost.clay;
+  c.wood -= cost.wood;
+  building!.level = 2;
+  building!.maxHp = Math.round(building!.maxHp * 1.5);
+  building!.hp = building!.maxHp;
+  return true;
+}
+
 export function completeBuilding(world: World, building: Building): void {
   building.stage = "built";
   markObstaclesChanged();

@@ -8,7 +8,7 @@ import { listSaves, loadGameSlot, loadWorldSnapshot, saveGameSlot, saveWorldSnap
 import { addFoodSource, createWorld, restartColony, toNetworkSnapshot, randomTerrain, replaceWorld } from "./sim/world";
 import { LEGACY_TERRAIN, setSurfaceTerrain } from "../../shared/surfaceTerrain";
 import { eraseColonyZone, paintColonyZone } from "./sim/zones";
-import { eraseBuildCells, paintWallCells, placeGate, placePointBuilding, isSurfaceBlockedAt } from "./sim/building";
+import { eraseBuildCells, paintWallCells, placeGate, placePointBuilding, isSurfaceBlockedAt, upgradeHut } from "./sim/building";
 import { startLoop, type LoopController } from "./loop";
 import { trainWaterWeapons, prepareSandboxGuard } from "./sim/session";
 import { createObjectives } from "./sim/objectives";
@@ -93,6 +93,7 @@ const hub = createSocketHub(CONFIG.wsPort, (view, includePheromones) => networkS
     paintWallCells(world, command.colonyIndex, command.cells);
   }
   if (command.type === "placeGate") placeGate(world, command.colonyIndex, command.x, command.y, command.axis);
+  if (command.type === "upgradeHut") upgradeHut(world, command.colonyIndex, command.buildingId);
   if (command.type === "paintGate") {
     paintWallCells(world, command.colonyIndex, command.cells, "gate");
   }

@@ -41,7 +41,11 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
 
   if (c.queenAlive && population >= c.nestCapacity) {
     if (count("hut") < CONFIG.maxHutsPerColony) out.push({ key: "huts", severity: "warn", text: "Нам тесно — поставь ещё хижину", pos: { ...camp } });
-    else out.push({ key: "full", severity: "info", text: "Лагерь полон — больше хижин здесь не поставить" });
+    else {
+      const small = own.find(b => b.type === "hut" && b.stage === "built" && (b.level ?? 1) < 2);
+      if (small) out.push({ key: "house", severity: "warn", text: "Лагерь полон — улучши хижину до дома рода (особая глина)", pos: { ...small.pos } });
+      else out.push({ key: "full", severity: "info", text: "Все хижины — дома рода: племя выросло до предела" });
+    }
   } else if (c.queenAlive && !c.growthPaused && c.clay < CONFIG.newResidentClayCost + (c.clayReserve ?? 0)) {
     const clay = nearest(world.surface.resourceNodes.filter(n => n.kind === "clay" && n.amount > 0).map(n => n.pos), camp);
     out.push({ key: "clay", severity: "warn", text: "Глины нет — новых лепить не из чего", pos: clay ? { ...clay } : undefined });
@@ -80,9 +84,9 @@ export function collectAdvice(world: World, runtime: ColonyRuntime): Raw[] {
   if (besieged) out.push({ key: "siege", severity: "danger", text: "Соседи осаждают тотем — поставь пост обороны рядом с ним", pos: { ...besieged.pos } });
   const dom = world.session.dominance;
   if (dom && dom.holder !== runtime.id) {
-    const left = Math.max(0, CONFIG.dominanceTicks - (world.tick - dom.since));
+    const left = Math.max(0, (dom.required ?? CONFIG.dominanceTicks) - (world.tick - dom.since));
     const target = (world.surface.springs ?? []).find(s => s.holder === dom.holder);
-    out.push({ key: "dominance", severity: "danger", text: `Соседи держат ${CONFIG.dominanceSprings} источника — через ${Math.ceil(left / 600)} ч. игры они победят. Осади их тотем постом обороны`, pos: target ? { ...target.pos } : undefined });
+    out.push({ key: "dominance", severity: "danger", text: `Соседи держат ${dom.count ?? CONFIG.dominanceSprings} источника — через ${Math.ceil(left / 600)} ч. игры они победят. Осади их тотем постом обороны`, pos: target ? { ...target.pos } : undefined });
   }
   if (world.weather.bigRainActive && (world.weather.bigRainAt ?? CONFIG.bigRainAtTicks) >= CONFIG.bigRainAtTicks) out.push({ key: "finale", severity: "warn", text: "Великий ливень! Держите костёр живым — по окончании победит сильнейшее племя" });
 

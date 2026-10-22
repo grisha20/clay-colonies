@@ -13,7 +13,8 @@ process.env.SPIDER_GENOME_FILE = "./.dominance-genome-spider.json";
 const fs = await import("node:fs");
 const { loadGenome } = await import("../ai/genome");
 const { loadSpiderGenome } = await import("../ai/spiderGenome");
-const { createWorld } = await import("../sim/world");
+const { createWorld, toSnapshot, worldFromSnapshot } = await import("../sim/world");
+const { upgradeHut, hutUpgradeRefusal } = await import("../sim/building");
 const { generateTerrain } = await import("../sim/terrainGen");
 const { step } = await import("../sim/step");
 const { CONFIG } = await import("../config");
@@ -154,6 +155,66 @@ const totemAt = (w: ReturnType<typeof fresh>, owner: string, pos: { x: number; y
   check("defence: totem survives the war", w.surface.buildings.includes(t), `hp ${t.hp.toFixed(0)}`);
   check("defence: guards fight the besiegers at the post", fights > 0 && (fallenB > 0 || weakest < CONFIG.refuelEnergyThreshold), `fight ticks ${fights}, fallen ${fallenB}, weakest besieger energy ${weakest.toFixed(0)}`);
   check("defence: the siege is lifted", warEnded);
+}
+
+// Round 2 (playtest 22.10): harder dominance, war against the leader, springs off the shore, houses.
+{
+  const w = fresh();
+  const [s0, s1, s2] = w.surface.springs!;
+  totemAt(w, "colony-1", { x: s0.pos.x + 8, y: s0.pos.y }, "d1"); totemAt(w, "colony-1", { x: s1.pos.x + 8, y: s1.pos.y }, "d2");
+  w.tick = 20000; updateSprings(w); updateOutcome(w);
+  check("two springs need two days", w.session.dominance?.required === CONFIG.dominanceTicks && CONFIG.dominanceTicks === 12000);
+  totemAt(w, "colony-1", { x: s2.pos.x + 8, y: s2.pos.y }, "d3");
+  w.tick = 20100; updateSprings(w); updateOutcome(w);
+  check("all three springs need a day, time held is kept", w.session.dominance?.required === CONFIG.dominanceAllTicks && w.session.dominance.since === 20000);
+  w.tick = 20000 + CONFIG.dominanceAllTicks; updateObjectives(w);
+  check("objective counts all-spring time double", w.objectives.find(o => o.id === "win-dominance")!.done === true);
+  check("ritual needs 60 special clay", CONFIG.idolRitualTicks / CONFIG.idolSpecialClayEvery === 60);
+}
+{
+  // The neighbour is outnumbered but the player leads by the springs: war anyway.
+  const w = fresh();
+  const A = w.colonies[0], B = w.colonies[1];
+  const [s0, s1] = w.surface.springs!;
+  totemAt(w, A.id, { x: s0.pos.x + 7, y: s0.pos.y + 3 }, "lead1"); totemAt(w, A.id, { x: s1.pos.x + 7, y: s1.pos.y + 3 }, "lead2");
+  for (let i = 0; A.ants.length < 40; i++) A.ants.push({ ...A.ants[i % A.ants.length], id: `big-${i}`, pos: { ...A.surfaceEntrance } });
+  while (B.ants.length < CONFIG.aiWarLeaderMinAlive) B.ants.push({ ...B.ants[0], id: `b-${B.ants.length}`, pos: { ...B.surfaceEntrance } });
+  w.tick = CONFIG.aiWarAfterTicks + 100;
+  check("outnumbered neighbour waits while nobody leads", !updateWar(w, 1));
+  updateSprings(w); updateOutcome(w);
+  check("outnumbered neighbour goes to war against the leader", w.session.dominance?.holder === A.id && updateWar(w, 1) && !!B.colony.war);
+}
+{
+  let shoreOk = true, count = 0;
+  for (const seed of [7, 42, 4242, 9716477, 911028219, 123456]) {
+    const t = generateTerrain(seed).terrain;
+    for (const sp of t.springs ?? []) {
+      count++;
+      for (const lake of t.lakes) for (const q of lake.outline) if (Math.hypot(q.x - sp.x, q.y - sp.y) < 12) shoreOk = false;
+    }
+  }
+  check("springs stay off the lake shore", shoreOk && count >= 12, `${count} springs`);
+}
+{
+  // House of the clan.
+  const w = fresh();
+  const A = w.colonies[0], c = A.colony;
+  const hut = w.surface.buildings.find(b => b.colonyId === A.id && b.type === "hut" && b.stage === "built")!;
+  c.specialClay = 0; c.clay = 100; c.wood = 100;
+  check("house needs special clay", hutUpgradeRefusal(w, 0, hut) === "Не хватает особой глины");
+  c.specialClay = 20;
+  const cap0 = (() => { w.tick = 0; return null; })();
+  check("upgrade succeeds and is paid", upgradeHut(w, 0, hut.id) && hut.level === 2 && c.specialClay === 20 - CONFIG.hutUpgradeCost.special && c.clay === 100 - CONFIG.hutUpgradeCost.clay);
+  check("no second upgrade", hutUpgradeRefusal(w, 0, hut) === "Это уже дом рода");
+  check("rival hut refused", hutUpgradeRefusal(w, 1, hut) === "Нужна своя хижина");
+  // A house doubles the hut's places in the population cap.
+  for (let i = 0; i < 2 * CONFIG.broodLayCooldownTicks; i++) step(w);
+  const huts = w.surface.buildings.filter(b => b.colonyId === A.id && b.type === "hut" && b.stage === "built");
+  const expected = Math.floor(CONFIG.maxPopulation / w.colonies.length) + huts.reduce((sum, h) => sum + CONFIG.hutPopulationBonus * ((h.level ?? 1) >= 2 ? 2 : 1), 0);
+  check("house doubles the hut's places", A.colony.nestCapacity === expected, `${A.colony.nestCapacity} vs ${expected}`);
+  const saved = worldFromSnapshot(JSON.parse(JSON.stringify(toSnapshot(w))), genome, spider, genomeB);
+  check("save keeps the house", saved.surface.buildings.find(b => b.id === hut.id)?.level === 2);
+  void cap0;
 }
 
 for (const f of ["./.dominance-snapshot.json", "./.dominance-genome-a.json", "./.dominance-genome-b.json", "./.dominance-genome-spider.json"]) fs.rmSync(f, { force: true });

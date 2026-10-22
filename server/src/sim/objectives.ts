@@ -9,7 +9,7 @@ import { CONFIG } from "../config";
 export function createObjectives(hasSprings = true): Objective[] {
   return [
     // Пути победы: достаточно одного, у каждого своё «послевкусие».
-    { id: "win-dominance", text: `Держать ${CONFIG.dominanceSprings} источника особой глины сутки`, target: CONFIG.dominanceTicks, progress: 0, done: false, victory: true },
+    { id: "win-dominance", text: "Держать 2 источника двое суток (или все 3 — сутки)", target: CONFIG.dominanceTicks, progress: 0, done: false, victory: true },
     { id: "win-idol", text: "Завершить ритуал Идола (живой костёр и особая глина)", target: CONFIG.idolRitualTicks, progress: 0, done: false, victory: true },
     { id: "win-bigrain", text: "Пережить Великий ливень сильнее соседей", target: 1, progress: 0, done: false, victory: true },
     { id: "win-spider", text: "Одолеть паука", target: 1, progress: 0, done: false },
@@ -92,7 +92,9 @@ function currentValue(world: World, id: string): number {
       if ((world.weather.bigRainAt ?? CONFIG.bigRainAtTicks) < CONFIG.bigRainAtTicks) return world.weather.bigRainDone && world.weather.bigRainSurvived ? 1 : 0;
       return world.session.finaleWon ? 1 : 0;
     case "win-dominance":
-      return world.session.dominance?.holder === colony.id ? world.tick - world.session.dominance.since : 0;
+      if (world.session.dominance?.holder !== colony.id) return 0;
+      // Progress in "two-spring" ticks: holding all springs counts faster.
+      return Math.floor((world.tick - world.session.dominance.since) * CONFIG.dominanceTicks / (world.session.dominance.required ?? CONFIG.dominanceTicks));
     default:
       return 0;
   }

@@ -194,9 +194,14 @@ export function springSites(terrain: SurfaceTerrainData, seed: number): { x: num
   const camps = terrain.camps ?? LEGACY_CAMPS;
   const outlines = [...terrain.lakes.map((l) => l.outline), ...(terrain.mountains ?? []).map((m) => m.outline)];
   const walk = walkableFrom(terrain, camps[0]);
+  // Fights at a spring should happen on dry land, not at the shore where lake
+  // monsters drag guards away (playtest 22.10): keep ~22 from lakes, 8 from rock.
+  const lakeOutlines = terrain.lakes.map((l) => l.outline);
+  const ring = (p: P, r: number) => Array.from({ length: 12 }, (_, i) => ({ x: p.x + Math.cos(i * Math.PI / 6) * r, y: p.y + Math.sin(i * Math.PI / 6) * r }));
   const ok = (p: P, taken: P[]) =>
     p.x > 30 && p.y > 30 && p.x < W - 30 && p.y < H - 30 && walk.reach(p) &&
-    Array.from({ length: 8 }, (_, i) => ({ x: p.x + Math.cos(i * Math.PI / 4) * 8, y: p.y + Math.sin(i * Math.PI / 4) * 8 })).every((q) => outlines.every((o) => !insidePolygon(q, o))) &&
+    ring(p, 8).every((q) => outlines.every((o) => !insidePolygon(q, o))) &&
+    [12, 17, 22].every((r) => ring(p, r).every((q) => lakeOutlines.every((o) => !insidePolygon(q, o)))) &&
     !outlines.some((o) => insidePolygon(p, o)) &&
     camps.every((c) => dist(c, p) > 80) &&
     (terrain.depositSites ?? []).every((d) => dist(d, p) > 20) &&

@@ -1,7 +1,7 @@
 import type { Building, BuildingType, Vec2 } from "../../../shared/types";
 import { isWaterAt, isTerrainBlockedAt } from "../../../shared/surfaceTerrain";
 import { CONFIG } from "../config";
-import { placePointBuilding, placeGate, paintWallCells, wallCellIndexAt, isSurfaceBlockedAt } from "./building";
+import { placePointBuilding, placeGate, paintWallCells, wallCellIndexAt, isSurfaceBlockedAt, upgradeHut } from "./building";
 import type { ColonyRuntime, World } from "./world";
 import { trainWaterWeapons } from "./session";
 import { fenceCellCenters } from "../../../shared/fenceGeometry";
@@ -131,7 +131,9 @@ export function updateWar(world: World, index: number): boolean {
     if (!player || world.tick < CONFIG.aiWarAfterTicks || world.tick < (c.warCooldownUntil ?? 0)) return false;
     // Enough people to field the war party (guards are raised once at war).
     const alive = (r: typeof runtime) => r.ants.filter(a => a.state !== "dead").length;
-    if (alive(runtime) < CONFIG.aiWarMinGuards * 3 || alive(runtime) < alive(player) * 0.8) return false;
+    // The player is about to win by the springs: go to war whatever the numbers.
+    const leader = world.session.dominance?.holder === player.id;
+    if (leader ? alive(runtime) < CONFIG.aiWarLeaderMinAlive : alive(runtime) < CONFIG.aiWarMinGuards * 3 || alive(runtime) < alive(player) * 0.8) return false;
     const target = warTarget(world, index);
     if (!target) return false;
     c.war = { targetId: target.id, since: world.tick };
@@ -200,6 +202,9 @@ export function updateSettlementAI(world: World): void {
     else if (built("storage") < 2 && population >= 20 && world.tick > 6000) type = "storage";
     else if (!built("kiln") && population >= 14 && world.tick > 5000 && c.stone >= 6) type = "kiln";
     else if (!built("idol") && world.tick > CONFIG.matchMinTicks / 2 && c.clay > 35 && c.stone > 10) type = "idol";
+    // Houses of the clan once the huts are maxed and special clay allows.
+    const smallHut = buildings.find(b => b.type === "hut" && b.stage === "built" && (b.level ?? 1) < 2);
+    if (smallHut && built("hut") >= CONFIG.maxHutsPerColony && upgradeHut(world, index, smallHut.id)) continue;
     const pendingTotem = buildings.some(b => b.type === "totem" && b.stage !== "built");
     if (!type && built("workshop") && !pendingTotem && built("totem") < CONFIG.maxTotemsPerColony && world.tick > 3000 && c.clay >= 14 && c.wood >= 8 && c.stone >= 4) {
       const site = totemSite(world, index);

@@ -8,6 +8,7 @@ export type ClientCommand =
   | { type: "setAlarm"; colonyIndex: number; value: boolean }
   | { type: "setAutoManage"; colonyIndex: number; value: boolean }
   | { type: "setFiring"; colonyIndex: number; paused: boolean }
+  | { type: "upgradeHut"; colonyIndex: number; buildingId: string }
   | { type: "setDefensePost"; colonyIndex: number; x: number; y: number }
   | { type: "trainWaterWeapons"; colonyIndex: number }
   | { type: "setGrowth"; colonyIndex: number; paused: boolean; reserve: number }
@@ -109,6 +110,7 @@ export function parseCommand(raw: string): ClientCommand | null {
     if (command.type === "setAlarm" && typeof command.value === "boolean") return { type: "setAlarm", colonyIndex, value: command.value };
     if (command.type === "setAutoManage" && typeof command.value === "boolean") return { type: "setAutoManage", colonyIndex, value: command.value };
     if (command.type === "setFiring" && typeof command.paused === "boolean") return { type: "setFiring", colonyIndex, paused: command.paused };
+    if (command.type === "upgradeHut" && typeof command.buildingId === "string" && /^bld-\d{1,8}$/.test(command.buildingId)) return { type: "upgradeHut", colonyIndex, buildingId: command.buildingId };
     if (command.type === "setSandbox" && typeof command.value === "boolean") return { type: "setSandbox", value: command.value, colonyIndex };
     if (command.type === "trainWaterWeapons") return { type: "trainWaterWeapons", colonyIndex };
     if (command.type === "setGrowth" && typeof command.paused === "boolean" && typeof command.reserve === "number" && Number.isFinite(command.reserve)) {
