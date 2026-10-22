@@ -76,13 +76,45 @@ static func point_building_placement(surface: Dictionary, owner: String, type: S
 			own += 1
 	if own >= int(LIMITS.get(type, 99)):
 		return "Достигнут предел этих построек"
-	for b in surface.get("buildings", []):
-		if _pos(b.get("pos")).distance_to(pos) < 8.0:
-			return "Слишком близко к другой постройке"
+	var near = building_spacing(surface.get("buildings", []), fx, fy, frx, fry)
+	if near != "":
+		return near
 	for s in surface.get("springs", []):
 		if _pos(s.get("pos")).distance_to(pos) < SPRING_CLEARANCE + frx:
 			return "Здесь бьёт источник особой глины"
 	return territory_placement(surface, owner, pos)
+
+
+## shared/buildingPlacement.ts PLACEMENT_GAP / buildingSpacing: a walkway
+## round the new foundation, by real footprint sizes, also to fence cells.
+const PLACEMENT_GAP := 1.0
+
+static func fence_cells(b: Dictionary) -> Array[Vector2]:
+	var p = _pos(b.get("pos"))
+	var count = GATE_SPAN if str(b.get("type", "")) == "gate" and int(b.get("gateSpan", 1)) == GATE_SPAN else 1
+	var vertical = str(b.get("gateAxis", "horizontal")) == "vertical"
+	var cells: Array[Vector2] = []
+	for i in range(count):
+		var off = (float(i) - float(count - 1) / 2.0) * WALL_CELL_SIZE
+		cells.append(p + (Vector2(0, off) if vertical else Vector2(off, 0)))
+	return cells
+
+static func building_spacing(buildings: Array, fx: float, fy: float, frx: float, fry: float) -> String:
+	for b in buildings:
+		var t = str(b.get("type", ""))
+		if t == "wall" or t == "gate":
+			var reach_x = frx + WALL_CELL_SIZE / 2.0 + PLACEMENT_GAP
+			var reach_y = fry + WALL_CELL_SIZE / 2.0 + PLACEMENT_GAP
+			for c in fence_cells(b):
+				if pow((c.x - fx) / reach_x, 2) + pow((c.y - fy) / reach_y, 2) < 1.0:
+					return "Слишком близко к ограде"
+			continue
+		var o = _footprint(b)
+		if o.is_empty():
+			continue
+		if pow((float(o.x) - fx) / (frx + float(o.rx) + PLACEMENT_GAP), 2) + pow((float(o.y) - fy) / (fry + float(o.ry) + PLACEMENT_GAP), 2) < 1.0:
+			return "Слишком близко к другой постройке"
+	return ""
 
 
 static func territory_discs(surface: Dictionary) -> Array:

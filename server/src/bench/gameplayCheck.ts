@@ -22,6 +22,7 @@ const { assignHarvestJobs, assignBuildJobs } = await import("../sim/economy");
 const { assignForageRoles } = await import("../sim/foodMemory");
 const { paintWallCells, wallCellIndexAt, completeBuilding, placePointBuilding, resolveSurfaceCollision, isSurfaceBlockedAt } = await import("../sim/building");
 const { insideHearth, crossesHearth } = await import("../../../shared/campGeometry");
+const { pointBuildingPlacement } = await import("../../../shared/buildingPlacement");
 const { moveHarvestCarrying } = await import("../sim/ant/forage");
 const { moveSurfaceToward } = await import("../sim/ant/movement");
 const { buildingFootprint, insideBuilding, crossesBuilding, buildingServicePoint } = await import("../../../shared/buildingGeometry");
@@ -395,6 +396,20 @@ try {
     assert.ok([...ringIds].some(id => !w.surface.buildings.some(b => b.id === id)), "closed ring gets a breach");
     assert.ok((e.attackAt ?? -1) > 0, "smashing is a visible blow");
     w.tick = w.session.raid.until; updateRaids(w); assert.equal(w.session.raid.phase, "peace"); assert.equal(w.session.stats.raidsSurvived, 1);
+  });
+  scenario("Хижина встаёт внутри огороженного лагеря: зазор считается по основаниям", () => {
+    const w = fresh(), c = w.colonies[0], home = c.surfaceEntrance;
+    // A fence ring of radius ~24 round the camp, every 2 units.
+    const ring: number[] = [];
+    for (let a = 0; a < 360; a += 4) ring.push(wallCellIndexAt(home.x + Math.cos(a * Math.PI / 180) * 24, home.y + Math.sin(a * Math.PI / 180) * 24));
+    paintWallCells(w, 0, [...new Set(ring)]);
+    const free = [[0, -14], [-14, 6], [14, 8], [0, 15]].map(([dx, dy]) => ({ x: home.x + dx, y: home.y + dy }))
+      .filter(p => pointBuildingPlacement(w.surface, c.id, "hut", p) === null);
+    assert.ok(free.length >= 2, `huts fit inside the fence: ${free.length}`);
+    // Still no hut right against the fence or overlapping another foundation.
+    assert.equal(pointBuildingPlacement(w.surface, c.id, "hut", { x: home.x + 22.5, y: home.y }), "Слишком близко к ограде");
+    const hut = w.surface.buildings.find(b => b.colonyId === c.id && b.type === "hut")!;
+    assert.equal(pointBuildingPlacement(w.surface, c.id, "hut", { x: hut.pos.x + 3, y: hut.pos.y }), "Слишком близко к другой постройке");
   });
   scenario("Паук у очага во время набега: жители встают на защиту, а не разбегаются", () => {
     const w = fresh(), c = w.colonies[0], scoped = colonyWorldView(w, c);
