@@ -16,6 +16,12 @@ signal spoke(key: String, text: String)
 const SEVERITY_BORDER = {"danger": Color(0.72, 0.18, 0.12), "warn": Color(0.78, 0.48, 0.10), "info": Color(0.55, 0.38, 0.22)}
 ## Portrait diameter; set before adding to the tree (the bottom dock uses a bigger one).
 var portrait_size := 132
+## Perched on the minimap (2D reference layout): no round frame, the figure is
+## shown to the waist with her arms on the map's edge, and the speech bubble
+## has a tail pointing at her mouth. Set before adding to the tree.
+var perched := false
+const PERCH_SIZE := Vector2(200, 190)
+var tail: Control
 const TYPE_CHARS_PER_SEC := 55.0
 const VOICE_DIR := "res://audio/mother/"
 
@@ -53,8 +59,18 @@ func _ready() -> void:
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.minimum_size_changed.connect(update_minimum_size)
 	add_child(row)
-	_build_portrait(row)
-	_build_bubble(row)
+	if perched:
+		row.alignment = BoxContainer.ALIGNMENT_END
+		_build_bubble(row)
+		tail = BubbleTail.new()
+		tail.custom_minimum_size = Vector2(20, 0)
+		tail.size_flags_vertical = Control.SIZE_FILL
+		row.add_child(tail)
+		_build_portrait(row)
+		bubble.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	else:
+		_build_portrait(row)
+		_build_bubble(row)
 	voice = AudioStreamPlayer.new()
 	voice.name = "MotherVoice"
 	add_child(voice)
@@ -73,21 +89,23 @@ func _build_portrait(parent: Control) -> void:
 	sb.set_corner_radius_all(portrait_size / 2 + 6)
 	sb.set_border_width_all(3)
 	sb.content_margin_left = 4; sb.content_margin_right = 4; sb.content_margin_top = 4; sb.content_margin_bottom = 4
-	portrait_frame.add_theme_stylebox_override("panel", sb)
-	# Clip the square 3D view to the round frame.
-	portrait_frame.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	portrait_frame.add_theme_stylebox_override("panel", StyleBoxEmpty.new() if perched else sb)
+	if not perched:
+		# Clip the square 3D view to the round frame.
+		portrait_frame.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
 	portrait_frame.mouse_filter = Control.MOUSE_FILTER_STOP
 	portrait_frame.tooltip_text = "Праматерь — подсказывает, чего не хватает племени"
 	parent.add_child(portrait_frame)
 	var container = SubViewportContainer.new()
 	container.stretch = true
-	container.custom_minimum_size = Vector2(portrait_size, portrait_size)
+	var view_size = PERCH_SIZE if perched else Vector2(portrait_size, portrait_size)
+	container.custom_minimum_size = view_size
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_child(container)
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
-	viewport.size = Vector2i(portrait_size, portrait_size)
+	viewport.size = Vector2i(view_size)
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	container.add_child(viewport)
 	var env = WorldEnvironment.new()
@@ -131,8 +149,12 @@ func _build_portrait(parent: Control) -> void:
 	var cam = Camera3D.new()
 	cam.fov = 30.0
 	cam.position = Vector3(0, 2.12, 2.35)
+	if perched:
+		# To the waist: her forward-reaching arms rest on the bottom edge.
+		cam.fov = 30.0
+		cam.position = Vector3(0, 2.3, 3.1)
 	viewport.add_child(cam)
-	cam.look_at(Vector3(0, 1.98, 0), Vector3.UP)
+	cam.look_at(Vector3(0, 1.95 if perched else 1.98, 0), Vector3.UP)
 
 
 func _build_bubble(parent: Control) -> void:
@@ -243,12 +265,18 @@ func _page(step: int) -> void:
 func _show_current() -> void:
 	var has = not advice.is_empty()
 	bubble.visible = has
+	if tail:
+		tail.visible = has
 	modulate.a = 1.0 if has else 0.75
 	if not has:
 		return
 	var a: Dictionary = advice[index]
 	text_label.text = str(a.get("text", ""))
 	bubble_style.border_color = SEVERITY_BORDER.get(str(a.get("severity", "info")), SEVERITY_BORDER.info)
+	if tail:
+		(tail as BubbleTail).border = bubble_style.border_color
+		tail.visible = true
+		tail.queue_redraw()
 	where_button.visible = typeof(a.get("pos")) == TYPE_DICTIONARY
 	var many = advice.size() > 1
 	prev_button.visible = many
@@ -287,6 +315,17 @@ static func voice_stream(key: String) -> AudioStream:
 			if ResourceLoader.exists(path):
 				return load(path) as AudioStream
 	return null
+
+
+## The bubble's tail: a little triangle from the bubble to her mouth.
+class BubbleTail extends Control:
+	var border := Color(0.55, 0.38, 0.22)
+	func _draw() -> void:
+		# From the bubble's side (its middle) down to her mouth.
+		var y = 46.0
+		var pts = PackedVector2Array([Vector2(-3, y - 11), Vector2(size.x + 2, y + 50), Vector2(-3, y + 11)])
+		draw_colored_polygon(pts, Color(0.98, 0.94, 0.84, 0.97))
+		draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2]]), border, 2.0)
 
 
 func _process(delta: float) -> void:

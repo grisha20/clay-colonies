@@ -31,10 +31,8 @@ var warrior_button: Button
 const WARRIOR_COST := {"specialClay": 4, "spears": 1}
 const WARRIORS_PER_RESIDENTS := 8
 const WATER_COST := {"wood": 6, "stone": 4}
-## One unit (row + its "why not" note) per job; two columns in the bottom dock.
+## One unit (row + its "why not" note) per job.
 var rows_box: GridContainer
-var title_label: Label
-var main_box: VBoxContainer
 var priorities: Dictionary = {}
 var free_for_plus: int = 0
 var signature: String = ""
@@ -48,13 +46,11 @@ func _ready() -> void:
 	mouse_force_pass_scroll_events = false
 	custom_minimum_size = Vector2(300, 0)
 	var box = VBoxContainer.new()
-	main_box = box
 	add_child(box)
 	var title = Label.new()
 	title.text = "Работы"
 	title.add_theme_font_size_override("font_size", 22)
 	box.add_child(title)
-	title_label = title
 	header = Label.new()
 	header.add_theme_font_size_override("font_size", 14)
 	box.add_child(header)
@@ -337,23 +333,6 @@ func _update_warrior(snapshot: Dictionary, colony: Dictionary, colony_id: String
 	var reason = warrior_refusal(snapshot, colony, colony_id)
 	warrior_button.disabled = reason != ""
 	warrior_button.text = ("Посвятить воина (%d особой глины, копьё) · воинов: %d" % [WARRIOR_COST.specialClay, warriors]) if reason == "" else ("Воинов: %d · %s" % [warriors, reason])
-
-
-## Bottom dock layout: controls on the left, job rows in two columns on the
-## right, no title (the dock tab says «Работы»).
-func set_compact() -> void:
-	if rows_box.get_parent() != main_box:
-		return
-	title_label.visible = false
-	var hb = HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 14)
-	remove_child(main_box)
-	add_child(hb)
-	hb.add_child(main_box)
-	main_box.remove_child(rows_box)
-	hb.add_child(VSeparator.new())
-	hb.add_child(rows_box)
-	rows_box.columns = 2
 
 
 func _update_mode() -> void:

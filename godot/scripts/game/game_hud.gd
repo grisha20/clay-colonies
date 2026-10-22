@@ -27,12 +27,17 @@ var settings_button: Button
 var quick_panel: PanelContainer
 var alarm_on: bool = false
 var tasks_signature: String = ""
+## Growth shown next to the stores (2D reference): +N over the last RATE_WINDOW ticks.
+const RATE_WINDOW := 1200
+var rate_labels: Dictionary = {}
+var history: Array = []
 
 
 func _ready() -> void:
 	name = "GameHud"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_brand()
 	_build_top_bar()
 	_build_tasks()
 	_build_alert()
@@ -69,6 +74,26 @@ func _label(text: String, size: int = 18, color: Color = INK) -> Label:
 	return l
 
 
+## Name plate at the top left, like the 2D reference.
+func _build_brand() -> void:
+	var brand = PanelContainer.new()
+	brand.name = "Brand"
+	brand.add_theme_stylebox_override("panel", panel_style())
+	brand.position = Vector2(16, 12)
+	brand.custom_minimum_size = Vector2(300, 0)
+	brand.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(brand)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	brand.add_child(row)
+	var icon = TextureRect.new()
+	icon.texture = make_icon("people")
+	icon.custom_minimum_size = Vector2(30, 30)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	row.add_child(icon)
+	row.add_child(_label("Clayfolk", 26))
+
+
 func _build_top_bar() -> void:
 	var bar = PanelContainer.new()
 	bar.name = "ResourceBar"
@@ -93,6 +118,10 @@ func _build_top_bar() -> void:
 		var value = _label("0", 22)
 		cell.add_child(value)
 		resource_labels[spec[0]] = value
+		if spec[0] in ["clay", "food", "wood", "stone"]:
+			var rate = _label("", 15, Color(0.30, 0.55, 0.20))
+			cell.add_child(rate)
+			rate_labels[spec[0]] = rate
 		row.add_child(cell)
 	row.add_child(VSeparator.new())
 	weather_label = _label("День · ясно", 18)
@@ -117,6 +146,7 @@ func _build_top_bar() -> void:
 		b.text = spec[1]
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(46, 40)
 		var v: int = spec[0]
 		b.pressed.connect(func(): speed_requested.emit(v))
 		row.add_child(b)
@@ -130,6 +160,8 @@ func _build_top_bar() -> void:
 	row.add_child(alarm_button)
 	settings_button = Button.new()
 	settings_button.text = "⚙"
+	settings_button.custom_minimum_size = Vector2(46, 40)
+	settings_button.add_theme_font_size_override("font_size", 22)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	settings_button.tooltip_text = "Меню: сохранить, лагеря и озёра, сервер, управление"
 	settings_button.pressed.connect(func(): settings_requested.emit())
@@ -140,7 +172,7 @@ func _build_tasks() -> void:
 	tasks_panel = PanelContainer.new()
 	tasks_panel.name = "TasksPanel"
 	tasks_panel.add_theme_stylebox_override("panel", panel_style())
-	tasks_panel.position = Vector2(16, 16)
+	tasks_panel.position = Vector2(16, 72)
 	tasks_panel.custom_minimum_size = Vector2(300, 0)
 	tasks_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	tasks_panel.mouse_force_pass_scroll_events = false
@@ -159,7 +191,7 @@ func _build_alert() -> void:
 	alert_panel.add_theme_stylebox_override("panel", panel_style(Color(0.62, 0.20, 0.14, 0.92)))
 	alert_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	alert_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	# Below the mother's portrait at the top centre.
+	# Under the resource bar at the top centre.
 	alert_panel.position.y = 70
 	alert_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	alert_panel.visible = false
@@ -178,6 +210,25 @@ func _build_tooltip() -> void:
 	add_child(tooltip_panel)
 	tooltip_label = _label("", 16)
 	tooltip_panel.add_child(tooltip_label)
+
+
+## "+12" / "−5" next to a store: change over the last RATE_WINDOW ticks.
+func _update_rates(tick: int, values: Dictionary) -> void:
+	if not history.is_empty() and tick < int(history[-1][0]):
+		history.clear()  # new match or loaded save
+	history.append([tick, values])
+	while history.size() > 2 and tick - int(history[1][0]) >= RATE_WINDOW:
+		history.pop_front()
+	var old = history[0]
+	var span = tick - int(old[0])
+	for k in rate_labels.keys():
+		var l: Label = rate_labels[k]
+		var delta = int(round(float(values[k]) - float(old[1][k])))
+		if span < RATE_WINDOW / 4 or delta == 0:
+			l.text = ""
+			continue
+		l.text = ("+%d" % delta) if delta > 0 else ("−%d" % -delta)
+		l.add_theme_color_override("font_color", Color(0.30, 0.55, 0.20) if delta > 0 else Color(0.70, 0.25, 0.16))
 
 
 ## Updates every widget from one snapshot.
@@ -202,6 +253,7 @@ func update_from_snapshot(snapshot: Dictionary, population: int) -> void:
 	resource_labels.wood.text = str(int(float(colony.get("wood", 0))))
 	resource_labels.stone.text = str(int(float(colony.get("stone", 0))))
 	resource_labels.people.text = str(population)
+	_update_rates(int(snapshot.get("tick", 0)), {"clay": float(colony.get("clay", 0)), "food": food, "wood": float(colony.get("wood", 0)), "stone": float(colony.get("stone", 0))})
 	alarm_on = bool(colony.get("alarm", false))
 	alarm_button.button_pressed = alarm_on
 
