@@ -20,7 +20,7 @@ func shot(name: String, text: String, focus: Vector3, distance: float, angle: fl
 	wv.focused_target = null
 	wv.camera_navigated = true
 	wv.camera_pivot.position = focus
-	wv.camera_pivot.rotation.y = yaw
+	wv.camera_yaw = yaw
 	wv.camera_angle_deg = angle
 	wv.camera.fov = fov
 	wv.camera.rotation_degrees.x = -angle

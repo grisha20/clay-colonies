@@ -569,8 +569,11 @@ func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 		return false
 	if tool == "" or not (event is InputEventMouseButton):
 		return false
-	if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-		set_tool("")
+	# Right click cancels on release: a held right button turns the camera, and
+	# WorldView swallows the release when it did.
+	if event.button_index == MOUSE_BUTTON_RIGHT:
+		if not event.pressed:
+			set_tool("")
 		return true
 	if event.button_index != MOUSE_BUTTON_LEFT:
 		return false

@@ -281,7 +281,7 @@ func _setup_hud() -> void:
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.text = "WASD / стрелки — камера · Колесо — масштаб · ЛКМ — выбрать"
-	help_label.text = "WASD — камера · колесо — масштаб · ЛКМ — выбрать\n1–9, 0 — стройка и зоны · Esc/ПКМ — отмена"
+	help_label.text = "WASD, зажатое колесо — камера · зажатая ПКМ — поворот · колесо — масштаб\nЛКМ — выбрать · 1–9, 0 — стройка и зоны · Esc/ПКМ — отмена · Home — север вверх"
 	# Bottom-right under the inspector: the picture build bar fills the bottom centre.
 	help_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	help_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN

@@ -206,6 +206,8 @@ func run() -> void:
 	scene._unhandled_input(key3)
 	check("hotkey_selects_workshop", scene.build.tool == "workshop")
 	mouse(camp, MOUSE_BUTTON_RIGHT, true)
+	check("right_press_keeps_tool", scene.build.tool == "workshop")
+	mouse(camp, MOUSE_BUTTON_RIGHT, false)
 	check("right_click_cancels", scene.build.tool == "")
 
 	scene.ws_client.disconnect_from_server()

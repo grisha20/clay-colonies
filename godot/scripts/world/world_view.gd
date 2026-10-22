@@ -25,6 +25,16 @@ const MAX_CAMERA_DISTANCE: float = 80.0
 var colony_focus_points: Array[Vector3] = [COLONY_1_ENTRANCE, COLONY_2_ENTRANCE]
 var received_landmarks: bool = false
 var camera_navigated: bool = false
+## Mouse camera: held middle button drags the map, held right button turns it
+## around the focus point. A right click without turning still reaches the
+## build tools (cancel); a turn swallows the release.
+const ROTATE_DRAG_THRESHOLD := 6.0
+const ROTATE_SPEED := 0.008
+var camera_yaw: float = 0.0
+var _rmb_down := false
+var _rmb_travel := 0.0
+var _rmb_rotated := false
+var _mmb_down := false
 
 
 # Map dimensions matching CONFIG.mapWidth/mapHeight
@@ -1393,10 +1403,12 @@ func _process(delta: float) -> void:
 		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
 			pan.z += 1.0
 
+	camera_pivot.rotation.y = camera_yaw
 	if pan.length_squared() > 0:
 		focused_target = null
 		camera_navigated = true
-		camera_pivot.position += pan.normalized() * (pan_speed * camera_distance / 14.0 * delta)
+		# Screen-relative: "up" is always away from the camera, whatever the turn.
+		camera_pivot.position += Basis(Vector3.UP, camera_yaw) * pan.normalized() * (pan_speed * camera_distance / 14.0 * delta)
 	elif is_instance_valid(focused_target):
 		camera_pivot.position = camera_pivot.position.lerp(focused_target.global_position, 1.0 - exp(-6.0 * maxf(delta, 0.0)))
 	camera_pivot.position = _clamp_focus(camera_pivot.position)
@@ -1412,6 +1424,37 @@ func _ground(p: Vector3) -> Vector3:
 	return Vector3(p.x, p.y + SurfaceTerrain.height_at(p.x, p.z), p.z)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_MIDDLE:
+			_mmb_down = event.pressed
+			get_viewport().set_input_as_handled()
+			return
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			if event.pressed:
+				_rmb_down = true
+				_rmb_travel = 0.0
+				_rmb_rotated = false
+			else:
+				_rmb_down = false
+				if _rmb_rotated:
+					get_viewport().set_input_as_handled()
+			return  # the press still reaches the build tools
+	if event is InputEventMouseMotion:
+		if _mmb_down:
+			drag_camera(event.relative)
+			get_viewport().set_input_as_handled()
+			return
+		if _rmb_down:
+			_rmb_travel += event.relative.length()
+			if _rmb_travel >= ROTATE_DRAG_THRESHOLD:
+				_rmb_rotated = true
+				turn_camera(-event.relative.x * ROTATE_SPEED)
+				get_viewport().set_input_as_handled()
+			return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_HOME:
+		camera_yaw = 0.0
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			target_camera_distance = maxf(MIN_CAMERA_DISTANCE, target_camera_distance / 1.15)
@@ -1419,6 +1462,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			target_camera_distance = minf(MAX_CAMERA_DISTANCE, target_camera_distance * 1.15)
 			get_viewport().set_input_as_handled()
+
+## Turn the view around the focus point (radians, + turns the world clockwise on screen).
+func turn_camera(radians: float) -> void:
+	camera_yaw = wrapf(camera_yaw + radians, -PI, PI)
+	camera_navigated = true
+	if camera_pivot:
+		camera_pivot.rotation.y = camera_yaw
+
+## Drag the map with the cursor: the ground under it follows the mouse.
+func drag_camera(relative: Vector2) -> void:
+	if not camera:
+		return
+	focused_target = null
+	camera_navigated = true
+	var vh = maxf(1.0, get_viewport().get_visible_rect().size.y)
+	var per_pixel = 2.0 * camera_distance * tan(deg_to_rad(camera.fov) * 0.5) / vh
+	var forward_stretch = 1.0 / maxf(0.35, sin(deg_to_rad(camera_angle_deg)))
+	var move = Vector3(-relative.x * per_pixel, 0.0, -relative.y * per_pixel * forward_stretch)
+	camera_pivot.position = _clamp_focus(camera_pivot.position + Basis(Vector3.UP, camera_yaw) * move)
 
 func _update_colony_focus_points(entrances: Variant) -> void:
 	if not entrances is Array:
