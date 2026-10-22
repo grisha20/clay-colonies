@@ -14,7 +14,8 @@ signal show_requested(pos: Vector2)
 signal spoke(key: String, text: String)
 
 const SEVERITY_BORDER = {"danger": Color(0.72, 0.18, 0.12), "warn": Color(0.78, 0.48, 0.10), "info": Color(0.55, 0.38, 0.22)}
-const PORTRAIT_SIZE := 132
+## Portrait diameter; set before adding to the tree (the bottom dock uses a bigger one).
+var portrait_size := 132
 const TYPE_CHARS_PER_SEC := 55.0
 const VOICE_DIR := "res://audio/mother/"
 
@@ -31,6 +32,7 @@ var prev_button: Button
 var next_button: Button
 var count_label: Label
 var voice: AudioStreamPlayer
+var row: HBoxContainer
 
 var advice: Array = []
 var index := 0
@@ -45,9 +47,11 @@ var time := 0.0
 func _ready() -> void:
 	name = "MotherSpeaker"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var row = HBoxContainer.new()
+	row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 0)
-	row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	row.alignment = BoxContainer.ALIGNMENT_END
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.minimum_size_changed.connect(update_minimum_size)
 	add_child(row)
 	_build_portrait(row)
 	_build_bubble(row)
@@ -57,11 +61,16 @@ func _ready() -> void:
 	_show_current()
 
 
+## Sized by what is shown (the portrait may live in the bottom dock instead).
+func _get_minimum_size() -> Vector2:
+	return row.get_combined_minimum_size() if row else Vector2.ZERO
+
+
 func _build_portrait(parent: Control) -> void:
 	portrait_frame = PanelContainer.new()
 	portrait_frame.name = "Portrait"
 	var sb = GameHud.panel_style(Color(0.86, 0.72, 0.52, 0.96))
-	sb.set_corner_radius_all(PORTRAIT_SIZE / 2 + 6)
+	sb.set_corner_radius_all(portrait_size / 2 + 6)
 	sb.set_border_width_all(3)
 	sb.content_margin_left = 4; sb.content_margin_right = 4; sb.content_margin_top = 4; sb.content_margin_bottom = 4
 	portrait_frame.add_theme_stylebox_override("panel", sb)
@@ -72,13 +81,13 @@ func _build_portrait(parent: Control) -> void:
 	parent.add_child(portrait_frame)
 	var container = SubViewportContainer.new()
 	container.stretch = true
-	container.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	container.custom_minimum_size = Vector2(portrait_size, portrait_size)
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_child(container)
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
-	viewport.size = Vector2i(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	viewport.size = Vector2i(portrait_size, portrait_size)
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	container.add_child(viewport)
 	var env = WorldEnvironment.new()

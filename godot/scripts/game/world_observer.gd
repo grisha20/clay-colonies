@@ -29,6 +29,8 @@ var mother_speaker: MotherSpeaker
 ## Settings menu behind the ⚙ button (connection, camp and lake shortcuts, save, controls).
 var settings_panel: PanelContainer
 var insp_panel: PanelContainer
+## Stronghold-style bottom panel holding the build slab, works, game buttons and the mother.
+var dock: BottomDock
 var population_counts: Array[int] = [0, 0]
 var player_colony: int = 0
 
@@ -268,12 +270,8 @@ func _setup_hud() -> void:
 	priority_panel.warrior_requested.connect(func(): ws_client.send_command({"type": "initiateWarrior", "colony": player_colony}))
 
 	mother_speaker = MotherSpeaker.new()
+	mother_speaker.portrait_size = 168
 	canvas.add_child(mother_speaker)
-	mother_speaker.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	mother_speaker.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	mother_speaker.offset_top = 64
-	mother_speaker.offset_left = -270
-	mother_speaker.offset_right = 270
 	mother_speaker.show_requested.connect(func(p): world_view.focus_on_point(p))
 	# The settings menu opens above the works panel.
 	canvas.add_child(settings_panel)
@@ -282,6 +280,8 @@ func _setup_hud() -> void:
 	build.name = "BuildController"
 	add_child(build)
 	build.setup(self, world_view, ws_client, hud, canvas)
+
+	_assemble_dock(canvas)
 
 	start_menu = StartMenu.new()
 	start_menu.visible = false
@@ -298,6 +298,49 @@ func _setup_hud() -> void:
 	vbox.add_child(help_label)
 	_update_inspector()
 
+## Gathers the build groups, works panel, game buttons and the mother's portrait
+## into the bottom dock (their owners keep running them).
+func _assemble_dock(canvas: CanvasLayer) -> void:
+	dock = BottomDock.new()
+	canvas.add_child(dock)
+	canvas.move_child(dock, canvas.get_children().find(hud) + 1)
+	var groups = build.toolbar.get_child(0)
+	for g in groups.get_children():
+		if g is VBoxContainer and g.get_child_count() > 1:
+			var title = g.get_child(0) as Label
+			title.visible = false
+			dock.add_page(title.text, g)
+	build.toolbar.visible = false
+	priority_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	priority_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	priority_panel.set_compact()
+	dock.add_page("Работы", priority_panel, false)
+	for v in [0, 1, 5, 20]:
+		dock.add_button(hud.speed_buttons[v])
+	dock.add_button(hud.alarm_button)
+	dock.add_button(hud.settings_button)
+	hud.quick_panel.visible = false
+	dock.set_portrait(mother_speaker.portrait_frame)
+	# The speech bubble and the settings menu rise above the dock on the right.
+	for c in [mother_speaker, settings_panel]:
+		c.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		c.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		c.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		c.offset_right = -24
+	_place_over_dock()
+
+## Keep what sits above the dock clear of it (the works tab makes it taller).
+func _place_over_dock() -> void:
+	if not dock:
+		return
+	var top = -dock.size.y - 8.0
+	mother_speaker.offset_bottom = top
+	mother_speaker.offset_top = top
+	settings_panel.offset_bottom = top
+	settings_panel.offset_top = top
+	insp_panel.offset_bottom = top
+	insp_panel.offset_top = top - 204.0
+
 func _connect_signals() -> void:
 	ws_client.snapshot_received.connect(_on_snapshot_received)
 	ws_client.connected.connect(_on_connected)
@@ -308,6 +351,7 @@ func _connect_signals() -> void:
 	entity_registry.resident_despawned.connect(_on_resident_despawned)
 
 func _process(delta: float) -> void:
+	_place_over_dock()
 	var t0 = Time.get_ticks_usec()
 	_update_inspector()
 	FramePerf.add("frame.inspector", t0)
@@ -478,6 +522,8 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		advice_feed.update_from_snapshot(snapshot, player_colony)
 	if mother_speaker:
 		mother_speaker.update_from_snapshot(snapshot, player_colony)
+	if dock:
+		dock.update_from_snapshot(snapshot, player_colony)
 	if build:
 		build.update_from_snapshot(snapshot, player_colony)
 	FramePerf.add("snap.panels", t0)
@@ -576,7 +622,8 @@ func _update_world_tooltip() -> void:
 	var over_ui = (start_menu and start_menu.visible) or hovered != null or not vp.get_visible_rect().has_point(mouse)
 	# HUD hints (build tiles, buttons, resource cells) go through the same
 	# panel as world hover text: Godot's own tooltip popup did not show up.
-	var ui_tip = _ui_tooltip(hovered)
+	# The dock writes hints for its slab itself, like Stronghold.
+	var ui_tip = "" if dock and dock.owns(hovered) else _ui_tooltip(hovered)
 	if ui_tip != "":
 		if build:
 			build.update_preview(Vector2.INF)

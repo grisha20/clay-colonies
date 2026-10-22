@@ -69,10 +69,13 @@ func run() -> void:
 	await process_frame
 	panel.update_from_snapshot(snap([deer], [hunter_data]), 0)
 	var texts = []
-	for row in panel.rows_box.get_children():
-		for c in row.get_children():
-			if c is Label:
-				texts.append((c as Label).text)
+	var stack: Array = panel.rows_box.get_children()
+	while not stack.is_empty():
+		var c = stack.pop_front()
+		if c is Label:
+			texts.append((c as Label).text)
+		elif c is Container:
+			stack.append_array(c.get_children())
 	check("hunt_row_with_spears", "Охота" in texts and texts.any(func(t): return t.contains("копья: 1")), str(texts))
 	var guard = hunter_data.duplicate(); guard["job"] = "guard"; guard["id"] = "ant-g"
 	var s = snap([deer], [hunter_data, guard])

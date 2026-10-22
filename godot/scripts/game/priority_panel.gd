@@ -31,7 +31,10 @@ var warrior_button: Button
 const WARRIOR_COST := {"specialClay": 4, "spears": 1}
 const WARRIORS_PER_RESIDENTS := 8
 const WATER_COST := {"wood": 6, "stone": 4}
-var rows_box: VBoxContainer
+## One unit (row + its "why not" note) per job; two columns in the bottom dock.
+var rows_box: GridContainer
+var title_label: Label
+var main_box: VBoxContainer
 var priorities: Dictionary = {}
 var free_for_plus: int = 0
 var signature: String = ""
@@ -45,11 +48,13 @@ func _ready() -> void:
 	mouse_force_pass_scroll_events = false
 	custom_minimum_size = Vector2(300, 0)
 	var box = VBoxContainer.new()
+	main_box = box
 	add_child(box)
 	var title = Label.new()
 	title.text = "Работы"
 	title.add_theme_font_size_override("font_size", 22)
 	box.add_child(title)
+	title_label = title
 	header = Label.new()
 	header.add_theme_font_size_override("font_size", 14)
 	box.add_child(header)
@@ -90,8 +95,10 @@ func _ready() -> void:
 	warrior_button.tooltip_text = "Стражник у костра проходит посвящение: сильнее бьёт, меньше получает урона, носит копьё и перья. Праматерь посвящает сама, когда племени грозят."
 	warrior_button.pressed.connect(func(): warrior_requested.emit())
 	box.add_child(warrior_button)
-	rows_box = VBoxContainer.new()
-	rows_box.add_theme_constant_override("separation", 2)
+	rows_box = GridContainer.new()
+	rows_box.columns = 1
+	rows_box.add_theme_constant_override("v_separation", 2)
+	rows_box.add_theme_constant_override("h_separation", 22)
 	box.add_child(rows_box)
 
 
@@ -218,14 +225,17 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 			t.add_theme_font_size_override("font_size", 13)
 			t.add_theme_color_override("font_color", GameHud.INK.lightened(0.3))
 			row.add_child(t)
-		rows_box.add_child(row)
+		var unit = VBoxContainer.new()
+		unit.add_theme_constant_override("separation", 0)
+		unit.add_child(row)
+		rows_box.add_child(unit)
 		var reason = unmet_reason(k, target, int(counts[k]), alive, alarm, population, food, tools, loose_stone)
 		if reason != "":
 			var r = Label.new()
 			r.text = "    " + reason
 			r.add_theme_font_size_override("font_size", 12)
 			r.add_theme_color_override("font_color", Color(0.56, 0.32, 0.18))
-			rows_box.add_child(r)
+			unit.add_child(r)
 
 
 ## Why a job has fewer workers than asked (same order as the 2D panel).
@@ -327,6 +337,23 @@ func _update_warrior(snapshot: Dictionary, colony: Dictionary, colony_id: String
 	var reason = warrior_refusal(snapshot, colony, colony_id)
 	warrior_button.disabled = reason != ""
 	warrior_button.text = ("Посвятить воина (%d особой глины, копьё) · воинов: %d" % [WARRIOR_COST.specialClay, warriors]) if reason == "" else ("Воинов: %d · %s" % [warriors, reason])
+
+
+## Bottom dock layout: controls on the left, job rows in two columns on the
+## right, no title (the dock tab says «Работы»).
+func set_compact() -> void:
+	if rows_box.get_parent() != main_box:
+		return
+	title_label.visible = false
+	var hb = HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 14)
+	remove_child(main_box)
+	add_child(hb)
+	hb.add_child(main_box)
+	main_box.remove_child(rows_box)
+	hb.add_child(VSeparator.new())
+	hb.add_child(rows_box)
+	rows_box.columns = 2
 
 
 func _update_mode() -> void:

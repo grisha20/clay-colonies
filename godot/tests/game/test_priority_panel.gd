@@ -47,9 +47,11 @@ func run() -> void:
 	check("free_hands", panel.free_for_plus == 0, str(panel.free_for_plus))
 	check("header", panel.header.text == "Жителей 7 · свободно 0 · на еде 2", panel.header.text)
 	var texts = []
-	for c in panel.rows_box.get_children():
-		if c is Label:
-			texts.append(c.text.strip_edges())
+	# Each job is a unit: its row and, below it, the "why not" note.
+	for unit in panel.rows_box.get_children():
+		for c in unit.get_children():
+			if c is Label:
+				texts.append(c.text.strip_edges())
 	check("reason_food_for_gathering", texts.has("Для добычи нужно 8 жителей"), str(texts))
 	check("reason_rods_for_fishing", texts.has("Не хватает удочек"), str(texts))
 	var asked = []

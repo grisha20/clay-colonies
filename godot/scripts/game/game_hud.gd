@@ -160,7 +160,7 @@ func _build_alert() -> void:
 	alert_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	alert_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	# Below the mother's portrait at the top centre.
-	alert_panel.position.y = 214
+	alert_panel.position.y = 70
 	alert_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	alert_panel.visible = false
 	add_child(alert_panel)
