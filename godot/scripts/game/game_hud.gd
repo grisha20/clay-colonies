@@ -15,10 +15,13 @@ const BORDER := Color(0.55, 0.38, 0.22)
 
 var resource_labels: Dictionary = {}
 var weather_label: Label
+var time_icon: TextureRect
+var weather_icon: TextureRect
 var tasks_box: VBoxContainer
 var tasks_panel: PanelContainer
 var alert_panel: PanelContainer
 var alert_label: Label
+var alert_icon: TextureRect
 var tooltip_panel: PanelContainer
 var tooltip_label: Label
 var speed_buttons: Dictionary = {}
@@ -66,6 +69,63 @@ static func panel_style(fill: Color = PARCHMENT) -> StyleBoxFlat:
 	return sb
 
 
+## Painted parchment panel (art/hud ui_panel); the flat style if it is missing.
+static func parchment(pad: Array = [14, 10, 14, 10], picture: String = "ui_panel") -> StyleBox:
+	var sb = HudArt.box(picture, pad)
+	return sb if sb else panel_style()
+
+
+## Icon picture of a fixed on-screen size (the painted ones are 4× larger).
+static func icon_rect(texture: Texture2D, size: float) -> TextureRect:
+	var r = TextureRect.new()
+	r.texture = texture
+	r.custom_minimum_size = Vector2(size, size)
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+
+## Panel title on the painted header strip ("Задачи", "Работы").
+static func header(text: String, size: int = 20) -> Control:
+	var l = Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", INK)
+	var sb = HudArt.box("ui_header", [14, 3, 14, 3])
+	if sb:
+		l.add_theme_stylebox_override("normal", sb)
+	return l
+
+
+## Painted track and fill for a progress bar.
+static func skin_bar(bar: ProgressBar, fill: String = "ui_bar_fill_green") -> void:
+	var bg = HudArt.box("ui_bar_bg", [0, 0, 0, 0])
+	var fg = HudArt.box(fill, [0, 0, 0, 0])
+	if bg and fg:
+		bar.add_theme_stylebox_override("background", bg)
+		bar.add_theme_stylebox_override("fill", fg)
+
+
+## server/src/sim/objectives.ts id -> task picture.
+static func _task_picture(id: String) -> String:
+	if id.begins_with("clay"):
+		return "task_clay"
+	if id.begins_with("stone"):
+		return "task_stone"
+	if id.begins_with("hut") or id.begins_with("workshop") or id.begins_with("kiln") or id.begins_with("wall"):
+		return "task_build_hut"
+	if id.begins_with("pop") or id.begins_with("fired"):
+		return "task_population"
+	if id.begins_with("totem") or id.begins_with("spring"):
+		return "task_territory"
+	if id == "win-spider":
+		return "task_survive_raid"
+	if id == "win-idol":
+		return "task_idol_ritual"
+	return "ui_dot_yellow"
+
+
 func _label(text: String, size: int = 18, color: Color = INK) -> Label:
 	var l = Label.new()
 	l.text = text
@@ -78,7 +138,7 @@ func _label(text: String, size: int = 18, color: Color = INK) -> Label:
 func _build_brand() -> void:
 	var brand = PanelContainer.new()
 	brand.name = "Brand"
-	brand.add_theme_stylebox_override("panel", panel_style())
+	brand.add_theme_stylebox_override("panel", parchment([16, 8, 16, 8], "brand_plate"))
 	brand.position = Vector2(16, 12)
 	brand.custom_minimum_size = Vector2(300, 0)
 	brand.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -86,18 +146,14 @@ func _build_brand() -> void:
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	brand.add_child(row)
-	var icon = TextureRect.new()
-	icon.texture = make_icon("people")
-	icon.custom_minimum_size = Vector2(30, 30)
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
-	row.add_child(icon)
+	row.add_child(icon_rect(make_icon("people"), 36))
 	row.add_child(_label("Clayfolk", 26))
 
 
 func _build_top_bar() -> void:
 	var bar = PanelContainer.new()
 	bar.name = "ResourceBar"
-	bar.add_theme_stylebox_override("panel", panel_style())
+	bar.add_theme_stylebox_override("panel", parchment([18, 8, 18, 8]))
 	bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	bar.position.y = 12
@@ -110,11 +166,7 @@ func _build_top_bar() -> void:
 	for spec in [["clay", "Глина"], ["special", "Особая глина — питает ритуал Идола; её дают источники на своей земле"], ["food", "Еда"], ["wood", "Дерево"], ["stone", "Камень"], ["people", "Жители"]]:
 		var cell = HBoxContainer.new()
 		cell.tooltip_text = spec[1]
-		var icon = TextureRect.new()
-		icon.texture = make_icon(spec[0])
-		icon.custom_minimum_size = Vector2(28, 28)
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
-		cell.add_child(icon)
+		cell.add_child(icon_rect(make_icon(spec[0]), 36))
 		var value = _label("0", 22)
 		cell.add_child(value)
 		resource_labels[spec[0]] = value
@@ -124,13 +176,17 @@ func _build_top_bar() -> void:
 			rate_labels[spec[0]] = rate
 		row.add_child(cell)
 	row.add_child(VSeparator.new())
+	time_icon = icon_rect(HudArt.tex("time_day"), 28)
+	row.add_child(time_icon)
+	weather_icon = icon_rect(HudArt.tex("weather_clear"), 28)
+	row.add_child(weather_icon)
 	weather_label = _label("День · ясно", 18)
 	row.add_child(weather_label)
 	# Like the 2D client: pause, speed, alarm and the settings menu sit in their
 	# own small panel at the top right; the stores stay in the middle.
 	quick_panel = PanelContainer.new()
 	quick_panel.name = "QuickPanel"
-	quick_panel.add_theme_stylebox_override("panel", panel_style())
+	quick_panel.add_theme_stylebox_override("panel", parchment([10, 8, 10, 8]))
 	quick_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	quick_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	quick_panel.offset_right = -16
@@ -141,12 +197,14 @@ func _build_top_bar() -> void:
 	row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	quick_panel.add_child(row)
-	for spec in [[0, "Пауза"], [1, "1×"], [5, "5×"], [20, "20×"]]:
+	for spec in [[0, "Пауза", "glyph_pause", "Пауза"], [1, "1×", "glyph_play", "Обычная скорость"], [5, "5×", "glyph_fast", "Скорость 5×"], [20, "20×", "glyph_faster", "Скорость 20×"]]:
 		var b = Button.new()
 		b.text = spec[1]
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(46, 40)
+		b.custom_minimum_size = Vector2(48, 48)
+		b.tooltip_text = spec[3]
+		HudArt.glyph_button(b, spec[2])
 		var v: int = spec[0]
 		b.pressed.connect(func(): speed_requested.emit(v))
 		row.add_child(b)
@@ -155,15 +213,18 @@ func _build_top_bar() -> void:
 	alarm_button.text = "Тревога"
 	alarm_button.toggle_mode = true
 	alarm_button.focus_mode = Control.FOCUS_NONE
-	alarm_button.tooltip_text = "Все жители бросают работу и бегут защищать лагерь"
+	alarm_button.custom_minimum_size = Vector2(48, 48)
+	alarm_button.tooltip_text = "Тревога: все жители бросают работу и бегут защищать лагерь"
+	HudArt.glyph_button(alarm_button, "glyph_alarm", 34)
 	alarm_button.pressed.connect(func(): alarm_requested.emit(not alarm_on))
 	row.add_child(alarm_button)
 	settings_button = Button.new()
 	settings_button.text = "⚙"
-	settings_button.custom_minimum_size = Vector2(46, 40)
+	settings_button.custom_minimum_size = Vector2(48, 48)
 	settings_button.add_theme_font_size_override("font_size", 22)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	settings_button.tooltip_text = "Меню: сохранить, лагеря и озёра, сервер, управление"
+	HudArt.glyph_button(settings_button, "glyph_settings")
 	settings_button.pressed.connect(func(): settings_requested.emit())
 	row.add_child(settings_button)
 
@@ -171,15 +232,16 @@ func _build_top_bar() -> void:
 func _build_tasks() -> void:
 	tasks_panel = PanelContainer.new()
 	tasks_panel.name = "TasksPanel"
-	tasks_panel.add_theme_stylebox_override("panel", panel_style())
-	tasks_panel.position = Vector2(16, 72)
+	tasks_panel.add_theme_stylebox_override("panel", parchment())
+	tasks_panel.position = Vector2(16, 80)
 	tasks_panel.custom_minimum_size = Vector2(300, 0)
 	tasks_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	tasks_panel.mouse_force_pass_scroll_events = false
 	add_child(tasks_panel)
 	var box = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
 	tasks_panel.add_child(box)
-	box.add_child(_label("Задачи", 22))
+	box.add_child(header("Задачи"))
 	tasks_box = VBoxContainer.new()
 	tasks_box.add_theme_constant_override("separation", 6)
 	box.add_child(tasks_box)
@@ -198,13 +260,19 @@ func _build_alert() -> void:
 	add_child(alert_panel)
 	alert_label = _label("", 20, Color(1, 0.95, 0.85))
 	alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	alert_panel.add_child(alert_label)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	alert_panel.add_child(row)
+	alert_icon = icon_rect(null, 44)
+	row.add_child(alert_icon)
+	row.add_child(alert_label)
 
 
 func _build_tooltip() -> void:
 	tooltip_panel = PanelContainer.new()
 	tooltip_panel.name = "WorldTooltip"
-	tooltip_panel.add_theme_stylebox_override("panel", panel_style())
+	tooltip_panel.add_theme_stylebox_override("panel", parchment([12, 8, 12, 8], "ui_tooltip"))
 	tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tooltip_panel.visible = false
 	add_child(tooltip_panel)
@@ -256,6 +324,9 @@ func update_from_snapshot(snapshot: Dictionary, population: int) -> void:
 	_update_rates(int(snapshot.get("tick", 0)), {"clay": float(colony.get("clay", 0)), "food": food, "wood": float(colony.get("wood", 0)), "stone": float(colony.get("stone", 0))})
 	alarm_on = bool(colony.get("alarm", false))
 	alarm_button.button_pressed = alarm_on
+	var horn = HudArt.tex("glyph_alarm_on" if alarm_on else "glyph_alarm")
+	if horn:
+		alarm_button.icon = horn
 
 	var speed = int(round(float(session.get("speed", 1.0))))
 	for v in speed_buttons.keys():
@@ -265,6 +336,14 @@ func update_from_snapshot(snapshot: Dictionary, population: int) -> void:
 	var weather = snapshot.get("weather", {})
 	var wstate = str(weather.get("state", "clear")) if typeof(weather) == TYPE_DICTIONARY else "clear"
 	var phase = day_phase(tick)
+	var tt = HudArt.tex("time_" + phase)
+	if tt:
+		time_icon.texture = tt
+	var wt = HudArt.tex({"clear": "weather_clear", "warning": "weather_clouds", "rain": "weather_rain"}.get(wstate, "weather_clear"))
+	if wt:
+		weather_icon.texture = wt
+	# A clear day would show two suns: the weather icon only when it is not clear.
+	weather_icon.visible = wstate != "clear"
 	weather_label.text = "День %d · %s · %s" % [int(tick / DAY_TICKS) + 1, {"day": "день", "dusk": "сумерки", "night": "ночь", "dawn": "рассвет"}[phase], {"clear": "ясно", "warning": "тучи", "rain": "дождь"}.get(wstate, wstate)]
 
 	_update_tasks(snapshot.get("objectives", []))
@@ -305,21 +384,33 @@ func _update_tasks(objectives: Variant) -> void:
 		var done = bool(o.get("done", false))
 		var target = maxf(1.0, float(o.get("target", 1)))
 		var progress = clampf(float(o.get("progress", 0)), 0.0, target)
+		var victory = bool(o.get("victory", false))
+		var line = HBoxContainer.new()
+		line.add_theme_constant_override("separation", 8)
+		var pic = HudArt.tex("ui_check" if done else ("ui_star" if victory else _task_picture(str(o.get("id", "")))))
 		var row = VBoxContainer.new()
-		var prefix = "★ " if bool(o.get("victory", false)) else ""
-		var title = _label(("✓ " if done else prefix) + str(o.get("text", "")), 16, Color(0.35, 0.45, 0.2) if done else INK)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var prefix = "★ " if victory else ""
+		var text = str(o.get("text", "")) if pic else ("✓ " if done else prefix) + str(o.get("text", ""))
+		var title = _label(text, 16, Color(0.35, 0.45, 0.2) if done else INK)
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		title.custom_minimum_size = Vector2(280, 0)
+		title.custom_minimum_size = Vector2(240 if pic else 280, 0)
 		row.add_child(title)
 		if target > 1.0 and not done:
 			var bar = ProgressBar.new()
 			bar.max_value = target
 			bar.value = progress
 			bar.show_percentage = false
-			bar.custom_minimum_size = Vector2(280, 8)
+			bar.custom_minimum_size = Vector2(240 if pic else 280, 12 if pic else 8)
+			skin_bar(bar, "ui_bar_fill_amber" if victory else "ui_bar_fill_green")
 			row.add_child(bar)
 			row.add_child(_label("%d / %d" % [int(progress), int(target)], 13, INK.lightened(0.25)))
-		tasks_box.add_child(row)
+		if pic:
+			var holder = icon_rect(pic, 32)
+			holder.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			line.add_child(holder)
+		line.add_child(row)
+		tasks_box.add_child(line)
 		shown += 1
 
 
@@ -357,6 +448,28 @@ func _update_alert(session: Dictionary, weather: Variant, tick: int, colony: Dic
 		lines.append("Тревога включена: работа остановлена.")
 	if str(session.get("status", "playing")) != "playing":
 		lines = ["Партия окончена: %s" % str(session.get("reason", ""))]
+	var raid_phase = str(raid.get("phase", "peace")) if typeof(raid) == TYPE_DICTIONARY else "peace"
+	var wdict: Dictionary = weather if typeof(weather) == TYPE_DICTIONARY else {}
+	var pic = ""
+	var status = str(session.get("status", "playing"))
+	if status != "playing":
+		pic = "alert_victory" if status == "victory" else "alert_defeat"
+	elif raid_phase == "attack":
+		pic = "alert_spider"
+	elif raid_phase == "warning":
+		pic = "alert_raid"
+	elif bool(wdict.get("bigRainActive", false)) or (lines.size() > 0 and lines.any(func(l): return l.begins_with("Великий ливень"))):
+		pic = "alert_big_rain"
+	elif str(wdict.get("state", "")) == "rain":
+		pic = "alert_rain"
+	elif str(wdict.get("state", "")) == "warning":
+		pic = "alert_clouds"
+	elif bool(colony.get("alarm", false)):
+		pic = "alert_alarm"
+	elif typeof(dom) == TYPE_DICTIONARY:
+		pic = "task_territory"
+	alert_icon.texture = HudArt.tex(pic) if pic != "" else null
+	alert_icon.visible = alert_icon.texture != null
 	alert_label.text = "\n".join(lines)
 	alert_panel.visible = not lines.is_empty()
 
@@ -380,8 +493,11 @@ func show_tooltip(text: String, screen_pos: Vector2) -> void:
 	tooltip_panel.position = Vector2(maxf(4, pos.x), maxf(4, pos.y))
 
 
-## Small hand-drawn resource icons (no texture assets needed).
-static func make_icon(kind: String) -> ImageTexture:
+## Resource icon: the painted res_<kind> picture, or a small one drawn by code.
+static func make_icon(kind: String) -> Texture2D:
+	var painted = HudArt.tex("res_" + kind)
+	if painted:
+		return painted
 	var img = Image.create(28, 28, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	match kind:
