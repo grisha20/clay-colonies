@@ -71,6 +71,10 @@ def build_one(name, spec, images):
         master=raster.paint_contour(texture,np.array(mask)>0,0,(.6 if shape=='bar' else 1.5)*k)
         master.save(source_path)
         result=raster.finish(master,size)
+        if shape=='bar':
+            for x in range(4,size[0]-4):
+                for y in range(size[1]):
+                    result.putpixel((x,y),result.getpixel((size[0]//2,y)))
     elif mode=='cursor_forbid':
         result=images['cursor_default'].copy()
         badge=images['glyph_forbid'].resize((28,28),Image.Resampling.BOX)
@@ -161,17 +165,16 @@ def build_one(name, spec, images):
         elif mode=='background':
             result=source.resize(size,Image.Resampling.LANCZOS)
             result.putalpha(255)
+        elif mode=='bubble':
+            result=raster.bubble(source,size,tuple(spec['slice']))
         else:
             result=raster.icon(source,size,margin=spec.get('margin'),outer=spec.get('outer'),inner=spec.get('inner'))
-            if mode=='bubble' or name=='mother_bubble_tail':
+            if name=='mother_bubble_tail':
                 data=np.array(result)
                 rgb=data[:,:,:3].astype(float)
                 paper=(data[:,:,3]==255)&(rgb[:,:,0]>195)&(rgb[:,:,1]>175)&(rgb[:,:,2]>125)&(rgb[:,:,1]>rgb[:,:,0]*.8)
                 data[paper,:3]=raster.PAPER
                 result=Image.fromarray(data)
-            if mode=='bubble':
-                l,t,r,b=spec['slice']
-                ImageDraw.Draw(result).rectangle((l,t,size[0]-r-1,size[1]-b-1),fill=(*raster.PAPER,255))
         if 'fill' in spec:
             result=recolor(result,tuple(spec['fill']))
     if spec.get('auto_hotspot')=='tip':
@@ -225,10 +228,12 @@ def make_sheets(images,catalog,stage):
         sheet.save(ROOT/'_preview'/f'sheet_{group}.png')
     # A compact index for the current stage without hiding per-group exact-size sheets.
     names=[n for n in images if catalog[n]['stage']==stage]
+    if stage==8:
+        names=[n for n in ['res_clay','res_wood','res_stone','res_food','res_special','res_people','tool_axe','tool_pickaxe','tool_rod','tool_spear','mood_happy','mood_scared','build_hut','build_house','build_storage','build_workshop','build_kiln','build_idol','build_wall','build_gate','build_totem','job_heal','job_carry','job_warrior','glyph_pause','glyph_pause_light','glyph_settings','glyph_settings_light','glyph_alarm_on','glyph_alarm_on_light','alert_spider','alert_big_rain','cursor_default','cursor_hover','cursor_build','cursor_forbid','cursor_attack','cursor_wait','minimap_mother_hands','mother_bubble'] if n in images]
     cols=5
     index=Image.new('RGBA',(1400,90+math.ceil(len(names)/cols)*230),PAPER)
     d=ImageDraw.Draw(index)
-    d.text((24,18),f'CLAYFOLK / HUD · этап {stage}',font=font(30,True),fill=INK)
+    d.text((24,18),f'CLAYFOLK / HUD · '+(f'{len(images)} PNG · итоговый обзор' if stage==8 else f'этап {stage}'),font=font(30,True),fill=INK)
     for i,name in enumerate(names):
         x,y=20+(i%cols)*276,90+(i//cols)*230
         im=images[name].copy()
@@ -239,6 +244,8 @@ def make_sheets(images,catalog,stage):
         d.text((x,y+162),name,font=font(16,True),fill=INK)
         d.text((x,y+188),catalog[name]['title'],font=font(14),fill=INK)
     index.save(ROOT/'_preview'/f'stage_{stage}_board.png')
+    if stage==8:
+        index.save(ROOT/'_preview'/'overview.png')
 
 
 def write_manifest(catalog):

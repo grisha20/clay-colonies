@@ -115,3 +115,28 @@ def panel(source,size,inset):
             result.putpixel((x,y),copy.getpixel((w//2,y)))
     ImageDraw.Draw(result).rectangle((l,t,w-r-1,h-b-1),fill=(*PAPER,255))
     return finish(result,size)
+
+
+def bubble(source,size,inset):
+    # Fit the generated rounded body into the fixed corner bands *before*
+    # extending the straight sides. Copying a middle row over curved sides
+    # without this remapping would create a step at each slice boundary.
+    w,h=size
+    l,t,r,b=(v*SCALE for v in inset)
+    large=(w*SCALE,h*SCALE)
+    original=icon(source,large,margin=4*SCALE,outer=1.5*SCALE,inner=.5*SCALE)
+    anchor=round(large[1]*.44)
+    result=Image.new('RGBA',large)
+    bands=[(0,anchor,0,t),(anchor,anchor+1,t,large[1]-b),
+           (anchor+1,large[1],large[1]-b,large[1])]
+    for sy0,sy1,dy0,dy1 in bands:
+        piece=original.crop((0,sy0,large[0],sy1))
+        result.paste(piece.resize((large[0],dy1-dy0),Image.Resampling.BOX),(0,dy0))
+    data=np.array(result)
+    rgb=data[:,:,:3].astype(float)
+    paper=(data[:,:,3]==255)&(rgb[:,:,0]>195)&(rgb[:,:,1]>175)&(rgb[:,:,2]>125)&(rgb[:,:,1]>rgb[:,:,0]*.8)
+    data[paper,:3]=PAPER
+    # Both horizontal edge strips use a straight, constant generated profile.
+    data[:,l:large[0]-r]=data[:,large[0]//2:large[0]//2+1]
+    data[t:large[1]-b,l:large[0]-r]=(*PAPER,255)
+    return finish(Image.fromarray(data),size)

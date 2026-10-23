@@ -65,6 +65,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--stage', choices=[str(i) for i in range(9)]+['all'], default='all')
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--assets-only',action='store_true',help='Check the portable art pack without this workstation\'s protected-file/worktree audit')
     args = parser.parse_args()
     report = []
     failures = []
@@ -190,6 +191,36 @@ def main():
                 colors=np.array(li)
                 require(np.any(np.all(colors[:,:,:3]==(242,227,189),axis=2)), 'Light glyph lacks parchment fill: '+name)
     out('8. Crisp #4D331F contour / 1px boundary / light glyphs: '+('PASS' if before==len(failures) else 'FAIL'))
+    before=len(failures)
+    for name in top:
+        spec=catalog.get(name,{})
+        if not spec.get('slice'):
+            continue
+        im=images[name+'.png']
+        l,t,r,b=spec['slice']
+        center=np.array(im)[t:im.height-b,l:im.width-r]
+        if name!='ui_separator_h':
+            require(np.all(center==center[0,0]),'9-slice center is not uniform: '+name)
+        for size in [(im.width*2,im.height),(im.width,im.height*2)]:
+            stretched=nine_slice(im,size,(l,t,r,b))
+            for src,dest in [((0,0,l,t),(0,0,l,t)),((im.width-r,0,im.width,t),(size[0]-r,0,size[0],t)),((0,im.height-b,l,im.height),(0,size[1]-b,l,size[1])),((im.width-r,im.height-b,im.width,im.height),(size[0]-r,size[1]-b,size[0],size[1]))]:
+                require(im.crop(src).tobytes()==stretched.crop(dest).tobytes(),'9-slice corner changed: '+name)
+        if name in {'minimap_frame','card_resident_portrait_frame'}:
+            require(not np.any(center[:,:,3]),'Frame center is not fully transparent: '+name)
+        if name=='mother_bubble':
+            # A uniform center alone does not catch a curved side abruptly
+            # replaced by a straight strip. Compare silhouettes across joins.
+            mask=np.array(im.getchannel('A'))>0
+            for axis,seams in [(0,[t,im.height-b]),(1,[l,im.width-r])]:
+                for seam in seams:
+                    a=np.flatnonzero(np.take(mask,seam-1,axis=axis))
+                    z=np.flatnonzero(np.take(mask,seam,axis=axis))
+                    require(len(a)>0 and len(z)>0 and max(abs(int(a[0])-int(z[0])),abs(int(a[-1])-int(z[-1])))<=1,
+                            'Speech bubble silhouette steps at slice join')
+    out('9. 9-slice centers / corners / transparent frames / bubble joins: '+('PASS' if before==len(failures) else 'FAIL'))
+    for name in top:
+        require((ROOT/'_source'/f'{name}.png').is_file(),'Missing large source: '+name)
+        require((ROOT/'_preview'/f'{name}_24.png').is_file(),'Missing small preview: '+name)
     if 'btn_square_normal.png' in images:
         im=images['btn_square_normal.png']
         require(im.crop((16,16,48,48)).getextrema()==tuple((v,v) for v in im.getpixel((32,32))),'Button centre is not uniform')
@@ -198,15 +229,18 @@ def main():
             require(stretched.crop((0,0,16,16)).tobytes()==im.crop((0,0,16,16)).tobytes(),'9-slice altered corner')
     # Verify protected user files against the pre-work SHA-256 snapshot; never write there.
     baseline=ROOT/'_tools'/'protected_before.json'
-    if baseline.is_file():
+    if baseline.is_file() and not args.assets_only:
         entries=json.loads(baseline.read_text(encoding='utf-8-sig'))
         for entry in entries:
             path=ROOT.parents[1]/entry['path']
             require(path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest().upper()==entry['hash'], 'Protected file changed: '+str(path))
         out(f'Protected files: {len(entries)} SHA-256 comparisons.')
     repo=ROOT.parents[1]
-    changed=subprocess.run(['git','diff','--name-only','HEAD'],cwd=repo,capture_output=True,text=True,check=True).stdout.splitlines()
-    require(all(p.startswith('art/hud/') for p in changed),'Tracked changes outside art/hud')
+    if not args.assets_only:
+        changed=subprocess.run(['git','diff','--name-only','HEAD'],cwd=repo,capture_output=True,text=True,check=True).stdout.splitlines()
+        require(all(p.startswith('art/hud/') for p in changed),'Tracked changes outside art/hud')
+    else:
+        out('Workspace audit: SKIPPED by explicit --assets-only; art checks remain enabled.')
     if args.stage not in ('all','8'):
         out(f'DEFERRED: {len(EXPECTED-top)} remaining specification assets'+('; '+', '.join(deferred) if deferred else '')+'.')
         out('Full §6 completeness is NOT claimed. Run --stage all for final delivery.')
