@@ -1,0 +1,342 @@
+{
+  "res_clay": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Глина",
+    "stage": 0,
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: res_clay — a compact triangular heap of three large irregular orange-red lumps of clay, one above two. Main clay #C8642F to #E07A3C, small soft warm highlights, deep brown contact creases. No tiny scattered fragments. Production target 128x128, generate large.",
+    "where": "HUD Clayfolk · res"
+  },
+  "res_wood": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Дерево",
+    "stage": 0,
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: res_wood — a compact bundle of three or four short crooked brown sticks tied together at the middle with a simple loop of dry grass fibre. Sticks lie diagonally lower-left to upper-right, visible warm cut ends, one twig nub only. Wood #8B5A2B, binding muted straw. Simple graphic silhouette, very little bark detail. Production target 128x128.",
+    "where": "HUD Clayfolk · res"
+  },
+  "glyph_pause": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Пауза",
+    "stage": 0,
+    "brightness": 0.75,
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: glyph_pause — ONLY TWO chunky upright parallel dark brown #4D331F bars with gently rounded handmade corners. Bars equal height and width, large clear gap between them, perfectly legible pause symbol. Tiny matte clay bevel lit upper-left, dark ochre-brown face. No button frame, no background plate, no circles or extra decorations. Production target 48x48.",
+    "where": "HUD Clayfolk · glyph"
+  },
+  "build_hut": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Хижина",
+    "stage": 0,
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: build_hut — one small round orange clay hut with a wide pale straw conical roof. Slightly elevated three-quarter view, matching a clay sandbox colony game. Simple broad thatched roof with just a few broad shallow grooves, small knot at roof peak, cylindrical terracotta walls, one dark door with two wooden upright supports. No windows, vegetation, ground, platform, chimney, fence or cast shadow. Broad simple shapes, minimal detail, thick brown outline. Production target 128x112.",
+    "where": "HUD Clayfolk · build"
+  },
+  "btn_square_normal": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "btn",
+    "title": "Квадратная кнопка",
+    "stage": 0,
+    "mode": "panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ],
+    "state": "normal",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: btn_square_normal — an EMPTY square game button background, front-facing and axis-aligned, gently rounded square corners, thick continuous earthy brown #8C6138 outer rim outlined #4D331F, warm pale parchment #F2E3BD center. Soft matte handmade clay/parchment finish, mild upper-left rim highlight and inner lower-right shading. Shape is a clean regular rounded square for 9-slice scaling, constant straight border width, unpatterned perfectly flat center, no dents in silhouette, no corner ornaments. NO GLYPH. Transparent outside corners. Production target 64x64.",
+    "where": "HUD Clayfolk · btn"
+  },
+  "cursor_default": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Обычный курсор",
+    "stage": 0,
+    "mode": "cursor_default",
+    "hotspot": [
+      4,
+      4
+    ],
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: cursor_default — one simple chunky handmade orange clay mouse pointer arrow. Conventional computer arrow points sharply to the UPPER LEFT; broad triangular arrow head and short diagonal stem towards lower right. Dark brown #4D331F outline, terracotta #D66C34 face with one soft upper-left edge highlight. Front-facing flat icon, no perspective. Single continuous silhouette, no details or decorations. Transparent square canvas. Pointer will be positioned at (3,3) in the final 64x64 cursor; generate with margin for cropping.",
+    "where": "HUD Clayfolk · cursor"
+  },
+  "res_special": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Особая глина",
+    "subject": "A compact pile of two rounded turquoise-blue special clay lumps #3FA7B5, a small pale cyan facet-like highlight and TWO tiny turquoise glints near the upper-right. Matte magical clay, restrained luminous accent inside silhouette, NO outer glow.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A compact pile of two rounded turquoise-blue special clay lumps #3FA7B5, a small pale cyan facet-like highlight and TWO tiny turquoise glints near the upper-right. Matte magical clay, restrained luminous accent inside silhouette, NO outer glow. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_food": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Еда",
+    "subject": "A compact pile of three red berries with one green leaf and a small clearly recognizable whole blue-grey fish lying beside them. Simple abundant food symbol, generous individual shapes, not a meal on a plate.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A compact pile of three red berries with one green leaf and a small clearly recognizable whole blue-grey fish lying beside them. Simple abundant food symbol, generous individual shapes, not a meal on a plate. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_berries": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Ягоды",
+    "subject": "A compact bunch of five plump red berries #B8402F with two simple green leaves #5C8C33 at the top. No basket or stems extending far out.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A compact bunch of five plump red berries #B8402F with two simple green leaves #5C8C33 at the top. No basket or stems extending far out. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_fish": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Рыба",
+    "subject": "Two short plump stylized freshly caught fish overlapping as a compact resource pile, blue-grey #7297A0 backs, pale warm bellies, simple dark eyes and broad tail fins. No water, dish or scenery.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. Two short plump stylized freshly caught fish overlapping as a compact resource pile, blue-grey #7297A0 backs, pale warm bellies, simple dark eyes and broad tail fins. No water, dish or scenery. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_meat": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Мясо",
+    "subject": "One chunky muted red meat haunch with a short ivory bone end, next to a smaller meat cut. Compact primitive hunting resource pile. Simplified clay-like food shapes, no gore or drips.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. One chunky muted red meat haunch with a short ivory bone end, next to a smaller meat cut. Compact primitive hunting resource pile. Simplified clay-like food shapes, no gore or drips. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_stone": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Камень",
+    "subject": "A compact triangular heap of three chunky grey stones #8A8F96, one rounded rock above two broad rocks. Only a few large soft facets, no small scattered chips.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A compact triangular heap of three chunky grey stones #8A8F96, one rounded rock above two broad rocks. Only a few large soft facets, no small scattered chips. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_water": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Вода",
+    "subject": "A small low terracotta clay bowl, visibly filled with blue water #3F8FD0. View slightly from above. Broad blue water ellipse with one restrained pale highlight, round thick clay rim. No splash, ground or shadow.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A small low terracotta clay bowl, visibly filled with blue water #3F8FD0. View slightly from above. Broad blue water ellipse with one restrained pale highlight, round thick clay rim. No splash, ground or shadow. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_people": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Жители",
+    "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Neutral friendly expression: gently upturned closed mouth and relaxed eyes. Match an innocent hand-moulded clay villager.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Neutral friendly expression: gently upturned closed mouth and relaxed eyes. Match an innocent hand-moulded clay villager. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_bones": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Кости",
+    "subject": "A compact loose pile of three short ivory animal bones, broad rounded ends. Primitive crafting resource, friendly clay aesthetic, no skull or gore.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A compact loose pile of three short ivory animal bones, broad rounded ends. Primitive crafting resource, friendly clay aesthetic, no skull or gore. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "res_fiber": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "res",
+    "title": "Трава / волокна",
+    "subject": "A compact bundle of four broad green grass/fibre blades #5C8C33, folded at the middle and tied with one simple straw fibre loop. Broad leaves, no fine hairlike strands.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. A compact bundle of four broad green grass/fibre blades #5C8C33, folded at the middle and tied with one simple straw fibre loop. Broad leaves, no fine hairlike strands. Ready size 128x128; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · res"
+  },
+  "tool_axe": {
+    "size": [
+      96,
+      96
+    ],
+    "group": "tool",
+    "title": "Топор",
+    "subject": "One Stone Age axe: short crooked brown wooden handle diagonal bottom-left to top-right, broad chunky grey stone axe head lashed near the top with two turns of grass-fibre rope. Simple thick silhouettes. No metal.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. One Stone Age axe: short crooked brown wooden handle diagonal bottom-left to top-right, broad chunky grey stone axe head lashed near the top with two turns of grass-fibre rope. Simple thick silhouettes. No metal. Ready size 96x96; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · tool"
+  },
+  "tool_pickaxe": {
+    "size": [
+      96,
+      96
+    ],
+    "group": "tool",
+    "title": "Кирка",
+    "subject": "One Stone Age pickaxe: diagonal short brown wooden handle, a dark grey roughly pointed stone cross-head lashed on with two broad loops of grass-fibre rope. Readable pickaxe shape with two opposed ends, no metal.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. One Stone Age pickaxe: diagonal short brown wooden handle, a dark grey roughly pointed stone cross-head lashed on with two broad loops of grass-fibre rope. Readable pickaxe shape with two opposed ends, no metal. Ready size 96x96; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · tool"
+  },
+  "tool_rod": {
+    "size": [
+      96,
+      96
+    ],
+    "group": "tool",
+    "title": "Удочка",
+    "subject": "One short slightly bent wooden fishing rod diagonally from lower-left to upper-right, a SIMPLE curved thick brown fishing line hanging down to a small red clay float. Minimal detail, no reel or metal, rod and line form a compact icon.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. One short slightly bent wooden fishing rod diagonally from lower-left to upper-right, a SIMPLE curved thick brown fishing line hanging down to a small red clay float. Minimal detail, no reel or metal, rod and line form a compact icon. Ready size 96x96; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · tool"
+  },
+  "tool_spear": {
+    "size": [
+      96,
+      96
+    ],
+    "group": "tool",
+    "title": "Копьё",
+    "subject": "One short thick Stone Age spear diagonally lower-left to upper-right, brown wooden shaft with a broad triangular grey stone point secured by two simple grass-fibre wraps. Entire spear visible, thick substantial silhouette, no metal.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. One short thick Stone Age spear diagonally lower-left to upper-right, brown wooden shaft with a broad triangular grey stone point secured by two simple grass-fibre wraps. Entire spear visible, thick substantial silhouette, no metal. Ready size 96x96; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · tool"
+  },
+  "brand_plate": {
+    "size": [
+      320,
+      64
+    ],
+    "group": "brand",
+    "title": "Плашка вывески",
+    "subject": "An EMPTY long horizontal rectangular parchment sign plate, front facing and axis aligned. Width FIVE TIMES its height. Pale parchment #F2E3BD perfectly flat unpatterned center, gently rounded corners, continuous brown clay rim #8C6138 with crisp dark-brown contour #4D331F. Soft top-left bevel lighting only inside rim. Intended 9-slice frame, straight constant-width edges, no ornaments or glyphs or ropes or pegs. All corners outside the sign transparent. No writing whatsoever.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. An EMPTY long horizontal rectangular parchment sign plate, front facing and axis aligned. Width FIVE TIMES its height. Pale parchment #F2E3BD perfectly flat unpatterned center, gently rounded corners, continuous brown clay rim #8C6138 with crisp dark-brown contour #4D331F. Soft top-left bevel lighting only inside rim. Intended 9-slice frame, straight constant-width edges, no ornaments or glyphs or ropes or pegs. All corners outside the sign transparent. No writing whatsoever. Ready size 320x64; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · brand",
+    "mode": "panel",
+    "slice": [
+      20,
+      16,
+      20,
+      16
+    ]
+  },
+  "mood_happy": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "mood",
+    "title": "Радость",
+    "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression HAPPY: broad U-shaped smiling mouth, gently raised cheeks, eyes relaxed and friendly. Keep eyes open and bead-like.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression HAPPY: broad U-shaped smiling mouth, gently raised cheeks, eyes relaxed and friendly. Keep eyes open and bead-like. Ready size 64x64; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · mood"
+  },
+  "mood_ok": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "mood",
+    "title": "Спокойствие",
+    "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression OK / NEUTRAL: relaxed level eyebrows and tiny straight calm closed mouth. Not smiling, not sad.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression OK / NEUTRAL: relaxed level eyebrows and tiny straight calm closed mouth. Not smiling, not sad. Ready size 64x64; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · mood"
+  },
+  "mood_sad": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "mood",
+    "title": "Грусть",
+    "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression SAD: simple downturned mouth, inner ends of small eyebrows tilt upward. No tears.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression SAD: simple downturned mouth, inner ends of small eyebrows tilt upward. No tears. Ready size 64x64; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · mood"
+  },
+  "mood_angry": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "mood",
+    "title": "Злость",
+    "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression ANGRY: thick short eyebrows slant down toward the nose, small downturned mouth. Still cute rather than frightening.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression ANGRY: thick short eyebrows slant down toward the nose, small downturned mouth. Still cute rather than frightening. Ready size 64x64; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · mood"
+  },
+  "mood_scared": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "mood",
+    "title": "Страх",
+    "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression SCARED: raised short eyebrows, widely opened round bead eyes and a small oval open O-shaped mouth. No extra symbols or sweat droplets.",
+    "prompt": "Use case: stylized-concept. One production raster HUD icon for Clayfolk, a cozy colony game about tiny clay people in a living children's sandbox. Warm hand-painted matte clay aesthetic, simple chunky shapes, minimal broad modelling marks, readable at 24 px. Strong CRISP SOLID dark brown outline #4D331F: a sharply defined ink-like contour, no blurry brown glow, no soft outer shadow. Warm upper-left illumination; all shading contained inside the object. Genuine transparent RGBA background. Center the entire isolated subject with 10 percent empty margin on every side. NO text, letters, numbers, logo, watermark, square backing tile, ground, scenery, photo realism, gloss, plastic, metal, neon or pixel art. No white halo. The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Expression SCARED: raised short eyebrows, widely opened round bead eyes and a small oval open O-shaped mouth. No extra symbols or sweat droplets. Ready size 64x64; draw at high resolution.",
+    "stage": 1,
+    "where": "HUD Clayfolk · mood"
+  },
+  "glyph_pause_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Пауза — светлый глиф",
+    "stage": 1,
+    "mode": "light",
+    "base": "glyph_pause",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from generated glyph_pause silhouette: exact parchment #F2E3BD fill, opaque #4D331F contour; identical alpha to the base glyph."
+  }
+}

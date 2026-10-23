@@ -4,6 +4,7 @@ import csv
 import json
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance, ImageChops
+import raster_pipeline as raster
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
@@ -27,10 +28,17 @@ def font(size, bold=False):
 
 
 def clean_alpha(im):
-    # Remove only nearly invisible resampling dust; preserve actual generated alpha.
-    im = im.convert('RGBA')
-    im.putalpha(im.getchannel('A').point(lambda a: 0 if a < 3 else a))
-    return im
+    # Generated solid interiors often arrive at 253/255; normalize that coverage.
+    import numpy as np
+    data=np.array(im.convert('RGBA'))
+    alpha=data[:,:,3]
+    alpha[alpha<8]=0
+    alpha[alpha>=240]=255
+    rgb=data[:,:,:3]
+    white=(alpha>0)&(alpha<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)
+    alpha[white]=0
+    data[alpha==0]=(0,0,0,0)
+    return Image.fromarray(data)
 
 
 def fit_asset(im, size, margin):
@@ -60,47 +68,15 @@ def nine_slice(im, size, inset):
 
 
 def outlined_asset(im, size):
-    scale = 4
-    radius = 5 if size[0] >= 96 else (2 if size[0] == 64 else 1)
-    # Two extra pixels absorb Lanczos ringing around the expanded contour.
-    margin = (10 if size[0] >= 96 else 4) + radius + 2
-    large = (size[0]*scale, size[1]*scale)
-    result = fit_asset(im, large, margin*scale)
-    outline = Image.new('RGBA', large, INK)
-    outline.putalpha(result.getchannel('A').filter(ImageFilter.MaxFilter(radius*scale*2+1)))
-    outline.alpha_composite(result)
-    return clean_alpha(outline.resize(size, RESAMPLE))
+    return raster.icon(im, size)
 
 
 def make_cursor(im):
-    cursor = outlined_asset(im, (64,64))
-    cut = cursor.crop(cursor.getchannel('A').getbbox())
-    result = Image.new('RGBA', (64,64))
-    result.alpha_composite(cut, (4,4))
-    # Sharpen the rounded generated arrow tip at the click location.
-    ImageDraw.Draw(result).polygon([(4,4),(14,8),(8,14)], fill=INK)
-    # The new tip replaces the old rounded cap: remove its two small protrusions.
-    mask = Image.new('L', (256,256))
-    ImageDraw.Draw(mask).polygon([(16,16),(256,96),(256,256),(72,256)], fill=255)
-    mask = mask.resize((64,64), RESAMPLE)
-    result.putalpha(ImageChops.multiply(result.getchannel('A'), mask))
-    return result
+    return raster.cursor(im)
 
 
 def make_button(im):
-    result = fit_asset(im, (64, 64), 2)
-    # Keep generated corners; make the stretch zone and its centre constant.
-    # This avoids repeating painted texture when Godot stretches the 9-slice.
-    pixels = result.copy()
-    for y in range(16, 48):
-        for x in range(64):
-            result.putpixel((x, y), pixels.getpixel((x, 32)))
-    pixels = result.copy()
-    for x in range(16, 48):
-        for y in range(64):
-            result.putpixel((x, y), pixels.getpixel((32, y)))
-    ImageDraw.Draw(result).rectangle((16, 16, 47, 47), fill=PAPER)
-    return result
+    return raster.panel(im,(64,64),(16,16,16,16))
 
 
 def paste_center(canvas, im, box):
@@ -112,7 +88,7 @@ def make_board(images):
     board = Image.new('RGBA', (1560, 1260), PAPER)
     d = ImageDraw.Draw(board)
     d.text((40, 26), 'CLAYFOLK / HUD', font=font(32, True), fill=INK)
-    d.text((40, 72), 'Этап 0 · шесть проб · стиль ожидает одобрения', font=font(21), fill=INK)
+    d.text((40, 72), 'Стиль одобрен · плотный контур · исправленное остриё', font=font(21), fill=INK)
     palette = ['#F2E3BD', '#4D331F', '#8C6138', '#D66C34', '#5C8C33', '#3F8FD0', '#F0B85A']
     for i, c in enumerate(palette):
         d.rounded_rectangle((1030+i*68, 30, 1084+i*68, 62), radius=6, fill=c, outline=INK)
@@ -157,7 +133,7 @@ def make_board(images):
     for i, size in enumerate([(128,64), (64,96), (192,64)]):
         board.alpha_composite(nine_slice(button, size, (16,16,16,16)), (150+i*230, 1120))
     d.text((900, 1133), 'Без текста внутри игровых ассетов.', font=font(19), fill=INK)
-    d.text((900, 1166), 'Курсор: hotspot (4,4). Следующий этап — после «да».', font=font(17), fill=INK)
+    d.text((900, 1166), 'Курсор: hotspot (4,4). Светлые глифы — на sheet_glyph.', font=font(17), fill=INK)
     board.save(ROOT/'_preview'/'style_board.png')
     # Per-group review sheets, including both backgrounds and the 24 px views.
     for group in dict.fromkeys(s[1] for s in SPECS.values()):

@@ -8,8 +8,11 @@ import subprocess
 import sys
 from pathlib import Path
 from PIL import Image
+import numpy as np
+from scipy.ndimage import distance_transform_edt
 sys.dont_write_bytecode = True
 from build_stage0 import ROOT, SPECS, nine_slice
+from build_hud import load_catalog
 
 STATES = ('normal', 'hover', 'pressed', 'disabled')
 FAMILIES = ['btn_square', 'ui_button_wide', 'ui_btn_plus', 'ui_btn_minus', 'card_build']
@@ -60,7 +63,7 @@ def is_slice(name):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stage', choices=['0','all'], default='all')
+    parser.add_argument('--stage', choices=[str(i) for i in range(9)]+['all'], default='all')
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
     report = []
@@ -80,10 +83,13 @@ def main():
     pngs = {p.relative_to(ROOT).as_posix() for p in ROOT.rglob('*.png')}
     require(pngs==set(index), f'PNG/manifest mismatch: {pngs ^ set(index)}')
     top = {p.stem for p in ROOT.glob('*.png')}
-    wanted = set(SPECS) if args.stage=='0' else EXPECTED
+    catalog=load_catalog()
+    if args.stage=='all' or args.stage=='8':
+        wanted=EXPECTED | {n+'_light' for n in EXPECTED if n.startswith('glyph_')}
+    else:
+        wanted={n for n,spec in catalog.items() if spec['stage']<=int(args.stage)}
     require(wanted <= top, 'Missing required assets: '+', '.join(sorted(wanted-top)))
-    if args.stage=='0':
-        require(top==set(SPECS), 'Stage 0 must contain exactly six top-level assets')
+    require(all(n in catalog or index.get(n+'.png',{}).get('group')=='extra' for n in top), 'Uncatalogued game assets')
     out(f'SCOPE: stage {args.stage}; {len(top)} game assets; {len(rows)} PNG manifest rows.')
     out('1. Inventory: '+('PASS' if not failures else 'FAIL'))
     before = len(failures)
@@ -97,8 +103,13 @@ def main():
         images[file] = im
         require(re.fullmatch(r'\d+x\d+',row['size']) is not None, f'Invalid size: {file}')
         require(row['size']==f'{im.width}x{im.height}', f'Manifest size mismatch: {file}')
-        if '/' not in file and p.stem in KNOWN_SIZES:
-            require(im.size==KNOWN_SIZES[p.stem], f'Spec size mismatch: {file}')
+        if '/' not in file:
+            name=p.stem
+            expected_size=KNOWN_SIZES.get(name,KNOWN_SIZES.get(name.removesuffix('_light')))
+            if expected_size:
+                require(im.size==expected_size, f'Spec size mismatch: {file}')
+            if name in catalog:
+                require(im.size==tuple(catalog[name]['size']), f'Catalog size mismatch: {file}')
         require(im.format=='PNG' and im.mode=='RGBA', f'Not PNG RGBA: {file}')
         require(bool(row['title_ru'] and row['where'] and row['prompt']), f'Incomplete manifest row: {file}')
     out('2. Dimensions / PNG RGBA / metadata: '+('PASS' if before==len(failures) else 'FAIL'))
@@ -114,8 +125,9 @@ def main():
             if number==3 and not texture:
                 require(all(alpha.getpixel(p)==0 for p in [(0,0),(im.width-1,0),(0,im.height-1),(im.width-1,im.height-1)]), 'Opaque corner: '+file)
             elif number==4:
-                data = im.get_flattened_data() if hasattr(im,'get_flattened_data') else im.getdata()
-                bad = sum(1 for r,g,b,a in data if 0<a<255 and min(r,g,b)>235 and max(r,g,b)-min(r,g,b)<20)
+                data=np.array(im)
+                rgb=data[:,:,:3]
+                bad=int(np.sum((data[:,:,3]>0)&(data[:,:,3]<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)))
                 require(bad==0, f'Near-white alpha edges: {file} ({bad} px)')
             elif number==5 and not source and not texture and not is_slice(name):
                 bbox = alpha.getbbox()
@@ -147,7 +159,7 @@ def main():
     for family in FAMILIES:
         present = {s for s in STATES if f'{family}_{s}' in top}
         if present and present != set(STATES):
-            if args.stage=='0' and family=='btn_square' and present=={'normal'}:
+            if args.stage not in ('all','8') and int(args.stage)<2 and family=='btn_square' and present=={'normal'}:
                 deferred.append(family+': hover, pressed, disabled (stage 2)')
             else:
                 require(False, f'Incomplete state family {family}: {present}')
@@ -155,7 +167,29 @@ def main():
             variants = [images[f'{family}_{s}.png'] for s in STATES]
             require(len({im.size for im in variants})==1,'State sizes differ: '+family)
             require(len({im.getchannel('A').tobytes() for im in variants})==1,'State silhouettes differ: '+family)
-    out('7. State families: '+('PASS' if before==len(failures) else 'FAIL')+(' (stage-0 normal-only exception)' if deferred else ''))
+    out('7. State families: '+('PASS' if before==len(failures) else 'FAIL')+(' (normal-only sample; full family in stage 2)' if deferred else ''))
+    before=len(failures)
+    for name in top:
+        im=images[name+'.png']
+        if name=='menu_background':
+            continue
+        data=np.array(im)
+        a=data[:,:,3]
+        partial=(a>0)&(a<255)
+        require(np.all(data[partial,:3]==(77,51,31)), 'Translucent contour is not exact #4D331F: '+name)
+        opaque=a==255
+        if partial.any():
+            distance=distance_transform_edt(~opaque)
+            require(np.max(distance[partial])<=1.5,'Soft outer glow exceeds 1px coverage band: '+name)
+        if name.startswith('glyph_') and not name.endswith('_light'):
+            light=name+'_light'
+            require(light in top, 'Missing light glyph: '+name)
+            if light in top:
+                li=images[light+'.png']
+                require(li.size==im.size and li.getchannel('A').tobytes()==im.getchannel('A').tobytes(),'Light glyph silhouette mismatch: '+name)
+                colors=np.array(li)
+                require(np.any(np.all(colors[:,:,:3]==(242,227,189),axis=2)), 'Light glyph lacks parchment fill: '+name)
+    out('8. Crisp #4D331F contour / 1px boundary / light glyphs: '+('PASS' if before==len(failures) else 'FAIL'))
     if 'btn_square_normal.png' in images:
         im=images['btn_square_normal.png']
         require(im.crop((16,16,48,48)).getextrema()==tuple((v,v) for v in im.getpixel((32,32))),'Button centre is not uniform')
@@ -173,8 +207,8 @@ def main():
     repo=ROOT.parents[1]
     changed=subprocess.run(['git','diff','--name-only','HEAD'],cwd=repo,capture_output=True,text=True,check=True).stdout.splitlines()
     require(all(p.startswith('art/hud/') for p in changed),'Tracked changes outside art/hud')
-    if args.stage=='0':
-        out(f'DEFERRED: {len(EXPECTED-top)} remaining specification assets; '+', '.join(deferred)+'.')
+    if args.stage not in ('all','8'):
+        out(f'DEFERRED: {len(EXPECTED-top)} remaining specification assets'+('; '+', '.join(deferred) if deferred else '')+'.')
         out('Full §6 completeness is NOT claimed. Run --stage all for final delivery.')
     out(f'RESULT: {"PASS" if not failures else "FAIL"} — {len(failures)} errors.')
     for failure in failures:
