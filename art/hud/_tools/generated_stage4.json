@@ -1,0 +1,66 @@
+{
+  "defs": {
+    "ui_heart": {
+      "stage": 4,
+      "size": [
+        32,
+        32
+      ],
+      "group": "ui",
+      "title": "Здоровье",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One plump simple muted red clay heart #C0392B, broad symmetrical lobes and a short pointed bottom. No decoration or backing.",
+      "where": "HUD Clayfolk · ui"
+    },
+    "glyph_follow": {
+      "stage": 4,
+      "size": [
+        48,
+        48
+      ],
+      "group": "glyph",
+      "title": "Следовать",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. Two simple chunky primitive footprints viewed from above, diagonally staggered, made of warm brown clay. Each print has one broad sole and three little rounded toes merged near the sole. Compact follow/trail icon, no background tile.",
+      "where": "HUD Clayfolk · glyph"
+    },
+    "glyph_hand": {
+      "stage": 4,
+      "size": [
+        48,
+        48
+      ],
+      "group": "glyph",
+      "title": "Ладонь",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One open warm ochre clay hand, palm facing viewer, fingers pointing upward. Four short thick rounded fingers plus one thumb, simple broad palm. No wrist cuff or text.",
+      "where": "HUD Clayfolk · glyph"
+    },
+    "job_warrior": {
+      "stage": 4,
+      "size": [
+        64,
+        64
+      ],
+      "group": "job",
+      "title": "Посвящение в воины",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky primitive stone-tipped wooden spear with two small broad ochre feathers tied just below its stone point. Diagonal bottom-left to top-right. No metal.",
+      "where": "HUD Clayfolk · job"
+    },
+    "act_sleep": {
+      "stage": 4,
+      "size": [
+        48,
+        48
+      ],
+      "group": "act",
+      "title": "Спит",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. The rounded orange terracotta head of a Clayfolk resident, tiny ears, tiny round clay nose, eyes CLOSED as two small curved dark strokes, relaxed faint smile, front view. No letters, sleep symbols, moon or hat.",
+      "where": "HUD Clayfolk · act"
+    }
+  },
+  "paths": {
+    "ui_heart": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-e562b025-7d48-4370-a46b-1c6d5b553ab7.png",
+    "glyph_follow": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-368e4e19-ffe1-4d63-9e86-c7d85c65c591.png",
+    "glyph_hand": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-0713fd9d-2c84-4011-8685-89f31231aade.png",
+    "job_warrior": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-ce640fc7-19a7-44b0-9950-3a9de12a2c9d.png",
+    "act_sleep": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-cc93960f-0b47-43fc-9e15-80afd57fa475.png"
+  }
+}

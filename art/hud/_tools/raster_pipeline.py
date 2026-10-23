@@ -52,7 +52,9 @@ def icon(source, size, fill=None, margin=None, outer=None, inner=None):
     inner = max(.75,w*.015625) if inner is None else inner
     large = (w*SCALE,h*SCALE)
     cut = texture_mask(source)
-    cut.thumbnail((round((w-2*margin-2*outer)*SCALE),round((h-2*margin-2*outer)*SCALE)),Image.Resampling.LANCZOS)
+    target=(round((w-2*margin-2*outer)*SCALE),round((h-2*margin-2*outer)*SCALE))
+    ratio=min(target[0]/cut.width,target[1]/cut.height)
+    cut=cut.resize((max(1,round(cut.width*ratio)),max(1,round(cut.height*ratio))),Image.Resampling.LANCZOS)
     cut.putalpha(cut.getchannel('A').point(lambda a: 255 if a >=128 else 0))
     texture = Image.new('RGBA',large)
     texture.paste(cut,((large[0]-cut.width)//2,(large[1]-cut.height)//2))

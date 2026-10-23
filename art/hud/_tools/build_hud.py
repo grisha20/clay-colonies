@@ -50,6 +50,7 @@ def build_one(name, spec, images):
         elif shape=='minus':
             d.rounded_rectangle((pad,h*.41,w-pad,h*.59),radius=k,fill=255)
         elif shape=='cross':
+            pad=7*k
             d.line((pad,pad,w-pad,h-pad),fill=255,width=5*k)
             d.line((w-pad,pad,pad,h-pad),fill=255,width=5*k)
         elif shape=='ban':
@@ -102,13 +103,17 @@ def build_one(name, spec, images):
         master=Image.new('RGBA',(size[0]*4,size[1]*4))
         for part in spec['parts']:
             base=Image.open(ROOT/'_source'/f"{part['name']}.png")
+            if part.get('flip'):
+                base=base.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            if part.get('rotate'):
+                base=base.rotate(part['rotate'],expand=True)
             x,y,w,h=part['box']
             if part.get('stretch'):
                 base=raster.texture_mask(base).resize((w*8,h*8),Image.Resampling.LANCZOS)
             piece=raster.icon(base,(w*4,h*4),fill=tuple(part['fill']) if 'fill' in part else None,margin=part.get('margin'))
             master.alpha_composite(piece,(x*4,y*4))
         master.save(source_path)
-        result=raster.finish(master,size)
+        result=raster.icon(master,size,margin=4,outer=0,inner=0)
     else:
         if not source_path.is_file() and spec.get('base'):
             Image.open(ROOT/'_source'/f"{spec['base']}.png").save(source_path)
@@ -139,7 +144,7 @@ def build_one(name, spec, images):
             result=source.resize(size,Image.Resampling.LANCZOS)
             result.putalpha(255)
         else:
-            result=raster.icon(source,size)
+            result=raster.icon(source,size,margin=spec.get('margin'),outer=spec.get('outer'),inner=spec.get('inner'))
         if 'fill' in spec:
             result=recolor(result,tuple(spec['fill']))
     result.save(ROOT/f'{name}.png')
@@ -215,6 +220,8 @@ def write_manifest(catalog):
             title=spec['title']+(' — исходник' if source else '')
             where=spec.get('where','HUD Clayfolk · '+spec['group'])
             prompt=spec['prompt']
+            if 'parts' in spec:
+                prompt+=' | Composite recipe: '+json.dumps(spec['parts'],ensure_ascii=False,separators=(',',':'))
             if not source:
                 prompt+=' | Offline finishing: build_hud.py / raster_pipeline.py; binary silhouette, opaque #4D331F Euclidean contour, one-pixel BOX coverage boundary. Mode: '+spec.get('mode','icon')
             slices=','.join(map(str,spec.get('slice',[]))) if not source else ''

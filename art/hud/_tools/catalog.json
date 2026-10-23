@@ -1500,5 +1500,1004 @@
     "prompt": "Offline derivative of generated build_totem; reuse; no external assets.",
     "mode": "reuse",
     "base": "build_totem"
+  },
+  "ui_heart": {
+    "stage": 4,
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Здоровье",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One plump simple muted red clay heart #C0392B, broad symmetrical lobes and a short pointed bottom. No decoration or backing.",
+    "where": "HUD Clayfolk · ui"
+  },
+  "glyph_follow": {
+    "stage": 4,
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Следовать",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. Two simple chunky primitive footprints viewed from above, diagonally staggered, made of warm brown clay. Each print has one broad sole and three little rounded toes merged near the sole. Compact follow/trail icon, no background tile.",
+    "where": "HUD Clayfolk · glyph"
+  },
+  "glyph_hand": {
+    "stage": 4,
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Ладонь",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One open warm ochre clay hand, palm facing viewer, fingers pointing upward. Four short thick rounded fingers plus one thumb, simple broad palm. No wrist cuff or text.",
+    "where": "HUD Clayfolk · glyph"
+  },
+  "job_warrior": {
+    "stage": 4,
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Посвящение в воины",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky primitive stone-tipped wooden spear with two small broad ochre feathers tied just below its stone point. Diagonal bottom-left to top-right. No metal.",
+    "where": "HUD Clayfolk · job"
+  },
+  "act_sleep": {
+    "stage": 4,
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Спит",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. The rounded orange terracotta head of a Clayfolk resident, tiny ears, tiny round clay nose, eyes CLOSED as two small curved dark strokes, relaxed faint smile, front view. No letters, sleep symbols, moon or hat.",
+    "where": "HUD Clayfolk · act"
+  },
+  "glyph_deselect": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Снять выбор",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated res_clay; symbol; no text or external assets.",
+    "mode": "symbol",
+    "shape": "cross",
+    "base": "res_clay",
+    "fill": [
+      139,
+      90,
+      43
+    ]
+  },
+  "glyph_next_resident": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Следующий житель",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated glyph_play; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "glyph_play"
+  },
+  "glyph_gather": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Собирать",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated res_wood; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "res_wood"
+  },
+  "glyph_forbid": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Запрет",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated res_clay; symbol; no text or external assets.",
+    "mode": "symbol",
+    "shape": "ban",
+    "base": "res_clay",
+    "fill": [
+      192,
+      57,
+      43
+    ]
+  },
+  "job_guard": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Стража",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated tool_spear; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "tool_spear"
+  },
+  "job_fish": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Рыбалка",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated tool_rod; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "tool_rod"
+  },
+  "job_food": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Сбор еды",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated res_berries; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "res_berries"
+  },
+  "job_firing": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Обжиг",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated build_kiln; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "build_kiln"
+  },
+  "job_manual": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Вручную",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated glyph_hand; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "glyph_hand"
+  },
+  "job_clay": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Добыча глины",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_pickaxe",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "res_clay",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_wood": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Рубка дерева",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_axe",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "res_wood",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_stone": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Добыча камня",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_pickaxe",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "res_stone",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_build": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Стройка",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "build_hut",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "tool_axe",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_hunt": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Охота",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_spear",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "res_meat",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_heal": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Лечение",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "ui_heart",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "glyph_plus_light",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_carry": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Носка",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "glyph_hand",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "res_wood",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_water_shot": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Выстрел водой",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "res_water",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "glyph_play_light",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "job_mother_auto": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "job",
+    "title": "Праматерь решает",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "res_people",
+        "box": [
+          0,
+          0,
+          61,
+          61
+        ]
+      },
+      {
+        "name": "glyph_settings_light",
+        "box": [
+          21,
+          21,
+          42,
+          42
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_idle": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Бездействует",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated mood_ok; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "mood_ok"
+  },
+  "act_walk": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Идёт",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated glyph_follow; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "glyph_follow"
+  },
+  "act_guard": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Охраняет",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated tool_spear; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "tool_spear"
+  },
+  "act_carry": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Несёт груз",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "glyph_hand",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_wood",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_chop": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Рубит",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_axe",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_wood",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_dig": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Копает",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_pickaxe",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_clay",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_mine": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Добывает камень",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_pickaxe",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_stone",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_build": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Строит",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "build_hut",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "tool_axe",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_fish": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Рыбачит",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_rod",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_fish",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_hunt": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Охотится",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_spear",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_meat",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_eat": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Ест",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "res_people",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "res_berries",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_flee": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Убегает",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "glyph_follow",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "glyph_play",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_wounded": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Ранен",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "mood_sad",
+        "box": [
+          0,
+          0,
+          45,
+          45
+        ]
+      },
+      {
+        "name": "ui_heart",
+        "box": [
+          16,
+          16,
+          32,
+          32
+        ],
+        "flip": false
+      }
+    ]
+  },
+  "act_fight": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "act",
+    "title": "Сражается",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "tool_spear",
+        "box": [
+          0,
+          0,
+          48,
+          48
+        ]
+      },
+      {
+        "name": "tool_spear",
+        "box": [
+          0,
+          0,
+          48,
+          48
+        ],
+        "flip": true
+      }
+    ]
+  },
+  "card_resident_panel": {
+    "size": [
+      320,
+      256
+    ],
+    "group": "card",
+    "title": "Карточка жителя",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated ui_panel; panel; no text or external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "card_resident_portrait_frame": {
+    "size": [
+      112,
+      112
+    ],
+    "group": "card",
+    "title": "Рамка портрета жителя",
+    "stage": 4,
+    "where": "HUD Clayfolk · работы / карточка жителя",
+    "prompt": "Offline derivative of generated ui_panel; frame; no text or external assets.",
+    "mode": "frame",
+    "base": "ui_panel",
+    "slice": [
+      12,
+      12,
+      12,
+      12
+    ]
+  },
+  "glyph_follow_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Следовать — светлый",
+    "stage": 4,
+    "mode": "light",
+    "base": "glyph_follow",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_follow: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_hand_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Ладонь — светлый",
+    "stage": 4,
+    "mode": "light",
+    "base": "glyph_hand",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_hand: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_deselect_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Снять выбор — светлый",
+    "stage": 4,
+    "mode": "light",
+    "base": "glyph_deselect",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_deselect: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_next_resident_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Следующий житель — светлый",
+    "stage": 4,
+    "mode": "light",
+    "base": "glyph_next_resident",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_next_resident: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_gather_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Собирать — светлый",
+    "stage": 4,
+    "mode": "light",
+    "base": "glyph_gather",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_gather: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_forbid_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Запрет — светлый",
+    "stage": 4,
+    "mode": "light",
+    "base": "glyph_forbid",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_forbid: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
   }
 }

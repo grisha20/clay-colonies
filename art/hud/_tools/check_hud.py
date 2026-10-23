@@ -58,7 +58,7 @@ KNOWN_SIZES = {
 
 
 def is_slice(name):
-    return name in SLICE_NAMES or name=='ui_separator_h' or any(name.startswith(f+'_') for f in FAMILIES)
+    return name in SLICE_NAMES or bool(load_catalog().get(name,{}).get('slice')) or any(name.startswith(f+'_') for f in FAMILIES)
 
 
 def main():
