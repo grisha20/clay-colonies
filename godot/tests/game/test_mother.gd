@@ -28,14 +28,14 @@ func run() -> void:
 	root.add_child(panel)
 	await process_frame
 	panel.update_from_snapshot(snap(true, []), 0)
-	check("panel_auto_text", panel.mode_button.text == "Праматерь решает", panel.mode_button.text)
+	check("panel_auto_switch", panel.mother_seg.button_pressed and not panel.manual_seg.button_pressed)
 	var asked = []
 	panel.auto_manage_requested.connect(func(v): asked.append(v))
-	panel.mode_button.pressed.emit()
+	panel.manual_seg.pressed.emit()
 	check("panel_switch_to_manual", asked == [false], str(asked))
 	panel.update_from_snapshot(snap(false, []), 0)
-	check("panel_manual_text", panel.mode_button.text.begins_with("Вручную"), panel.mode_button.text)
-	panel.mode_button.pressed.emit()
+	check("panel_manual_switch", panel.manual_seg.button_pressed and not panel.mother_seg.button_pressed)
+	panel.mother_seg.pressed.emit()
 	check("panel_switch_back", asked == [false, true], str(asked))
 	panel.queue_free()
 

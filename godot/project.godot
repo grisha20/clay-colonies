@@ -20,6 +20,7 @@ window/stretch/aspect="expand"
 
 [gui]
 
+theme/custom_font="res://assets/fonts/nunito_ui.tres"
 timers/tooltip_delay_sec=3600.0
 
 [rendering]

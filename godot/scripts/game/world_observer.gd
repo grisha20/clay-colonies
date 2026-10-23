@@ -260,10 +260,10 @@ func _setup_hud() -> void:
 	insp_panel.theme = GameHud.ink_theme()
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	insp_panel.offset_left = 16
-	# Above the bottom dock (build bar + minimap).
-	insp_panel.offset_top = -428
+	# Bottom left, beside the centred build bar.
+	insp_panel.offset_top = -220
 	insp_panel.offset_right = 376
-	insp_panel.offset_bottom = -224
+	insp_panel.offset_bottom = -16
 	canvas.add_child(insp_panel)
 	var inspector_box = VBoxContainer.new()
 	insp_panel.add_child(inspector_box)
@@ -310,6 +310,30 @@ func _setup_hud() -> void:
 	minimap.offset_right = -BuildController.DOCK_EDGE
 	minimap.offset_bottom = -BuildController.DOCK_EDGE
 	minimap.focus_requested.connect(func(p): world_view.focus_on_point(p))
+	# Zoom buttons on the minimap's right edge (mock-up): camera closer / farther.
+	zoom_box = VBoxContainer.new()
+	zoom_box.name = "MapZoom"
+	zoom_box.add_theme_constant_override("separation", 6)
+	canvas.add_child(zoom_box)
+	zoom_box.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	for spec in [["+", "glyph_plus", 1.0 / 1.25, "Ближе"], ["−", "glyph_minus", 1.25, "Дальше"]]:
+		var zb = Button.new()
+		zb.text = spec[0]
+		zb.focus_mode = Control.FOCUS_NONE
+		zb.custom_minimum_size = Vector2(34, 34)
+		zb.tooltip_text = spec[3]
+		if not HudArt.skin_button(zb, "btn_zoom", [4, 4, 4, 4]):
+			HudArt.skin_button(zb, "btn_square", [4, 4, 4, 4])
+		var g = HudArt.tex(spec[1])
+		if g:
+			zb.text = ""
+			zb.icon = g
+			zb.expand_icon = true
+			zb.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			zb.add_theme_constant_override("icon_max_width", 20)
+		var k: float = spec[2]
+		zb.pressed.connect(func(): world_view.target_camera_distance = clampf(world_view.target_camera_distance * k, WorldView.MIN_CAMERA_DISTANCE, WorldView.MAX_CAMERA_DISTANCE))
+		zoom_box.add_child(zb)
 	# The mother perches on the minimap and speaks from there.
 	mother_speaker = MotherSpeaker.new()
 	mother_speaker.perched = true
@@ -359,7 +383,7 @@ func _setup_hud() -> void:
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.name = "ControlsHelp"
-	help_label.text = "WASD, зажатое колесо — камера · зажатая ПКМ — поворот\nколесо — масштаб · Home — север вверх · ЛКМ — выбрать\n1–9, 0 — стройка и зоны · Esc/ПКМ — отмена"
+	help_label.text = "WASD, зажатое колесо — камера · зажатая ПКМ — поворот\nколесо — масштаб · Home — север вверх · ЛКМ — выбрать\n1–6 — карточка вкладки, Tab — следующая вкладка · Esc/ПКМ — отмена"
 	help_label.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(HSeparator.new())
 	vbox.add_child(help_label)
@@ -411,6 +435,7 @@ func _load_ui_scale() -> int:
 ## sunk a little so her arms rest on the frame; the bubble opens to the left.
 const PERCH_OVERLAP := 30.0
 const HANDS_SIZE := Vector2(170, 43)
+var zoom_box: VBoxContainer
 var mother_hands: TextureRect
 
 func _place_mother() -> void:
@@ -422,6 +447,11 @@ func _place_mother() -> void:
 	mother_speaker.offset_top = bottom
 	mother_speaker.offset_right = minimap.offset_right - (minimap.size.x - portrait_w) * 0.5
 	mother_speaker.offset_left = mother_speaker.offset_right
+	if zoom_box:
+		zoom_box.offset_right = minimap.offset_right - 14
+		zoom_box.offset_left = zoom_box.offset_right - 34
+		zoom_box.offset_top = minimap.offset_bottom - minimap.size.y + 26
+		zoom_box.offset_bottom = zoom_box.offset_top + 74
 	if mother_hands:
 		var edge = minimap.offset_bottom - minimap.size.y
 		mother_hands.offset_bottom = edge + HANDS_SIZE.y * 0.7

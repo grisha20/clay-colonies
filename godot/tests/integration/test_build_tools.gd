@@ -169,8 +169,15 @@ func run() -> void:
 	var post_spot = camp + Vector2(-24, -10)
 	if BuildRules.post_placement(scene.world_view.last_snapshot.surface, "colony-1", post_spot) != "":
 		post_spot = camp + Vector2(-26, 8)
+	# Keys pick a card of the active tab; Tab moves on to «Оборона».
+	var tab_key = InputEventKey.new()
+	tab_key.keycode = KEY_TAB
+	tab_key.pressed = true
+	scene.build.show_tab(0)
+	scene._unhandled_input(tab_key)
+	check("tab_key_switches_tab", scene.build.active_tab == 1)
 	var key0 = InputEventKey.new()
-	key0.keycode = KEY_0
+	key0.keycode = KEY_3
 	key0.pressed = true
 	scene._unhandled_input(key0)
 	check("hotkey_selects_post", scene.build.tool == "post")
@@ -200,8 +207,9 @@ func run() -> void:
 	esc.pressed = true
 	scene._unhandled_input(esc)
 	check("esc_cancels_tool", scene.build.tool == "")
+	scene.build.show_tab(0)
 	var key3 = InputEventKey.new()
-	key3.keycode = KEY_3
+	key3.keycode = KEY_4
 	key3.pressed = true
 	scene._unhandled_input(key3)
 	check("hotkey_selects_workshop", scene.build.tool == "workshop")

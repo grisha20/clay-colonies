@@ -82,17 +82,23 @@ static func _flat_material(c: Color) -> StandardMaterial3D:
 	return m
 
 
-const GROUPS = [
-	["Жильё и хозяйство", ["hut", "house", "storage", "workshop", "kiln", "idol"]],
-	["Оборона", ["wall", "gate", "post"]],
-	["Земля и зоны", ["totem", "harvest", "forbid", "erase"]],
+## Tabs of the build bar: [title, tools in key order 1.., tab icon, fallback icon].
+const TABS = [
+	["Поселение", ["hut", "house", "storage", "workshop", "kiln", "idol"], "tab_settlement", "group_home"],
+	["Оборона", ["wall", "gate", "post"], "tab_defense", "group_defense"],
+	["Земля", ["totem", "harvest", "forbid", "erase"], "tab_land", "group_land"],
 ]
 const TILE_TEXT := Color(0.98, 0.93, 0.82)
-## Dock height: the minimap with its frame.
-const DOCK_HEIGHT := Minimap.VIEW + 24
-## Gap between the minimap and the screen edge (WorldObserver uses it too).
-const DOCK_EDGE := 6
-const GROUP_ICONS = ["group_home", "group_defense", "group_land"]
+const CARD_SIZE := Vector2(132, 150)
+## Orange of the active tab and selected card (mock-up).
+const ACTIVE_TEXT := Color(0.85, 0.44, 0.12)
+## Gap between the bar / minimap and the screen edge (WorldObserver uses it too).
+const BAR_EDGE := 10
+const DOCK_EDGE := 14
+var tab_buttons: Array = []
+var active_tab := 0
+var tile_tab: Dictionary = {}   # tool -> tab index
+var tile_keys: Dictionary = {}  # tool -> hotkey badge
 ## Short captions under the pictures; the tooltip carries the full name.
 const TILE_NAMES = {"kiln": "Печь", "post": "Пост", "totem": "Тотем", "harvest": "Добыча", "house": "Дом рода"}
 const COST_SHORT := Color(1.0, 0.55, 0.45)
@@ -123,24 +129,21 @@ static func _tile_style(fill: Color, border: Color, width: int) -> StyleBoxFlat:
 	return sb
 
 
-## Stronghold-style build bar: groups of picture tiles with name, cost as
-## resource icons, hotkey badge and "built / limit". Missing resources turn the
-## number red, a reached limit greys the picture (update_from_snapshot).
+## Build bar like the owner's mock-up (docs/godot/reference/hud_target.png):
+## tabs «Поселение / Оборона / Земля» above one row of cards; only the active
+## tab's cards show. Keys 1–6 pick a card of the active tab, Tab switches tabs.
+## A card: hotkey badge, picture, name, cost as resource icons (short ones red);
+## a reached limit greys the card (update_from_snapshot).
 func _build_toolbar(canvas: CanvasLayer) -> void:
 	toolbar = PanelContainer.new()
 	toolbar.name = "BuildToolbar"
-	toolbar.add_theme_stylebox_override("panel", GameHud.parchment([14, 8, 14, 8]))
+	toolbar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	toolbar.theme = GameHud.ink_theme()
-	# One dock along the bottom, as tall as the minimap: the minimap (bottom
-	# right, drawn above it) sits in its right end like an inset.
-	toolbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	# Flush with the screen edges: the parchment's own border runs off-screen.
-	toolbar.offset_left = -8
-	toolbar.offset_right = 8
-	toolbar.offset_bottom = 8
-	toolbar.offset_top = -DOCK_EDGE - DOCK_HEIGHT
+	toolbar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	toolbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	toolbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	toolbar.mouse_force_pass_scroll_events = false
+	toolbar.offset_bottom = -BAR_EDGE
+	toolbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas.add_child(toolbar)
 	canvas.move_child(toolbar, 0)
 	# Painted cards (art/hud build_*); a building without one is rendered from its model.
@@ -156,45 +159,101 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 		else:
 			kinds.append(spec[0])
 	icon_textures.merge(BuildIcons.create(self, kinds))
-	var dock = HBoxContainer.new()
-	toolbar.add_child(dock)
-	var centre = CenterContainer.new()
-	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dock.add_child(centre)
-	var map_room = Control.new()
-	map_room.custom_minimum_size = Vector2(Minimap.VIEW + 24, 0)
-	dock.add_theme_constant_override("separation", 0)
-	map_room.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dock.add_child(map_room)
+	var column = VBoxContainer.new()
+	column.add_theme_constant_override("separation", -4)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toolbar.add_child(column)
+	# The tab strip sticks up from the card panel, centred.
+	var tab_panel = PanelContainer.new()
+	tab_panel.name = "BuildTabs"
+	var strip = HudArt.box("ui_tabbar", [18, 6, 18, 6])
+	tab_panel.add_theme_stylebox_override("panel", strip if strip else GameHud.parchment([18, 6, 18, 6]))
+	tab_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tab_panel.mouse_force_pass_scroll_events = false
+	column.add_child(tab_panel)
+	var tab_row = HBoxContainer.new()
+	tab_row.add_theme_constant_override("separation", 6)
+	tab_panel.add_child(tab_row)
+	for i in range(TABS.size()):
+		if i > 0:
+			var sep = VSeparator.new()
+			sep.add_theme_constant_override("separation", 14)
+			tab_row.add_child(sep)
+		tab_row.add_child(_make_tab(i))
+	var cards_panel = PanelContainer.new()
+	cards_panel.name = "BuildCards"
+	cards_panel.add_theme_stylebox_override("panel", GameHud.parchment([14, 12, 14, 12]))
+	cards_panel.mouse_force_pass_scroll_events = false
+	column.add_child(cards_panel)
 	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	centre.add_child(row)
+	row.add_theme_constant_override("separation", 8)
+	row.custom_minimum_size = Vector2(CARD_SIZE.x * 6 + 8 * 5, 0)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards_panel.add_child(row)
 	var specs: Dictionary = {}
 	for spec in TOOLS:
 		specs[spec[0]] = spec
-	for g in range(GROUPS.size()):
-		if g > 0:
-			row.add_child(VSeparator.new())
-		var group = VBoxContainer.new()
-		group.add_theme_constant_override("separation", 2)
-		row.add_child(group)
-		var title = Label.new()
-		title.text = GROUPS[g][0]
-		title.add_theme_font_size_override("font_size", 14)
-		title.add_theme_color_override("font_color", GameHud.INK.lightened(0.25))
-		var head = HBoxContainer.new()
-		head.add_theme_constant_override("separation", 4)
-		var gicon = HudArt.tex(GROUP_ICONS[g])
-		if gicon:
-			head.add_child(GameHud.icon_rect(gicon, 20))
-		head.add_child(title)
-		group.add_child(head)
-		var tiles = HBoxContainer.new()
-		tiles.add_theme_constant_override("separation", 5)
-		group.add_child(tiles)
-		for t in GROUPS[g][1]:
-			tiles.add_child(_make_tile(specs[t]))
+	for i in range(TABS.size()):
+		var tools: Array = TABS[i][1]
+		for n in range(tools.size()):
+			var tile = _make_tile(specs[tools[n]], n + 1)
+			tile_tab[tools[n]] = i
+			row.add_child(tile)
+	show_tab(0)
+
+
+func _make_tab(i: int) -> Button:
+	var b = Button.new()
+	b.name = "Tab_%d" % i
+	b.text = TABS[i][0]
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", 19)
+	b.add_theme_color_override("font_color", GameHud.INK.lightened(0.15))
+	b.add_theme_color_override("font_hover_color", GameHud.INK)
+	for state in ["font_pressed_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(state, ACTIVE_TEXT)
+	var icon = HudArt.tex(TABS[i][2])
+	if icon == null:
+		icon = HudArt.tex(TABS[i][3])
+	if icon:
+		b.icon = icon
+		b.add_theme_constant_override("icon_max_width", 26)
+		b.add_theme_constant_override("h_separation", 8)
+	var idle = StyleBoxEmpty.new()
+	idle.content_margin_left = 14
+	idle.content_margin_right = 14
+	idle.content_margin_top = 4
+	idle.content_margin_bottom = 7
+	# Active tab: an orange line under it, like the mock-up.
+	var line = HudArt.box("ui_tab_underline", [14, 4, 14, 7])
+	if line == null:
+		var flat = StyleBoxFlat.new()
+		flat.bg_color = Color(0, 0, 0, 0)
+		flat.border_color = ACTIVE_TEXT
+		flat.border_width_bottom = 3
+		flat.content_margin_left = 14
+		flat.content_margin_right = 14
+		flat.content_margin_top = 4
+		flat.content_margin_bottom = 7
+		line = flat
+	for state in ["normal", "hover", "disabled"]:
+		b.add_theme_stylebox_override(state, idle)
+	b.add_theme_stylebox_override("pressed", line)
+	b.add_theme_stylebox_override("hover_pressed", line)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.pressed.connect(func(): show_tab(i))
+	tab_buttons.append(b)
+	return b
+
+
+## Shows one tab's cards (and leaves the tool alone).
+func show_tab(i: int) -> void:
+	active_tab = i
+	for n in range(tab_buttons.size()):
+		tab_buttons[n].button_pressed = n == i
+	for t in buttons.keys():
+		buttons[t].visible = int(tile_tab.get(t, 0)) == i
 
 
 func _plain_label(text: String, size: int, color: Color) -> Label:
@@ -206,14 +265,14 @@ func _plain_label(text: String, size: int, color: Color) -> Label:
 	return l
 
 
-func _make_tile(spec: Array) -> Button:
+func _make_tile(spec: Array, slot: int) -> Button:
 	var t: String = spec[0]
 	var b = Button.new()
 	b.name = "Tool_" + t
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(102, 142) if painted_cards else Vector2(98, 118)
-	b.tooltip_text = "%s  [%s]" % [HINTS[t], spec[2]]
+	b.custom_minimum_size = CARD_SIZE
+	b.tooltip_text = "%s  [%d]" % [HINTS[t], slot]
 	if not (painted_cards and HudArt.skin_button(b, "card_build", [6, 6, 6, 6])):
 		b.add_theme_stylebox_override("normal", _tile_style(Color(0.45, 0.34, 0.23), Color(0.27, 0.19, 0.12), 2))
 		b.add_theme_stylebox_override("hover", _tile_style(Color(0.53, 0.41, 0.28), Color(0.33, 0.24, 0.15), 2))
@@ -222,18 +281,19 @@ func _make_tile(spec: Array) -> Button:
 	b.pressed.connect(func(): set_tool("" if tool == t else t))
 	var box = VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	box.offset_left = 4
-	box.offset_right = -4
-	box.offset_top = 4
-	box.offset_bottom = -4
-	box.add_theme_constant_override("separation", 1)
+	box.offset_left = 6
+	box.offset_right = -6
+	box.offset_top = 8
+	box.offset_bottom = -8
+	box.add_theme_constant_override("separation", 0)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(box)
 	var pic = TextureRect.new()
 	pic.texture = icon_textures.get(t)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.custom_minimum_size = Vector2(92, 76) if painted_cards else Vector2(80, 60)
+	pic.custom_minimum_size = Vector2(CARD_SIZE.x - 22, 82)
+	pic.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(pic)
 	tile_icons[t] = pic
@@ -247,14 +307,14 @@ func _make_tile(spec: Array) -> Button:
 		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pic.add_child(s)
-	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 14 if painted_cards else 12, tile_text)
+	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 16, tile_text)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	box.add_child(name_label)
 	var cost_row = HBoxContainer.new()
 	cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	cost_row.add_theme_constant_override("separation", 2)
+	cost_row.add_theme_constant_override("separation", 3)
 	cost_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(cost_row)
 	var costs: Dictionary = {}
@@ -262,47 +322,56 @@ func _make_tile(spec: Array) -> Button:
 	for res in ["clay", "wood", "stone", "special"]:
 		if int(cost.get(res, 0)) <= 0:
 			continue
-		var ic = TextureRect.new()
-		ic.texture = GameHud.make_icon(res)
-		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		ic.custom_minimum_size = Vector2(17, 17) if painted_cards else Vector2(14, 14)
-		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cost_row.add_child(ic)
-		var n = _plain_label(str(int(cost[res])), 14 if painted_cards else 12, tile_text)
+		if not costs.is_empty():
+			cost_row.add_child(_spacer(3))
+		cost_row.add_child(GameHud.icon_rect(GameHud.make_icon(res), 18))
+		var n = _plain_label(str(int(cost[res])), 15, tile_text)
 		cost_row.add_child(n)
 		costs[res] = n
 	if costs.is_empty():
-		cost_row.add_child(_plain_label("даром", 14 if painted_cards else 12, tile_text.lightened(0.2) if painted_cards else tile_text.darkened(0.2)))
+		cost_row.add_child(_plain_label("даром", 15, tile_text.lightened(0.25) if painted_cards else tile_text.darkened(0.2)))
 	tile_costs[t] = costs
-	var key = _plain_label(spec[2], 12, Color(0.25, 0.17, 0.10))
-	key.position = Vector2(5, 3)
-	var kb = StyleBoxFlat.new()
-	kb.bg_color = Color(0.96, 0.88, 0.66)
-	kb.set_corner_radius_all(4)
-	kb.content_margin_left = 4
-	kb.content_margin_right = 4
-	key.add_theme_stylebox_override("normal", kb)
+	var key = _plain_label(str(slot), 13, GameHud.INK)
+	key.name = "Key"
+	key.position = Vector2(7, 6)
+	key.custom_minimum_size = Vector2(22, 22)
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	key.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	b.add_child(key)
+	tile_keys[t] = key
+	_style_key(t, false)
 	if BuildRules.LIMITS.has(t):
+		# Built / limit lives in the tooltip; the label is kept for the tests and shots.
 		var count = _plain_label("", 12, tile_text)
-		count.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-		count.offset_left = -40
-		count.offset_right = -5
-		count.offset_top = 3
-		count.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		if painted_cards:
-			# A badge like the hotkey one: dark ink on the picture would vanish.
-			count.add_theme_color_override("font_color", Color(0.25, 0.17, 0.10))
-			count.add_theme_stylebox_override("normal", kb)
-			count.offset_left = 0
-		else:
-			count.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+		count.visible = false
 		b.add_child(count)
 		tile_counts[t] = count
 	buttons[t] = b
 	return b
+
+
+func _spacer(w: float) -> Control:
+	var c = Control.new()
+	c.custom_minimum_size = Vector2(w, 0)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
+
+
+## Hotkey badge in the card corner: orange on the selected card.
+func _style_key(t: String, active: bool) -> void:
+	var key: Label = tile_keys.get(t)
+	if key == null:
+		return
+	var sb = HudArt.box("ui_key_badge_active" if active else "ui_key_badge_normal", [0, 0, 0, 0])
+	if sb == null:
+		var flat = StyleBoxFlat.new()
+		flat.bg_color = Color(0.95, 0.60, 0.22) if active else Color(0.98, 0.93, 0.84)
+		flat.border_color = Color(0.79, 0.40, 0.10) if active else Color(0.86, 0.76, 0.60)
+		flat.set_border_width_all(1)
+		flat.set_corner_radius_all(5)
+		sb = flat
+	key.add_theme_stylebox_override("normal", sb)
+	key.add_theme_color_override("font_color", Color.WHITE if active else GameHud.INK)
 
 
 ## Resources and building counts of the player's tribe: short costs go red,
@@ -340,7 +409,11 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 			var card = HudArt.box("card_build_disabled" if full else "card_build_normal", [6, 6, 6, 6])
 			if card:
 				(buttons[t] as Button).add_theme_stylebox_override("normal", card)
-		var tip = "%s  [%s]" % [HINTS[t], spec[2]]
+		var slot = (TABS[int(tile_tab.get(t, 0))][1] as Array).find(t) + 1
+		var tip = "%s  [%d]" % [HINTS[t], slot]
+		if tile_counts.has(t):
+			tip += "
+Построено " + (tile_counts[t] as Label).text
 		if full:
 			tip += "\nДостигнут предел этих построек"
 		elif not short.is_empty():
@@ -402,6 +475,9 @@ func set_tool(t: String) -> void:
 	drag_start = Vector2.INF
 	for k in buttons.keys():
 		buttons[k].button_pressed = k == t
+		_style_key(k, k == t)
+	if t != "" and tile_tab.has(t) and int(tile_tab[t]) != active_tab:
+		show_tab(int(tile_tab[t]))
 	if ghost_building:
 		ghost_building.queue_free()
 		ghost_building = null
@@ -608,10 +684,15 @@ func update_zone_overlay() -> void:
 ## Returns true when the event belongs to the active tool.
 func handle_input(event: InputEvent, ground_point: Callable) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
-		for spec in TOOLS:
-			if _hotkey_matches(event, spec[2]):
-				set_tool("" if tool == spec[0] else spec[0])
-				return true
+		# 1–6: a card of the active tab; Tab / Shift+Tab: next / previous tab.
+		if event.keycode == KEY_TAB:
+			show_tab(posmod(active_tab + (-1 if event.shift_pressed else 1), TABS.size()))
+			return true
+		var n = event.keycode - KEY_1
+		var tools: Array = TABS[active_tab][1]
+		if n >= 0 and n < tools.size():
+			set_tool("" if tool == tools[n] else tools[n])
+			return true
 		if tool == "":
 			return false
 		if event.keycode == KEY_ESCAPE:

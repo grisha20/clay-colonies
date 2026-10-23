@@ -108,7 +108,7 @@ func run() -> void:
 
 	# Hand the work over and back through the panel.
 	scene.ws_client.send_command({"type": "setSpeed", "value": 1})
-	scene.priority_panel.mode_button.pressed.emit()
+	scene.priority_panel.manual_seg.pressed.emit()
 	var t0 = Time.get_ticks_msec()
 	while bool(colony().get("autoManage", true)) and Time.get_ticks_msec() - t0 < 5000:
 		await process_frame
@@ -117,7 +117,7 @@ func run() -> void:
 	look(camp, 26.0)
 	await wait_seconds(0.5)
 	shot("mother_04_manual")
-	scene.priority_panel.mode_button.pressed.emit()
+	scene.priority_panel.mother_seg.pressed.emit()
 	t0 = Time.get_ticks_msec()
 	while not bool(colony().get("autoManage", false)) and Time.get_ticks_msec() - t0 < 5000:
 		await process_frame

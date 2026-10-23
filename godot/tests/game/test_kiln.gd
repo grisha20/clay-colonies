@@ -50,7 +50,7 @@ func run() -> void:
 	var ants = [{"id": "ant-1", "colonyId": "colony-1", "job": "forage", "fired": true}, {"id": "ant-2", "colonyId": "colony-1", "job": "forage"}]
 	panel.update_from_snapshot(snap({"antId": "ant-2", "progress": 5, "calledAt": 0, "paid": true}, ants), 0)
 	check("firing_row_shown", panel.firing_row.visible)
-	check("firing_row_text", panel.firing_label.text == "Обожжено 1 из 2 · печь горит", panel.firing_label.text)
+	check("firing_row_text", panel.firing_label.text == "Обжиг · 1 из 2 · печь горит", panel.firing_label.text)
 	var asked = []
 	panel.firing_requested.connect(func(v): asked.append(v))
 	panel.firing_button.pressed.emit()

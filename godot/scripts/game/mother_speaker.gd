@@ -33,6 +33,7 @@ var bubble: PanelContainer
 var bubble_style: StyleBoxFlat
 var painted_bubble: StyleBoxTexture
 var severity_icon: TextureRect
+var mother_icon: Texture2D
 const SEVERITY_DOT = {"danger": "ui_dot_red", "warn": "ui_dot_yellow", "info": "ui_dot_green"}
 var name_label: Label
 var text_label: Label
@@ -184,10 +185,13 @@ func _build_bubble(parent: Control) -> void:
 	box.add_child(head)
 	severity_icon = GameHud.icon_rect(null, 18)
 	severity_icon.visible = painted_bubble != null
+	# The mock-up shows her little head by the name; without it, a severity dot.
+	mother_icon = HudArt.tex("icon_mother")
 	head.add_child(severity_icon)
 	name_label = Label.new()
 	name_label.text = "Праматерь"
 	name_label.add_theme_font_size_override("font_size", 15)
+	GameHud.bold(name_label)
 	name_label.add_theme_color_override("font_color", GameHud.INK.lightened(0.25))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(name_label)
@@ -209,6 +213,8 @@ func _build_bubble(parent: Control) -> void:
 	line.add_child(text_label)
 	where_button = _small_button("где", func(): _show_where())
 	where_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	where_button.tooltip_text = "Показать, где это"
+	_pin_style(where_button)
 	line.add_child(where_button)
 
 
@@ -282,7 +288,7 @@ func _show_current() -> void:
 	text_label.text = str(a.get("text", ""))
 	bubble_style.border_color = SEVERITY_BORDER.get(str(a.get("severity", "info")), SEVERITY_BORDER.info)
 	if severity_icon.visible:
-		severity_icon.texture = HudArt.tex(SEVERITY_DOT.get(str(a.get("severity", "info")), "ui_dot_green"))
+		severity_icon.texture = mother_icon if mother_icon else HudArt.tex(SEVERITY_DOT.get(str(a.get("severity", "info")), "ui_dot_green"))
 	if tail:
 		(tail as BubbleTail).border = bubble_style.border_color
 		# The painted bubble has its own tail.
@@ -375,3 +381,29 @@ static func _painted_bubble() -> StyleBoxTexture:
 	sb.content_margin_right = 18
 	sb.content_margin_bottom = 34
 	return sb
+
+
+## «Где» as the mock-up's round orange pin button (art/hud btn_pin_*), or an
+## orange pill with the word when the pictures are missing.
+static func _pin_style(b: Button) -> void:
+	var normal = HudArt.box("btn_pin_normal", [0, 0, 0, 0])
+	if normal:
+		b.text = ""
+		b.custom_minimum_size = Vector2(34, 34)
+		b.add_theme_stylebox_override("normal", normal)
+		b.add_theme_stylebox_override("hover", HudArt.box("btn_pin_hover", [0, 0, 0, 0]))
+		b.add_theme_stylebox_override("pressed", HudArt.box("btn_pin_pressed", [0, 0, 0, 0]))
+		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		return
+	for state in ["normal", "hover", "pressed"]:
+		var sb = StyleBoxFlat.new()
+		sb.bg_color = Color(0.93, 0.52, 0.16).lightened(0.1 if state == "hover" else 0.0).darkened(0.1 if state == "pressed" else 0.0)
+		sb.set_corner_radius_all(14)
+		sb.content_margin_left = 10
+		sb.content_margin_right = 10
+		sb.content_margin_top = 3
+		sb.content_margin_bottom = 3
+		b.add_theme_stylebox_override(state, sb)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	for state in ["font_color", "font_hover_color", "font_pressed_color"]:
+		b.add_theme_color_override(state, Color.WHITE)

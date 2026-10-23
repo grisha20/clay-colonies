@@ -45,7 +45,7 @@ func run() -> void:
 	panel.update_from_snapshot(snap, 0)
 	# 7 residents, 1 scout, 6 assigned -> 0 free.
 	check("free_hands", panel.free_for_plus == 0, str(panel.free_for_plus))
-	check("header", panel.header.text == "Жителей 7 · свободно 0 · на еде 2", panel.header.text)
+	check("header", panel.header.text == "Жители 7 · Свободно 0", panel.header.text)
 	var texts = []
 	# Each job is a unit: its row and, below it, the "why not" note.
 	for unit in panel.rows_box.get_children():
