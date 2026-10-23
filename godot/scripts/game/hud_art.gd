@@ -77,7 +77,9 @@ static func ink_button_text(b: Button, ink: Color) -> void:
 ## Square icon button: painted frame plus a glyph. Keeps the text as the
 ## fallback when the glyph is missing.
 static func glyph_button(b: Button, glyph: String, size: int = 30) -> void:
-	skin_button(b, "btn_square", [6, 6, 6, 6])
+	# The stretched icon fills the content height, so the margins set its size.
+	var pad = maxi(6, int((b.custom_minimum_size.y - size) / 2.0))
+	skin_button(b, "btn_square", [pad, pad, pad, pad])
 	var g = tex(glyph)
 	if g == null:
 		return

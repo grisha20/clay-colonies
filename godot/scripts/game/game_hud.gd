@@ -33,6 +33,7 @@ var toast_label: Label
 var toast_until := 0
 const TOAST_INK = {"check": Color("fff8e9"), "warn": Color("fff0cf"), "danger": Color("fff0cf")}
 var tasks_count: Label
+var alert_kind := ""
 var tasks_done_ids: Dictionary = {}
 var tasks_seen := false
 var tooltip_panel: PanelContainer
@@ -288,7 +289,7 @@ func _build_top_bar() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(62, 62)
 		b.tooltip_text = spec[3]
-		HudArt.glyph_button(b, spec[2])
+		HudArt.glyph_button(b, spec[2], 34)
 		var v: int = spec[0]
 		b.pressed.connect(func(): speed_requested.emit(v))
 		row.add_child(b)
@@ -299,7 +300,7 @@ func _build_top_bar() -> void:
 	alarm_button.focus_mode = Control.FOCUS_NONE
 	alarm_button.custom_minimum_size = Vector2(62, 62)
 	alarm_button.tooltip_text = "Тревога: все жители бросают работу и бегут защищать лагерь"
-	HudArt.glyph_button(alarm_button, "glyph_alarm", 34)
+	HudArt.glyph_button(alarm_button, "glyph_alarm", 36)
 	alarm_button.pressed.connect(func(): alarm_requested.emit(not alarm_on))
 	row.add_child(alarm_button)
 	settings_button = Button.new()
@@ -308,7 +309,7 @@ func _build_top_bar() -> void:
 	settings_button.add_theme_font_size_override("font_size", 22)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	settings_button.tooltip_text = "Меню: сохранить, лагеря и озёра, сервер, управление"
-	HudArt.glyph_button(settings_button, "glyph_settings")
+	HudArt.glyph_button(settings_button, "glyph_settings", 34)
 	settings_button.pressed.connect(func(): settings_requested.emit())
 	row.add_child(settings_button)
 
@@ -427,6 +428,28 @@ func _build_alert() -> void:
 
 
 ## [panel, icon, label] of one toast pill.
+## Pill for a standing alert: the green toast picture for good news, a flat
+## amber or red pill for weather, alarm and danger.
+func _alert_style(kind: String) -> StyleBox:
+	if kind == "check":
+		var sb = HudArt.box("ui_toast", [18, 10, 22, 10])
+		if sb:
+			return sb
+	var flat = StyleBoxFlat.new()
+	flat.bg_color = {"check": Color("5c9a3c"), "warn": Color("e08a2c"), "danger": Color("c4452e")}[kind]
+	flat.border_color = flat.bg_color.darkened(0.25)
+	flat.set_border_width_all(2)
+	flat.set_corner_radius_all(22)
+	flat.shadow_color = Color(0.27, 0.16, 0.06, 0.25)
+	flat.shadow_size = 6
+	flat.shadow_offset = Vector2(0, 3)
+	flat.content_margin_left = 18
+	flat.content_margin_right = 22
+	flat.content_margin_top = 10
+	flat.content_margin_bottom = 10
+	return flat
+
+
 func _toast_panel(node_name: String) -> Array:
 	var panel = PanelContainer.new()
 	panel.name = node_name
@@ -468,12 +491,17 @@ func _process(_delta: float) -> void:
 
 
 func _build_tooltip() -> void:
+	# Own canvas layer: the tooltip must stay above every panel («Работы», build bar).
+	var layer = CanvasLayer.new()
+	layer.name = "TooltipLayer"
+	layer.layer = 50
+	add_child(layer)
 	tooltip_panel = PanelContainer.new()
 	tooltip_panel.name = "WorldTooltip"
 	tooltip_panel.add_theme_stylebox_override("panel", parchment([12, 8, 12, 8], "ui_tooltip"))
 	tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tooltip_panel.visible = false
-	add_child(tooltip_panel)
+	layer.add_child(tooltip_panel)
 	tooltip_label = _label("", 16)
 	tooltip_panel.add_child(tooltip_label)
 
@@ -624,6 +652,9 @@ func _task_row(o: Dictionary) -> Control:
 	if box_pic:
 		var pic = icon_rect(box_pic, 28)
 		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		if not done:
+			# The empty box is pale cream on cream; darken it to be seen.
+			pic.modulate = Color(0.88, 0.82, 0.74)
 		line.add_child(pic)
 	else:
 		text = ("✓ " if done else "○ ") + text
@@ -711,8 +742,14 @@ func _update_alert(session: Dictionary, weather: Variant, tick: int, colony: Dic
 	elif typeof(dom) == TYPE_DICTIONARY:
 		pic = "task_territory"
 	alert_icon.texture = HudArt.tex(pic) if pic != "" else null
+	# The green pill is for good news only: danger is red, weather and alarm amber.
 	var danger = pic in ["alert_spider", "alert_raid", "alert_defeat", "alert_big_rain"]
-	alert_label.add_theme_color_override("font_color", TOAST_INK.danger if danger else INK)
+	var good = pic in ["alert_victory"] or (pic == "task_territory" and lines.size() > 0 and lines[0].begins_with("Мы держим"))
+	var kind = "danger" if danger else ("check" if good else "warn")
+	if kind != alert_kind:
+		alert_kind = kind
+		alert_panel.add_theme_stylebox_override("panel", _alert_style(kind))
+	alert_label.add_theme_color_override("font_color", TOAST_INK[kind])
 	alert_icon.visible = alert_icon.texture != null
 	alert_label.text = "\n".join(lines)
 	alert_panel.visible = not lines.is_empty()
