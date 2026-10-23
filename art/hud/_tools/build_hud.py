@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw, ImageEnhance
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 import raster_pipeline as raster
+import revision_shapes
 from build_stage0 import ROOT, font, nine_slice, make_board, paste_center, clean_alpha
 
 CATALOG = ROOT/'_tools'/'catalog.json'
@@ -27,6 +28,26 @@ def recolor(im, color=None, brightness=1):
         data[interior,:3]=color
     elif brightness!=1:
         data[interior,:3]=np.clip(data[interior,:3].astype(float)*brightness,0,255).astype('uint8')
+    return Image.fromarray(data)
+
+
+def save_source(image,path,spec):
+    image=image.copy()
+    limit=spec.get('source_max')
+    if limit:
+        image.thumbnail((limit,limit),Image.Resampling.LANCZOS)
+        image=clean_alpha(image)
+    if path.is_file():
+        with Image.open(path) as previous:
+            if previous.mode==image.mode and previous.size==image.size and previous.tobytes()==image.tobytes():
+                return
+    image.save(path,optimize=bool(limit))
+
+
+def ink_details(image):
+    data=np.array(image)
+    dark=(data[:,:,3]>0)&np.all(data[:,:,:3]<=(120,95,72),axis=2)
+    data[dark,:3]=raster.INK
     return Image.fromarray(data)
 
 
@@ -69,23 +90,34 @@ def build_one(name, spec, images):
         data=np.clip(np.array(color)[None,None,:]*light[:,:,None],0,255).astype('uint8')
         texture=Image.fromarray(data)
         master=raster.paint_contour(texture,np.array(mask)>0,0,(.6 if shape=='bar' else 1.5)*k)
-        master.save(source_path)
+        save_source(master,source_path,spec)
         result=raster.finish(master,size)
         if shape=='bar':
             for x in range(4,size[0]-4):
                 for y in range(size[1]):
                     result.putpixel((x,y),result.getpixel((size[0]//2,y)))
     elif mode=='cursor_forbid':
-        result=images['cursor_default'].copy()
-        badge=images['glyph_forbid'].resize((28,28),Image.Resampling.BOX)
-        result.alpha_composite(badge,(32,32))
-        result=raster.finish(result,size)
-        result.resize((256,256),Image.Resampling.NEAREST).save(source_path)
+        master=revision_shapes.forbid_cursor(images['cursor_default'])
+        save_source(master,source_path,spec)
+        result=raster.finish(master,size)
+    elif mode in ('alarm_on','raid_alert'):
+        source=Image.open(ROOT/'_source'/f"{spec['base']}.png")
+        master=revision_shapes.alarm_on(source) if mode=='alarm_on' else revision_shapes.raid_alert(source)
+        save_source(master,source_path,spec)
+        result=raster.icon(master,size,margin=4,outer=0,inner=0) if mode=='alarm_on' else raster.finish(master,size)
+        if spec.get('ink_details'):
+            result=ink_details(result)
     elif mode=='light':
         # Exactly matching silhouette: color changes only inside the existing ink.
         result=recolor(images[spec['base']],raster.PAPER)
         master=Image.open(ROOT/'_source'/f"{spec['base']}.png")
-        raster.icon(master,(512,512),fill=raster.PAPER).save(source_path)
+        if spec.get('ink_details'):
+            master=raster.texture_mask(master)
+            master=ink_details(master)
+            master=recolor(master,raster.PAPER)
+        else:
+            master=raster.icon(master,(512,512),fill=raster.PAPER)
+        save_source(master,source_path,spec)
     elif mode=='state':
         result=images[spec['base']].copy()
         state=spec['state']
@@ -104,13 +136,14 @@ def build_one(name, spec, images):
                 data[top,:3]=(data[top,:3]*.70).astype('uint8')
                 data[bottom,:3]=np.clip(data[bottom,:3]*1.12,0,255).astype('uint8')
             result=Image.fromarray(data)
-        result.resize((size[0]*4,size[1]*4),Image.Resampling.NEAREST).save(source_path)
+        save_source(result.resize((size[0]*4,size[1]*4),Image.Resampling.NEAREST),source_path,spec)
     elif mode=='reuse':
         base=Image.open(ROOT/'_source'/f"{spec['base']}.png")
         if spec.get('rotate'):
             base=base.rotate(spec['rotate'],expand=True)
-        result=raster.icon(base,size,fill=tuple(spec['fill']) if 'fill' in spec else None)
-        base.save(source_path)
+        result=raster.icon(base,size,fill=tuple(spec['fill']) if 'fill' in spec else None,
+                           margin=spec.get('margin'),outer=spec.get('outer'),inner=spec.get('inner'))
+        save_source(base,source_path,spec)
     elif mode=='composite':
         master=Image.new('RGBA',(size[0]*4,size[1]*4))
         for part in spec['parts']:
@@ -132,16 +165,17 @@ def build_one(name, spec, images):
             x,y,w,h=part['box']
             if part.get('stretch'):
                 base=raster.texture_mask(base).resize((w*8,h*8),Image.Resampling.LANCZOS)
-            piece=raster.icon(base,(w*4,h*4),fill=tuple(part['fill']) if 'fill' in part else None,margin=part.get('margin'))
+            settings={'margin':0,'outer':0,'inner':0} if spec.get('tight_parts') else {'margin':part.get('margin')}
+            piece=raster.icon(base,(w*4,h*4),fill=tuple(part['fill']) if 'fill' in part else None,**settings)
             master.alpha_composite(piece,(x*4,y*4))
-        master.save(source_path)
-        result=raster.icon(master,size,margin=4,outer=0,inner=0)
+        save_source(master,source_path,spec)
+        result=raster.icon(master,size,margin=spec.get('margin',4),outer=spec.get('outer',0),inner=spec.get('inner',0))
     else:
         if not source_path.is_file() and spec.get('base'):
-            Image.open(ROOT/'_source'/f"{spec['base']}.png").save(source_path)
+            save_source(Image.open(ROOT/'_source'/f"{spec['base']}.png"),source_path,spec)
         source=Image.open(source_path).convert('RGBA')
         source=clean_alpha(source)
-        source.save(source_path)
+        save_source(source,source_path,spec)
         if spec.get('brightness'):
             a=source.getchannel('A')
             source=ImageEnhance.Brightness(source).enhance(spec['brightness'])
@@ -177,6 +211,8 @@ def build_one(name, spec, images):
                 result=Image.fromarray(data)
         if 'fill' in spec:
             result=recolor(result,tuple(spec['fill']))
+        if spec.get('ink_details'):
+            result=ink_details(result)
     if spec.get('auto_hotspot')=='tip':
         ys,xs=np.where(np.array(result.getchannel('A'))>=128)
         scores=xs+ys
@@ -226,6 +262,10 @@ def make_sheets(images,catalog,stage):
                 d.rectangle((x+154,y+232,x+185,y+263),fill='#C0392B')
                 paste_center(sheet,small,(x+155,y+233,30,30))
         sheet.save(ROOT/'_preview'/f'sheet_{group}.png')
+    make_index(images,catalog,stage)
+
+
+def make_index(images,catalog,stage):
     # A compact index for the current stage without hiding per-group exact-size sheets.
     names=[n for n in images if catalog[n]['stage']==stage]
     if stage==8:

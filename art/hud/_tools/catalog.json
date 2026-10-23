@@ -369,8 +369,11 @@
     ],
     "group": "glyph",
     "title": "Тревога",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One short thick curved primitive animal-horn trumpet, ochre brown, broad bell opening facing upper-right and short mouthpiece lower-left, bound at its middle with simple grass fibre. No sound waves, no hand, no frame.",
-    "where": "Правая верхняя панель — управление временем / настройками / тревогой"
+    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One large primitive blowing-horn musical instrument, NOT a tooth or tusk. Bold almost C-shaped curved ochre horn with a SHORT BLUNT tubular mouthpiece at lower-left, thick middle, and a very broad flared trumpet bell pointing upper-right. The bell is seen as a prominent dark oval hollow opening inside a thick ochre rim; dark opening must remain visible when recolored monochrome. Compact nearly square silhouette, body height about 75% of its width, not a long skinny crescent. Plain horn, no straps or dangling things, no sound waves.",
+    "where": "Правая верхняя панель — управление временем / настройками / тревогой",
+    "source_max": 1024,
+    "ink_details": true,
+    "mode": "icon"
   },
   "glyph_alarm_on": {
     "stage": 2,
@@ -380,8 +383,12 @@
     ],
     "group": "glyph",
     "title": "Тревога включена",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One short thick curved primitive animal-horn trumpet, ochre brown, broad bell opening facing upper-right and mouthpiece lower-left, bound at its middle with grass fibre. Two thick short curved sound-wave arcs just beyond the bell. No glow or hand or frame.",
-    "where": "Правая верхняя панель — управление временем / настройками / тревогой"
+    "prompt": "Offline derivative of generated glyph_alarm: same large horn with two separated curved sound-wave arcs. revision_shapes.alarm_on.",
+    "where": "Правая верхняя панель — управление временем / настройками / тревогой",
+    "source_max": 1024,
+    "ink_details": true,
+    "mode": "alarm_on",
+    "base": "glyph_alarm"
   },
   "ui_panel": {
     "stage": 2,
@@ -1169,7 +1176,9 @@
     "mode": "light",
     "base": "glyph_alarm",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_alarm: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from glyph_alarm: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
+    "source_max": 1024,
+    "ink_details": true
   },
   "glyph_alarm_on_light": {
     "size": [
@@ -1182,7 +1191,9 @@
     "mode": "light",
     "base": "glyph_alarm_on",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_alarm_on: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from glyph_alarm_on: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
+    "source_max": 1024,
+    "ink_details": true
   },
   "glyph_plus_light": {
     "size": [
@@ -1553,8 +1564,14 @@
     ],
     "group": "act",
     "title": "Спит",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. The rounded orange terracotta head of a Clayfolk resident, tiny ears, tiny round clay nose, eyes CLOSED as two small curved dark strokes, relaxed faint smile, front view. No letters, sleep symbols, moon or hat.",
-    "where": "Карточка выбранного жителя — текущее занятие"
+    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A relaxed rounded orange Clayfolk resident HEAD on the LOWER LEFT, front view, eyes firmly CLOSED as TWO clear dark curved eyelids, sleepy expression. Above and to the RIGHT is one LARGE warm parchment/ochre CRESCENT MOON, clearly separate from the head. Head diameter about 65% of combined icon width, moon about 45% of combined height. NO question mark, no Z or letters, no hat, no pillow.",
+    "where": "Карточка выбранного жителя — текущее занятие",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true,
+    "mode": "icon"
   },
   "glyph_deselect": {
     "size": [
@@ -1584,9 +1601,10 @@
     "title": "Следующий житель",
     "stage": 4,
     "where": "Карточка выбранного жителя — кнопки действий",
-    "prompt": "Offline derivative of generated glyph_play; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "glyph_play"
+    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A large friendly Clayfolk resident HEAD on the LEFT, front view, tiny ears, two clearly OPEN dark round eyes and small simple smile, same character as the reference. Beside and slightly overlapping lower-right of the head is one short thick RIGHT-POINTING ARROW with a RECTANGULAR SHAFT and triangular arrowhead. Head about two thirds of total width, arrow about half total width. NOT an isolated triangle. Keep eyes and smile in solid dark-brown ink, no tiny detail.",
+    "mode": "icon",
+    "source_max": 1024,
+    "ink_details": true
   },
   "glyph_gather": {
     "size": [
@@ -1991,9 +2009,13 @@
     "title": "Бездействует",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated mood_ok; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "mood_ok"
+    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A friendly rounded orange Clayfolk resident HEAD on the LOWER LEFT, front view, eyes clearly OPEN as TWO LARGE dark circular dots; relaxed awake neutral expression. Above and to the RIGHT is one LARGE thick ochre QUESTION MARK pictogram, with a clearly separated dot, signifying idle/unsure. Only this one question-mark symbol is allowed, NO other writing. Head diameter about 65% of combined icon width, question mark about 45% of combined height, fully visible separate silhouette.",
+    "mode": "icon",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_walk": {
     "size": [
@@ -2006,7 +2028,12 @@
     "where": "Карточка выбранного жителя — текущее занятие",
     "prompt": "Offline derivative of generated glyph_follow; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "glyph_follow"
+    "base": "glyph_follow",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_guard": {
     "size": [
@@ -2019,7 +2046,12 @@
     "where": "Карточка выбранного жителя — текущее занятие",
     "prompt": "Offline derivative of generated tool_spear; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "tool_spear"
+    "base": "tool_spear",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_carry": {
     "size": [
@@ -2030,29 +2062,13 @@
     "title": "Несёт груз",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "glyph_hand",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_wood",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ]
+    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One small orange Clayfolk RESIDENT in three-quarter SIDE VIEW facing LEFT, oversized rounded clay head with two tiny dark eyes, simple plump orange clay torso and two short legs. A very LARGE obvious straw WOVEN BASKET is strapped to its BACK on the RIGHT, about as big as its torso, filled with just two chunky sticks protruding. Thick basket rim and a few broad woven bands; simple readable backpack silhouette. Resident carries basket ON BACK, not in hands. No hand-only icon, no ground.",
+    "mode": "icon",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_chop": {
     "size": [
@@ -2085,7 +2101,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_dig": {
     "size": [
@@ -2118,7 +2139,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_mine": {
     "size": [
@@ -2151,7 +2177,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_build": {
     "size": [
@@ -2184,7 +2215,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_fish": {
     "size": [
@@ -2217,7 +2253,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_hunt": {
     "size": [
@@ -2250,7 +2291,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_eat": {
     "size": [
@@ -2283,7 +2329,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_flee": {
     "size": [
@@ -2294,29 +2345,13 @@
     "title": "Убегает",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "glyph_follow",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "glyph_play",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ]
+    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One clearly RUNNING little orange Clayfolk RESIDENT in side view facing RIGHT: oversized round clay head, tiny ear and open eye, simple plump clay torso, two arms bent and two legs visibly stretched in opposite directions in a sprint. Three SHORT THICK horizontal ochre SPEED LINES behind the body on the LEFT, with clear air gaps. Compact running silhouette; focus on readable arms/legs and motion, no equipment or triangle, no question mark, no floor.",
+    "mode": "icon",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_wounded": {
     "size": [
@@ -2349,7 +2384,12 @@
         ],
         "flip": false
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "act_fight": {
     "size": [
@@ -2382,7 +2422,12 @@
         ],
         "flip": true
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "card_resident_panel": {
     "size": [
@@ -2472,7 +2517,9 @@
     "mode": "light",
     "base": "glyph_next_resident",
     "where": "Карточка выбранного жителя — кнопки действий · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_next_resident: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from glyph_next_resident: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
+    "source_max": 1024,
+    "ink_details": true
   },
   "glyph_gather_light": {
     "size": [
@@ -2588,7 +2635,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated res_clay; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "res_clay"
+    "base": "res_clay",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_food": {
     "size": [
@@ -2601,7 +2653,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated res_food; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "res_food"
+    "base": "res_food",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_stone": {
     "size": [
@@ -2614,7 +2671,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated res_stone; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "res_stone"
+    "base": "res_stone",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_wood": {
     "size": [
@@ -2627,7 +2689,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated res_wood; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "res_wood"
+    "base": "res_wood",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_build_hut": {
     "size": [
@@ -2640,7 +2707,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated build_hut; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "build_hut"
+    "base": "build_hut",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_population": {
     "size": [
@@ -2653,7 +2725,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated res_people; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "res_people"
+    "base": "res_people",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_territory": {
     "size": [
@@ -2666,7 +2743,12 @@
     "where": "Левая панель «Задачи»",
     "prompt": "Offline derivative of generated build_totem; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "build_totem"
+    "base": "build_totem",
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_idol_ritual": {
     "size": [
@@ -2698,7 +2780,12 @@
           32
         ]
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "task_survive_raid": {
     "size": [
@@ -2730,7 +2817,12 @@
           32
         ]
       }
-    ]
+    ],
+    "source_max": 1024,
+    "margin": 4,
+    "outer": 0,
+    "inner": 1,
+    "tight_parts": true
   },
   "alert_raid": {
     "size": [
@@ -2741,33 +2833,10 @@
     "title": "Набег",
     "stage": 5,
     "where": "Уведомления и тревоги",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "alert_spider",
-        "box": [
-          0,
-          0,
-          64,
-          64
-        ]
-      },
-      {
-        "name": "glyph_play",
-        "box": [
-          21,
-          21,
-          42,
-          42
-        ],
-        "fill": [
-          192,
-          57,
-          43
-        ]
-      }
-    ]
+    "prompt": "Offline derivative of generated alert_spider: large spider with a separate bright red exclamation mark; no play triangle. revision_shapes.raid_alert.",
+    "mode": "raid_alert",
+    "source_max": 1024,
+    "base": "alert_spider"
   },
   "alert_clouds": {
     "size": [
@@ -2806,7 +2875,8 @@
     "where": "Уведомления и тревоги",
     "prompt": "Offline derivative of generated glyph_alarm_on; reuse; no text or external assets.",
     "mode": "reuse",
-    "base": "glyph_alarm_on"
+    "base": "glyph_alarm_on",
+    "source_max": 1024
   },
   "alert_victory": {
     "size": [
@@ -3332,13 +3402,14 @@
     "title": "Сюда нельзя",
     "stage": 7,
     "where": "Указатель мыши",
-    "prompt": "Offline derivative of generated cursor_default; cursor_forbid; no text or external assets.",
+    "prompt": "Offline derivative of cursor_default: 32 px bright red ban circle and diagonal slash on parchment disc; hotspot unchanged (4,4). revision_shapes.forbid_cursor.",
     "mode": "cursor_forbid",
     "base": "cursor_default",
     "hotspot": [
       4,
       4
-    ]
+    ],
+    "source_max": 1024
   },
   "cursor_harvest": {
     "size": [

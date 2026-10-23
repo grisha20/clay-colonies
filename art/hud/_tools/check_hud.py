@@ -218,6 +218,19 @@ def main():
                     require(len(a)>0 and len(z)>0 and max(abs(int(a[0])-int(z[0])),abs(int(a[-1])-int(z[-1])))<=1,
                             'Speech bubble silhouette steps at slice join')
     out('9. 9-slice centers / corners / transparent frames / bubble joins: '+('PASS' if before==len(failures) else 'FAIL'))
+    before=len(failures)
+    for name in top:
+        spec=catalog.get(name,{})
+        if spec.get('source_max'):
+            source=images.get('_source/'+name+'.png')
+            require(source is not None and max(source.size)<=spec['source_max'],
+                    'Revised source exceeds size cap: '+name)
+        if name.startswith(('act_','task_')) and spec.get('source_max'):
+            im=images[name+'.png']
+            bbox=im.getbbox()
+            extent=max(bbox[2]-bbox[0],bbox[3]-bbox[1]) if bbox else 0
+            require(.82<=extent/max(im.size)<=.86,'Act/task subject does not occupy about 85%: '+name)
+    out('10. Revised sources <=1024 px / act-task scale: '+('PASS' if before==len(failures) else 'FAIL'))
     for name in top:
         require((ROOT/'_source'/f'{name}.png').is_file(),'Missing large source: '+name)
         require((ROOT/'_preview'/f'{name}_24.png').is_file(),'Missing small preview: '+name)

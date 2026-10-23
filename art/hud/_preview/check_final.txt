@@ -1,4 +1,4 @@
-SCOPE: stage all; 187 game assets; 595 PNG manifest rows.
+SCOPE: stage all; 187 game assets; 596 PNG manifest rows.
 1. Inventory: PASS
 2. Dimensions / PNG RGBA / metadata: PASS
 3. Transparent corners: PASS
@@ -8,5 +8,6 @@ SCOPE: stage all; 187 game assets; 595 PNG manifest rows.
 7. State families: PASS
 8. Crisp #4D331F contour / 1px boundary / light glyphs: PASS
 9. 9-slice centers / corners / transparent frames / bubble joins: PASS
+10. Revised sources <=1024 px / act-task scale: PASS
 Protected files: 49 SHA-256 comparisons.
 RESULT: PASS — 0 errors.
