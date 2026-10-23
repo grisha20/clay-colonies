@@ -147,7 +147,7 @@ def main():
                         x,y = map(int,row['hotspot'].split(','))
                         valid = 0<=x<im.width and 0<=y<im.height
                         require(valid,'Hotspot outside canvas: '+file)
-                        if valid:
+                        if valid and name not in {'cursor_grab','cursor_rotate','cursor_wait'}:
                             require(alpha.getpixel((x,y))>0,'Hotspot on transparent pixel: '+file)
                         if name=='cursor_default':
                             require(x<=4 and y<=4,'Arrow tip too far from upper left: '+file)

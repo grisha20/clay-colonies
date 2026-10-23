@@ -71,6 +71,12 @@ def build_one(name, spec, images):
         master=raster.paint_contour(texture,np.array(mask)>0,0,(.6 if shape=='bar' else 1.5)*k)
         master.save(source_path)
         result=raster.finish(master,size)
+    elif mode=='cursor_forbid':
+        result=images['cursor_default'].copy()
+        badge=images['glyph_forbid'].resize((28,28),Image.Resampling.BOX)
+        result.alpha_composite(badge,(32,32))
+        result=raster.finish(result,size)
+        result.resize((256,256),Image.Resampling.NEAREST).save(source_path)
     elif mode=='light':
         # Exactly matching silhouette: color changes only inside the existing ink.
         result=recolor(images[spec['base']],raster.PAPER)
@@ -97,6 +103,8 @@ def build_one(name, spec, images):
         result.resize((size[0]*4,size[1]*4),Image.Resampling.NEAREST).save(source_path)
     elif mode=='reuse':
         base=Image.open(ROOT/'_source'/f"{spec['base']}.png")
+        if spec.get('rotate'):
+            base=base.rotate(spec['rotate'],expand=True)
         result=raster.icon(base,size,fill=tuple(spec['fill']) if 'fill' in spec else None)
         base.save(source_path)
     elif mode=='composite':
@@ -166,6 +174,11 @@ def build_one(name, spec, images):
                 ImageDraw.Draw(result).rectangle((l,t,size[0]-r-1,size[1]-b-1),fill=(*raster.PAPER,255))
         if 'fill' in spec:
             result=recolor(result,tuple(spec['fill']))
+    if spec.get('auto_hotspot')=='tip':
+        ys,xs=np.where(np.array(result.getchannel('A'))>=128)
+        scores=xs+ys
+        p=int(np.argmin(scores))
+        spec['hotspot']=[int(xs[p]),int(ys[p])]
     result.save(ROOT/f'{name}.png')
     return result
 
@@ -201,6 +214,8 @@ def make_sheets(images,catalog,stage):
             small=raster.finish(small,small.size)
             small.save(ROOT/'_preview'/f'{name}_24.png')
             d.text((x+12,y+238),'24 px',font=font(13),fill=INK)
+            if 'hotspot' in catalog[name]:
+                d.text((x+198,y+238),'hotspot: '+','.join(map(str,catalog[name]['hotspot'])),font=font(13),fill=INK)
             paste_center(sheet,small,(x+64,y+233,30,30))
             d.rectangle((x+104,y+232,x+135,y+263),fill=DARK)
             paste_center(sheet,small,(x+105,y+233,30,30))
@@ -281,6 +296,7 @@ def main():
     for name,spec in catalog.items():
         if spec['stage']<=args.stage:
             images[name]=build_one(name,spec,images)
+    CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     make_board(images)
     make_sheets(images,catalog,args.stage)
     write_manifest(catalog)

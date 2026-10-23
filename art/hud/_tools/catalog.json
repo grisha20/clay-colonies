@@ -3244,5 +3244,173 @@
       24,
       24
     ]
+  },
+  "cursor_hover": {
+    "stage": 7,
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Над объектом",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky orange terracotta cursor hand, index finger extended toward the UPPER LEFT, other three fingers curled into the broad palm, thumb on the side. Hand only, no arrow, no backing. The fingertip is the click point. Thick substantial fingertip, not a thin needle.",
+    "where": "HUD Clayfolk · cursor",
+    "auto_hotspot": "tip",
+    "hotspot": [
+      9,
+      6
+    ]
+  },
+  "cursor_grab": {
+    "stage": 7,
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Перетаскивание камеры",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One orange terracotta clenched hand/fist viewed from its back, four short curled fingers and a thumb wrapped around them. Broad compact silhouette, no arm, no cuff, no frame.",
+    "where": "HUD Clayfolk · cursor",
+    "hotspot": [
+      32,
+      32
+    ]
+  },
+  "cursor_rotate": {
+    "stage": 7,
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Поворот камеры",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One thick almost complete C-shaped circular arrow turning clockwise, sculpted from orange terracotta clay. Broad arrowhead at top-right, open gap at upper-right. Clear rotation symbol, no central object or backing.",
+    "where": "HUD Clayfolk · cursor",
+    "hotspot": [
+      32,
+      32
+    ]
+  },
+  "cursor_build": {
+    "stage": 7,
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Размещение постройки",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. A single small primitive wooden trowel/peg tool used as a mouse cursor: a broad pointed terracotta blade at UPPER LEFT, short thick wooden handle towards LOWER RIGHT with a simple grass-fibre binding. Sharp substantial blade point, not a thin needle. Entire tool visible, no metal, no hand or arrow.",
+    "where": "Указатель мыши",
+    "auto_hotspot": "tip",
+    "hotspot": [
+      7,
+      6
+    ]
+  },
+  "cursor_brush": {
+    "stage": 7,
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Кисть зоны",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. A single short thick pointed wooden stylus used to draw a zone in sand, diagonal from UPPER LEFT point to LOWER RIGHT handle. Beside the point one short broad curved brown stroke, like a drawn line in earth, but no ground plane. Substantial sharp wooden point, not a thin needle. No hand or arrow.",
+    "where": "Указатель мыши",
+    "auto_hotspot": "tip",
+    "hotspot": [
+      7,
+      7
+    ]
+  },
+  "cursor_forbid": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Сюда нельзя",
+    "stage": 7,
+    "where": "Указатель мыши",
+    "prompt": "Offline derivative of generated cursor_default; cursor_forbid; no text or external assets.",
+    "mode": "cursor_forbid",
+    "base": "cursor_default",
+    "hotspot": [
+      4,
+      4
+    ]
+  },
+  "cursor_harvest": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Зона добычи",
+    "stage": 7,
+    "where": "Указатель мыши",
+    "prompt": "Offline derivative of generated tool_pickaxe; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "tool_pickaxe",
+    "auto_hotspot": "tip",
+    "hotspot": [
+      10,
+      6
+    ]
+  },
+  "cursor_attack": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Атака",
+    "stage": 7,
+    "where": "Указатель мыши",
+    "prompt": "Offline derivative of generated tool_spear; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "tool_spear",
+    "rotate": 90,
+    "auto_hotspot": "tip",
+    "hotspot": [
+      7,
+      6
+    ]
+  },
+  "cursor_wait": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "cursor",
+    "title": "Ожидание",
+    "stage": 7,
+    "where": "Указатель мыши",
+    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "cursor_rotate",
+        "box": [
+          0,
+          0,
+          64,
+          64
+        ]
+      },
+      {
+        "name": "res_clay",
+        "box": [
+          17,
+          17,
+          30,
+          30
+        ]
+      }
+    ],
+    "hotspot": [
+      32,
+      32
+    ]
   }
 }
