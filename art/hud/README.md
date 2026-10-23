@@ -55,7 +55,7 @@ py -3.11 art/hud/_tools/check_hud.py --edition v2 --stage 0 --report art/hud/_pr
 
 ## Как воспроизвести или перерисовать
 
-Нужны Python 3.11, Pillow, NumPy и SciPy. Служебные подписи используют установленный Arial; в игровых иконках текста нет. Из корня репозитория:
+Нужны Python 3.11, Pillow, NumPy, SciPy и OpenCV (маски объектов референса). Служебные подписи используют установленный Arial; в игровых иконках текста нет. Из корня репозитория:
 
 ```powershell
 $env:PYTHONIOENCODING='utf-8'

@@ -113,7 +113,7 @@ def main():
                 e=imported[name];spec['prompt']=e['prompt'];source=clean_source(Image.open(e['generated_path']))
             elif spec.get('v2_ref'):
                 source=reference_cut(name)
-            elif spec.get('v2_shape') or name.startswith(('ui_checkbox_','ui_toast_')) or name=='ui_check':
+            elif spec.get('v2_shape') or name.startswith(('ui_checkbox_','ui_toast_')) or name in ('ui_check','time_dawn','time_dusk'):
                 source=render_exact(Image.new('RGBA',tuple(spec['size'])),tuple(spec['size']),spec)
                 source=source.resize((min(1024,source.width*4),min(1024,source.height*4)),Image.Resampling.LANCZOS)
             elif path.is_file():

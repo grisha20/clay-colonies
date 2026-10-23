@@ -2,6 +2,7 @@
 import io,json,math,sys
 from pathlib import Path
 import numpy as np
+import cv2
 from PIL import Image,ImageDraw,ImageFilter,ImageEnhance
 from scipy.ndimage import distance_transform_edt,binary_fill_holes,label
 from hud_v2 import clean_source,sprite,V2_REQUIRED,V2_STAGES
@@ -14,8 +15,8 @@ CREAM=(255,244,224)
 ORANGE=(252,180,69)
 # Coordinates are native pixels of our generated 1672x941 reference.
 CROPS={
-'res_clay':(489,23,526,57),'res_special':(596,22,635,57),'res_food':(685,21,725,57),
-'res_wood':(767,21,806,57),'res_stone':(842,22,884,57),'res_people':(949,22,986,59),
+'res_clay':(489,23,526,57),'res_special':(596,22,635,57),'res_food':(670,21,709,59),
+'res_wood':(767,21,806,57),'res_stone':(858,21,900,59),'res_people':(949,22,986,59),
 'job_clay':(1358,214,1399,248),'job_wood':(1357,254,1399,289),'job_stone':(1356,290,1399,328),
 'job_build':(1354,329,1402,369),'job_guard':(1356,368,1399,408),'job_fish':(1356,408,1399,449),'job_hunt':(1357,448,1399,490),
 'build_hut':(461,787,548,863),'build_house':(589,787,688,864),'build_storage':(719,791,823,863),
@@ -23,6 +24,7 @@ CROPS={
 'tab_settlement':(573,741,599,770),'tab_defense':(785,742,812,773),'tab_land':(979,740,1007,775),
 'icon_works':(1358,91,1389,128),'icon_person':(1357,129,1383,154),'icon_kiln':(1358,496,1410,555),
 'icon_mother':(1236,656,1260,680),
+'time_day':(1054,15,1108,65),'weather_clear':(1054,15,1108,65),
 }
 
 
@@ -36,8 +38,21 @@ def reference_cut(name):
     corners=np.concatenate([a[:2,:2].reshape(-1,3),a[:2,-2:].reshape(-1,3),a[-2:,:2].reshape(-1,3),a[-2:,-2:].reshape(-1,3)])
     bg=np.median(corners,axis=0)
     diff=np.max(np.abs(a-bg),axis=2)
-    alpha=np.clip((diff-10)/24,0,1)
-    # Reject nearby card-edge lines and the hotkey; retain the intended object.
+    gc=np.where(diff>20,cv2.GC_PR_FGD,cv2.GC_PR_BGD).astype('uint8')
+    gc[diff<9]=cv2.GC_BGD
+    gc[diff>max(42,float(np.percentile(diff,70)))]=cv2.GC_FGD
+    gc[0]=0;gc[-1]=0;gc[:,0]=0;gc[:,-1]=0
+    cv2.setRNGSeed(0)
+    cv2.grabCut(a.astype('uint8'),gc,None,np.zeros((1,65)),np.zeros((1,65)),5,cv2.GC_INIT_WITH_MASK)
+    binary=(gc==cv2.GC_FGD)|(gc==cv2.GC_PR_FGD)
+    core=cv2.erode(binary.astype('uint8'),np.ones((3,3),'uint8')).astype(bool)
+    if not core.any():core=binary
+    nearest=distance_transform_edt(~core,return_distances=False,return_indices=True)
+    fg=a[nearest[0],nearest[1]]
+    delta=fg-bg[None,None,:]
+    alpha=np.clip(np.sum((a-bg)*delta,axis=2)/np.maximum(1,np.sum(delta*delta,axis=2)),0,1)
+    outer=cv2.dilate(binary.astype('uint8'),np.ones((3,3),'uint8')).astype(bool)
+    alpha[~outer]=0;alpha[core]=1
     alpha[:1]=0;alpha[-1:]=0;alpha[:,:1]=0;alpha[:,-1:]=0
     parts,n=label(alpha>.18)
     sizes=np.bincount(parts.ravel());keep=np.flatnonzero(sizes>=max(3,h*w*.002))
@@ -50,8 +65,7 @@ def reference_cut(name):
         if hs[p]<=10:alpha[hp==p]=1
     out=np.zeros((h,w,4),dtype='uint8')
     # Remove the cream matte from antialiased silhouette pixels.
-    aa=np.maximum(alpha,.08)[:,:,None]
-    rgb=np.clip((a-bg[None,None,:]*(1-alpha[:,:,None]))/aa,0,255)
+    rgb=np.where(core[:,:,None],a,fg)
     out[:,:,:3]=rgb.astype('uint8');out[:,:,3]=np.rint(alpha*255).astype('uint8')
     out[out[:,:,3]<3]=0
     im=Image.fromarray(out)
@@ -233,10 +247,21 @@ def symbol(size,name):
         d.ellipse((17*K,12*K,31*K,26*K),fill=paper);poly([(17,21),(24,35),(31,21)],paper)
         d.ellipse((21*K,16*K,27*K,22*K),fill=(207,101,44,255))
     elif name=='ui_tab_underline':rr((4,3,124,6),(190,88,28,255),2)
+    elif name in ('time_dawn','time_dusk'):
+        col=(245,172,64,255) if name.endswith('dawn') else (221,111,46,255)
+        d.ellipse((16*K,19*K,48*K,51*K),fill=col)
+        for angle in range(180,361,45):
+            t=math.radians(angle)
+            line([(32+21*math.cos(t),35+21*math.sin(t)),(32+26*math.cos(t),35+26*math.sin(t))],col,3)
+        d.rectangle((0,45*K,W,H),fill=(0,0,0,0))
+        line([(9,45),(55,45)],(162,114,67,255),3)
     else:raise ValueError('Unknown v2 symbol '+name)
     result=rgba_finish(im,size)
     if name.endswith('_light'):
         data=np.array(result);data[data[:,:,3]>0,:3]=(242,227,189);data[data[:,:,3]==0]=0
+        result=Image.fromarray(data)
+    if name!='ui_tab_underline':
+        data=np.array(result);data[:4]=0;data[-4:]=0;data[:,:4]=0;data[:,-4:]=0
         result=Image.fromarray(data)
     return result
 
@@ -257,5 +282,10 @@ def soften_legacy(source):
 def render(source,size,spec):
     name=spec['v2_recipe'];shape=spec.get('v2_shape')
     if shape in ('bevel','rounded','bar','bubble','frame','segment','tabbar'):return shaped(size,name,shape)
-    if shape in ('glyph','pin','underline') or name.startswith(('ui_toast_','ui_checkbox_')) or name=='ui_check':return symbol(size,name)
-    return sprite(source,size,spec.get('v2_margin',4))
+    if shape in ('glyph','pin','underline') or name.startswith(('ui_toast_','ui_checkbox_')) or name in ('ui_check','time_dawn','time_dusk'):return symbol(size,name)
+    result=sprite(source,size,spec.get('v2_margin',4))
+    data=np.array(result);rgb=data[:,:,:3]
+    white=(data[:,:,3]>0)&(data[:,:,3]<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)
+    data[white,:3]=np.minimum(data[white,:3],233)
+    data[:4]=0;data[-4:]=0;data[:,:4]=0;data[:,-4:]=0
+    return Image.fromarray(data)
