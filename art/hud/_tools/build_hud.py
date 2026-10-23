@@ -155,6 +155,15 @@ def build_one(name, spec, images):
             result.putalpha(255)
         else:
             result=raster.icon(source,size,margin=spec.get('margin'),outer=spec.get('outer'),inner=spec.get('inner'))
+            if mode=='bubble' or name=='mother_bubble_tail':
+                data=np.array(result)
+                rgb=data[:,:,:3].astype(float)
+                paper=(data[:,:,3]==255)&(rgb[:,:,0]>195)&(rgb[:,:,1]>175)&(rgb[:,:,2]>125)&(rgb[:,:,1]>rgb[:,:,0]*.8)
+                data[paper,:3]=raster.PAPER
+                result=Image.fromarray(data)
+            if mode=='bubble':
+                l,t,r,b=spec['slice']
+                ImageDraw.Draw(result).rectangle((l,t,size[0]-r-1,size[1]-b-1),fill=(*raster.PAPER,255))
         if 'fill' in spec:
             result=recolor(result,tuple(spec['fill']))
     result.save(ROOT/f'{name}.png')

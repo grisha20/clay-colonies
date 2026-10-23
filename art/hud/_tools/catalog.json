@@ -3031,5 +3031,218 @@
         "rotate": 270
       }
     ]
+  },
+  "minimap_mother_hands": {
+    "stage": 6,
+    "size": [
+      256,
+      64
+    ],
+    "group": "minimap",
+    "title": "Ладони Праматери",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. TWO small warm orange terracotta clay hands resting over an invisible horizontal rim. Front view: each hand has four short plump fingers gently curled downward over the rim and one small thumb, slightly larger motherly hands. Hands spaced horizontally apart by one hand width, same height. NO arms, body, head, jewellery, actual rim or map. Light orange matte clay matching the Clayfolk mother portrait.",
+    "where": "HUD Clayfolk · minimap",
+    "outer": 2,
+    "inner": 1
+  },
+  "mother_bubble": {
+    "stage": 6,
+    "size": [
+      320,
+      128
+    ],
+    "group": "mother",
+    "title": "Облачко Праматери",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One EMPTY wide horizontal parchment speech bubble, about three times as wide as tall, front facing. Rounded rectangular body with ONE short broad triangular tail extending down from very near its bottom LEFT corner. Pale parchment #F2E3BD completely flat center, thin brown clay rim with crisp #4D331F outline. Tail near left corner so it fits within bottom-left 9-slice corner. No writing, ornaments or characters.",
+    "where": "HUD Clayfolk · mother",
+    "mode": "bubble",
+    "slice": [
+      96,
+      32,
+      24,
+      48
+    ],
+    "margin": 4,
+    "outer": 1.5,
+    "inner": 0.5
+  },
+  "mother_bubble_tail": {
+    "stage": 6,
+    "size": [
+      32,
+      32
+    ],
+    "group": "mother",
+    "title": "Хвостик облачка",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One small broad triangular parchment speech-bubble tail pointing down-left, pale parchment #F2E3BD with crisp brown contour #4D331F, slightly rounded corners. Only the isolated tail, no speech bubble, writing or backing.",
+    "where": "HUD Clayfolk · mother"
+  },
+  "logo_clayfolk": {
+    "stage": 6,
+    "size": [
+      1024,
+      384
+    ],
+    "group": "logo",
+    "title": "Логотип Clayfolk",
+    "where": "Стартовое меню",
+    "prompt": "Use case: logo-brand. Create a warm hand-painted raster game wordmark consisting of EXACTLY the text \"Clayfolk\", capitalization C then lowercase layfolk, 8 letters C l a y f o l k. The letters look hand-moulded from matte orange terracotta clay #D66C34, soft handmade broad forms, crisp solid dark brown #4D331F outline, warm upper-left internal highlights. Single horizontal line, clearly readable familiar letterforms, generous spacing, no joined ambiguous letters, no extra words, icons or decorations, no watermark, no ground or drop shadow. Genuine transparent RGBA background, entire wordmark visible with 8% empty margin. Ready aspect ratio 1024x384.",
+    "outer": 6,
+    "inner": 2,
+    "margin": 24
+  },
+  "menu_background": {
+    "stage": 6,
+    "size": [
+      1920,
+      1080
+    ],
+    "group": "menu",
+    "title": "Фон стартового меню",
+    "where": "Стартовое меню",
+    "mode": "background",
+    "prompt": "Use case: stylized-concept. A wide 16:9 painted game menu background for Clayfolk, a cozy living children's sandbox world made of matte handmade terracotta clay, sticks, stones, earth and grass. Elevated three-quarter fixed camera. On the RIGHT TWO THIRDS: a small cozy clay settlement with two round terracotta huts under pale straw conical roofs, a contained warm campfire ringed by stones, three tiny friendly bald orange clay people with round heads and bead eyes, piles of clay and sticks and stones, a few broad grass tufts. On the LEFT THIRD: a calm uncluttered warm parchment-sand clearing, very low detail, plenty of readable quiet space for the game to place its menu. Warm late-afternoon upper-left sunlight, soft painterly internal modelling, rustic earth palette #D66C34 #8C6138 #5C8C33 #F2E3BD, no photo realism, no glossy plastic, no metal or sci-fi. Entire scene opaque. Absolutely NO text, words, letters, logo, UI frames or watermark. Production ready size 1920x1080; generate a large landscape illustration."
+  },
+  "minimap_frame": {
+    "size": [
+      256,
+      256
+    ],
+    "group": "minimap",
+    "title": "Рамка миникарты",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated ui_panel; frame; no text or external assets.",
+    "mode": "frame",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "minimap_camp_own": {
+    "size": [
+      24,
+      24
+    ],
+    "group": "minimap",
+    "title": "Наш лагерь",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated build_hut; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "build_hut",
+    "fill": [
+      92,
+      140,
+      51
+    ]
+  },
+  "minimap_camp_enemy": {
+    "size": [
+      24,
+      24
+    ],
+    "group": "minimap",
+    "title": "Чужой лагерь",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated build_hut; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "build_hut",
+    "fill": [
+      192,
+      57,
+      43
+    ]
+  },
+  "minimap_enemy": {
+    "size": [
+      24,
+      24
+    ],
+    "group": "minimap",
+    "title": "Враг",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated alert_spider; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "alert_spider",
+    "fill": [
+      192,
+      57,
+      43
+    ]
+  },
+  "minimap_resident": {
+    "size": [
+      24,
+      24
+    ],
+    "group": "minimap",
+    "title": "Житель",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated res_people; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "res_people",
+    "fill": [
+      224,
+      122,
+      60
+    ]
+  },
+  "minimap_totem": {
+    "size": [
+      24,
+      24
+    ],
+    "group": "minimap",
+    "title": "Тотем",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated build_totem; reuse; no text or external assets.",
+    "mode": "reuse",
+    "base": "build_totem"
+  },
+  "minimap_lake": {
+    "size": [
+      24,
+      24
+    ],
+    "group": "minimap",
+    "title": "Озеро",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated res_clay; symbol; no text or external assets.",
+    "mode": "symbol",
+    "shape": "dot",
+    "base": "res_clay",
+    "fill": [
+      63,
+      143,
+      208
+    ]
+  },
+  "menu_panel": {
+    "size": [
+      512,
+      640
+    ],
+    "group": "menu",
+    "title": "Панель меню",
+    "stage": 6,
+    "where": "HUD Clayfolk · миникарта / меню",
+    "prompt": "Offline derivative of generated ui_panel; panel; no text or external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      24,
+      24,
+      24,
+      24
+    ]
   }
 }

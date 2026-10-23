@@ -114,4 +114,4 @@ def panel(source,size,inset):
         for y in range(h):
             result.putpixel((x,y),copy.getpixel((w//2,y)))
     ImageDraw.Draw(result).rectangle((l,t,w-r-1,h-b-1),fill=(*PAPER,255))
-    return result
+    return finish(result,size)
