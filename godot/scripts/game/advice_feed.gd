@@ -19,7 +19,7 @@ var last_new: Array[String] = []
 
 func _ready() -> void:
 	name = "AdviceFeed"
-	add_theme_stylebox_override("panel", GameHud.panel_style())
+	add_theme_stylebox_override("panel", GameHud.parchment())
 	theme = GameHud.ink_theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_force_pass_scroll_events = false

@@ -51,6 +51,35 @@ func _ready() -> void:
 static func ink_theme() -> Theme:
 	var t = Theme.new()
 	t.set_color("font_color", "Label", INK)
+	# Painted wide buttons for every text button on the parchment panels.
+	var pad = [14, 6, 14, 6]
+	if HudArt.box("ui_button_wide_normal", pad):
+		t.set_stylebox("normal", "Button", HudArt.box("ui_button_wide_normal", pad))
+		t.set_stylebox("hover", "Button", HudArt.box("ui_button_wide_hover", pad))
+		t.set_stylebox("pressed", "Button", HudArt.box("ui_button_wide_pressed", pad))
+		t.set_stylebox("hover_pressed", "Button", HudArt.box("ui_button_wide_pressed", pad))
+		t.set_stylebox("disabled", "Button", HudArt.box("ui_button_wide_disabled", pad))
+		t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
+		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+			t.set_color(state, "Button", INK)
+		t.set_color("font_disabled_color", "Button", Color(INK, 0.55))
+	var bg = HudArt.box("ui_bar_bg", [0, 0, 0, 0])
+	if bg:
+		t.set_stylebox("background", "ProgressBar", bg)
+		t.set_stylebox("fill", "ProgressBar", HudArt.box("ui_bar_fill_green", [0, 0, 0, 0]))
+	var grab = HudArt.box("ui_scroll_grabber", [0, 0, 0, 0])
+	if grab:
+		t.set_stylebox("scroll", "VScrollBar", HudArt.box("ui_scroll_track", [0, 0, 0, 0]))
+		t.set_stylebox("grabber", "VScrollBar", grab)
+		t.set_stylebox("grabber_highlight", "VScrollBar", HudArt.box("ui_scroll_grabber", [0, 0, 0, 0]))
+		t.set_stylebox("grabber_pressed", "VScrollBar", HudArt.box("ui_scroll_grabber", [0, 0, 0, 0]))
+	var sep = HudArt.tex("ui_separator_h")
+	if sep:
+		var line = StyleBoxTexture.new()
+		line.texture = sep
+		line.texture_margin_left = 4
+		line.texture_margin_right = 4
+		t.set_stylebox("separator", "HSeparator", line)
 	return t
 
 

@@ -120,7 +120,7 @@ func _setup_hud() -> void:
 	top_panel.mouse_force_pass_scroll_events = false
 	top_panel.name = "ObserverPanel"
 	top_panel.theme = GameHud.ink_theme()
-	top_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.97)))
+	top_panel.add_theme_stylebox_override("panel", GameHud.parchment())
 	top_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	top_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	top_panel.offset_right = -16
@@ -224,7 +224,7 @@ func _setup_hud() -> void:
 	insp_panel = PanelContainer.new()
 	insp_panel.mouse_force_pass_scroll_events = false
 	insp_panel.name = "ResidentInspector"
-	insp_panel.add_theme_stylebox_override("panel", GameHud.panel_style(Color(0.95, 0.89, 0.74, 0.9)))
+	insp_panel.add_theme_stylebox_override("panel", GameHud.parchment())
 	insp_panel.theme = GameHud.ink_theme()
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	insp_panel.offset_left = 16
@@ -285,6 +285,14 @@ func _setup_hud() -> void:
 	mother_speaker.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	mother_speaker.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	mother_speaker.show_requested.connect(func(p): world_view.focus_on_point(p))
+	# Her painted hands rest on the minimap's top edge, in front of her.
+	var hands_tex = HudArt.tex("minimap_mother_hands")
+	if hands_tex:
+		mother_hands = GameHud.icon_rect(hands_tex, 0)
+		mother_hands.name = "MotherHands"
+		mother_hands.custom_minimum_size = HANDS_SIZE
+		canvas.add_child(mother_hands)
+		mother_hands.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	# The settings menu opens above the works panel.
 	canvas.add_child(settings_panel)
 
@@ -292,6 +300,8 @@ func _setup_hud() -> void:
 	build.name = "BuildController"
 	add_child(build)
 	build.setup(self, world_view, ws_client, hud, canvas)
+	HudArt.install_cursors()
+	build.tool_changed.connect(func(t): HudArt.set_cursor(Input.CURSOR_CROSS, TOOL_CURSORS.get(t, "cursor_build")))
 
 	start_menu = StartMenu.new()
 	start_menu.visible = false
@@ -311,6 +321,8 @@ func _setup_hud() -> void:
 ## The mother sits on the minimap's top edge: her portrait centred over it,
 ## sunk a little so her arms rest on the frame; the bubble opens to the left.
 const PERCH_OVERLAP := 30.0
+const HANDS_SIZE := Vector2(170, 43)
+var mother_hands: TextureRect
 
 func _place_mother() -> void:
 	if not minimap or not mother_speaker:
@@ -321,6 +333,13 @@ func _place_mother() -> void:
 	mother_speaker.offset_top = bottom
 	mother_speaker.offset_right = -16.0 - (minimap.size.x - portrait_w) * 0.5
 	mother_speaker.offset_left = mother_speaker.offset_right
+	if mother_hands:
+		var edge = -16.0 - minimap.size.y
+		mother_hands.offset_bottom = edge + HANDS_SIZE.y * 0.7
+		mother_hands.offset_top = mother_hands.offset_bottom - HANDS_SIZE.y
+		mother_hands.offset_right = -16.0 - (minimap.size.x - HANDS_SIZE.x) * 0.5
+		mother_hands.offset_left = mother_hands.offset_right - HANDS_SIZE.x
+		mother_hands.visible = mother_speaker.visible
 
 func _connect_signals() -> void:
 	ws_client.snapshot_received.connect(_on_snapshot_received)
@@ -331,8 +350,29 @@ func _connect_signals() -> void:
 	entity_registry.population_updated.connect(_on_population_updated)
 	entity_registry.resident_despawned.connect(_on_resident_despawned)
 
+## Build tool -> painted cursor over the world (buildings get the stake).
+const TOOL_CURSORS = {"wall": "cursor_brush", "erase": "cursor_brush", "harvest": "cursor_harvest", "forbid": "cursor_forbid"}
+var cursor_shape := -1
+
+## Cursor over the world (the HUD keeps the arrow): camera drag and turn,
+## the build tool, a refused spot, something under the mouse.
+func _update_cursor() -> void:
+	var shape = Input.CURSOR_ARROW
+	if world_view._mmb_down:
+		shape = Input.CURSOR_DRAG
+	elif world_view._rmb_down and world_view._rmb_rotated:
+		shape = Input.CURSOR_MOVE
+	elif build and build.tool != "":
+		shape = Input.CURSOR_FORBIDDEN if build.last_reason != "" else Input.CURSOR_CROSS
+	elif hud and hud.tooltip_panel.visible:
+		shape = Input.CURSOR_POINTING_HAND
+	if shape != cursor_shape:
+		cursor_shape = shape
+		Input.set_default_cursor_shape(shape)
+
 func _process(delta: float) -> void:
 	_place_mother()
+	_update_cursor()
 	if minimap and world_view.camera:
 		var vp = get_viewport().get_visible_rect().size
 		var quad = PackedVector2Array()

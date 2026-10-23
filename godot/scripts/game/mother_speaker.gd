@@ -31,6 +31,9 @@ var head_pivot: Node3D
 var mouth: MeshInstance3D
 var bubble: PanelContainer
 var bubble_style: StyleBoxFlat
+var painted_bubble: StyleBoxTexture
+var severity_icon: TextureRect
+const SEVERITY_DOT = {"danger": "ui_dot_red", "warn": "ui_dot_yellow", "info": "ui_dot_green"}
 var name_label: Label
 var text_label: Label
 var where_button: Button
@@ -165,7 +168,8 @@ func _build_bubble(parent: Control) -> void:
 	bubble_style.corner_radius_top_left = 4
 	bubble_style.content_margin_left = 14
 	bubble_style.content_margin_right = 12
-	bubble.add_theme_stylebox_override("panel", bubble_style)
+	painted_bubble = _painted_bubble()
+	bubble.add_theme_stylebox_override("panel", painted_bubble if painted_bubble else bubble_style)
 	bubble.theme = GameHud.ink_theme()
 	bubble.mouse_filter = Control.MOUSE_FILTER_STOP
 	bubble.mouse_force_pass_scroll_events = false
@@ -176,7 +180,11 @@ func _build_bubble(parent: Control) -> void:
 	box.add_theme_constant_override("separation", 4)
 	bubble.add_child(box)
 	var head = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
 	box.add_child(head)
+	severity_icon = GameHud.icon_rect(null, 18)
+	severity_icon.visible = painted_bubble != null
+	head.add_child(severity_icon)
 	name_label = Label.new()
 	name_label.text = "Праматерь"
 	name_label.add_theme_font_size_override("font_size", 15)
@@ -266,16 +274,19 @@ func _show_current() -> void:
 	var has = not advice.is_empty()
 	bubble.visible = has
 	if tail:
-		tail.visible = has
+		tail.visible = has and painted_bubble == null
 	modulate.a = 1.0 if has else 0.75
 	if not has:
 		return
 	var a: Dictionary = advice[index]
 	text_label.text = str(a.get("text", ""))
 	bubble_style.border_color = SEVERITY_BORDER.get(str(a.get("severity", "info")), SEVERITY_BORDER.info)
+	if severity_icon.visible:
+		severity_icon.texture = HudArt.tex(SEVERITY_DOT.get(str(a.get("severity", "info")), "ui_dot_green"))
 	if tail:
 		(tail as BubbleTail).border = bubble_style.border_color
-		tail.visible = true
+		# The painted bubble has its own tail.
+		tail.visible = painted_bubble == null
 		tail.queue_redraw()
 	where_button.visible = typeof(a.get("pos")) == TYPE_DICTIONARY
 	var many = advice.size() > 1
@@ -342,3 +353,25 @@ func _process(delta: float) -> void:
 	head_pivot.rotation = Vector3(nod + sin(time * 1.1) * 0.015, sin(time * 0.5) * 0.08 + (sin(nod_phase * 3.0) * 0.08 if talking else 0.0), 0)
 	var open = (0.35 + 0.65 * absf(sin(time * 14.0))) if talking else 0.25
 	mouth.scale = Vector3(1.3, open, 0.5)
+
+
+## Painted speech bubble (art/hud mother_bubble), mirrored so its tail points
+## right and down, to her mouth; null keeps the flat bubble and drawn tail.
+static func _painted_bubble() -> StyleBoxTexture:
+	var t = HudArt.tex("mother_bubble")
+	if t == null:
+		return null
+	var img = t.get_image()
+	img.flip_x()
+	var s: Array = HudArt.meta().get("slice", {}).get("mother_bubble", [96, 32, 64, 48])
+	var sb = StyleBoxTexture.new()
+	sb.texture = ImageTexture.create_from_image(img)
+	sb.texture_margin_left = s[2]
+	sb.texture_margin_top = s[1]
+	sb.texture_margin_right = s[0]
+	sb.texture_margin_bottom = s[3]
+	sb.content_margin_left = 18
+	sb.content_margin_top = 12
+	sb.content_margin_right = 18
+	sb.content_margin_bottom = 34
+	return sb

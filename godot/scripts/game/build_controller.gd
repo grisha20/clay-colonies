@@ -88,6 +88,7 @@ const GROUPS = [
 	["Земля и зоны", ["totem", "harvest", "forbid", "erase"]],
 ]
 const TILE_TEXT := Color(0.98, 0.93, 0.82)
+const GROUP_ICONS = ["group_home", "group_defense", "group_land"]
 ## Short captions under the pictures; the tooltip carries the full name.
 const TILE_NAMES = {"kiln": "Печь", "post": "Пост", "totem": "Тотем", "harvest": "Добыча", "house": "Дом рода"}
 const COST_SHORT := Color(1.0, 0.55, 0.45)
@@ -97,6 +98,10 @@ var tile_counts: Dictionary = {}   # tool -> Label
 var tile_icons: Dictionary = {}    # tool -> TextureRect
 var icon_textures: Dictionary = {}
 var toolbar_state: Dictionary = {} # tool -> {"short": [res], "full": bool}
+## Text colours on the tiles: light on the old dark tiles, ink on painted parchment cards.
+var tile_text: Color = TILE_TEXT
+var cost_short: Color = COST_SHORT
+var painted_cards: bool = false
 
 
 static func _tile_style(fill: Color, border: Color, width: int) -> StyleBoxFlat:
@@ -120,7 +125,7 @@ static func _tile_style(fill: Color, border: Color, width: int) -> StyleBoxFlat:
 func _build_toolbar(canvas: CanvasLayer) -> void:
 	toolbar = PanelContainer.new()
 	toolbar.name = "BuildToolbar"
-	toolbar.add_theme_stylebox_override("panel", GameHud.panel_style())
+	toolbar.add_theme_stylebox_override("panel", GameHud.parchment([14, 8, 14, 10]))
 	toolbar.theme = GameHud.ink_theme()
 	toolbar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	toolbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -128,10 +133,19 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 	toolbar.offset_bottom = -12
 	toolbar.mouse_force_pass_scroll_events = false
 	canvas.add_child(toolbar)
+	# Painted cards (art/hud build_*); a building without one is rendered from its model.
+	painted_cards = HudArt.tex("card_build_normal") != null
+	if painted_cards:
+		tile_text = GameHud.INK
+		cost_short = Color(0.78, 0.18, 0.10)
 	var kinds: Array = []
 	for spec in TOOLS:
-		kinds.append(spec[0])
-	icon_textures = BuildIcons.create(self, kinds)
+		var painted = HudArt.tex("build_" + spec[0])
+		if painted:
+			icon_textures[spec[0]] = painted
+		else:
+			kinds.append(spec[0])
+	icon_textures.merge(BuildIcons.create(self, kinds))
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	toolbar.add_child(row)
@@ -148,7 +162,13 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 		title.text = GROUPS[g][0]
 		title.add_theme_font_size_override("font_size", 13)
 		title.add_theme_color_override("font_color", GameHud.INK.lightened(0.25))
-		group.add_child(title)
+		var head = HBoxContainer.new()
+		head.add_theme_constant_override("separation", 4)
+		var gicon = HudArt.tex(GROUP_ICONS[g])
+		if gicon:
+			head.add_child(GameHud.icon_rect(gicon, 20))
+		head.add_child(title)
+		group.add_child(head)
 		var tiles = HBoxContainer.new()
 		tiles.add_theme_constant_override("separation", 4)
 		group.add_child(tiles)
@@ -171,12 +191,13 @@ func _make_tile(spec: Array) -> Button:
 	b.name = "Tool_" + t
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(78, 118)
+	b.custom_minimum_size = Vector2(98, 118)
 	b.tooltip_text = "%s  [%s]" % [HINTS[t], spec[2]]
-	b.add_theme_stylebox_override("normal", _tile_style(Color(0.45, 0.34, 0.23), Color(0.27, 0.19, 0.12), 2))
-	b.add_theme_stylebox_override("hover", _tile_style(Color(0.53, 0.41, 0.28), Color(0.33, 0.24, 0.15), 2))
-	b.add_theme_stylebox_override("pressed", _tile_style(Color(0.58, 0.45, 0.28), Color(0.98, 0.80, 0.30), 3))
-	b.add_theme_stylebox_override("hover_pressed", _tile_style(Color(0.62, 0.48, 0.30), Color(0.98, 0.80, 0.30), 3))
+	if not (painted_cards and HudArt.skin_button(b, "card_build", [6, 6, 6, 6])):
+		b.add_theme_stylebox_override("normal", _tile_style(Color(0.45, 0.34, 0.23), Color(0.27, 0.19, 0.12), 2))
+		b.add_theme_stylebox_override("hover", _tile_style(Color(0.53, 0.41, 0.28), Color(0.33, 0.24, 0.15), 2))
+		b.add_theme_stylebox_override("pressed", _tile_style(Color(0.58, 0.45, 0.28), Color(0.98, 0.80, 0.30), 3))
+		b.add_theme_stylebox_override("hover_pressed", _tile_style(Color(0.62, 0.48, 0.30), Color(0.98, 0.80, 0.30), 3))
 	b.pressed.connect(func(): set_tool("" if tool == t else t))
 	var box = VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -191,11 +212,11 @@ func _make_tile(spec: Array) -> Button:
 	pic.texture = icon_textures.get(t)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.custom_minimum_size = Vector2(70, 60)
+	pic.custom_minimum_size = Vector2(80, 60)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(pic)
 	tile_icons[t] = pic
-	var sign = BuildIcons.sign_for(t)
+	var sign = null if HudArt.tex("build_" + t) else BuildIcons.sign_for(t)
 	if sign:
 		var s = TextureRect.new()
 		s.texture = sign
@@ -205,7 +226,7 @@ func _make_tile(spec: Array) -> Button:
 		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pic.add_child(s)
-	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 12, TILE_TEXT)
+	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 12, tile_text)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -227,11 +248,11 @@ func _make_tile(spec: Array) -> Button:
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cost_row.add_child(ic)
-		var n = _plain_label(str(int(cost[res])), 12, TILE_TEXT)
+		var n = _plain_label(str(int(cost[res])), 12, tile_text)
 		cost_row.add_child(n)
 		costs[res] = n
 	if costs.is_empty():
-		cost_row.add_child(_plain_label("даром", 12, TILE_TEXT.darkened(0.2)))
+		cost_row.add_child(_plain_label("даром", 12, tile_text.lightened(0.2) if painted_cards else tile_text.darkened(0.2)))
 	tile_costs[t] = costs
 	var key = _plain_label(spec[2], 12, Color(0.25, 0.17, 0.10))
 	key.position = Vector2(5, 3)
@@ -243,13 +264,20 @@ func _make_tile(spec: Array) -> Button:
 	key.add_theme_stylebox_override("normal", kb)
 	b.add_child(key)
 	if BuildRules.LIMITS.has(t):
-		var count = _plain_label("", 12, TILE_TEXT)
+		var count = _plain_label("", 12, tile_text)
 		count.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 		count.offset_left = -40
 		count.offset_right = -5
 		count.offset_top = 3
+		count.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		count.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+		if painted_cards:
+			# A badge like the hotkey one: dark ink on the picture would vanish.
+			count.add_theme_color_override("font_color", Color(0.25, 0.17, 0.10))
+			count.add_theme_stylebox_override("normal", kb)
+			count.offset_left = 0
+		else:
+			count.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 		b.add_child(count)
 		tile_counts[t] = count
 	buttons[t] = b
@@ -279,7 +307,7 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 			var lack = float(colony.get("specialClay" if res == "special" else res, 0.0)) < float(cost.get(res, 0))
 			if lack:
 				short.append(res)
-			(tile_costs[t][res] as Label).add_theme_color_override("font_color", COST_SHORT if lack else TILE_TEXT)
+			(tile_costs[t][res] as Label).add_theme_color_override("font_color", cost_short if lack else tile_text)
 		var full = false
 		if tile_counts.has(t):
 			var n = int(built.get(t, 0))
@@ -287,6 +315,10 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 			full = n >= limit
 			(tile_counts[t] as Label).text = "%d/%d" % [n, limit]
 		(tile_icons[t] as TextureRect).modulate = Color(0.45, 0.45, 0.45) if full else (Color(0.8, 0.75, 0.72) if not short.is_empty() else Color.WHITE)
+		if painted_cards and full != bool(toolbar_state.get(t, {}).get("full", false)):
+			var card = HudArt.box("card_build_disabled" if full else "card_build_normal", [6, 6, 6, 6])
+			if card:
+				(buttons[t] as Button).add_theme_stylebox_override("normal", card)
 		var tip = "%s  [%s]" % [HINTS[t], spec[2]]
 		if full:
 			tip += "\nДостигнут предел этих построек"
@@ -345,6 +377,7 @@ func _build_ghosts() -> void:
 
 func set_tool(t: String) -> void:
 	tool = t
+	last_reason = ""
 	drag_start = Vector2.INF
 	for k in buttons.keys():
 		buttons[k].button_pressed = k == t

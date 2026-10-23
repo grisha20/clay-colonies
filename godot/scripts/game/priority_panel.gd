@@ -40,17 +40,15 @@ var signature: String = ""
 
 func _ready() -> void:
 	name = "PriorityPanel"
-	add_theme_stylebox_override("panel", GameHud.panel_style())
+	add_theme_stylebox_override("panel", GameHud.parchment())
 	theme = GameHud.ink_theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_force_pass_scroll_events = false
 	custom_minimum_size = Vector2(300, 0)
 	var box = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 5)
 	add_child(box)
-	var title = Label.new()
-	title.text = "Работы"
-	title.add_theme_font_size_override("font_size", 22)
-	box.add_child(title)
+	box.add_child(GameHud.header("Работы"))
 	header = Label.new()
 	header.add_theme_font_size_override("font_size", 14)
 	box.add_child(header)
@@ -60,6 +58,7 @@ func _ready() -> void:
 	mode_button.name = "ModeButton"
 	mode_button.focus_mode = Control.FOCUS_NONE
 	mode_button.pressed.connect(func(): auto_manage_requested.emit(not auto_manage))
+	_icon(mode_button, "job_mother_auto")
 	box.add_child(mode_button)
 	mode_hint = Label.new()
 	mode_hint.add_theme_font_size_override("font_size", 12)
@@ -77,6 +76,7 @@ func _ready() -> void:
 	firing_button = Button.new()
 	firing_button.focus_mode = Control.FOCUS_NONE
 	firing_button.pressed.connect(func(): firing_requested.emit(not firing_paused))
+	_icon(firing_button, "job_firing")
 	firing_row.add_child(firing_button)
 	firing_row.visible = false
 	box.add_child(firing_row)
@@ -84,12 +84,14 @@ func _ready() -> void:
 	water_button.name = "WaterButton"
 	water_button.focus_mode = Control.FOCUS_NONE
 	water_button.pressed.connect(func(): water_requested.emit())
+	_icon(water_button, "job_water_shot")
 	box.add_child(water_button)
 	warrior_button = Button.new()
 	warrior_button.name = "WarriorButton"
 	warrior_button.focus_mode = Control.FOCUS_NONE
 	warrior_button.tooltip_text = "Стражник у костра проходит посвящение: сильнее бьёт, меньше получает урона, носит копьё и перья. Праматерь посвящает сама, когда племени грозят."
 	warrior_button.pressed.connect(func(): warrior_requested.emit())
+	_icon(warrior_button, "job_warrior")
 	box.add_child(warrior_button)
 	rows_box = GridContainer.new()
 	rows_box.columns = 1
@@ -196,6 +198,10 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 	for k in KEYS:
 		var target = int(priorities[k])
 		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		var job_pic = HudArt.tex("job_" + k)
+		if job_pic:
+			row.add_child(GameHud.icon_rect(job_pic, 26))
 		var label = Label.new()
 		label.text = LABELS[k]
 		label.custom_minimum_size = Vector2(80, 0)
@@ -339,6 +345,7 @@ func _update_mode() -> void:
 	if mode_button == null:
 		return
 	mode_button.text = "Праматерь решает" if auto_manage else "Вручную · вернуть Праматери"
+	_icon(mode_button, "job_mother_auto" if auto_manage else "job_manual")
 	mode_hint.text = "Праматерь сама расставляет жителей. Нажмите ± — и работы ваши." if auto_manage else "Вы распределяете жителей сами."
 
 
@@ -347,8 +354,28 @@ func _button(text: String, disabled: bool) -> Button:
 	b.text = text
 	b.disabled = disabled
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(28, 26)
+	b.custom_minimum_size = Vector2(28, 28)
+	# Painted ± buttons: frame from art/hud plus the glyph; text stays as fallback.
+	var family = "ui_btn_plus" if text == "+" else "ui_btn_minus"
+	var glyph = HudArt.tex("glyph_plus" if text == "+" else "glyph_minus")
+	if glyph and HudArt.skin_button(b, family, [4, 4, 4, 4]):
+		b.text = ""
+		b.icon = glyph
+		b.expand_icon = true
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.add_theme_constant_override("icon_max_width", 18)
+		b.modulate = Color(1, 1, 1, 0.55) if disabled else Color.WHITE
 	return b
+
+
+## Small picture at the left of a wide button.
+static func _icon(b: Button, picture: String) -> void:
+	var t = HudArt.tex(picture)
+	if t == null:
+		return
+	b.icon = t
+	b.expand_icon = true
+	b.add_theme_constant_override("icon_max_width", 24)
 
 
 func _change(k: String, delta: int) -> void:

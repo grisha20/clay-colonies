@@ -34,9 +34,26 @@ func _ready() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
+	# Painted sandbox scene behind the menu (art/hud menu_background); the
+	# menu sits on its calm left side, like the mock-up.
+	var painted = HudArt.tex("menu_background")
+	if painted:
+		var bg = TextureRect.new()
+		bg.name = "MenuBackground"
+		bg.texture = painted
+		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(bg)
+	theme = GameHud.ink_theme()
 
 	var center = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if painted:
+		center.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+		center.offset_left = 80
+		center.offset_right = 80 + 820
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
@@ -46,16 +63,25 @@ func _ready() -> void:
 
 	var panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(380, 0)
+	var panel_box = HudArt.box("menu_panel", [30, 26, 30, 26])
+	if panel_box:
+		panel.add_theme_stylebox_override("panel", panel_box)
 	row.add_child(panel)
 	var box = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
 
-	var title = Label.new()
-	title.text = "Clayfolk"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40)
-	box.add_child(title)
+	var logo = HudArt.tex("logo_clayfolk")
+	if logo:
+		var pic = GameHud.icon_rect(logo, 0)
+		pic.custom_minimum_size = Vector2(320, 120)
+		box.add_child(pic)
+	else:
+		var title = Label.new()
+		title.text = "Clayfolk"
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.add_theme_font_size_override("font_size", 40)
+		box.add_child(title)
 	var subtitle = Label.new()
 	subtitle.text = "Глиняный народец"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -88,6 +114,8 @@ func _ready() -> void:
 
 	saves_panel = PanelContainer.new()
 	saves_panel.custom_minimum_size = Vector2(360, 0)
+	if panel_box:
+		saves_panel.add_theme_stylebox_override("panel", HudArt.box("menu_panel", [30, 26, 30, 26]))
 	saves_panel.visible = false
 	row.add_child(saves_panel)
 	var saves_outer = VBoxContainer.new()

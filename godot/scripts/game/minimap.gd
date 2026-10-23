@@ -37,7 +37,9 @@ func _ready() -> void:
 	sb.set_border_width_all(4)
 	sb.set_corner_radius_all(10)
 	sb.content_margin_left = 6; sb.content_margin_right = 6; sb.content_margin_top = 6; sb.content_margin_bottom = 6
-	add_theme_stylebox_override("panel", sb)
+	# Painted wooden frame (art/hud minimap_frame); the map shows through its middle.
+	var frame = HudArt.box("minimap_frame", [12, 12, 12, 12])
+	add_theme_stylebox_override("panel", frame if frame else sb)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_force_pass_scroll_events = false
 	tooltip_text = ""
