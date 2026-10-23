@@ -100,7 +100,7 @@ def main():
     if args.stage>0:
         # Matching light glyphs remain available for dark HUD panels.
         for name in list(names):
-            if name.startswith('glyph_') and not name.endswith('_light') and 'chevron' not in name:
+            if name.startswith('glyph_') and not name.endswith('_light'):
                 light=name+'_light'
                 if light not in names:names.append(light)
         for name in names:

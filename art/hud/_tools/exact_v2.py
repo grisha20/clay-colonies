@@ -25,6 +25,22 @@ CROPS={
 'icon_works':(1358,91,1389,128),'icon_person':(1357,129,1383,154),'icon_kiln':(1358,496,1410,555),
 'icon_mother':(1236,656,1260,680),
 'time_day':(1054,15,1108,65),'weather_clear':(1054,15,1108,65),
+'logo_hud':(12,7,234,80),
+}
+TITLES={
+'logo_hud':'Логотип Clayfolk для HUD','ui_topbar':'Пилюля ресурсов','ui_toast':'Всплывающее уведомление',
+'ui_toast_check':'Успешное уведомление','ui_toast_warn':'Предупреждение','ui_toast_danger':'Опасность',
+'ui_checkbox_on':'Выполненная цель','ui_checkbox_off':'Невыполненная цель',
+'glyph_chevron_down':'Свернуть панель','glyph_chevron_right':'Развернуть панель',
+'ui_tabbar':'Подложка вкладок построек','ui_tab_underline':'Подчёркивание активной вкладки',
+'tab_settlement':'Вкладка «Поселение»','tab_defense':'Вкладка «Оборона»','tab_land':'Вкладка «Земля»',
+'ui_key_badge_normal':'Плашка клавиши','ui_key_badge_active':'Плашка выбранной клавиши',
+'ui_segment_left_normal':'Левая половина переключателя','ui_segment_left_active':'Активная левая половина переключателя',
+'ui_segment_right_normal':'Правая половина переключателя','ui_segment_right_active':'Активная правая половина переключателя',
+'ui_list_bg':'Подложка списка работ','icon_works':'Значок работ','icon_person':'Силуэт жителя',
+'icon_kiln':'Печь для полосы обжига','icon_mother':'Головка Праматери',
+**{'btn_pin_'+s:'Метка места — '+r for s,r in [('normal','обычная'),('hover','наведение'),('pressed','нажатая')]},
+**{'btn_zoom_'+s:'Кнопка масштаба — '+r for s,r in [('normal','обычная'),('hover','наведение'),('pressed','нажатая')]},
 }
 
 
@@ -45,6 +61,14 @@ def reference_cut(name):
     cv2.setRNGSeed(0)
     cv2.grabCut(a.astype('uint8'),gc,None,np.zeros((1,65)),np.zeros((1,65)),5,cv2.GC_INIT_WITH_MASK)
     binary=(gc==cv2.GC_FGD)|(gc==cv2.GC_PR_FGD)
+    if name in ('build_hut','build_house','build_kiln','build_idol'):
+        binary=binary_fill_holes(cv2.morphologyEx(binary.astype('uint8'),cv2.MORPH_CLOSE,np.ones((3,3),'uint8')).astype(bool))
+    if name.startswith('build_'):
+        components,n=label(binary)
+        for component in range(1,n+1):
+            yy,xx=np.where(components==component)
+            if len(xx) and xx.max()<28 and yy.max()<35:
+                binary[components==component]=False
     core=cv2.erode(binary.astype('uint8'),np.ones((3,3),'uint8')).astype(bool)
     if not core.any():core=binary
     nearest=distance_transform_edt(~core,return_distances=False,return_indices=True)
@@ -78,6 +102,8 @@ def cfg(name,old):
         s.pop(key,None)
     s.update(style_version=2,v2_stage=V2_REQUIRED.get(name,1),mode='v2',source_max=1024,v2_exact=True,v2_margin=4)
     s.setdefault('title',name.replace('_',' '));s.setdefault('where','HUD v2 · '+name)
+    if name in TITLES:s['title']=TITLES[name]
+    if name.endswith('_light') and name.removesuffix('_light') in TITLES:s['title']=TITLES[name.removesuffix('_light')]+' — светлый'
     s.setdefault('group',name.split('_')[0]);s.setdefault('stage',8)
     s['v2_kind']='sprite'
     if name in CROPS:
@@ -99,7 +125,7 @@ def cfg(name,old):
     elif name=='ui_tabbar':s.update(size=[256,64],v2_kind='panel',v2_shape='tabbar',slice=[28,24,28,12])
     elif name=='ui_tab_underline':s.update(size=[128,8],v2_kind='line',v2_shape='underline',slice=[5,2,5,2],v2_center='mixed')
     elif name.startswith('ui_segment_'):s.update(size=[128,48],v2_kind='button',v2_shape='segment',slice=[16,14,16,14])
-    elif name.startswith('ui_key_badge_'):s.update(size=[32,32],v2_kind='button',v2_shape='rounded')
+    elif name.startswith('ui_key_badge_'):s.update(size=[32,32],v2_kind='button',v2_shape='rounded',slice=[10,10,10,10])
     elif name.startswith('btn_zoom_'):s.update(size=[40,40],v2_kind='button',v2_shape='bevel',slice=[12,12,12,12])
     elif name.startswith('btn_pin_'):s.update(size=[48,48],v2_shape='pin')
     elif name.startswith('glyph_chevron_'):s.update(size=[32,32],v2_shape='glyph')
@@ -113,6 +139,8 @@ def cfg(name,old):
     s['v2_fill_top']=[255,244,224]
     s['v2_border']=[207,168,119]
     s['v2_recipe']=name
+    state=name.rsplit('_',1)[-1]
+    if state in ('normal','hover','pressed','disabled','active'):s['state']=state
     if s.get('v2_shape'):s['prompt']='Derived from our generated HUD target; exact_v2.py '+s['v2_shape']+' recipe '+name+'. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.'
     return s
 
@@ -153,6 +181,8 @@ def shaped(size,name,shape):
     if shape=='bevel' and active:top=np.array((255,187,72),float);bottom=np.array((248,164,47),float)
     if disabled:top=np.array((229,224,211),float);bottom=np.array((216,207,190),float)
     if name=='ui_list_bg':top=np.array((255,248,234),float);bottom=np.array((255,242,219),float)
+    if name.endswith('_hover'):
+        top+=(255-top)*.35;bottom+=(255-bottom)*.20
     if name=='ui_toast':top=np.array((107,158,71),float);bottom=np.array((69,116,40),float)
     if shape=='bar':
         top=np.array((237,214,180),float);bottom=np.array((230,200,158),float)
@@ -243,7 +273,8 @@ def symbol(size,name):
             rr((3,3,29,29),(84,133,49,255) if name.endswith('on') else (241,225,199,255),6)
             if name.endswith('on'):line([(8,15),(14,22),(25,9)],paper,3)
     elif name.startswith('btn_pin_'):
-        d.ellipse((4*K,4*K,44*K,44*K),fill=(207,101,44,255),outline=(242,197,142,255),width=2*K)
+        pin_color=(225,120,59,255) if name.endswith('hover') else ((185,79,31,255) if name.endswith('pressed') else (207,101,44,255))
+        d.ellipse((4*K,4*K,44*K,44*K),fill=pin_color,outline=(242,197,142,255),width=2*K)
         d.ellipse((17*K,12*K,31*K,26*K),fill=paper);poly([(17,21),(24,35),(31,21)],paper)
         d.ellipse((21*K,16*K,27*K,22*K),fill=(207,101,44,255))
     elif name=='ui_tab_underline':rr((4,3,124,6),(190,88,28,255),2)
@@ -271,7 +302,7 @@ def soften_legacy(source):
     data=np.array(source.convert('RGBA'));mask=data[:,:,3]>=128
     dist=distance_transform_edt(mask)
     dark=(data[:,:,0]<125)&(data[:,:,1]<95)&(data[:,:,2]<72)
-    edge=dark&(dist<max(2,min(source.size)*.026))
+    edge=(dark&(dist<max(2,min(source.size)*.026)))|np.all(data[:,:,:3]==(77,51,31),axis=2)&mask
     good=mask&~edge
     near=distance_transform_edt(~good,return_distances=False,return_indices=True)
     data[edge,:3]=data[near[0][edge],near[1][edge],:3]

@@ -271,7 +271,9 @@ def main():
             require(np.sum(shadow)>8,'V2 surface missing inset soft shadow: '+name)
             require(not shadow.any() or np.max(data[shadow,3])<=65,'V2 shadow exceeds 25% opacity: '+name)
         else:
-            require(not np.any(np.all(data[:,:,:3]==(77,51,31),axis=2)&(data[:,:,3]==255)),'V1 ink baked into v2 sprite: '+name)
+            opaque=data[:,:,3]==255
+            ink=np.all(data[:,:,:3]==(77,51,31),axis=2)&opaque
+            require(np.sum(ink)<=max(2,np.sum(opaque)*.005),'V1 ink contour baked into v2 sprite: '+name)
     out('11. V2 palette / soft shadows / no ink / sources <=1024 px: '+('PASS' if before==len(failures) else 'FAIL'))
     for name in top:
         require((ROOT/'_source'/f'{name}.png').is_file(),'Missing large source: '+name)

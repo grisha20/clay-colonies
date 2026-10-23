@@ -107,8 +107,32 @@
     "group": "build",
     "title": "Хижина",
     "stage": 0,
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: build_hut — one small round orange clay hut with a wide pale straw conical roof. Slightly elevated three-quarter view, matching a clay sandbox colony game. Simple broad thatched roof with just a few broad shallow grooves, small knot at roof peak, cylindrical terracotta walls, one dark door with two wooden upright supports. No windows, vegetation, ground, platform, chimney, fence or cast shadow. Broad simple shapes, minimal detail, thick brown outline. Production target 128x112.",
-    "where": "Нижняя панель построек — изображение над подписью и ценой"
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (461, 787, 548, 863): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "where": "Нижняя панель построек — изображение над подписью и ценой",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      461,
+      787,
+      548,
+      863
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_hut"
   },
   "btn_square_normal": {
     "size": [
@@ -2004,7 +2028,31 @@
     "title": "Дом рода",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A large round terracotta clan house with two overlapping pale straw conical roofs, broad double wooden entrance, a few simple turquoise special-clay dots around the clay wall. No scenery."
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (589, 787, 688, 864): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      589,
+      787,
+      688,
+      864
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_house"
   },
   "build_storage": {
     "size": [
@@ -2015,7 +2063,31 @@
     "title": "Склад",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. An open primitive storage shelter: four short wooden posts, one simple pale straw sloping roof; below it three compact piles of orange clay, brown logs and grey stones. No fence, no floor slab or ground."
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (719, 791, 823, 863): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      719,
+      791,
+      823,
+      863
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_storage"
   },
   "build_workshop": {
     "size": [
@@ -2026,7 +2098,31 @@
     "title": "Мастерская",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small open wooden workshop shelter with pale straw sloping roof, broad stump workbench, a short stone axe and stone pickaxe resting against the stump. No metal, machinery, floor tile or ground."
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (852, 786, 950, 863): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      852,
+      786,
+      950,
+      863
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_workshop"
   },
   "build_kiln": {
     "size": [
@@ -2037,7 +2133,31 @@
     "title": "Печь обжига",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One squat terracotta clay dome kiln, small round top vent, wide dark arched front mouth with a contained orange-yellow fire inside, two short logs at its foot. No chimney stack, smoke, separate ground or cast shadow."
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (993, 786, 1077, 865): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      993,
+      786,
+      1077,
+      865
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_kiln"
   },
   "build_idol": {
     "size": [
@@ -2048,7 +2168,31 @@
     "title": "Идол",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A short hand-moulded terracotta idol standing on a low clay base: a broad primitive face mask with two dark eye holes, tiny arms, turquoise forehead clay accent, simple sculpted body. Cute spiritual sandbox figurine, no text or ground."
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1135, 784, 1219, 865): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      1135,
+      784,
+      1219,
+      865
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_idol"
   },
   "build_wall": {
     "size": [
@@ -2059,7 +2203,25 @@
     "title": "Ограда",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. Two joined low sections of primitive palisade: short thick pointed wooden stakes with rough terracotta clay around their bases and two brown horizontal bindings. Three-quarter view, compact wide composition."
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. Two joined low sections of primitive palisade: short thick pointed wooden stakes with rough terracotta clay around their bases and two brown horizontal bindings. Three-quarter view, compact wide composition.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_wall"
   },
   "build_gate": {
     "size": [
@@ -2070,7 +2232,25 @@
     "title": "Ворота",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small double wooden gate matching a low primitive palisade, two short thick posts with terracotta feet and a simple horizontal lintel, two broad hinged stake leaves slightly parted. No metal, no surrounding wall segments or scenery."
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small double wooden gate matching a low primitive palisade, two short thick posts with terracotta feet and a simple horizontal lintel, two broad hinged stake leaves slightly parted. No metal, no surrounding wall segments or scenery.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_gate"
   },
   "build_post": {
     "size": [
@@ -2081,7 +2261,25 @@
     "title": "Пост обороны",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One small square raised wooden defensive platform on four short posts, a tiny waist-high wooden railing on two sides, one stone-tipped spear leaning upright from the platform. No flags, resident or ground tile."
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One small square raised wooden defensive platform on four short posts, a tiny waist-high wooden railing on two sides, one stone-tipped spear leaning upright from the platform. No flags, resident or ground tile.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_post"
   },
   "build_totem": {
     "size": [
@@ -2092,7 +2290,25 @@
     "title": "Тотем рода",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One tall thick clay-coated wooden clan totem with THREE large simple sculpted clay faces stacked vertically, muted red-orange and ochre surfaces, one turquoise forehead accent, chunky flared clay foot. No writing, feathers, floating effects or scenery."
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One tall thick clay-coated wooden clan totem with THREE large simple sculpted clay faces stacked vertically, muted red-orange and ochre surfaces, one turquoise forehead accent, chunky flared clay foot. No writing, feathers, floating effects or scenery.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_totem"
   },
   "build_harvest": {
     "size": [
@@ -2104,7 +2320,24 @@
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
     "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small irregular patch of warm earth seen three-quarter from above, two small grey rocks and one chunky stone pickaxe; a large bright green check mark clearly overlaid on the front-right of the patch. Minimal broad shapes. No text.",
-    "palette": "earth_signs"
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_harvest"
   },
   "build_forbid": {
     "size": [
@@ -2116,7 +2349,24 @@
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
     "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small irregular patch of warm earth seen three-quarter from above, a tiny green grass tuft; a large muted red prohibition symbol (a circle with diagonal slash) clearly overlaid across the front-right. Solid red #C0392B, no text.",
-    "palette": "earth_signs"
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_forbid"
   },
   "build_erase": {
     "size": [
@@ -2128,7 +2378,24 @@
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
     "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small irregular patch of warm earth seen three-quarter from above, a chunky simple rectangular orange clay eraser block and a large red X mark at its front-right. Very simple shapes, no lettering.",
-    "palette": "earth_signs"
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_erase"
   },
   "build_campfire": {
     "size": [
@@ -2139,7 +2406,25 @@
     "title": "Костёр",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small primitive campfire: three thick crossed brown sticks, a ring of five chunky grey stones, one broad warm amber-orange flame with pale yellow center. No smoke, no glow outside the flame, no ground."
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small primitive campfire: three thick crossed brown sticks, a ring of five chunky grey stones, one broad warm amber-orange flame with pale yellow center. No smoke, no glow outside the flame, no ground.",
+    "style_version": 2,
+    "v2_stage": 3,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 5,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "build_campfire"
   },
   "card_build_normal": {
     "size": [
