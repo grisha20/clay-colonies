@@ -135,6 +135,15 @@ def main():
     if args.stage>=4:
         from exact_preview import overview
         overview(catalog)
+    if args.stage==5:
+        for path in (ROOT/'_source').glob('*.png'):
+            source=Image.open(path).convert('RGBA')
+            name=path.stem
+            spec=catalog.get(name,{})
+            source=clean_source(source,preserve_cream=spec.get('v2_kind') in ('panel','button','card'))
+            source.save(path,optimize=True)
+            if name in catalog:catalog[name]['source_max']=1024
+        CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     write_manifest(catalog)
     print(f'HUD v2 stage {args.stage}: {len(names)} assets in approved scope; sources <=1024px; sheets + manifest updated.')
 

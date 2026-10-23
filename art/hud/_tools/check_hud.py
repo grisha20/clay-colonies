@@ -295,7 +295,9 @@ def main():
     repo=ROOT.parents[1]
     if not args.assets_only:
         changed=subprocess.run(['git','diff','--name-only','HEAD'],cwd=repo,capture_output=True,text=True,check=True).stdout.splitlines()
-        require(all(p.startswith('art/hud/') for p in changed),'Tracked changes outside art/hud')
+        allowed_prefixes=('art/hud/','godot/assets/ui/','godot/assets/fonts/','godot/tests/visual/','docs/godot/screenshots/hud_layout/')
+        allowed_files={'docs/godot/GAME_HUD.md'}|{'godot/scripts/game/'+n+'.gd' for n in ('game_hud','hud_art','priority_panel','mother_speaker','minimap','pause_menu','start_menu','build_controller','world_observer')}
+        require(all(p.startswith(allowed_prefixes) or p in allowed_files for p in changed),'Tracked changes outside exact-HUD specification section 3')
     else:
         out('Workspace audit: SKIPPED by explicit --assets-only; art checks remain enabled.')
     if args.edition=='v2':

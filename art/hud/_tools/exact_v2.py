@@ -61,6 +61,10 @@ def reference_cut(name):
     cv2.setRNGSeed(0)
     cv2.grabCut(a.astype('uint8'),gc,None,np.zeros((1,65)),np.zeros((1,65)),5,cv2.GC_INIT_WITH_MASK)
     binary=(gc==cv2.GC_FGD)|(gc==cv2.GC_PR_FGD)
+    if name in ('time_day','weather_clear'):
+        # The pill's outer edge crosses this crop; it is not part of the sun.
+        bg=np.array((251,240,216),float)
+        binary=(a[:,:,0]>a[:,:,1]*1.12)&(a[:,:,1]>a[:,:,2]*1.3)&(a[:,:,0]>150)
     if name in ('build_hut','build_house','build_kiln','build_idol'):
         binary=binary_fill_holes(cv2.morphologyEx(binary.astype('uint8'),cv2.MORPH_CLOSE,np.ones((3,3),'uint8')).astype(bool))
     if name.startswith('build_'):
