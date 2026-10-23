@@ -49,52 +49,70 @@
    16
   ],
   "btn_square_disabled": [
-   16,
-   16,
-   16,
-   16
+   20,
+   20,
+   20,
+   20
   ],
   "btn_square_hover": [
-   16,
-   16,
-   16,
-   16
+   20,
+   20,
+   20,
+   20
   ],
   "btn_square_normal": [
-   16,
-   16,
-   16,
-   16
+   20,
+   20,
+   20,
+   20
   ],
   "btn_square_pressed": [
-   16,
-   16,
-   16,
-   16
+   20,
+   20,
+   20,
+   20
+  ],
+  "btn_zoom_hover": [
+   12,
+   12,
+   12,
+   12
+  ],
+  "btn_zoom_normal": [
+   12,
+   12,
+   12,
+   12
+  ],
+  "btn_zoom_pressed": [
+   12,
+   12,
+   12,
+   12
   ],
   "card_build_disabled": [
-   16,
-   16,
-   16,
-   16
+   22,
+   22,
+   22,
+   22
   ],
   "card_build_hover": [
-   16,
-   16,
-   16,
-   16
+   22,
+   22,
+   22,
+   22
   ],
   "card_build_normal": [
-   16,
-   16,
-   16,
-   16
+   22,
+   22,
+   22,
+   22
   ],
   "card_build_pressed": [
-   16,
-   16,
-   16,
-   16
+   22,
+   22,
+   22,
+   22
   ],
   "card_resident_panel": [
    16,
@@ -115,34 +133,34 @@
    24
   ],
   "minimap_frame": [
-   16,
-   16,
-   16,
-   16
+   24,
+   24,
+   24,
+   24
   ],
   "mother_bubble": [
-   96,
-   32,
-   64,
-   48
+   24,
+   24,
+   72,
+   40
   ],
   "ui_bar_bg": [
-   16,
-   6,
-   16,
-   6
+   8,
+   5,
+   8,
+   5
   ],
   "ui_bar_fill_amber": [
-   16,
-   6,
-   16,
-   6
+   8,
+   5,
+   8,
+   5
   ],
   "ui_bar_fill_green": [
-   16,
-   6,
-   16,
-   6
+   8,
+   5,
+   8,
+   5
   ],
   "ui_bar_fill_red": [
    16,
@@ -228,11 +246,29 @@
    16,
    13
   ],
+  "ui_key_badge_active": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "ui_key_badge_normal": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "ui_list_bg": [
+   24,
+   24,
+   24,
+   24
+  ],
   "ui_panel": [
-   16,
-   16,
-   16,
-   16
+   24,
+   24,
+   24,
+   24
   ],
   "ui_panel_dark": [
    16,
@@ -252,17 +288,65 @@
    5,
    16
   ],
+  "ui_segment_left_active": [
+   16,
+   14,
+   16,
+   14
+  ],
+  "ui_segment_left_normal": [
+   16,
+   14,
+   16,
+   14
+  ],
+  "ui_segment_right_active": [
+   16,
+   14,
+   16,
+   14
+  ],
+  "ui_segment_right_normal": [
+   16,
+   14,
+   16,
+   14
+  ],
   "ui_separator_h": [
    4,
    2,
    4,
    2
   ],
+  "ui_tab_underline": [
+   10,
+   2,
+   10,
+   2
+  ],
+  "ui_tabbar": [
+   28,
+   24,
+   28,
+   12
+  ],
+  "ui_toast": [
+   20,
+   20,
+   20,
+   20
+  ],
   "ui_tooltip": [
-   16,
-   16,
-   16,
-   16
+   24,
+   24,
+   24,
+   24
+  ],
+  "ui_topbar": [
+   36,
+   28,
+   36,
+   28
   ]
  }
 }

@@ -1,0 +1,1328 @@
+{
+	"/root/WorldObserver/HUD/BuildToolbar": [
+		530.0,
+		850.0,
+		860.0,
+		220.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121": [
+		530.0,
+		850.0,
+		860.0,
+		220.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards": [
+		530.0,
+		896.0,
+		860.0,
+		174.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125": [
+		544.0,
+		908.0,
+		832.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house": [
+		684.0,
+		908.0,
+		132.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136": [
+		690.0,
+		916.0,
+		120.0,
+		134.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139": [
+		690.0,
+		1028.0,
+		120.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@Control@142": [
+		733.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@Control@145": [
+		772.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@Label@141": [
+		712.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@Label@144": [
+		760.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@Label@147": [
+		799.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@TextureRect@140": [
+		691.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@TextureRect@143": [
+		739.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@HBoxContainer@139/@TextureRect@146": [
+		778.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@Label@138": [
+		690.0,
+		1005.0,
+		120.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/@VBoxContainer@136/@TextureRect@137": [
+		690.0,
+		916.0,
+		120.0,
+		89.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_house/Key": [
+		691.0,
+		914.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut": [
+		544.0,
+		908.0,
+		132.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126": [
+		550.0,
+		916.0,
+		120.0,
+		134.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@HBoxContainer@129": [
+		550.0,
+		1028.0,
+		120.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@HBoxContainer@129/@Control@132": [
+		608.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@HBoxContainer@129/@Label@131": [
+		596.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@HBoxContainer@129/@Label@134": [
+		635.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@HBoxContainer@129/@TextureRect@130": [
+		575.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@HBoxContainer@129/@TextureRect@133": [
+		614.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@Label@128": [
+		550.0,
+		1005.0,
+		120.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/@VBoxContainer@126/@TextureRect@127": [
+		550.0,
+		916.0,
+		120.0,
+		89.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_hut/Key": [
+		551.0,
+		914.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol": [
+		1244.0,
+		908.0,
+		132.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178": [
+		1250.0,
+		916.0,
+		120.0,
+		134.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@HBoxContainer@181": [
+		1250.0,
+		1028.0,
+		120.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@HBoxContainer@181/@Control@184": [
+		1313.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@HBoxContainer@181/@Label@183": [
+		1292.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@HBoxContainer@181/@Label@186": [
+		1340.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@HBoxContainer@181/@TextureRect@182": [
+		1271.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@HBoxContainer@181/@TextureRect@185": [
+		1319.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@Label@180": [
+		1250.0,
+		1005.0,
+		120.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/@VBoxContainer@178/@TextureRect@179": [
+		1250.0,
+		916.0,
+		120.0,
+		89.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_idol/Key": [
+		1251.0,
+		914.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln": [
+		1104.0,
+		908.0,
+		132.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168": [
+		1110.0,
+		916.0,
+		120.0,
+		134.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@HBoxContainer@171": [
+		1110.0,
+		1028.0,
+		120.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@HBoxContainer@171/@Control@174": [
+		1173.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@HBoxContainer@171/@Label@173": [
+		1152.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@HBoxContainer@171/@Label@176": [
+		1200.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@HBoxContainer@171/@TextureRect@172": [
+		1131.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@HBoxContainer@171/@TextureRect@175": [
+		1179.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@Label@170": [
+		1110.0,
+		1005.0,
+		120.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/@VBoxContainer@168/@TextureRect@169": [
+		1110.0,
+		916.0,
+		120.0,
+		89.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_kiln/Key": [
+		1111.0,
+		914.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage": [
+		824.0,
+		908.0,
+		132.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148": [
+		830.0,
+		916.0,
+		120.0,
+		134.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@HBoxContainer@151": [
+		830.0,
+		1028.0,
+		120.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@HBoxContainer@151/@Control@154": [
+		888.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@HBoxContainer@151/@Label@153": [
+		876.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@HBoxContainer@151/@Label@156": [
+		915.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@HBoxContainer@151/@TextureRect@152": [
+		855.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@HBoxContainer@151/@TextureRect@155": [
+		894.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@Label@150": [
+		830.0,
+		1005.0,
+		120.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/@VBoxContainer@148/@TextureRect@149": [
+		830.0,
+		916.0,
+		120.0,
+		89.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_storage/Key": [
+		831.0,
+		914.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop": [
+		964.0,
+		908.0,
+		132.0,
+		150.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158": [
+		970.0,
+		916.0,
+		120.0,
+		134.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@HBoxContainer@161": [
+		970.0,
+		1028.0,
+		120.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@HBoxContainer@161/@Control@164": [
+		1028.0,
+		1028.0,
+		3.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@HBoxContainer@161/@Label@163": [
+		1016.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@HBoxContainer@161/@Label@166": [
+		1055.0,
+		1028.0,
+		9.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@HBoxContainer@161/@TextureRect@162": [
+		995.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@HBoxContainer@161/@TextureRect@165": [
+		1034.0,
+		1028.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@Label@160": [
+		970.0,
+		1005.0,
+		120.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/@VBoxContainer@158/@TextureRect@159": [
+		970.0,
+		916.0,
+		120.0,
+		89.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildCards/@HBoxContainer@125/Tool_workshop/Key": [
+		971.0,
+		914.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs": [
+		702.0,
+		850.0,
+		515.0,
+		50.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs/@HBoxContainer@122": [
+		720.0,
+		856.0,
+		479.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs/@HBoxContainer@122/@VSeparator@123": [
+		889.0,
+		856.0,
+		14.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs/@HBoxContainer@122/@VSeparator@124": [
+		1059.0,
+		856.0,
+		14.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs/@HBoxContainer@122/Tab_0": [
+		720.0,
+		856.0,
+		163.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs/@HBoxContainer@122/Tab_1": [
+		909.0,
+		856.0,
+		144.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/BuildToolbar/@VBoxContainer@121/BuildTabs/@HBoxContainer@122/Tab_2": [
+		1079.0,
+		856.0,
+		120.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/GameHud": [
+		0.0,
+		0.0,
+		1920.0,
+		1080.0
+	],
+	"/root/WorldObserver/HUD/GameHud/Brand": [
+		18.0,
+		10.0,
+		230.0,
+		64.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel": [
+		1540.0,
+		12.0,
+		364.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59": [
+		1540.0,
+		12.0,
+		364.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59/@Button@60": [
+		1540.0,
+		12.0,
+		54.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59/@Button@61": [
+		1602.0,
+		12.0,
+		54.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59/@Button@62": [
+		1664.0,
+		12.0,
+		54.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59/@Button@63": [
+		1726.0,
+		12.0,
+		54.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59/@Button@64": [
+		1788.0,
+		12.0,
+		54.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/QuickPanel/@HBoxContainer@59/@Button@65": [
+		1850.0,
+		12.0,
+		54.0,
+		54.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar": [
+		565.0,
+		12.0,
+		790.0,
+		57.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29": [
+		589.0,
+		18.0,
+		742.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@33": [
+		589.0,
+		18.0,
+		87.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@33/@Label@31": [
+		635.0,
+		24.0,
+		41.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@33/@TextureRect@30": [
+		589.0,
+		18.0,
+		38.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@36": [
+		698.0,
+		18.0,
+		60.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@36/@Label@35": [
+		744.0,
+		24.0,
+		14.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@36/@TextureRect@34": [
+		698.0,
+		18.0,
+		38.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@40": [
+		780.0,
+		18.0,
+		87.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@40/@Label@38": [
+		826.0,
+		24.0,
+		41.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@40/@TextureRect@37": [
+		780.0,
+		18.0,
+		38.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@44": [
+		889.0,
+		18.0,
+		74.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@44/@Label@42": [
+		935.0,
+		24.0,
+		28.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@44/@TextureRect@41": [
+		889.0,
+		18.0,
+		38.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@48": [
+		985.0,
+		18.0,
+		74.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@48/@Label@46": [
+		1031.0,
+		24.0,
+		28.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@48/@TextureRect@45": [
+		985.0,
+		18.0,
+		38.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@51": [
+		1081.0,
+		18.0,
+		74.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@51/@Label@50": [
+		1127.0,
+		24.0,
+		28.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@HBoxContainer@51/@TextureRect@49": [
+		1081.0,
+		18.0,
+		38.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@TextureRect@53": [
+		1203.0,
+		18.0,
+		40.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@VBoxContainer@55": [
+		1265.0,
+		18.0,
+		66.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@VBoxContainer@55/@Label@56": [
+		1265.0,
+		18.0,
+		66.0,
+		27.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@VBoxContainer@55/@Label@57": [
+		1265.0,
+		41.0,
+		66.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/GameHud/ResourceBar/@HBoxContainer@29/@VSeparator@52": [
+		1177.0,
+		18.0,
+		4.0,
+		45.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel": [
+		16.0,
+		84.0,
+		320.0,
+		107.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66": [
+		32.0,
+		94.0,
+		288.0,
+		85.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@HBoxContainer@67": [
+		32.0,
+		94.0,
+		288.0,
+		27.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@HBoxContainer@67/@Control@68": [
+		195.0,
+		94.0,
+		69.0,
+		27.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@HBoxContainer@67/@Label@69": [
+		270.0,
+		95.0,
+		50.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@HBoxContainer@67/TasksToggle": [
+		32.0,
+		94.0,
+		157.0,
+		27.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70": [
+		32.0,
+		127.0,
+		288.0,
+		52.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70/@HBoxContainer@394": [
+		32.0,
+		127.0,
+		288.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70/@HBoxContainer@394/@Label@393": [
+		64.0,
+		127.0,
+		256.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70/@HBoxContainer@394/@TextureRect@392": [
+		32.0,
+		127.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70/@HBoxContainer@397": [
+		32.0,
+		156.0,
+		288.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70/@HBoxContainer@397/@Label@396": [
+		64.0,
+		156.0,
+		256.0,
+		23.0
+	],
+	"/root/WorldObserver/HUD/GameHud/TasksPanel/@VBoxContainer@66/@VBoxContainer@70/@HBoxContainer@397/@TextureRect@395": [
+		32.0,
+		156.0,
+		22.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/GameHud/Toasts": [
+		809.5,
+		84.0,
+		301.0,
+		46.0
+	],
+	"/root/WorldObserver/HUD/GameHud/Toasts/EventToast": [
+		809.5,
+		84.0,
+		301.0,
+		46.0
+	],
+	"/root/WorldObserver/HUD/GameHud/Toasts/EventToast/@HBoxContainer@71": [
+		827.5,
+		92.0,
+		261.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/GameHud/Toasts/EventToast/@HBoxContainer@71/@Label@73": [
+		867.5,
+		94.0,
+		221.0,
+		26.0
+	],
+	"/root/WorldObserver/HUD/GameHud/Toasts/EventToast/@HBoxContainer@71/@TextureRect@72": [
+		827.5,
+		92.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/Minimap": [
+		1698.0,
+		858.0,
+		208.0,
+		208.0
+	],
+	"/root/WorldObserver/HUD/Minimap/MapCanvas": [
+		1710.0,
+		870.0,
+		184.0,
+		184.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker": [
+		1322.0,
+		698.0,
+		580.0,
+		190.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100": [
+		1322.0,
+		698.0,
+		580.0,
+		190.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/Portrait": [
+		1702.0,
+		698.0,
+		200.0,
+		190.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/Portrait/@SubViewportContainer@112": [
+		1702.0,
+		698.0,
+		200.0,
+		190.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble": [
+		1322.0,
+		698.0,
+		380.0,
+		106.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101": [
+		1340.0,
+		710.0,
+		344.0,
+		60.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101/@HBoxContainer@102": [
+		1340.0,
+		710.0,
+		344.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101/@HBoxContainer@102/@Label@104": [
+		1364.0,
+		710.0,
+		320.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101/@HBoxContainer@102/@TextureRect@103": [
+		1340.0,
+		710.0,
+		18.0,
+		22.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101/@HBoxContainer@108": [
+		1340.0,
+		736.0,
+		344.0,
+		34.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101/@HBoxContainer@108/@Button@110": [
+		1650.0,
+		736.0,
+		34.0,
+		34.0
+	],
+	"/root/WorldObserver/HUD/MotherSpeaker/@HBoxContainer@100/SpeechBubble/@VBoxContainer@101/@HBoxContainer@108/@Label@109": [
+		1340.0,
+		741.0,
+		302.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel": [
+		1604.0,
+		66.0,
+		300.0,
+		439.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79": [
+		1620.0,
+		78.0,
+		268.0,
+		413.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@HBoxContainer@80": [
+		1620.0,
+		78.0,
+		268.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@HBoxContainer@80/@TextureRect@81": [
+		1620.0,
+		78.0,
+		30.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@HBoxContainer@80/WorksToggle": [
+		1658.0,
+		78.0,
+		87.0,
+		33.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82": [
+		1620.0,
+		119.0,
+		268.0,
+		372.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/@HBoxContainer@83": [
+		1620.0,
+		119.0,
+		268.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/@HBoxContainer@83/@Label@85": [
+		1644.0,
+		119.0,
+		217.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/@HBoxContainer@83/@TextureRect@84": [
+		1620.0,
+		119.0,
+		18.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/@HBoxContainer@86": [
+		1620.0,
+		151.0,
+		268.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/@HBoxContainer@86/@Button@87": [
+		1620.0,
+		151.0,
+		134.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/@HBoxContainer@86/@Button@88": [
+		1754.0,
+		151.0,
+		134.0,
+		38.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/FiringRow": [
+		1620.0,
+		451.0,
+		268.0,
+		40.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/FiringRow/@Button@95": [
+		1854.0,
+		454.0,
+		34.0,
+		34.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/FiringRow/@TextureRect@91": [
+		1620.0,
+		451.0,
+		40.0,
+		40.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/FiringRow/@VBoxContainer@92": [
+		1670.0,
+		451.0,
+		174.0,
+		40.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/FiringRow/@VBoxContainer@92/@Label@94": [
+		1670.0,
+		469.0,
+		174.0,
+		20.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/FiringRow/@VBoxContainer@92/@ProgressBar@93": [
+		1670.0,
+		453.0,
+		174.0,
+		14.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList": [
+		1620.0,
+		197.0,
+		268.0,
+		246.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90": [
+		1628.0,
+		203.0,
+		252.0,
+		234.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405": [
+		1628.0,
+		203.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404": [
+		1628.0,
+		203.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404/@Button@401": [
+		1766.0,
+		203.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404/@Button@403": [
+		1842.0,
+		203.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404/@Label@399": [
+		1666.0,
+		206.0,
+		72.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404/@Label@402": [
+		1804.0,
+		206.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404/@TextureRect@398": [
+		1628.0,
+		203.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@405/@HBoxContainer@404/@TextureRect@400": [
+		1746.0,
+		212.0,
+		12.0,
+		12.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414": [
+		1628.0,
+		237.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413": [
+		1628.0,
+		237.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413/@Button@410": [
+		1766.0,
+		237.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413/@Button@412": [
+		1842.0,
+		237.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413/@Label@408": [
+		1666.0,
+		240.0,
+		72.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413/@Label@411": [
+		1804.0,
+		240.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413/@TextureRect@407": [
+		1628.0,
+		237.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@414/@HBoxContainer@413/@TextureRect@409": [
+		1746.0,
+		246.0,
+		12.0,
+		12.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422": [
+		1628.0,
+		271.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422/@HBoxContainer@421": [
+		1628.0,
+		271.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422/@HBoxContainer@421/@Button@418": [
+		1766.0,
+		271.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422/@HBoxContainer@421/@Button@420": [
+		1842.0,
+		271.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422/@HBoxContainer@421/@Label@417": [
+		1666.0,
+		274.0,
+		92.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422/@HBoxContainer@421/@Label@419": [
+		1804.0,
+		274.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@422/@HBoxContainer@421/@TextureRect@416": [
+		1628.0,
+		271.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430": [
+		1628.0,
+		305.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429": [
+		1628.0,
+		305.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429/@Button@426": [
+		1766.0,
+		305.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429/@Button@428": [
+		1842.0,
+		305.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429/@Label@424": [
+		1666.0,
+		308.0,
+		72.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429/@Label@427": [
+		1804.0,
+		308.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429/@TextureRect@423": [
+		1628.0,
+		305.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@430/@HBoxContainer@429/@TextureRect@425": [
+		1746.0,
+		314.0,
+		12.0,
+		12.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439": [
+		1628.0,
+		339.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438": [
+		1628.0,
+		339.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438/@Button@435": [
+		1766.0,
+		339.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438/@Button@437": [
+		1842.0,
+		339.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438/@Label@433": [
+		1666.0,
+		342.0,
+		72.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438/@Label@436": [
+		1804.0,
+		342.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438/@TextureRect@432": [
+		1628.0,
+		339.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@439/@HBoxContainer@438/@TextureRect@434": [
+		1746.0,
+		348.0,
+		12.0,
+		12.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448": [
+		1628.0,
+		373.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447": [
+		1628.0,
+		373.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447/@Button@444": [
+		1766.0,
+		373.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447/@Button@446": [
+		1842.0,
+		373.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447/@Label@442": [
+		1666.0,
+		376.0,
+		72.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447/@Label@445": [
+		1804.0,
+		376.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447/@TextureRect@441": [
+		1628.0,
+		373.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@448/@HBoxContainer@447/@TextureRect@443": [
+		1746.0,
+		382.0,
+		12.0,
+		12.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456": [
+		1628.0,
+		407.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456/@HBoxContainer@455": [
+		1628.0,
+		407.0,
+		244.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456/@HBoxContainer@455/@Button@452": [
+		1766.0,
+		407.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456/@HBoxContainer@455/@Button@454": [
+		1842.0,
+		407.0,
+		30.0,
+		30.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456/@HBoxContainer@455/@Label@451": [
+		1666.0,
+		410.0,
+		92.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456/@HBoxContainer@455/@Label@453": [
+		1804.0,
+		410.0,
+		30.0,
+		24.0
+	],
+	"/root/WorldObserver/HUD/PriorityPanel/@VBoxContainer@79/@VBoxContainer@82/JobList/@GridContainer@90/@VBoxContainer@456/@HBoxContainer@455/@TextureRect@450": [
+		1628.0,
+		407.0,
+		30.0,
+		30.0
+	]
+}
