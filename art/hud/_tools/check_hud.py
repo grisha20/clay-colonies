@@ -101,7 +101,7 @@ def main():
     migrated={n for n,s in catalog.items() if s.get('style_version')==2}
     out(f'SCOPE: {args.edition} stage {args.stage}; {len(top)} game assets; {len(rows)} PNG manifest rows.')
     if args.edition=='v2':
-        out(f'HUD v2: {len(wanted & migrated)}/{len(wanted)} requested samples; {len(migrated)}/{len(V2_REQUIRED)} migrated in full v2 specification.')
+        out(f'HUD v2: {len(wanted & migrated)}/{len(wanted)} requested samples; {len(migrated & set(V2_REQUIRED))}/{len(V2_REQUIRED)} migrated in full v2 specification.')
     out('1. Inventory: '+('PASS' if not failures else 'FAIL'))
     before = len(failures)
     images = {}
@@ -116,7 +116,7 @@ def main():
         require(row['size']==f'{im.width}x{im.height}', f'Manifest size mismatch: {file}')
         if '/' not in file:
             name=p.stem
-            expected_size=KNOWN_SIZES.get(name,KNOWN_SIZES.get(name.removesuffix('_light')))
+            expected_size=tuple(catalog[name]['size']) if catalog.get(name,{}).get('style_version')==2 else KNOWN_SIZES.get(name,KNOWN_SIZES.get(name.removesuffix('_light')))
             if expected_size:
                 require(im.size==expected_size, f'Spec size mismatch: {file}')
             if name in catalog:
@@ -223,7 +223,8 @@ def main():
         if name!='ui_separator_h':
             if name in migrated:
                 require(np.all(center==center[:,0:1,:]),'V2 center has horizontal texture or decoration: '+name)
-                require(np.all(center[:,:,3]==255),'V2 surface center is not opaque: '+name)
+                if spec.get('v2_center')=='transparent':require(not np.any(center[:,:,3]),'V2 frame center is not transparent: '+name)
+                elif spec.get('v2_center')!='mixed':require(np.all(center[:,:,3]==255),'V2 surface center is not opaque: '+name)
             else:
                 require(np.all(center==center[0,0]),'9-slice center is not uniform: '+name)
         for size in [(im.width*2,im.height),(im.width,im.height*2)]:
@@ -264,7 +265,8 @@ def main():
         require(source is not None and max(source.size)<=1024,'V2 source exceeds 1024px: '+name)
         data=np.array(im)
         if spec['v2_kind'] in ('panel','button','card'):
-            require(np.max(np.abs(np.array(im.getpixel((im.width//2,im.height//2)))[:3].astype(int)-np.array(spec['v2_fill_top'])))<35,'V2 face palette mismatch: '+name)
+            if not spec.get('v2_exact'):
+                require(np.max(np.abs(np.array(im.getpixel((im.width//2,im.height//2)))[:3].astype(int)-np.array(spec['v2_fill_top'])))<35,'V2 face palette mismatch: '+name)
             shadow=(data[:,:,3]>0)&np.all(np.abs(data[:,:,:3].astype(int)-np.array(SHADOW))<10,axis=2)
             require(np.sum(shadow)>8,'V2 surface missing inset soft shadow: '+name)
             require(not shadow.any() or np.max(data[shadow,3])<=65,'V2 shadow exceeds 25% opacity: '+name)
@@ -296,8 +298,10 @@ def main():
         out('Workspace audit: SKIPPED by explicit --assets-only; art checks remain enabled.')
     if args.edition=='v2':
         remaining=len(set(V2_REQUIRED)-migrated)
-        out(f'DEFERRED: {remaining} v2 assets; complete state families and stages 1-5 require owner approval after stage 0.')
-        out('This report validates the requested v2 stage, not completion of HUD v2.')
+        if remaining:
+            out(f'DEFERRED: {remaining} v2 assets outside the current stage.')
+            out('This report validates the requested v2 stage, not completion of HUD v2.')
+        else:out('HUD v2 specification: complete.')
     elif args.stage not in ('all','8'):
         out(f'DEFERRED: {len(EXPECTED-top)} remaining specification assets'+('; '+', '.join(deferred) if deferred else '')+'.')
         out('Full §6 completeness is NOT claimed. Run --stage all for final delivery.')

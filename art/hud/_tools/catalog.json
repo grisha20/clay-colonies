@@ -35,9 +35,27 @@
     "group": "glyph",
     "title": "Пауза",
     "stage": 0,
-    "brightness": 0.75,
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: glyph_pause — ONLY TWO chunky upright parallel dark brown #4D331F bars with gently rounded handmade corners. Bars equal height and width, large clear gap between them, perfectly legible pause symbol. Tiny matte clay bevel lit upper-left, dark ochre-brown face. No button frame, no background plate, no circles or extra decorations. Production target 48x48.",
-    "where": "Правая верхняя панель — управление временем / настройками / тревогой"
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_pause. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "where": "Правая верхняя панель — управление временем / настройками / тревогой",
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_pause"
   },
   "build_hut": {
     "size": [
@@ -52,21 +70,21 @@
   },
   "btn_square_normal": {
     "size": [
-      64,
-      64
+      96,
+      96
     ],
     "group": "btn",
     "title": "Квадратная кнопка",
     "stage": 0,
     "mode": "v2",
     "slice": [
-      26,
-      24,
-      26,
-      30
+      20,
+      20,
+      20,
+      20
     ],
     "state": "normal",
-    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. An EMPTY small SQUARE BUTTON in the default inactive state, front view orthographic. Match the pale pause/settings button frame in the upper right of the reference. Uniform pale cream #FFF8EC face, thin light-clay #E3C9A0 border, strongly rounded corners radius about 24% of button side, very subtle upper-edge highlight, soft diffuse 25%-opacity warm-brown shadow underneath. Body 80% canvas size, no brown thick rim, no icon or writing. Very clean, restrained shallow tactile depth.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_square_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Квадратные кнопки HUD, глиф накладывается отдельно",
     "style_version": 2,
     "v2_stage": 0,
@@ -74,14 +92,18 @@
     "source_max": 1024,
     "v2_fill_top": [
       255,
-      248,
-      236
+      244,
+      224
     ],
     "v2_border": [
-      227,
-      201,
-      160
-    ]
+      207,
+      168,
+      119
+    ],
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_shape": "bevel",
+    "v2_recipe": "btn_square_normal"
   },
   "cursor_default": {
     "size": [
@@ -354,10 +376,27 @@
     "group": "extra",
     "title": "Пауза — светлый глиф",
     "stage": 1,
-    "mode": "light",
-    "base": "glyph_pause",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from generated glyph_pause silhouette: exact parchment #F2E3BD fill, opaque #4D331F contour; identical alpha to the base glyph."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_pause_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_pause_light"
   },
   "glyph_play": {
     "stage": 2,
@@ -367,8 +406,27 @@
     ],
     "group": "glyph",
     "title": "Скорость 1×",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One broad right-pointing triangular PLAY symbol, made of dark matte brown clay #4D331F with a small subtle upper-left warm highlight. Rounded handmade corners. No button frame.",
-    "where": "Правая верхняя панель — управление временем / настройками / тревогой"
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_play. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "where": "Правая верхняя панель — управление временем / настройками / тревогой",
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_play"
   },
   "glyph_settings": {
     "stage": 2,
@@ -378,8 +436,27 @@
     ],
     "group": "glyph",
     "title": "Настройки",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky cogwheel carved from dark brown stone or clay. Six broad blunt teeth, one circular hole in the middle. Clear gear silhouette, no metal, no button frame.",
-    "where": "Правая верхняя панель — управление временем / настройками / тревогой"
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_settings. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "where": "Правая верхняя панель — управление временем / настройками / тревогой",
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_settings"
   },
   "glyph_alarm": {
     "stage": 2,
@@ -389,11 +466,27 @@
     ],
     "group": "glyph",
     "title": "Тревога",
-    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One large primitive blowing-horn musical instrument, NOT a tooth or tusk. Bold almost C-shaped curved ochre horn with a SHORT BLUNT tubular mouthpiece at lower-left, thick middle, and a very broad flared trumpet bell pointing upper-right. The bell is seen as a prominent dark oval hollow opening inside a thick ochre rim; dark opening must remain visible when recolored monochrome. Compact nearly square silhouette, body height about 75% of its width, not a long skinny crescent. Plain horn, no straps or dangling things, no sound waves.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_alarm. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой",
     "source_max": 1024,
-    "ink_details": true,
-    "mode": "icon"
+    "mode": "v2",
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_alarm"
   },
   "glyph_alarm_on": {
     "stage": 2,
@@ -403,12 +496,27 @@
     ],
     "group": "glyph",
     "title": "Тревога включена",
-    "prompt": "Offline derivative of generated glyph_alarm: same large horn with two separated curved sound-wave arcs. revision_shapes.alarm_on.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_alarm_on. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой",
     "source_max": 1024,
-    "ink_details": true,
-    "mode": "alarm_on",
-    "base": "glyph_alarm"
+    "mode": "v2",
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_alarm_on"
   },
   "ui_panel": {
     "stage": 2,
@@ -418,107 +526,144 @@
     ],
     "group": "ui",
     "title": "Пергаментная панель",
-    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. A plain EMPTY SQUARE UI PANEL, front view perfectly orthographic. Very pale warm cream #FBF3E3 flat uniform center. Thin light-clay #E3C9A0 border, about 1/64 of panel width. Soft round corners radius about 14% of panel width. Very restrained white rim highlight inside top edge. Soft diffuse warm-brown shadow below, opacity about 25%, confined to transparent margin. Clean modern cozy game UI like the Jobs panel in the reference. No ornaments or inset rectangles, no dark outlines. The panel itself about 85% canvas width and height. No content.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_panel. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Общие панели, кнопки, статусы и полосы HUD",
     "mode": "v2",
     "slice": [
-      32,
-      32,
-      32,
-      36
+      24,
+      24,
+      24,
+      24
     ],
     "style_version": 2,
     "v2_stage": 0,
     "v2_kind": "panel",
     "source_max": 1024,
     "v2_fill_top": [
-      251,
-      243,
-      227
+      255,
+      244,
+      224
     ],
     "v2_border": [
-      227,
-      201,
-      160
-    ]
+      207,
+      168,
+      119
+    ],
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_shape": "rounded",
+    "v2_recipe": "ui_panel"
   },
   "btn_square_hover": {
     "size": [
-      64,
-      64
+      96,
+      96
     ],
     "group": "btn",
     "title": "Квадратная кнопка — hover",
     "stage": 2,
     "where": "Квадратные кнопки HUD, глиф накладывается отдельно",
-    "prompt": "Offline derivative of generated btn_square_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "btn_square_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_square_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "hover",
     "slice": [
-      16,
-      16,
-      16,
-      16
-    ]
+      20,
+      20,
+      20,
+      20
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_square_hover"
   },
   "btn_square_pressed": {
     "size": [
-      64,
-      64
+      96,
+      96
     ],
     "group": "btn",
     "title": "Квадратная кнопка — pressed",
     "stage": 2,
     "where": "Квадратные кнопки HUD, глиф накладывается отдельно",
-    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. An EMPTY small SQUARE BUTTON in the selected/pressed state, front view orthographic. Match the orange play button frame in the upper right of the reference. Clear saturated WARM ORANGE vertical gradient from #F7A846 at top to #E57D22 at bottom, thin orange border #C9661A, strongly rounded corners radius about 24% of button side, narrow lighter top-rim highlight. Soft diffuse 25%-opacity warm-brown shadow beneath. Body 80% canvas size, no brown thick rim, no icon or writing. Clean shallow tactile depth.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_square_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "pressed",
     "slice": [
-      26,
-      24,
-      26,
-      30
+      20,
+      20,
+      20,
+      20
     ],
     "style_version": 2,
     "v2_stage": 0,
     "v2_kind": "button",
     "source_max": 1024,
     "v2_fill_top": [
-      247,
-      168,
-      70
+      255,
+      244,
+      224
     ],
     "v2_border": [
-      201,
-      102,
-      26
+      207,
+      168,
+      119
     ],
-    "v2_fill_bottom": [
-      229,
-      125,
-      34
-    ]
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_shape": "bevel",
+    "v2_recipe": "btn_square_pressed"
   },
   "btn_square_disabled": {
     "size": [
-      64,
-      64
+      96,
+      96
     ],
     "group": "btn",
     "title": "Квадратная кнопка — disabled",
     "stage": 2,
     "where": "Квадратные кнопки HUD, глиф накладывается отдельно",
-    "prompt": "Offline derivative of generated btn_square_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "btn_square_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_square_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "disabled",
     "slice": [
-      16,
-      16,
-      16,
-      16
-    ]
+      20,
+      20,
+      20,
+      20
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_square_disabled"
   },
   "ui_button_wide_normal": {
     "size": [
@@ -529,16 +674,33 @@
     "title": "Широкая кнопка",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_button_wide_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
       16,
       16,
       16,
       16
     ],
-    "state": "normal"
+    "state": "normal",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_button_wide_normal"
   },
   "ui_button_wide_hover": {
     "size": [
@@ -549,16 +711,33 @@
     "title": "Широкая кнопка — hover",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_button_wide_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_button_wide_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_button_wide_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "hover",
     "slice": [
       16,
       16,
       16,
       16
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_button_wide_hover"
   },
   "ui_button_wide_pressed": {
     "size": [
@@ -569,16 +748,33 @@
     "title": "Широкая кнопка — pressed",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_button_wide_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_button_wide_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_button_wide_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "pressed",
     "slice": [
       16,
       16,
       16,
       16
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_button_wide_pressed"
   },
   "ui_button_wide_disabled": {
     "size": [
@@ -589,16 +785,33 @@
     "title": "Широкая кнопка — disabled",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_button_wide_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_button_wide_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_button_wide_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "disabled",
     "slice": [
       16,
       16,
       16,
       16
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_button_wide_disabled"
   },
   "ui_btn_plus_normal": {
     "size": [
@@ -609,16 +822,33 @@
     "title": "Кнопка плюс — рамка",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
       10,
       10,
       10,
       10
     ],
-    "state": "normal"
+    "state": "normal",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_plus_normal"
   },
   "ui_btn_plus_hover": {
     "size": [
@@ -629,16 +859,33 @@
     "title": "Кнопка плюс — рамка — hover",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_btn_plus_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_btn_plus_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "hover",
     "slice": [
       10,
       10,
       10,
       10
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_plus_hover"
   },
   "ui_btn_plus_pressed": {
     "size": [
@@ -649,16 +896,33 @@
     "title": "Кнопка плюс — рамка — pressed",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_btn_plus_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_btn_plus_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "pressed",
     "slice": [
       10,
       10,
       10,
       10
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_plus_pressed"
   },
   "ui_btn_plus_disabled": {
     "size": [
@@ -669,16 +933,33 @@
     "title": "Кнопка плюс — рамка — disabled",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_btn_plus_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_btn_plus_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "disabled",
     "slice": [
       10,
       10,
       10,
       10
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_plus_disabled"
   },
   "ui_btn_minus_normal": {
     "size": [
@@ -689,16 +970,33 @@
     "title": "Кнопка минус — рамка",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
       10,
       10,
       10,
       10
     ],
-    "state": "normal"
+    "state": "normal",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_minus_normal"
   },
   "ui_btn_minus_hover": {
     "size": [
@@ -709,16 +1007,33 @@
     "title": "Кнопка минус — рамка — hover",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_btn_minus_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_btn_minus_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "hover",
     "slice": [
       10,
       10,
       10,
       10
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_minus_hover"
   },
   "ui_btn_minus_pressed": {
     "size": [
@@ -729,16 +1044,33 @@
     "title": "Кнопка минус — рамка — pressed",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_btn_minus_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_btn_minus_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "pressed",
     "slice": [
       10,
       10,
       10,
       10
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_minus_pressed"
   },
   "ui_btn_minus_disabled": {
     "size": [
@@ -749,16 +1081,33 @@
     "title": "Кнопка минус — рамка — disabled",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_btn_minus_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "ui_btn_minus_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "disabled",
     "slice": [
       10,
       10,
       10,
       10
-    ]
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "button",
+    "v2_shape": "bevel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_btn_minus_disabled"
   },
   "glyph_plus": {
     "size": [
@@ -769,10 +1118,27 @@
     "title": "Плюс",
     "stage": 2,
     "where": "Панель работ — кнопки ±",
-    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
-    "mode": "symbol",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_plus. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "shape": "plus",
-    "base": "res_clay"
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_plus"
   },
   "glyph_minus": {
     "size": [
@@ -783,10 +1149,27 @@
     "title": "Минус",
     "stage": 2,
     "where": "Панель работ — кнопки ±",
-    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
-    "mode": "symbol",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_minus. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "shape": "minus",
-    "base": "res_clay"
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_minus"
   },
   "glyph_fast": {
     "size": [
@@ -797,32 +1180,26 @@
     "title": "Скорость 5×",
     "stage": 2,
     "where": "Правая верхняя панель — управление временем / настройками / тревогой",
-    "prompt": "Offline derivative of generated glyph_play material; composite; no external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "glyph_play",
-        "box": [
-          2,
-          5,
-          20,
-          38
-        ],
-        "stretch": true,
-        "margin": 4
-      },
-      {
-        "name": "glyph_play",
-        "box": [
-          21,
-          5,
-          20,
-          38
-        ],
-        "stretch": true,
-        "margin": 4
-      }
-    ]
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_fast. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_fast"
   },
   "glyph_faster": {
     "size": [
@@ -833,43 +1210,26 @@
     "title": "Скорость 20×",
     "stage": 2,
     "where": "Правая верхняя панель — управление временем / настройками / тревогой",
-    "prompt": "Offline derivative of generated glyph_play material; composite; no external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "glyph_play",
-        "box": [
-          2,
-          5,
-          14,
-          38
-        ],
-        "stretch": true,
-        "margin": 4
-      },
-      {
-        "name": "glyph_play",
-        "box": [
-          15,
-          5,
-          14,
-          38
-        ],
-        "stretch": true,
-        "margin": 4
-      },
-      {
-        "name": "glyph_play",
-        "box": [
-          28,
-          5,
-          14,
-          38
-        ],
-        "stretch": true,
-        "margin": 4
-      }
-    ]
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_faster. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_faster"
   },
   "ui_panel_dark": {
     "size": [
@@ -928,20 +1288,32 @@
     "title": "Подсказка",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_tooltip. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      16,
-      16,
-      16,
-      16
+      24,
+      24,
+      24,
+      24
     ],
-    "fill": [
-      250,
-      239,
-      211
-    ]
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "panel",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_tooltip"
   },
   "ui_bar_bg": {
     "size": [
@@ -952,20 +1324,32 @@
     "title": "Подложка полосы",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bar recipe ui_bar_bg. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      16,
-      6,
-      16,
-      6
+      8,
+      5,
+      8,
+      5
     ],
-    "fill": [
-      93,
-      76,
-      52
-    ]
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "bar",
+    "v2_shape": "bar",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_bar_bg"
   },
   "ui_bar_fill_green": {
     "size": [
@@ -976,20 +1360,32 @@
     "title": "Прогресс / здоровье",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bar recipe ui_bar_fill_green. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      16,
-      6,
-      16,
-      6
+      8,
+      5,
+      8,
+      5
     ],
-    "fill": [
-      92,
-      140,
-      51
-    ]
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "bar",
+    "v2_shape": "bar",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_bar_fill_green"
   },
   "ui_bar_fill_amber": {
     "size": [
@@ -1000,20 +1396,32 @@
     "title": "Прогресс стройки",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bar recipe ui_bar_fill_amber. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      16,
-      6,
-      16,
-      6
+      8,
+      5,
+      8,
+      5
     ],
-    "fill": [
-      240,
-      184,
-      90
-    ]
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "bar",
+    "v2_shape": "bar",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_bar_fill_amber"
   },
   "ui_bar_fill_red": {
     "size": [
@@ -1199,10 +1607,27 @@
     "group": "extra",
     "title": "Скорость 1× — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_play",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_play: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_play_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_play_light"
   },
   "glyph_settings_light": {
     "size": [
@@ -1212,10 +1637,27 @@
     "group": "extra",
     "title": "Настройки — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_settings",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_settings: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_settings_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_settings_light"
   },
   "glyph_alarm_light": {
     "size": [
@@ -1225,12 +1667,27 @@
     "group": "extra",
     "title": "Тревога — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_alarm",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_alarm: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_alarm_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "source_max": 1024,
-    "ink_details": true
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_alarm_light"
   },
   "glyph_alarm_on_light": {
     "size": [
@@ -1240,12 +1697,27 @@
     "group": "extra",
     "title": "Тревога включена — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_alarm_on",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_alarm_on: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_alarm_on_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "source_max": 1024,
-    "ink_details": true
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_alarm_on_light"
   },
   "glyph_plus_light": {
     "size": [
@@ -1255,10 +1727,27 @@
     "group": "extra",
     "title": "Плюс — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_plus",
+    "mode": "v2",
     "where": "Панель работ — кнопки ± · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_plus: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_plus_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_plus_light"
   },
   "glyph_minus_light": {
     "size": [
@@ -1268,10 +1757,27 @@
     "group": "extra",
     "title": "Минус — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_minus",
+    "mode": "v2",
     "where": "Панель работ — кнопки ± · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_minus: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_minus_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_minus_light"
   },
   "glyph_fast_light": {
     "size": [
@@ -1281,10 +1787,27 @@
     "group": "extra",
     "title": "Скорость 5× — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_fast",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_fast: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_fast_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_fast_light"
   },
   "glyph_faster_light": {
     "size": [
@@ -1294,10 +1817,27 @@
     "group": "extra",
     "title": "Скорость 20× — светлый",
     "stage": 2,
-    "mode": "light",
-    "base": "glyph_faster",
+    "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_faster: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_faster_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_faster_light"
   },
   "build_house": {
     "size": [
@@ -1454,16 +1994,33 @@
     "title": "Карточка постройки",
     "stage": 3,
     "where": "Нижняя панель — рамка карточки постройки",
-    "prompt": "Offline derivative of generated ui_panel; panel; no external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe card_build_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      16,
-      16,
-      16,
-      16
+      22,
+      22,
+      22,
+      22
     ],
-    "state": "normal"
+    "state": "normal",
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "card",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "card_build_normal"
   },
   "card_build_hover": {
     "size": [
@@ -1474,16 +2031,33 @@
     "title": "Карточка постройки — hover",
     "stage": 3,
     "where": "Нижняя панель — рамка карточки постройки",
-    "prompt": "Offline derivative of generated card_build_normal; state; no external assets.",
-    "mode": "state",
-    "base": "card_build_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe card_build_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "hover",
     "slice": [
-      16,
-      16,
-      16,
-      16
-    ]
+      22,
+      22,
+      22,
+      22
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "card",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "card_build_hover"
   },
   "card_build_pressed": {
     "size": [
@@ -1494,29 +2068,33 @@
     "title": "Карточка постройки — pressed",
     "stage": 3,
     "where": "Нижняя панель — рамка карточки постройки",
-    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. An EMPTY selected BUILDING CARD FRAME, slightly taller than wide, width-to-height ratio 128:144. Front view orthographic, plain flat interior fill light warm apricot #FCDDB0, thin warm-orange #C9661A border, softly rounded corners about 12% of width, subtle inner top-edge highlight. Subtle warm soft shadow beneath. Match the selected Hut card at bottom left of the construction dock in the reference. No inset image window, no building, no icon, no text, no number badge. About 85% canvas size. No thick bevel or dark-brown outline.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe card_build_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "pressed",
     "slice": [
-      32,
-      32,
-      32,
-      36
+      22,
+      22,
+      22,
+      22
     ],
     "style_version": 2,
     "v2_stage": 0,
     "v2_kind": "card",
     "source_max": 1024,
     "v2_fill_top": [
-      252,
-      221,
-      176
+      255,
+      244,
+      224
     ],
     "v2_border": [
-      201,
-      102,
-      26
-    ]
+      207,
+      168,
+      119
+    ],
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_shape": "rounded",
+    "v2_recipe": "card_build_pressed"
   },
   "card_build_disabled": {
     "size": [
@@ -1527,16 +2105,33 @@
     "title": "Карточка постройки — disabled",
     "stage": 3,
     "where": "Нижняя панель — рамка карточки постройки",
-    "prompt": "Offline derivative of generated card_build_normal; state; no external assets.",
-    "mode": "state",
-    "base": "card_build_normal",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe card_build_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "state": "disabled",
     "slice": [
-      16,
-      16,
-      16,
-      16
-    ]
+      22,
+      22,
+      22,
+      22
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "card",
+    "v2_shape": "rounded",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "card_build_disabled"
   },
   "group_home": {
     "size": [
@@ -3173,18 +3768,36 @@
     ],
     "group": "mother",
     "title": "Облачко Праматери",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One EMPTY wide horizontal parchment speech bubble, about three times as wide as tall, front facing. Rounded rectangular body with ONE short broad triangular tail extending down from very near its bottom LEFT corner. Pale parchment #F2E3BD completely flat center, thin brown clay rim with crisp #4D331F outline. Tail near left corner so it fits within bottom-left 9-slice corner. No writing, ornaments or characters.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bubble recipe mother_bubble. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Облачко речи Праматери у миникарты",
-    "mode": "bubble",
+    "mode": "v2",
     "slice": [
-      96,
-      32,
-      64,
-      48
+      24,
+      24,
+      72,
+      40
     ],
     "margin": 4,
     "outer": 1.5,
-    "inner": 0.5
+    "inner": 0.5,
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "panel",
+    "v2_shape": "bubble",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "mother_bubble"
   },
   "mother_bubble_tail": {
     "stage": 6,
@@ -3232,15 +3845,33 @@
     "title": "Рамка миникарты",
     "stage": 6,
     "where": "Правая нижняя миникарта",
-    "prompt": "Offline derivative of generated ui_panel; frame; no text or external assets.",
-    "mode": "frame",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py frame recipe minimap_frame. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      16,
-      16,
-      16,
-      16
-    ]
+      24,
+      24,
+      24,
+      24
+    ],
+    "style_version": 2,
+    "v2_stage": 1,
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "frame",
+    "v2_shape": "frame",
+    "v2_center": "transparent",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "minimap_frame"
   },
   "minimap_camp_own": {
     "size": [

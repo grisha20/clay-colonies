@@ -4,7 +4,8 @@ sys.dont_write_bytecode=True
 from PIL import Image,ImageDraw
 from build_hud import ROOT,CATALOG,load_catalog,build_one,make_sheets,write_manifest
 from build_stage0 import font,paste_center,nine_slice
-from hud_v2 import SAMPLES,clean_source
+from hud_v2 import SAMPLES,clean_source,V2_STAGES
+from exact_v2 import cfg,reference_cut,soften_legacy,render as render_exact
 
 
 def setup_catalog(catalog,entries):
@@ -84,23 +85,58 @@ def style_board(catalog):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--stage',type=int,choices=[0],required=True)
+    parser.add_argument('--stage',type=int,choices=range(6),required=True)
     parser.add_argument('--import-generated',type=str)
     args=parser.parse_args()
     catalog=load_catalog()
-    if args.import_generated:
+    if args.import_generated and args.stage==0:
         setup_catalog(catalog,json.loads(open(args.import_generated,encoding='utf-8').read()))
         CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    names=list(SAMPLES)
+    imported={e['name']:e for e in json.loads(open(args.import_generated,encoding='utf-8').read())} if args.import_generated and args.stage>0 else {}
+    for stage in range(1,min(args.stage,4)+1):
+        for name in V2_STAGES[stage]:
+            if name not in names:names.append(name)
+    if args.stage>0:
+        # Matching light glyphs remain available for dark HUD panels.
+        for name in list(names):
+            if name.startswith('glyph_') and not name.endswith('_light') and 'chevron' not in name:
+                light=name+'_light'
+                if light not in names:names.append(light)
+        for name in names:
+            if name in SAMPLES and name not in V2_STAGES[1] and args.stage<2:continue
+            old=catalog.get(name,{})
+            spec=cfg(name,old)
+            if name.endswith('_light'):spec['group']='extra'
+            path=ROOT/'_source'/f'{name}.png'
+            if name in imported:
+                e=imported[name];spec['prompt']=e['prompt'];source=clean_source(Image.open(e['generated_path']))
+            elif spec.get('v2_ref'):
+                source=reference_cut(name)
+            elif spec.get('v2_shape') or name.startswith(('ui_checkbox_','ui_toast_')) or name=='ui_check':
+                source=render_exact(Image.new('RGBA',tuple(spec['size'])),tuple(spec['size']),spec)
+                source=source.resize((min(1024,source.width*4),min(1024,source.height*4)),Image.Resampling.LANCZOS)
+            elif path.is_file():
+                source=Image.open(path).convert('RGBA')
+                if old.get('style_version')!=2:source=soften_legacy(source)
+            else:raise ValueError('Missing generated input: '+name)
+            source=clean_source(source,preserve_cream=spec['v2_kind'] in ('panel','button','card'))
+            source.save(path,optimize=True)
+            catalog[name]=spec
+        CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     images={}
-    for name in SAMPLES:
+    for name in names:
         if catalog[name].get('style_version')!=2:
             raise ValueError('Import all six v2 sources first')
         images[name]=build_one(name,catalog[name],images)
     images={n:Image.open(ROOT/f'{n}.png').convert('RGBA') for n in catalog}
     make_sheets(images,catalog,8)
     style_board(catalog)
+    if args.stage>=4:
+        from exact_preview import overview
+        overview(catalog)
     write_manifest(catalog)
-    print('HUD v2 stage 0: six samples, sources <=1024px, sheets + manifest updated. STOP for owner approval.')
+    print(f'HUD v2 stage {args.stage}: {len(names)} assets in approved scope; sources <=1024px; sheets + manifest updated.')
 
 
 if __name__=='__main__':

@@ -116,6 +116,9 @@ def surface(size,spec):
 
 
 def render(source,size,spec):
+    if spec.get('v2_exact'):
+        from exact_v2 import render as exact_render
+        return exact_render(source,size,spec)
     if spec['v2_kind'] in ('panel','button','card'):
         return surface(size,spec)
     if spec.get('v2_flip'):

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "btn_square_normal",
+    "prompt": "Extract and recreate ONLY the empty CREAM SQUARE PAUSE BUTTON FRAME from the TOP RIGHT of the supplied Clayfolk HUD reference. Remove the pause glyph completely. Preserve its exact soft sculpted rounded form: substantial raised cream rim, thin darker beige outside edge, ivory highlight along top-left rim, subtle recessed lower inner shading, very rounded corners, pale cream recessed flat center. THIS MUST LOOK LIKE THE REFERENCE'S TACTILE BUTTON, NOT A FLAT ROUNDED RECTANGLE. Frontal orthographic square, no perspective, no writing, no icon. Genuine transparent background, complete button and restrained soft brown shadow inside generous transparent padding. One isolated button only, large enough to downsample to96x96. Do not return screenshot or green grass.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-40b97790-53a0-4708-8558-f07a20a08ddc.png"
+  },
+  {
+    "name": "btn_square_pressed",
+    "prompt": "Extract and recreate ONLY the empty selected ORANGE PLAY BUTTON FRAME from the TOP RIGHT of the supplied Clayfolk HUD reference. Remove the play triangle completely. Preserve the exact rounded shape and bevel: substantial orange raised rim, golden pale top-left rim highlight, orange recessed face, orange-beige darker outside edge, internal soft shading below, strong rounded corners. Match the reference's golden orange, NOT a flat orange rectangle. Front-facing orthographic square, no perspective, no writing, no icon. Genuine transparent background, complete button and restrained soft shadow inside generous transparent padding. One button only; future96x96.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-17553bd7-65fb-43f6-836a-372eb2fc2e4d.png"
+  },
+  {
+    "name": "logo_hud",
+    "prompt": "Extract ONLY the Clayfolk logo from the TOP LEFT of the supplied HUD reference, preserving the exact composition and style. One smiling orange clay resident head on the left, the exact word 'Clayfolk' in soft white/ivory rounded hand-lettered bold letters with warm dark-brown outline, and the small green leaves behind it. Text must be EXACTLY C l a y f o l k, no extra characters. Keep the reference logo's letter shapes, smile, leaves, proportions and palette; remove all game scenery/grass from behind it. Genuine transparent RGBA background, wide horizontal logo about3.6:1 with clear margins, complete unclipped logo. No plaque or panel, no additional words, no watermarks.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-74cffec4-5e36-49ed-82bd-38f3d57f0976.png"
+  }
+]
