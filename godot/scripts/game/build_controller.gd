@@ -88,6 +88,8 @@ const GROUPS = [
 	["Земля и зоны", ["totem", "harvest", "forbid", "erase"]],
 ]
 const TILE_TEXT := Color(0.98, 0.93, 0.82)
+## Dock height: the minimap with its frame.
+const DOCK_HEIGHT := Minimap.VIEW + 24
 const GROUP_ICONS = ["group_home", "group_defense", "group_land"]
 ## Short captions under the pictures; the tooltip carries the full name.
 const TILE_NAMES = {"kiln": "Печь", "post": "Пост", "totem": "Тотем", "harvest": "Добыча", "house": "Дом рода"}
@@ -125,14 +127,19 @@ static func _tile_style(fill: Color, border: Color, width: int) -> StyleBoxFlat:
 func _build_toolbar(canvas: CanvasLayer) -> void:
 	toolbar = PanelContainer.new()
 	toolbar.name = "BuildToolbar"
-	toolbar.add_theme_stylebox_override("panel", GameHud.parchment([14, 8, 14, 10]))
+	toolbar.add_theme_stylebox_override("panel", GameHud.parchment([14, 8, 14, 8]))
 	toolbar.theme = GameHud.ink_theme()
-	toolbar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	toolbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	# One dock along the bottom, as tall as the minimap: the minimap (bottom
+	# right, drawn above it) sits in its right end like an inset.
+	toolbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	toolbar.offset_left = 16
+	toolbar.offset_right = -16
+	toolbar.offset_bottom = -16
+	toolbar.offset_top = -16 - DOCK_HEIGHT
 	toolbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	toolbar.offset_bottom = -12
 	toolbar.mouse_force_pass_scroll_events = false
 	canvas.add_child(toolbar)
+	canvas.move_child(toolbar, 0)
 	# Painted cards (art/hud build_*); a building without one is rendered from its model.
 	painted_cards = HudArt.tex("card_build_normal") != null
 	if painted_cards:
@@ -146,9 +153,19 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 		else:
 			kinds.append(spec[0])
 	icon_textures.merge(BuildIcons.create(self, kinds))
+	var dock = HBoxContainer.new()
+	toolbar.add_child(dock)
+	var centre = CenterContainer.new()
+	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(centre)
+	var map_room = Control.new()
+	map_room.custom_minimum_size = Vector2(Minimap.VIEW + 24, 0)
+	map_room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(map_room)
 	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	toolbar.add_child(row)
+	row.add_theme_constant_override("separation", 10)
+	centre.add_child(row)
 	var specs: Dictionary = {}
 	for spec in TOOLS:
 		specs[spec[0]] = spec
@@ -160,17 +177,17 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 		row.add_child(group)
 		var title = Label.new()
 		title.text = GROUPS[g][0]
-		title.add_theme_font_size_override("font_size", 13)
+		title.add_theme_font_size_override("font_size", 15)
 		title.add_theme_color_override("font_color", GameHud.INK.lightened(0.25))
 		var head = HBoxContainer.new()
 		head.add_theme_constant_override("separation", 4)
 		var gicon = HudArt.tex(GROUP_ICONS[g])
 		if gicon:
-			head.add_child(GameHud.icon_rect(gicon, 20))
+			head.add_child(GameHud.icon_rect(gicon, 24))
 		head.add_child(title)
 		group.add_child(head)
 		var tiles = HBoxContainer.new()
-		tiles.add_theme_constant_override("separation", 4)
+		tiles.add_theme_constant_override("separation", 5)
 		group.add_child(tiles)
 		for t in GROUPS[g][1]:
 			tiles.add_child(_make_tile(specs[t]))
@@ -191,7 +208,7 @@ func _make_tile(spec: Array) -> Button:
 	b.name = "Tool_" + t
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(98, 118)
+	b.custom_minimum_size = Vector2(112, 166) if painted_cards else Vector2(98, 118)
 	b.tooltip_text = "%s  [%s]" % [HINTS[t], spec[2]]
 	if not (painted_cards and HudArt.skin_button(b, "card_build", [6, 6, 6, 6])):
 		b.add_theme_stylebox_override("normal", _tile_style(Color(0.45, 0.34, 0.23), Color(0.27, 0.19, 0.12), 2))
@@ -212,7 +229,7 @@ func _make_tile(spec: Array) -> Button:
 	pic.texture = icon_textures.get(t)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.custom_minimum_size = Vector2(80, 60)
+	pic.custom_minimum_size = Vector2(102, 92) if painted_cards else Vector2(80, 60)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(pic)
 	tile_icons[t] = pic
@@ -226,7 +243,7 @@ func _make_tile(spec: Array) -> Button:
 		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pic.add_child(s)
-	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 12, tile_text)
+	var name_label = _plain_label(TILE_NAMES.get(t, spec[1]), 15 if painted_cards else 12, tile_text)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -244,15 +261,15 @@ func _make_tile(spec: Array) -> Button:
 		var ic = TextureRect.new()
 		ic.texture = GameHud.make_icon(res)
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		ic.custom_minimum_size = Vector2(14, 14)
+		ic.custom_minimum_size = Vector2(17, 17) if painted_cards else Vector2(14, 14)
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cost_row.add_child(ic)
-		var n = _plain_label(str(int(cost[res])), 12, tile_text)
+		var n = _plain_label(str(int(cost[res])), 14 if painted_cards else 12, tile_text)
 		cost_row.add_child(n)
 		costs[res] = n
 	if costs.is_empty():
-		cost_row.add_child(_plain_label("даром", 12, tile_text.lightened(0.2) if painted_cards else tile_text.darkened(0.2)))
+		cost_row.add_child(_plain_label("даром", 14 if painted_cards else 12, tile_text.lightened(0.2) if painted_cards else tile_text.darkened(0.2)))
 	tile_costs[t] = costs
 	var key = _plain_label(spec[2], 12, Color(0.25, 0.17, 0.10))
 	key.position = Vector2(5, 3)
