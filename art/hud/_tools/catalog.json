@@ -4726,5 +4726,1157 @@
       32,
       32
     ]
+  },
+  "logo_hud": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Логотип Clayfolk для HUD",
+    "where": "HUD v2 · logo_hud",
+    "group": "logo",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      12,
+      7,
+      234,
+      80
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (12, 7, 234, 80): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      512,
+      144
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "logo_hud"
+  },
+  "ui_topbar": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Пилюля ресурсов",
+    "where": "HUD v2 · ui_topbar",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_topbar. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      256,
+      72
+    ],
+    "v2_shape": "rounded",
+    "slice": [
+      36,
+      28,
+      36,
+      28
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_topbar"
+  },
+  "ui_toast": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Всплывающее уведомление",
+    "where": "HUD v2 · ui_toast",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_toast. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      256,
+      56
+    ],
+    "v2_shape": "rounded",
+    "slice": [
+      20,
+      20,
+      20,
+      20
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_toast"
+  },
+  "ui_toast_check": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Успешное уведомление",
+    "where": "HUD v2 · ui_toast_check",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated Clayfolk HUD target; exact_v2.py recipe ui_toast_check",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_toast_check"
+  },
+  "ui_toast_warn": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Предупреждение",
+    "where": "HUD v2 · ui_toast_warn",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated Clayfolk HUD target; exact_v2.py recipe ui_toast_warn",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_toast_warn"
+  },
+  "ui_toast_danger": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Опасность",
+    "where": "HUD v2 · ui_toast_danger",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated Clayfolk HUD target; exact_v2.py recipe ui_toast_danger",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_toast_danger"
+  },
+  "ui_checkbox_on": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Выполненная цель",
+    "where": "HUD v2 · ui_checkbox_on",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated Clayfolk HUD target; exact_v2.py recipe ui_checkbox_on",
+    "size": [
+      32,
+      32
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_checkbox_on"
+  },
+  "ui_checkbox_off": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Невыполненная цель",
+    "where": "HUD v2 · ui_checkbox_off",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated Clayfolk HUD target; exact_v2.py recipe ui_checkbox_off",
+    "size": [
+      32,
+      32
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_checkbox_off"
+  },
+  "glyph_chevron_down": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Свернуть панель",
+    "where": "HUD v2 · glyph_chevron_down",
+    "group": "glyph",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_down. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_chevron_down"
+  },
+  "glyph_chevron_right": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Развернуть панель",
+    "where": "HUD v2 · glyph_chevron_right",
+    "group": "glyph",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_right. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_chevron_right"
+  },
+  "ui_tabbar": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Подложка вкладок построек",
+    "where": "HUD v2 · ui_tabbar",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py tabbar recipe ui_tabbar. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      256,
+      64
+    ],
+    "v2_shape": "tabbar",
+    "slice": [
+      28,
+      24,
+      28,
+      12
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_tabbar"
+  },
+  "ui_tab_underline": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Подчёркивание активной вкладки",
+    "where": "HUD v2 · ui_tab_underline",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "line",
+    "prompt": "Derived from our generated HUD target; exact_v2.py underline recipe ui_tab_underline. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      8
+    ],
+    "v2_shape": "underline",
+    "slice": [
+      10,
+      2,
+      10,
+      2
+    ],
+    "v2_center": "mixed",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_tab_underline"
+  },
+  "tab_settlement": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Вкладка «Поселение»",
+    "where": "HUD v2 · tab_settlement",
+    "group": "tab",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      573,
+      741,
+      599,
+      770
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (573, 741, 599, 770): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "tab_settlement"
+  },
+  "tab_defense": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Вкладка «Оборона»",
+    "where": "HUD v2 · tab_defense",
+    "group": "tab",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      785,
+      742,
+      812,
+      773
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (785, 742, 812, 773): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "tab_defense"
+  },
+  "tab_land": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Вкладка «Земля»",
+    "where": "HUD v2 · tab_land",
+    "group": "tab",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      979,
+      740,
+      1007,
+      775
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (979, 740, 1007, 775): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "tab_land"
+  },
+  "ui_key_badge_normal": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Плашка клавиши",
+    "where": "HUD v2 · ui_key_badge_normal",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_key_badge_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_shape": "rounded",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_key_badge_normal",
+    "state": "normal"
+  },
+  "ui_key_badge_active": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Плашка выбранной клавиши",
+    "where": "HUD v2 · ui_key_badge_active",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_key_badge_active. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_shape": "rounded",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_key_badge_active",
+    "state": "active"
+  },
+  "ui_segment_left_normal": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Левая половина переключателя",
+    "where": "HUD v2 · ui_segment_left_normal",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py segment recipe ui_segment_left_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      48
+    ],
+    "v2_shape": "segment",
+    "slice": [
+      16,
+      14,
+      16,
+      14
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_segment_left_normal",
+    "state": "normal"
+  },
+  "ui_segment_left_active": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Активная левая половина переключателя",
+    "where": "HUD v2 · ui_segment_left_active",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py segment recipe ui_segment_left_active. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      48
+    ],
+    "v2_shape": "segment",
+    "slice": [
+      16,
+      14,
+      16,
+      14
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_segment_left_active",
+    "state": "active"
+  },
+  "ui_segment_right_normal": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Правая половина переключателя",
+    "where": "HUD v2 · ui_segment_right_normal",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py segment recipe ui_segment_right_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      48
+    ],
+    "v2_shape": "segment",
+    "slice": [
+      16,
+      14,
+      16,
+      14
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_segment_right_normal",
+    "state": "normal"
+  },
+  "ui_segment_right_active": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Активная правая половина переключателя",
+    "where": "HUD v2 · ui_segment_right_active",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py segment recipe ui_segment_right_active. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      48
+    ],
+    "v2_shape": "segment",
+    "slice": [
+      16,
+      14,
+      16,
+      14
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_segment_right_active",
+    "state": "active"
+  },
+  "ui_list_bg": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Подложка списка работ",
+    "where": "HUD v2 · ui_list_bg",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_list_bg. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      128
+    ],
+    "v2_shape": "rounded",
+    "slice": [
+      24,
+      24,
+      24,
+      24
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_list_bg"
+  },
+  "icon_works": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Значок работ",
+    "where": "HUD v2 · icon_works",
+    "group": "icon",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      1358,
+      91,
+      1389,
+      128
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1358, 91, 1389, 128): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "icon_works"
+  },
+  "icon_person": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Силуэт жителя",
+    "where": "HUD v2 · icon_person",
+    "group": "icon",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      1357,
+      129,
+      1383,
+      154
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1357, 129, 1383, 154): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "icon_person"
+  },
+  "icon_kiln": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Печь для полосы обжига",
+    "where": "HUD v2 · icon_kiln",
+    "group": "icon",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      1358,
+      496,
+      1410,
+      555
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1358, 496, 1410, 555): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      64,
+      64
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "icon_kiln"
+  },
+  "icon_mother": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Головка Праматери",
+    "where": "HUD v2 · icon_mother",
+    "group": "icon",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "v2_ref": [
+      1236,
+      656,
+      1260,
+      680
+    ],
+    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1236, 656, 1260, 680): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "icon_mother"
+  },
+  "btn_pin_normal": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Метка места — обычная",
+    "where": "HUD v2 · btn_pin_normal",
+    "group": "btn",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py pin recipe btn_pin_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_shape": "pin",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_pin_normal",
+    "state": "normal"
+  },
+  "btn_pin_hover": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Метка места — наведение",
+    "where": "HUD v2 · btn_pin_hover",
+    "group": "btn",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py pin recipe btn_pin_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_shape": "pin",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_pin_hover",
+    "state": "hover"
+  },
+  "btn_pin_pressed": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Метка места — нажатая",
+    "where": "HUD v2 · btn_pin_pressed",
+    "group": "btn",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py pin recipe btn_pin_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      48,
+      48
+    ],
+    "v2_shape": "pin",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_pin_pressed",
+    "state": "pressed"
+  },
+  "btn_zoom_normal": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Кнопка масштаба — обычная",
+    "where": "HUD v2 · btn_zoom_normal",
+    "group": "btn",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_zoom_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      40,
+      40
+    ],
+    "v2_shape": "bevel",
+    "slice": [
+      12,
+      12,
+      12,
+      12
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_zoom_normal",
+    "state": "normal"
+  },
+  "btn_zoom_hover": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Кнопка масштаба — наведение",
+    "where": "HUD v2 · btn_zoom_hover",
+    "group": "btn",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_zoom_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      40,
+      40
+    ],
+    "v2_shape": "bevel",
+    "slice": [
+      12,
+      12,
+      12,
+      12
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_zoom_hover",
+    "state": "hover"
+  },
+  "btn_zoom_pressed": {
+    "style_version": 2,
+    "v2_stage": 4,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Кнопка масштаба — нажатая",
+    "where": "HUD v2 · btn_zoom_pressed",
+    "group": "btn",
+    "stage": 8,
+    "v2_kind": "button",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe btn_zoom_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      40,
+      40
+    ],
+    "v2_shape": "bevel",
+    "slice": [
+      12,
+      12,
+      12,
+      12
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "btn_zoom_pressed",
+    "state": "pressed"
+  },
+  "glyph_chevron_down_light": {
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Свернуть панель — светлый",
+    "where": "HUD v2 · glyph_chevron_down_light",
+    "group": "extra",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_down_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_chevron_down_light"
+  },
+  "glyph_chevron_right_light": {
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Развернуть панель — светлый",
+    "where": "HUD v2 · glyph_chevron_right_light",
+    "group": "extra",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_right_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      32,
+      32
+    ],
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_chevron_right_light"
   }
 }

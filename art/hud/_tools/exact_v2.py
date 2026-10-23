@@ -91,6 +91,11 @@ def reference_cut(name):
     # Remove the cream matte from antialiased silhouette pixels.
     rgb=np.where(core[:,:,None],a,fg)
     out[:,:,:3]=rgb.astype('uint8');out[:,:,3]=np.rint(alpha*255).astype('uint8')
+    if name=='logo_hud':
+        # Exclude the grass baseline below the lettering; keep the leaf crown.
+        yy,xx=np.indices((h,w))
+        grass=(a[:,:,1]>a[:,:,0]*1.03)&(a[:,:,1]>a[:,:,2]*1.3)
+        out[(xx>65)&(yy>57)&grass]=0
     out[out[:,:,3]<3]=0
     im=Image.fromarray(out)
     return im.resize((w*4,h*4),Image.Resampling.LANCZOS)
@@ -123,7 +128,7 @@ def cfg(name,old):
     elif name=='ui_topbar':s.update(size=[256,72],v2_kind='panel',v2_shape='rounded',slice=[36,28,36,28])
     elif name=='ui_toast':s.update(size=[256,56],v2_kind='panel',v2_shape='rounded',slice=[20,20,20,20])
     elif name=='ui_tabbar':s.update(size=[256,64],v2_kind='panel',v2_shape='tabbar',slice=[28,24,28,12])
-    elif name=='ui_tab_underline':s.update(size=[128,8],v2_kind='line',v2_shape='underline',slice=[5,2,5,2],v2_center='mixed')
+    elif name=='ui_tab_underline':s.update(size=[128,8],v2_kind='line',v2_shape='underline',slice=[10,2,10,2],v2_center='mixed')
     elif name.startswith('ui_segment_'):s.update(size=[128,48],v2_kind='button',v2_shape='segment',slice=[16,14,16,14])
     elif name.startswith('ui_key_badge_'):s.update(size=[32,32],v2_kind='button',v2_shape='rounded',slice=[10,10,10,10])
     elif name.startswith('btn_zoom_'):s.update(size=[40,40],v2_kind='button',v2_shape='bevel',slice=[12,12,12,12])
@@ -293,6 +298,9 @@ def symbol(size,name):
         result=Image.fromarray(data)
     if name!='ui_tab_underline':
         data=np.array(result);data[:4]=0;data[-4:]=0;data[:,:4]=0;data[:,-4:]=0
+        rgb=data[:,:,:3]
+        white=(data[:,:,3]>0)&(data[:,:,3]<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)
+        data[white,:3]=np.minimum(data[white,:3],233)
         result=Image.fromarray(data)
     return result
 
