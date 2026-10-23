@@ -119,6 +119,15 @@ def build_one(name, spec, images):
             a=source.getchannel('A')
             source=ImageEnhance.Brightness(source).enhance(spec['brightness'])
             source.putalpha(a)
+        if spec.get('palette')=='earth_signs':
+            data=np.array(source)
+            rgb=data[:,:,:3].astype(float)
+            green=(rgb[:,:,1]>rgb[:,:,0]*1.25)&(rgb[:,:,1]>rgb[:,:,2]*1.25)
+            red=(rgb[:,:,0]>rgb[:,:,1]*1.8)&(rgb[:,:,0]>rgb[:,:,2]*1.8)
+            for mask,target in [(green,(92,140,51)),(red,(192,57,43))]:
+                scale=np.clip(rgb[mask].max(axis=1)/200,.7,1.1)
+                data[mask,:3]=np.clip(np.array(target)[None,:]*scale[:,None],0,255).astype('uint8')
+            source=Image.fromarray(data)
         if mode in ('panel','frame'):
             result=raster.panel(source,size,tuple(spec['slice']))
             if mode=='frame':

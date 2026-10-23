@@ -1235,5 +1235,270 @@
     "base": "glyph_faster",
     "where": "Тёмные панели и красная кнопка тревоги",
     "prompt": "Derived from glyph_faster: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "build_house": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Дом рода",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A large round terracotta clan house with two overlapping pale straw conical roofs, broad double wooden entrance, a few simple turquoise special-clay dots around the clay wall. No scenery."
+  },
+  "build_storage": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Склад",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. An open primitive storage shelter: four short wooden posts, one simple pale straw sloping roof; below it three compact piles of orange clay, brown logs and grey stones. No fence, no floor slab or ground."
+  },
+  "build_workshop": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Мастерская",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small open wooden workshop shelter with pale straw sloping roof, broad stump workbench, a short stone axe and stone pickaxe resting against the stump. No metal, machinery, floor tile or ground."
+  },
+  "build_kiln": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Печь обжига",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One squat terracotta clay dome kiln, small round top vent, wide dark arched front mouth with a contained orange-yellow fire inside, two short logs at its foot. No chimney stack, smoke, separate ground or cast shadow."
+  },
+  "build_idol": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Идол",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A short hand-moulded terracotta idol standing on a low clay base: a broad primitive face mask with two dark eye holes, tiny arms, turquoise forehead clay accent, simple sculpted body. Cute spiritual sandbox figurine, no text or ground."
+  },
+  "build_wall": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Ограда",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. Two joined low sections of primitive palisade: short thick pointed wooden stakes with rough terracotta clay around their bases and two brown horizontal bindings. Three-quarter view, compact wide composition."
+  },
+  "build_gate": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Ворота",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small double wooden gate matching a low primitive palisade, two short thick posts with terracotta feet and a simple horizontal lintel, two broad hinged stake leaves slightly parted. No metal, no surrounding wall segments or scenery."
+  },
+  "build_post": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Пост обороны",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One small square raised wooden defensive platform on four short posts, a tiny waist-high wooden railing on two sides, one stone-tipped spear leaning upright from the platform. No flags, resident or ground tile."
+  },
+  "build_totem": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Тотем рода",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. One tall thick clay-coated wooden clan totem with THREE large simple sculpted clay faces stacked vertically, muted red-orange and ochre surfaces, one turquoise forehead accent, chunky flared clay foot. No writing, feathers, floating effects or scenery."
+  },
+  "build_harvest": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Зона добычи",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small irregular patch of warm earth seen three-quarter from above, two small grey rocks and one chunky stone pickaxe; a large bright green check mark clearly overlaid on the front-right of the patch. Minimal broad shapes. No text.",
+    "palette": "earth_signs"
+  },
+  "build_forbid": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Запрет",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small irregular patch of warm earth seen three-quarter from above, a tiny green grass tuft; a large muted red prohibition symbol (a circle with diagonal slash) clearly overlaid across the front-right. Solid red #C0392B, no text.",
+    "palette": "earth_signs"
+  },
+  "build_erase": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Ластик",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small irregular patch of warm earth seen three-quarter from above, a chunky simple rectangular orange clay eraser block and a large red X mark at its front-right. Very simple shapes, no lettering.",
+    "palette": "earth_signs"
+  },
+  "build_campfire": {
+    "size": [
+      128,
+      112
+    ],
+    "group": "build",
+    "title": "Костёр",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "undefinedAsset type: building selection icon, slightly elevated three-quarter view. Large clear shapes and minimal detail, matching a clay sandbox village. No ground tile except where explicitly requested. Ready size 128x112; draw large. A small primitive campfire: three thick crossed brown sticks, a ring of five chunky grey stones, one broad warm amber-orange flame with pale yellow center. No smoke, no glow outside the flame, no ground."
+  },
+  "card_build_normal": {
+    "size": [
+      128,
+      144
+    ],
+    "group": "card",
+    "title": "Карточка постройки",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated ui_panel; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ],
+    "state": "normal"
+  },
+  "card_build_hover": {
+    "size": [
+      128,
+      144
+    ],
+    "group": "card",
+    "title": "Карточка постройки — hover",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated card_build_normal; state; no external assets.",
+    "mode": "state",
+    "base": "card_build_normal",
+    "state": "hover",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "card_build_pressed": {
+    "size": [
+      128,
+      144
+    ],
+    "group": "card",
+    "title": "Карточка постройки — pressed",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated card_build_normal; state; no external assets.",
+    "mode": "state",
+    "base": "card_build_normal",
+    "state": "pressed",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "card_build_disabled": {
+    "size": [
+      128,
+      144
+    ],
+    "group": "card",
+    "title": "Карточка постройки — disabled",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated card_build_normal; state; no external assets.",
+    "mode": "state",
+    "base": "card_build_normal",
+    "state": "disabled",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "group_home": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "group",
+    "title": "Жильё и хозяйство",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated build_hut; reuse; no external assets.",
+    "mode": "reuse",
+    "base": "build_hut"
+  },
+  "group_defense": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "group",
+    "title": "Оборона",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated build_wall; reuse; no external assets.",
+    "mode": "reuse",
+    "base": "build_wall"
+  },
+  "group_land": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "group",
+    "title": "Земля и зоны",
+    "stage": 3,
+    "where": "Нижняя панель построек",
+    "prompt": "Offline derivative of generated build_totem; reuse; no external assets.",
+    "mode": "reuse",
+    "base": "build_totem"
   }
 }
