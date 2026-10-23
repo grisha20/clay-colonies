@@ -55,6 +55,12 @@ def build_one(name, spec, images):
     mode=spec.get('mode','icon')
     size=tuple(spec['size'])
     source_path=ROOT/'_source'/f'{name}.png'
+    if spec.get('style_version')==2:
+        from hud_v2 import render
+        with Image.open(source_path) as source:
+            result=render(source.convert('RGBA'),size,spec)
+        result.save(ROOT/f'{name}.png')
+        return result
     if mode=='symbol':
         k=4
         large=(size[0]*k,size[1]*k)
@@ -250,7 +256,8 @@ def make_sheets(images,catalog,stage):
             small=im.copy()
             small.thumbnail((24,24),Image.Resampling.BOX)
             # Restore boundary ink after resizing; no light fringe in review copies.
-            small=raster.finish(small,small.size)
+            if catalog[name].get('style_version')!=2:
+                small=raster.finish(small,small.size)
             small.save(ROOT/'_preview'/f'{name}_24.png')
             d.text((x+12,y+238),'24 px',font=font(13),fill=INK)
             if 'hotspot' in catalog[name]:
@@ -304,7 +311,11 @@ def write_manifest(catalog):
             if 'parts' in spec:
                 prompt+=' | Composite recipe: '+json.dumps(spec['parts'],ensure_ascii=False,separators=(',',':'))
             if not source:
-                prompt+=' | Offline finishing: build_hud.py / raster_pipeline.py; binary silhouette, opaque #4D331F Euclidean contour, one-pixel BOX coverage boundary. Mode: '+spec.get('mode','icon')
+                if spec.get('style_version')==2:
+                    prompt+=' | HUD v2 finishing: hud_v2.py; normalized cream/orange 9-slice geometry and inset soft shadow, or premultiplied-alpha sprite resize; no v1 ink contour.'
+                    prompt+=' | V2 recipe: '+json.dumps({k:v for k,v in spec.items() if k.startswith('v2_')},ensure_ascii=False,separators=(',',':'))
+                else:
+                    prompt+=' | Offline finishing: build_hud.py / raster_pipeline.py; binary silhouette, opaque #4D331F Euclidean contour, one-pixel BOX coverage boundary. Mode: '+spec.get('mode','icon')
             slices=','.join(map(str,spec.get('slice',[]))) if not source else ''
             hotspot=','.join(map(str,spec.get('hotspot',[]))) if not source else ''
             states=spec.get('state','') if not source else ''
@@ -324,6 +335,8 @@ def main():
     parser.add_argument('--stage',type=int,required=True)
     parser.add_argument('--import-generated',type=Path)
     args=parser.parse_args()
+    if any(s.get('style_version')==2 for s in load_catalog().values()):
+        parser.error('HUD v2 migration started. Use build_hud_v2.py for the approved scope; v1 rebuild would also change unrevised derivatives.')
     if args.import_generated:
         paths=json.loads(args.import_generated.read_text(encoding='utf-8'))
         for name,path in paths.items():

@@ -13,6 +13,7 @@ from scipy.ndimage import distance_transform_edt
 sys.dont_write_bytecode = True
 from build_stage0 import ROOT, SPECS, nine_slice
 from build_hud import load_catalog
+from hud_v2 import SAMPLES,V2_REQUIRED,SHADOW
 
 STATES = ('normal', 'hover', 'pressed', 'disabled')
 FAMILIES = ['btn_square', 'ui_button_wide', 'ui_btn_plus', 'ui_btn_minus', 'card_build']
@@ -64,6 +65,7 @@ def is_slice(name):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--stage', choices=[str(i) for i in range(9)]+['all'], default='all')
+    parser.add_argument('--edition',choices=['v1','v2'],default='v1',help='v2 validates the requested migration stage; legacy PNGs remain audited')
     parser.add_argument('--report', type=Path)
     parser.add_argument('--assets-only',action='store_true',help='Check the portable art pack without this workstation\'s protected-file/worktree audit')
     args = parser.parse_args()
@@ -85,13 +87,21 @@ def main():
     require(pngs==set(index), f'PNG/manifest mismatch: {pngs ^ set(index)}')
     top = {p.stem for p in ROOT.glob('*.png')}
     catalog=load_catalog()
-    if args.stage=='all' or args.stage=='8':
+    if args.edition=='v2':
+        scope=5 if args.stage=='all' else int(args.stage)
+        wanted={n for n,s in V2_REQUIRED.items() if s<=scope}
+        for name in wanted:
+            require(catalog.get(name,{}).get('style_version')==2,'V2 asset not migrated: '+name)
+    elif args.stage=='all' or args.stage=='8':
         wanted=EXPECTED | {n+'_light' for n in EXPECTED if n.startswith('glyph_')}
     else:
         wanted={n for n,spec in catalog.items() if spec['stage']<=int(args.stage)}
     require(wanted <= top, 'Missing required assets: '+', '.join(sorted(wanted-top)))
     require(all(n in catalog or index.get(n+'.png',{}).get('group')=='extra' for n in top), 'Uncatalogued game assets')
-    out(f'SCOPE: stage {args.stage}; {len(top)} game assets; {len(rows)} PNG manifest rows.')
+    migrated={n for n,s in catalog.items() if s.get('style_version')==2}
+    out(f'SCOPE: {args.edition} stage {args.stage}; {len(top)} game assets; {len(rows)} PNG manifest rows.')
+    if args.edition=='v2':
+        out(f'HUD v2: {len(wanted & migrated)}/{len(wanted)} requested samples; {len(migrated)}/{len(V2_REQUIRED)} migrated in full v2 specification.')
     out('1. Inventory: '+('PASS' if not failures else 'FAIL'))
     before = len(failures)
     images = {}
@@ -114,13 +124,15 @@ def main():
         require(im.format=='PNG' and im.mode=='RGBA', f'Not PNG RGBA: {file}')
         require(bool(row['title_ru'] and row['where'] and row['prompt']), f'Incomplete manifest row: {file}')
     out('2. Dimensions / PNG RGBA / metadata: '+('PASS' if before==len(failures) else 'FAIL'))
-    for number, label in [(3,'Transparent corners'),(4,'No near-white semitransparent edges'),(5,'Margins >= 4 px (9-slice exempt)'),(6,'9-slice / cursor metadata')]:
+    for number, label in [(3,'Transparent corners'),(4,'No white matte / clean alpha (v2 cream AA allowed)'),(5,'Margins >= 4 px (9-slice exempt)'),(6,'9-slice / cursor metadata')]:
         before = len(failures)
         for file, im in images.items():
             if im.mode!='RGBA' or file.startswith('_preview/'):
                 continue
             row, name = index[file], Path(file).stem
             source = file.startswith('_source/')
+            v2=catalog.get(name,{}).get('style_version')==2
+            v2_surface=v2 and catalog[name].get('v2_kind') in ('panel','button','card')
             alpha = im.getchannel('A')
             texture = name=='menu_background' or name in {'ui_panel','ui_panel_dark','ui_header','ui_tooltip','menu_panel'}
             if number==3 and not texture:
@@ -128,8 +140,12 @@ def main():
             elif number==4:
                 data=np.array(im)
                 rgb=data[:,:,:3]
-                bad=int(np.sum((data[:,:,3]>0)&(data[:,:,3]<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)))
-                require(bad==0, f'Near-white alpha edges: {file} ({bad} px)')
+                if v2_surface:
+                    # Light cream AA is intentional in v2; it is not white matte.
+                    require(np.all(data[data[:,:,3]==0,:3]==0),'Hidden matte outside v2 surface: '+file)
+                else:
+                    bad=int(np.sum((data[:,:,3]>0)&(data[:,:,3]<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)))
+                    require(bad==0, f'Near-white alpha edges: {file} ({bad} px)')
             elif number==5 and not source and not texture and not is_slice(name):
                 bbox = alpha.getbbox()
                 require(bbox is not None, 'Empty asset: '+file)
@@ -167,12 +183,17 @@ def main():
         if present==set(STATES):
             variants = [images[f'{family}_{s}.png'] for s in STATES]
             require(len({im.size for im in variants})==1,'State sizes differ: '+family)
-            require(len({im.getchannel('A').tobytes() for im in variants})==1,'State silhouettes differ: '+family)
-    out('7. State families: '+('PASS' if before==len(failures) else 'FAIL')+(' (normal-only sample; full family in stage 2)' if deferred else ''))
+            versions={catalog[f'{family}_{s}'].get('style_version',1) for s in STATES}
+            for version in versions:
+                same=[images[f'{family}_{s}.png'] for s in STATES if catalog[f'{family}_{s}'].get('style_version',1)==version]
+                require(len({im.getchannel('A').tobytes() for im in same})==1,'State silhouettes differ within style version: '+family)
+            if len(versions)>1:
+                deferred.append(family+': complete v2 state family (v2 stage 1)')
+    out('7. State families: '+('PASS' if before==len(failures) else 'FAIL')+(' (v1/v2 checked separately; v2 family completion deferred)' if migrated and deferred else (' (normal-only sample; full family in stage 2)' if deferred else '')))
     before=len(failures)
     for name in top:
         im=images[name+'.png']
-        if name=='menu_background':
+        if name=='menu_background' or name in migrated:
             continue
         data=np.array(im)
         a=data[:,:,3]
@@ -190,7 +211,7 @@ def main():
                 require(li.size==im.size and li.getchannel('A').tobytes()==im.getchannel('A').tobytes(),'Light glyph silhouette mismatch: '+name)
                 colors=np.array(li)
                 require(np.any(np.all(colors[:,:,:3]==(242,227,189),axis=2)), 'Light glyph lacks parchment fill: '+name)
-    out('8. Crisp #4D331F contour / 1px boundary / light glyphs: '+('PASS' if before==len(failures) else 'FAIL'))
+    out('8. Legacy v1 contour / boundary / light glyphs: '+('PASS' if before==len(failures) else 'FAIL'))
     before=len(failures)
     for name in top:
         spec=catalog.get(name,{})
@@ -200,7 +221,11 @@ def main():
         l,t,r,b=spec['slice']
         center=np.array(im)[t:im.height-b,l:im.width-r]
         if name!='ui_separator_h':
-            require(np.all(center==center[0,0]),'9-slice center is not uniform: '+name)
+            if name in migrated:
+                require(np.all(center==center[:,0:1,:]),'V2 center has horizontal texture or decoration: '+name)
+                require(np.all(center[:,:,3]==255),'V2 surface center is not opaque: '+name)
+            else:
+                require(np.all(center==center[0,0]),'9-slice center is not uniform: '+name)
         for size in [(im.width*2,im.height),(im.width,im.height*2)]:
             stretched=nine_slice(im,size,(l,t,r,b))
             for src,dest in [((0,0,l,t),(0,0,l,t)),((im.width-r,0,im.width,t),(size[0]-r,0,size[0],t)),((0,im.height-b,l,im.height),(0,size[1]-b,l,size[1])),((im.width-r,im.height-b,im.width,im.height),(size[0]-r,size[1]-b,size[0],size[1]))]:
@@ -231,17 +256,32 @@ def main():
             extent=max(bbox[2]-bbox[0],bbox[3]-bbox[1]) if bbox else 0
             require(.82<=extent/max(im.size)<=.86,'Act/task subject does not occupy about 85%: '+name)
     out('10. Revised sources <=1024 px / act-task scale: '+('PASS' if before==len(failures) else 'FAIL'))
+    before=len(failures)
+    for name in migrated:
+        im=images[name+'.png']
+        spec=catalog[name]
+        source=images.get('_source/'+name+'.png')
+        require(source is not None and max(source.size)<=1024,'V2 source exceeds 1024px: '+name)
+        data=np.array(im)
+        if spec['v2_kind'] in ('panel','button','card'):
+            require(np.max(np.abs(np.array(im.getpixel((im.width//2,im.height//2)))[:3].astype(int)-np.array(spec['v2_fill_top'])))<35,'V2 face palette mismatch: '+name)
+            shadow=(data[:,:,3]>0)&np.all(np.abs(data[:,:,:3].astype(int)-np.array(SHADOW))<10,axis=2)
+            require(np.sum(shadow)>8,'V2 surface missing inset soft shadow: '+name)
+            require(not shadow.any() or np.max(data[shadow,3])<=65,'V2 shadow exceeds 25% opacity: '+name)
+        else:
+            require(not np.any(np.all(data[:,:,:3]==(77,51,31),axis=2)&(data[:,:,3]==255)),'V1 ink baked into v2 sprite: '+name)
+    out('11. V2 palette / soft shadows / no ink / sources <=1024 px: '+('PASS' if before==len(failures) else 'FAIL'))
     for name in top:
         require((ROOT/'_source'/f'{name}.png').is_file(),'Missing large source: '+name)
         require((ROOT/'_preview'/f'{name}_24.png').is_file(),'Missing small preview: '+name)
-    if 'btn_square_normal.png' in images:
+    if 'btn_square_normal.png' in images and 'btn_square_normal' not in migrated:
         im=images['btn_square_normal.png']
         require(im.crop((16,16,48,48)).getextrema()==tuple((v,v) for v in im.getpixel((32,32))),'Button centre is not uniform')
         for size in [(128,64),(64,96),(192,64)]:
             stretched=nine_slice(im,size,(16,16,16,16))
             require(stretched.crop((0,0,16,16)).tobytes()==im.crop((0,0,16,16)).tobytes(),'9-slice altered corner')
     # Verify protected user files against the pre-work SHA-256 snapshot; never write there.
-    baseline=ROOT/'_tools'/'protected_before.json'
+    baseline=ROOT/'_tools'/('protected_v2_before.json' if migrated else 'protected_before.json')
     if baseline.is_file() and not args.assets_only:
         entries=json.loads(baseline.read_text(encoding='utf-8-sig'))
         for entry in entries:
@@ -254,7 +294,11 @@ def main():
         require(all(p.startswith('art/hud/') for p in changed),'Tracked changes outside art/hud')
     else:
         out('Workspace audit: SKIPPED by explicit --assets-only; art checks remain enabled.')
-    if args.stage not in ('all','8'):
+    if args.edition=='v2':
+        remaining=len(set(V2_REQUIRED)-migrated)
+        out(f'DEFERRED: {remaining} v2 assets; complete state families and stages 1-5 require owner approval after stage 0.')
+        out('This report validates the requested v2 stage, not completion of HUD v2.')
+    elif args.stage not in ('all','8'):
         out(f'DEFERRED: {len(EXPECTED-top)} remaining specification assets'+('; '+', '.join(deferred) if deferred else '')+'.')
         out('Full §6 completeness is NOT claimed. Run --stage all for final delivery.')
     out(f'RESULT: {"PASS" if not failures else "FAIL"} — {len(failures)} errors.')

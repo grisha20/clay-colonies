@@ -18,8 +18,14 @@
     "group": "res",
     "title": "Дерево",
     "stage": 0,
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: res_wood — a compact bundle of three or four short crooked brown sticks tied together at the middle with a simple loop of dry grass fibre. Sticks lie diagonally lower-left to upper-right, visible warm cut ends, one twig nub only. Wood #8B5A2B, binding muted straw. Simple graphic silhouette, very little bark detail. Production target 128x128.",
-    "where": "game_hud.gd · верхняя панель ресурсов"
+    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. ONE SINGLE short chunky brown LOG, diagonally from lower left to upper right, with a large clearly visible sawn round end on its lower-left end. Rich softly modelled warm clay/wood bark #985D2D, simple broad bark grooves, warm tan end grain with just two big growth rings. Like the resource-bar wood icon in the reference; NOT a bundle of sticks. Soft rounded matte hand-modelled clay-render look, natural soft edge shading, absolutely NO drawn dark contour, no ink outline, no external cast shadow or ground. Large simple readable silhouette. Entire log about 84% of square canvas, isolated genuine transparency.",
+    "where": "game_hud.gd · верхняя панель ресурсов",
+    "style_version": 2,
+    "v2_stage": 0,
+    "mode": "v2",
+    "v2_kind": "sprite",
+    "source_max": 1024,
+    "v2_margin": 10
   },
   "glyph_pause": {
     "size": [
@@ -52,16 +58,30 @@
     "group": "btn",
     "title": "Квадратная кнопка",
     "stage": 0,
-    "mode": "panel",
+    "mode": "v2",
     "slice": [
-      16,
-      16,
-      16,
-      16
+      26,
+      24,
+      26,
+      30
     ],
     "state": "normal",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD raster asset. A warm hand-painted icon of hand-moulded clay, wood and grass from a child's living sandbox. Simple chunky silhouette readable at 24 pixels, softly imperfect handmade edges, subtle sparse finger impressions. Strong consistent dark brown #4D331F outline approximately 1/16 of object width, soft upper-left light, shading only within object on lower-right. Muted warm earth palette, matte surfaces. Absolutely no text, letters, numbers, watermark, border tile, scenery, ground plane, drop shadow, white halo, gloss, neon, metal or pixel-art stair steps. Genuine transparent RGBA background. Exactly one isolated subject centered in a square large canvas with generous transparent margin, about 8% on each edge. Reference screenshot establishes palette and simple visual language, but do not copy pixelation or any UI text. Subject: btn_square_normal — an EMPTY square game button background, front-facing and axis-aligned, gently rounded square corners, thick continuous earthy brown #8C6138 outer rim outlined #4D331F, warm pale parchment #F2E3BD center. Soft matte handmade clay/parchment finish, mild upper-left rim highlight and inner lower-right shading. Shape is a clean regular rounded square for 9-slice scaling, constant straight border width, unpatterned perfectly flat center, no dents in silhouette, no corner ornaments. NO GLYPH. Transparent outside corners. Production target 64x64.",
-    "where": "Квадратные кнопки HUD, глиф накладывается отдельно"
+    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. An EMPTY small SQUARE BUTTON in the default inactive state, front view orthographic. Match the pale pause/settings button frame in the upper right of the reference. Uniform pale cream #FFF8EC face, thin light-clay #E3C9A0 border, strongly rounded corners radius about 24% of button side, very subtle upper-edge highlight, soft diffuse 25%-opacity warm-brown shadow underneath. Body 80% canvas size, no brown thick rim, no icon or writing. Very clean, restrained shallow tactile depth.",
+    "where": "Квадратные кнопки HUD, глиф накладывается отдельно",
+    "style_version": 2,
+    "v2_stage": 0,
+    "v2_kind": "button",
+    "source_max": 1024,
+    "v2_fill_top": [
+      255,
+      248,
+      236
+    ],
+    "v2_border": [
+      227,
+      201,
+      160
+    ]
   },
   "cursor_default": {
     "size": [
@@ -398,14 +418,28 @@
     ],
     "group": "ui",
     "title": "Пергаментная панель",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One EMPTY square parchment UI panel. Front-facing, axis aligned, mildly rounded corners, constant-width brown clay border #8C6138 with exact crisp #4D331F contour. Large perfectly flat center #F2E3BD, no central texture, no ornaments, no lettering, no uneven silhouette. Suitable for 9-slice, light only within frame. Transparent outside corners.",
+    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. A plain EMPTY SQUARE UI PANEL, front view perfectly orthographic. Very pale warm cream #FBF3E3 flat uniform center. Thin light-clay #E3C9A0 border, about 1/64 of panel width. Soft round corners radius about 14% of panel width. Very restrained white rim highlight inside top edge. Soft diffuse warm-brown shadow below, opacity about 25%, confined to transparent margin. Clean modern cozy game UI like the Jobs panel in the reference. No ornaments or inset rectangles, no dark outlines. The panel itself about 85% canvas width and height. No content.",
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "mode": "panel",
+    "mode": "v2",
     "slice": [
-      16,
-      16,
-      16,
-      16
+      32,
+      32,
+      32,
+      36
+    ],
+    "style_version": 2,
+    "v2_stage": 0,
+    "v2_kind": "panel",
+    "source_max": 1024,
+    "v2_fill_top": [
+      251,
+      243,
+      227
+    ],
+    "v2_border": [
+      227,
+      201,
+      160
     ]
   },
   "btn_square_hover": {
@@ -437,15 +471,33 @@
     "title": "Квадратная кнопка — pressed",
     "stage": 2,
     "where": "Квадратные кнопки HUD, глиф накладывается отдельно",
-    "prompt": "Offline derivative of generated btn_square_normal material; state; no external assets.",
-    "mode": "state",
-    "base": "btn_square_normal",
+    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. An EMPTY small SQUARE BUTTON in the selected/pressed state, front view orthographic. Match the orange play button frame in the upper right of the reference. Clear saturated WARM ORANGE vertical gradient from #F7A846 at top to #E57D22 at bottom, thin orange border #C9661A, strongly rounded corners radius about 24% of button side, narrow lighter top-rim highlight. Soft diffuse 25%-opacity warm-brown shadow beneath. Body 80% canvas size, no brown thick rim, no icon or writing. Clean shallow tactile depth.",
+    "mode": "v2",
     "state": "pressed",
     "slice": [
-      16,
-      16,
-      16,
-      16
+      26,
+      24,
+      26,
+      30
+    ],
+    "style_version": 2,
+    "v2_stage": 0,
+    "v2_kind": "button",
+    "source_max": 1024,
+    "v2_fill_top": [
+      247,
+      168,
+      70
+    ],
+    "v2_border": [
+      201,
+      102,
+      26
+    ],
+    "v2_fill_bottom": [
+      229,
+      125,
+      34
     ]
   },
   "btn_square_disabled": {
@@ -1442,15 +1494,28 @@
     "title": "Карточка постройки — pressed",
     "stage": 3,
     "where": "Нижняя панель — рамка карточки постройки",
-    "prompt": "Offline derivative of generated card_build_normal; state; no external assets.",
-    "mode": "state",
-    "base": "card_build_normal",
+    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. An EMPTY selected BUILDING CARD FRAME, slightly taller than wide, width-to-height ratio 128:144. Front view orthographic, plain flat interior fill light warm apricot #FCDDB0, thin warm-orange #C9661A border, softly rounded corners about 12% of width, subtle inner top-edge highlight. Subtle warm soft shadow beneath. Match the selected Hut card at bottom left of the construction dock in the reference. No inset image window, no building, no icon, no text, no number badge. About 85% canvas size. No thick bevel or dark-brown outline.",
+    "mode": "v2",
     "state": "pressed",
     "slice": [
-      16,
-      16,
-      16,
-      16
+      32,
+      32,
+      32,
+      36
+    ],
+    "style_version": 2,
+    "v2_stage": 0,
+    "v2_kind": "card",
+    "source_max": 1024,
+    "v2_fill_top": [
+      252,
+      221,
+      176
+    ],
+    "v2_border": [
+      201,
+      102,
+      26
     ]
   },
   "card_build_disabled": {
@@ -1811,29 +1876,14 @@
     "title": "Стройка",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "build_hut",
-        "box": [
-          0,
-          0,
-          61,
-          61
-        ]
-      },
-      {
-        "name": "tool_axe",
-        "box": [
-          21,
-          21,
-          42,
-          42
-        ],
-        "flip": false
-      }
-    ]
+    "prompt": "Use case: stylized-concept. Asset type: ONE transparent game HUD raster asset for Clayfolk HUD v2. The provided screenshot is a STYLE REFERENCE only; do not reproduce the full screen or any text from it. Match its clean cream/orange UI and softly rendered clay objects. Single isolated complete asset centered on genuine transparent RGBA, with generous clear margins. No labels, letters, numbers, logos, glyphs, grids, scenery, watermark, strong brown outline, parchment stains or thick beveled rim. Soft upper-left illumination. ONE simple chunky STONE HAMMER on a thick warm brown WOODEN HANDLE, diagonally from lower-left to upper-right. Big broad rounded taupe-gray stone hammer head at upper-left, head rounded rectangular with blunt flat ends, simple grass-fiber binding, short thick wooden handle extending lower-right. Match the hammer icon beside the Construction job in the reference. This is a HAMMER with BLUNT RECTANGULAR stone head, NOT an axe, pickaxe or metallic tool. Soft matte hand-modelled clay render, upper-left light, gentle internal lower-right shading, NO drawn outline, no contour or external cast shadow. Simple exaggerated shapes readable at 24px. About 84% of square transparent canvas, no text.",
+    "mode": "v2",
+    "style_version": 2,
+    "v2_stage": 0,
+    "v2_kind": "sprite",
+    "source_max": 1024,
+    "v2_margin": 5,
+    "v2_flip": true
   },
   "job_hunt": {
     "size": [
