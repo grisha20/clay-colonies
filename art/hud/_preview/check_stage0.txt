@@ -1,0 +1,12 @@
+SCOPE: stage 0; 6 game assets; 23 PNG manifest rows.
+1. Inventory: PASS
+2. Dimensions / PNG RGBA / metadata: PASS
+3. Transparent corners: PASS
+4. No near-white semitransparent edges: PASS
+5. Margins >= 4 px (9-slice exempt): PASS
+6. 9-slice / cursor metadata: PASS
+7. State families: PASS (stage-0 normal-only exception)
+Protected files: 49 SHA-256 comparisons.
+DEFERRED: 164 remaining specification assets; btn_square: hover, pressed, disabled (stage 2).
+Full §6 completeness is NOT claimed. Run --stage all for final delivery.
+RESULT: PASS — 0 errors.
