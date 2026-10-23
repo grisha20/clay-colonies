@@ -30,6 +30,10 @@ var settings_button: Button
 var quick_panel: PanelContainer
 var alarm_on: bool = false
 var tasks_signature: String = ""
+var tasks_toggle: Button
+var tasks_done := 0
+var tasks_total := 0
+const TASKS_SHOWN := 4
 ## Growth shown next to the stores (2D reference): +N over the last RATE_WINDOW ticks.
 const RATE_WINDOW := 1200
 var rate_labels: Dictionary = {}
@@ -262,18 +266,44 @@ func _build_tasks() -> void:
 	tasks_panel = PanelContainer.new()
 	tasks_panel.name = "TasksPanel"
 	tasks_panel.add_theme_stylebox_override("panel", parchment())
-	tasks_panel.position = Vector2(16, 80)
-	tasks_panel.custom_minimum_size = Vector2(300, 0)
+	tasks_panel.position = Vector2(16, 76)
+	tasks_panel.custom_minimum_size = Vector2(280, 0)
 	tasks_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	tasks_panel.mouse_force_pass_scroll_events = false
 	add_child(tasks_panel)
 	var box = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	tasks_panel.add_child(box)
-	box.add_child(header("Задачи"))
+	tasks_toggle = header_button("Задачи")
+	tasks_toggle.tooltip_text = "Свернуть или развернуть задачи"
+	tasks_toggle.pressed.connect(func():
+		tasks_box.visible = not tasks_box.visible
+		_update_tasks_title())
+	box.add_child(tasks_toggle)
 	tasks_box = VBoxContainer.new()
-	tasks_box.add_theme_constant_override("separation", 6)
+	tasks_box.add_theme_constant_override("separation", 5)
 	box.add_child(tasks_box)
+
+
+## Clickable panel title on the header strip: folds its panel (▾ open, ▸ folded).
+static func header_button(text: String, size: int = 18) -> Button:
+	var b = Button.new()
+	b.text = text
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", size)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(state, INK)
+	var sb = HudArt.box("ui_header", [12, 2, 12, 2])
+	if sb:
+		for state in ["normal", "hover", "pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(state, sb)
+		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	return b
+
+
+func _update_tasks_title() -> void:
+	tasks_toggle.text = ("Задачи ▾" if tasks_box.visible else "Задачи ▸") + ("   %d / %d" % [tasks_done, tasks_total] if tasks_total > 0 else "")
 
 
 func _build_alert() -> void:
@@ -406,11 +436,20 @@ func _update_tasks(objectives: Variant) -> void:
 	tasks_signature = sig
 	for c in tasks_box.get_children():
 		c.queue_free()
+	# Only open tasks (up to TASKS_SHOWN); finished ones fold into one line.
 	var shown = 0
+	tasks_done = 0
+	tasks_total = 0
 	for o in objectives:
-		if typeof(o) != TYPE_DICTIONARY or shown >= 7:
+		if typeof(o) != TYPE_DICTIONARY:
 			continue
-		var done = bool(o.get("done", false))
+		tasks_total += 1
+		if bool(o.get("done", false)):
+			tasks_done += 1
+			continue
+		if shown >= TASKS_SHOWN:
+			continue
+		var done = false
 		var target = maxf(1.0, float(o.get("target", 1)))
 		var progress = clampf(float(o.get("progress", 0)), 0.0, target)
 		var victory = bool(o.get("victory", false))
@@ -421,16 +460,16 @@ func _update_tasks(objectives: Variant) -> void:
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var prefix = "★ " if victory else ""
 		var text = str(o.get("text", "")) if pic else ("✓ " if done else prefix) + str(o.get("text", ""))
-		var title = _label(text, 16, Color(0.35, 0.45, 0.2) if done else INK)
+		var title = _label(text, 15, INK)
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		title.custom_minimum_size = Vector2(240 if pic else 280, 0)
+		title.custom_minimum_size = Vector2(220 if pic else 260, 0)
 		row.add_child(title)
 		if target > 1.0 and not done:
 			var bar = ProgressBar.new()
 			bar.max_value = target
 			bar.value = progress
 			bar.show_percentage = false
-			bar.custom_minimum_size = Vector2(240 if pic else 280, 12 if pic else 8)
+			bar.custom_minimum_size = Vector2(220 if pic else 260, 10 if pic else 8)
 			skin_bar(bar, "ui_bar_fill_amber" if victory else "ui_bar_fill_green")
 			row.add_child(bar)
 			row.add_child(_label("%d / %d" % [int(progress), int(target)], 13, INK.lightened(0.25)))
@@ -441,6 +480,15 @@ func _update_tasks(objectives: Variant) -> void:
 		line.add_child(row)
 		tasks_box.add_child(line)
 		shown += 1
+	if tasks_done > 0:
+		var summary = HBoxContainer.new()
+		summary.add_theme_constant_override("separation", 8)
+		var check_pic = HudArt.tex("ui_check")
+		if check_pic:
+			summary.add_child(icon_rect(check_pic, 24))
+		summary.add_child(_label(("Выполнено: %d" if check_pic else "✓ Выполнено: %d") % tasks_done, 14, Color(0.35, 0.45, 0.2)))
+		tasks_box.add_child(summary)
+	_update_tasks_title()
 
 
 func _update_alert(session: Dictionary, weather: Variant, tick: int, colony: Dictionary) -> void:

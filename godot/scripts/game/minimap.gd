@@ -10,7 +10,7 @@ extends PanelContainer
 signal focus_requested(point: Vector2)
 
 const MAP_SIZE := Vector2(480, 480)
-const VIEW := 210
+const VIEW := 184
 ## Terrain is sampled on a coarser grid (scaled up with filtering) on a worker thread.
 const TERRAIN_RES := 105
 const GRASS := Color(0.47, 0.62, 0.31)

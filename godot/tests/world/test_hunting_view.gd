@@ -75,6 +75,9 @@ func run() -> void:
 		if c is Label:
 			texts.append((c as Label).text)
 		elif c is Container:
+			# Tool counts are an icon and a number; the words are in the row tooltip.
+			if (c as Control).tooltip_text != "":
+				texts.append((c as Control).tooltip_text)
 			stack.append_array(c.get_children())
 	check("hunt_row_with_spears", "Охота" in texts and texts.any(func(t): return t.contains("копья: 1")), str(texts))
 	var guard = hunter_data.duplicate(); guard["job"] = "guard"; guard["id"] = "ant-g"

@@ -147,11 +147,22 @@ func run() -> void:
 	scene._on_snapshot_received(snapshot(103, [b.duplicate(true)]))
 	check(scene.selected_resident_id.is_empty() and scene.inspector_label.text.contains("не выбран") and scene.follow_button.disabled,
 		"despawn clears selection and stale inspector")
+	# Esc steps back one layer at a time: open panels first, then the selection.
+	scene.settings_panel.visible = false
+	scene.close_start_menu()
 	scene.select_resident(actor_b)
 	key(KEY_ESCAPE, true)
 	key(KEY_ESCAPE, false)
 	await process_frame
 	check(scene.selected_resident_id.is_empty() and not actor_b.selection_ring.visible, "Escape clears selection and ring")
+	key(KEY_ESCAPE, true)
+	key(KEY_ESCAPE, false)
+	await process_frame
+	check(scene.pause_menu.visible, "Escape with nothing open shows the pause menu")
+	key(KEY_ESCAPE, true)
+	key(KEY_ESCAPE, false)
+	await process_frame
+	check(not scene.pause_menu.visible, "Escape closes the pause menu")
 	scene.select_resident(actor_b)
 	scene._on_connected()
 	check(scene.selected_resident_id.is_empty(), "reconnect clears selection")

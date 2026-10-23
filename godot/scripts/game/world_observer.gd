@@ -92,6 +92,38 @@ func open_start_menu() -> void:
 func close_start_menu() -> void:
 	start_menu.visible = false
 
+var pause_menu: PauseMenu
+## Speed before the pause menu stopped the match; restored when it closes.
+var speed_before_pause := 0
+
+func open_pause_menu() -> void:
+	speed_before_pause = int(round(entity_registry.current_sim_speed))
+	if speed_before_pause > 0:
+		ws_client.send_command({"type": "setSpeed", "value": 0})
+	pause_menu.open()
+
+func close_pause_menu() -> void:
+	if not pause_menu.visible:
+		return
+	pause_menu.close()
+	if speed_before_pause > 0:
+		ws_client.send_command({"type": "setSpeed", "value": speed_before_pause})
+	speed_before_pause = 0
+
+## Esc steps back one layer: menu, settings, selection; with nothing open it
+## brings up the pause menu.
+func _on_escape() -> void:
+	if pause_menu.visible:
+		close_pause_menu()
+	elif start_menu.visible:
+		close_start_menu()
+	elif settings_panel.visible:
+		settings_panel.visible = false
+	elif selected_resident_id != "":
+		select_resident(null)
+	else:
+		open_pause_menu()
+
 func _on_menu_new_game(classic: bool) -> void:
 	# Keep the running match: autosave it to a slot before the server replaces it.
 	ws_client.send_command({"type": "saveGame", "name": "Перед новой игрой"})
@@ -229,9 +261,9 @@ func _setup_hud() -> void:
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	insp_panel.offset_left = 16
 	# Above the bottom dock (build bar + minimap).
-	insp_panel.offset_top = -470
+	insp_panel.offset_top = -428
 	insp_panel.offset_right = 376
-	insp_panel.offset_bottom = -266
+	insp_panel.offset_bottom = -224
 	canvas.add_child(insp_panel)
 	var inspector_box = VBoxContainer.new()
 	insp_panel.add_child(inspector_box)
@@ -275,8 +307,8 @@ func _setup_hud() -> void:
 	minimap.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	minimap.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	minimap.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	minimap.offset_right = -16
-	minimap.offset_bottom = -16
+	minimap.offset_right = -BuildController.DOCK_EDGE
+	minimap.offset_bottom = -BuildController.DOCK_EDGE
 	minimap.focus_requested.connect(func(p): world_view.focus_on_point(p))
 	# The mother perches on the minimap and speaks from there.
 	mother_speaker = MotherSpeaker.new()
@@ -310,6 +342,20 @@ func _setup_hud() -> void:
 	start_menu.continue_requested.connect(close_start_menu)
 	start_menu.new_game_requested.connect(_on_menu_new_game)
 	start_menu.load_requested.connect(_on_menu_load)
+	pause_menu = PauseMenu.new()
+	canvas.add_child(pause_menu)
+	pause_menu.continue_requested.connect(close_pause_menu)
+	pause_menu.save_requested.connect(func():
+		ws_client.send_command({"type": "saveGame"})
+		pause_menu.status_label.text = "Сохранено")
+	pause_menu.load_requested.connect(func():
+		close_pause_menu()
+		open_start_menu()
+		start_menu.saves_panel.visible = true)
+	pause_menu.main_menu_requested.connect(func():
+		close_pause_menu()
+		open_start_menu())
+	pause_menu.quit_requested.connect(func(): get_tree().quit())
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.name = "ControlsHelp"
@@ -317,7 +363,49 @@ func _setup_hud() -> void:
 	help_label.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(HSeparator.new())
 	vbox.add_child(help_label)
+	# Interface size: on big screens the HUD grows with the window; this shrinks it.
+	var scale_row = HBoxContainer.new()
+	scale_row.add_theme_constant_override("separation", 4)
+	var scale_label = Label.new()
+	scale_label.text = "Интерфейс"
+	scale_row.add_child(scale_label)
+	for pct in UI_SCALES:
+		var sb = Button.new()
+		sb.text = "%d%%" % pct
+		sb.toggle_mode = true
+		sb.focus_mode = Control.FOCUS_NONE
+		sb.custom_minimum_size = Vector2(54, 0)
+		sb.pressed.connect(func(): set_ui_scale(pct))
+		scale_row.add_child(sb)
+		ui_scale_buttons[pct] = sb
+	vbox.add_child(scale_row)
+	set_ui_scale(_load_ui_scale(), false)
 	_update_inspector()
+
+const UI_SCALES = [75, 85, 100, 115]
+const SETTINGS_PATH := "user://settings.cfg"
+var ui_scale_buttons: Dictionary = {}
+
+## Scales the whole 2D interface (not the 3D world) and remembers the choice.
+func set_ui_scale(pct: int, remember: bool = true) -> void:
+	get_tree().root.content_scale_factor = pct / 100.0
+	for k in ui_scale_buttons.keys():
+		ui_scale_buttons[k].button_pressed = k == pct
+	if not remember:
+		return
+	var cfg = ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("ui", "scale", pct)
+	cfg.save(SETTINGS_PATH)
+
+func _load_ui_scale() -> int:
+	var cfg = ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) == OK:
+		var v = int(cfg.get_value("ui", "scale", 100))
+		if v in UI_SCALES:
+			return v
+	# First run: a little smaller on screens above Full HD.
+	return 85 if DisplayServer.get_name() != "headless" and DisplayServer.screen_get_size().y > 1200 else 100
 
 ## The mother sits on the minimap's top edge: her portrait centred over it,
 ## sunk a little so her arms rest on the frame; the bubble opens to the left.
@@ -329,16 +417,16 @@ func _place_mother() -> void:
 	if not minimap or not mother_speaker:
 		return
 	var portrait_w = MotherSpeaker.PERCH_SIZE.x
-	var bottom = -16.0 - minimap.size.y + PERCH_OVERLAP
+	var bottom = minimap.offset_bottom - minimap.size.y + PERCH_OVERLAP
 	mother_speaker.offset_bottom = bottom
 	mother_speaker.offset_top = bottom
-	mother_speaker.offset_right = -16.0 - (minimap.size.x - portrait_w) * 0.5
+	mother_speaker.offset_right = minimap.offset_right - (minimap.size.x - portrait_w) * 0.5
 	mother_speaker.offset_left = mother_speaker.offset_right
 	if mother_hands:
-		var edge = -16.0 - minimap.size.y
+		var edge = minimap.offset_bottom - minimap.size.y
 		mother_hands.offset_bottom = edge + HANDS_SIZE.y * 0.7
 		mother_hands.offset_top = mother_hands.offset_bottom - HANDS_SIZE.y
-		mother_hands.offset_right = -16.0 - (minimap.size.x - HANDS_SIZE.x) * 0.5
+		mother_hands.offset_right = minimap.offset_right - (minimap.size.x - HANDS_SIZE.x) * 0.5
 		mother_hands.offset_left = mother_hands.offset_right - HANDS_SIZE.x
 		mother_hands.visible = mother_speaker.visible
 
@@ -594,7 +682,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
-			select_resident(null)
+			_on_escape()
 			get_viewport().set_input_as_handled()
 		elif event.keycode == KEY_F:
 			_toggle_follow_selected()

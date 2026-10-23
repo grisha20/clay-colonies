@@ -31,11 +31,13 @@ var warrior_button: Button
 const WARRIOR_COST := {"specialClay": 4, "spears": 1}
 const WARRIORS_PER_RESIDENTS := 8
 const WATER_COST := {"wood": 6, "stone": 4}
+const WARRIOR_TIP := "Стражник у костра проходит посвящение: сильнее бьёт, меньше получает урона, носит копьё и перья. Праматерь посвящает сама, когда племени грозят."
 ## One unit (row + its "why not" note) per job.
 var rows_box: GridContainer
 var priorities: Dictionary = {}
 var free_for_plus: int = 0
 var signature: String = ""
+var body: VBoxContainer
 
 
 func _ready() -> void:
@@ -44,19 +46,29 @@ func _ready() -> void:
 	theme = GameHud.ink_theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_force_pass_scroll_events = false
-	custom_minimum_size = Vector2(300, 0)
 	var box = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 5)
+	box.add_theme_constant_override("separation", 4)
 	add_child(box)
-	box.add_child(GameHud.header("Работы"))
+	var toggle = GameHud.header_button("Работы ▾")
+	toggle.tooltip_text = "Свернуть или развернуть работы"
+	box.add_child(toggle)
+	# Everything under the title folds away with it.
+	body = VBoxContainer.new()
+	body.add_theme_constant_override("separation", 4)
+	box.add_child(body)
+	toggle.pressed.connect(func():
+		body.visible = not body.visible
+		toggle.text = "Работы ▾" if body.visible else "Работы ▸")
+	box = body
 	header = Label.new()
-	header.add_theme_font_size_override("font_size", 14)
+	header.add_theme_font_size_override("font_size", 13)
 	box.add_child(header)
 	# «Праматерь решает»: the tribe AI sets the targets (colony.autoManage);
 	# any +/- hands them to the player (the server switches to manual).
 	mode_button = Button.new()
 	mode_button.name = "ModeButton"
 	mode_button.focus_mode = Control.FOCUS_NONE
+	mode_button.add_theme_font_size_override("font_size", 14)
 	mode_button.pressed.connect(func(): auto_manage_requested.emit(not auto_manage))
 	_icon(mode_button, "job_mother_auto")
 	box.add_child(mode_button)
@@ -64,17 +76,20 @@ func _ready() -> void:
 	mode_hint.add_theme_font_size_override("font_size", 12)
 	mode_hint.add_theme_color_override("font_color", GameHud.INK.lightened(0.3))
 	mode_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	mode_hint.custom_minimum_size = Vector2(300, 0)
+	mode_hint.custom_minimum_size = Vector2(240, 0)
+	# The hint lives in the button's tooltip; the label stays for the 2D parity.
+	mode_hint.visible = false
 	box.add_child(mode_hint)
 	_update_mode()
 	firing_row = HBoxContainer.new()
 	firing_row.name = "FiringRow"
 	firing_label = Label.new()
-	firing_label.add_theme_font_size_override("font_size", 14)
+	firing_label.add_theme_font_size_override("font_size", 13)
 	firing_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	firing_row.add_child(firing_label)
 	firing_button = Button.new()
 	firing_button.focus_mode = Control.FOCUS_NONE
+	firing_button.add_theme_font_size_override("font_size", 13)
 	firing_button.pressed.connect(func(): firing_requested.emit(not firing_paused))
 	_icon(firing_button, "job_firing")
 	firing_row.add_child(firing_button)
@@ -83,12 +98,14 @@ func _ready() -> void:
 	water_button = Button.new()
 	water_button.name = "WaterButton"
 	water_button.focus_mode = Control.FOCUS_NONE
+	_compact(water_button)
 	water_button.pressed.connect(func(): water_requested.emit())
 	_icon(water_button, "job_water_shot")
 	box.add_child(water_button)
 	warrior_button = Button.new()
 	warrior_button.name = "WarriorButton"
 	warrior_button.focus_mode = Control.FOCUS_NONE
+	_compact(warrior_button)
 	warrior_button.tooltip_text = "Стражник у костра проходит посвящение: сильнее бьёт, меньше получает урона, носит копьё и перья. Праматерь посвящает сама, когда племени грозят."
 	warrior_button.pressed.connect(func(): warrior_requested.emit())
 	_icon(warrior_button, "job_warrior")
@@ -204,40 +221,57 @@ func update_from_snapshot(snapshot: Dictionary, player: int) -> void:
 			row.add_child(GameHud.icon_rect(job_pic, 26))
 		var label = Label.new()
 		label.text = LABELS[k]
-		label.custom_minimum_size = Vector2(80, 0)
+		label.add_theme_font_size_override("font_size", 15)
+		label.custom_minimum_size = Vector2(72, 0)
 		row.add_child(label)
 		var minus = _button("−", target <= 0)
 		minus.pressed.connect(func(): _change(k, -1))
 		row.add_child(minus)
 		var value = Label.new()
 		value.text = str(target)
-		value.custom_minimum_size = Vector2(26, 0)
+		value.custom_minimum_size = Vector2(22, 0)
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		row.add_child(value)
 		var plus = _button("+", free_for_plus <= 0)
 		plus.pressed.connect(func(): _change(k, 1))
 		row.add_child(plus)
+		# Busy now, then the tools in store: short, with the words in the tooltip.
 		var actual = Label.new()
-		actual.text = "  заняты: %d" % int(counts[k])
+		actual.text = " → %d" % int(counts[k])
 		actual.add_theme_font_size_override("font_size", 14)
+		actual.custom_minimum_size = Vector2(34, 0)
 		row.add_child(actual)
+		var tip = "%s: просим %d, заняты %d" % [LABELS[k], target, int(counts[k])]
 		if tools.has(k):
+			var tool_word = {"wood": "топоры", "stone": "кирки", "fish": "удочки", "hunt": "копья"}[k]
+			var tool_pic = HudArt.tex({"wood": "tool_axe", "stone": "tool_pickaxe", "fish": "tool_rod", "hunt": "tool_spear"}[k])
+			if tool_pic:
+				row.add_child(GameHud.icon_rect(tool_pic, 18))
 			var t = Label.new()
-			t.text = "  %s: %d" % [{"wood": "топоры", "stone": "кирки", "fish": "удочки", "hunt": "копья"}[k], tools[k]]
+			t.text = str(tools[k]) if tool_pic else "  %s: %d" % [tool_word, tools[k]]
 			t.add_theme_font_size_override("font_size", 13)
 			t.add_theme_color_override("font_color", GameHud.INK.lightened(0.3))
 			row.add_child(t)
+			tip += " · %s: %d" % [tool_word, tools[k]]
 		var unit = VBoxContainer.new()
 		unit.add_theme_constant_override("separation", 0)
 		unit.add_child(row)
 		rows_box.add_child(unit)
 		var reason = unmet_reason(k, target, int(counts[k]), alive, alarm, population, food, tools, loose_stone)
 		if reason != "":
+			# A yellow dot on the row; the reason itself is in the tooltip.
+			var dot = HudArt.tex("ui_dot_yellow")
 			var r = Label.new()
 			r.text = "    " + reason
 			r.add_theme_font_size_override("font_size", 12)
 			r.add_theme_color_override("font_color", Color(0.56, 0.32, 0.18))
 			unit.add_child(r)
+			if dot:
+				r.visible = false
+				row.add_child(GameHud.icon_rect(dot, 16))
+			tip += "
+" + reason
+		unit.tooltip_text = tip
 
 
 ## Why a job has fewer workers than asked (same order as the 2D panel).
@@ -305,6 +339,7 @@ func _update_water(snapshot: Dictionary, colony: Dictionary, colony_id: String) 
 	else:
 		water_button.text = "Обучить стражу водяной стрельбе (%d дерево, %d камень)" % [WATER_COST.wood, WATER_COST.stone]
 		water_button.disabled = float(colony.get("wood", 0)) < WATER_COST.wood or float(colony.get("stone", 0)) < WATER_COST.stone
+	water_button.tooltip_text = water_button.text
 
 
 ## Mirrors warriorRefusal: cap 1 + one per 8 residents, special clay, a spear, a guard.
@@ -339,12 +374,15 @@ func _update_warrior(snapshot: Dictionary, colony: Dictionary, colony_id: String
 	var reason = warrior_refusal(snapshot, colony, colony_id)
 	warrior_button.disabled = reason != ""
 	warrior_button.text = ("Посвятить воина (%d особой глины, копьё) · воинов: %d" % [WARRIOR_COST.specialClay, warriors]) if reason == "" else ("Воинов: %d · %s" % [warriors, reason])
+	warrior_button.tooltip_text = warrior_button.text + "
+" + WARRIOR_TIP
 
 
 func _update_mode() -> void:
 	if mode_button == null:
 		return
 	mode_button.text = "Праматерь решает" if auto_manage else "Вручную · вернуть Праматери"
+	mode_button.tooltip_text = "Праматерь сама расставляет жителей. Нажмите ± — и работы ваши." if auto_manage else "Вы распределяете жителей сами. Нажмите, чтобы вернуть Праматери."
 	_icon(mode_button, "job_mother_auto" if auto_manage else "job_manual")
 	mode_hint.text = "Праматерь сама расставляет жителей. Нажмите ± — и работы ваши." if auto_manage else "Вы распределяете жителей сами."
 
@@ -366,6 +404,15 @@ func _button(text: String, disabled: bool) -> Button:
 		b.add_theme_constant_override("icon_max_width", 18)
 		b.modulate = Color(1, 1, 1, 0.55) if disabled else Color.WHITE
 	return b
+
+
+## Long-text button kept to one short line: smaller font, cut with «…»,
+## the whole text in the tooltip (kept in sync by _sync_tips).
+static func _compact(b: Button) -> void:
+	b.add_theme_font_size_override("font_size", 13)
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.custom_minimum_size = Vector2(240, 0)
 
 
 ## Small picture at the left of a wide button.
