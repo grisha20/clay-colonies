@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS placement_parity 1200 queries, 0 mismatches { "hut": 134, "storage": 134, "workshop": 134, "idol": 133, "fence": 133, "gate-h": 133, "gate-v": 133, "kiln": 133, "totem": 133 }
+PASS brush_cells_straight_line [1205, 1206, 1207, 1208, 1209, 1210]
+PASS rect_zone_cells [0, 1, 2, 120, 121, 122]
+PASS cell_center 
+PASS gate_cells 
+PASS cost_text 
+BUILD_RULES_FAILURES=0

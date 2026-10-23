@@ -89,11 +89,11 @@ const TABS = [
 	["Земля", ["totem", "harvest", "forbid", "erase"], "tab_land", "group_land"],
 ]
 const TILE_TEXT := Color(0.98, 0.93, 0.82)
-const CARD_SIZE := Vector2(132, 150)
+const CARD_SIZE := Vector2(150, 164)
 ## Orange of the active tab and selected card (mock-up).
 const ACTIVE_TEXT := Color(0.85, 0.44, 0.12)
 ## Gap between the bar / minimap and the screen edge (WorldObserver uses it too).
-const BAR_EDGE := 10
+const BAR_EDGE := 9
 const DOCK_EDGE := 14
 var tab_buttons: Array = []
 var active_tab := 0
@@ -166,6 +166,7 @@ func _build_toolbar(canvas: CanvasLayer) -> void:
 	# The tab strip sticks up from the card panel, centred.
 	var tab_panel = PanelContainer.new()
 	tab_panel.name = "BuildTabs"
+	tab_panel.custom_minimum_size.x = 780
 	var strip = HudArt.box("ui_tabbar", [18, 6, 18, 6])
 	tab_panel.add_theme_stylebox_override("panel", strip if strip else GameHud.parchment([18, 6, 18, 6]))
 	tab_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -208,7 +209,9 @@ func _make_tab(i: int) -> Button:
 	b.text = TABS[i][0]
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.add_theme_font_size_override("font_size", 19)
+	GameHud.bold(b)
 	b.add_theme_color_override("font_color", GameHud.INK.lightened(0.15))
 	b.add_theme_color_override("font_hover_color", GameHud.INK)
 	for state in ["font_pressed_color", "font_hover_pressed_color"]:
@@ -217,26 +220,38 @@ func _make_tab(i: int) -> Button:
 	if icon == null:
 		icon = HudArt.tex(TABS[i][3])
 	if icon:
-		b.icon = icon
-		b.add_theme_constant_override("icon_max_width", 26)
-		b.add_theme_constant_override("h_separation", 8)
+		b.text = ""
+		b.tooltip_text = TABS[i][0]
+		b.custom_minimum_size.y = 38
+		var center = CenterContainer.new()
+		center.name = "Contents"
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(center)
+		var contents = HBoxContainer.new()
+		contents.name = "Row"
+		contents.add_theme_constant_override("separation", 8)
+		contents.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center.add_child(contents)
+		contents.add_child(GameHud.icon_rect(icon, 26))
+		var caption = _plain_label(TABS[i][0], 19, GameHud.INK)
+		caption.name = "Caption"
+		GameHud.bold(caption)
+		contents.add_child(caption)
 	var idle = StyleBoxEmpty.new()
 	idle.content_margin_left = 14
 	idle.content_margin_right = 14
 	idle.content_margin_top = 4
 	idle.content_margin_bottom = 7
 	# Active tab: an orange line under it, like the mock-up.
-	var line = HudArt.box("ui_tab_underline", [14, 4, 14, 7])
-	if line == null:
-		var flat = StyleBoxFlat.new()
-		flat.bg_color = Color(0, 0, 0, 0)
-		flat.border_color = ACTIVE_TEXT
-		flat.border_width_bottom = 3
-		flat.content_margin_left = 14
-		flat.content_margin_right = 14
-		flat.content_margin_top = 4
-		flat.content_margin_bottom = 7
-		line = flat
+	var line = StyleBoxFlat.new()
+	line.bg_color = Color.TRANSPARENT
+	line.border_color = ACTIVE_TEXT
+	line.border_width_bottom = 3
+	line.content_margin_left = 14
+	line.content_margin_right = 14
+	line.content_margin_top = 4
+	line.content_margin_bottom = 7
 	for state in ["normal", "hover", "disabled"]:
 		b.add_theme_stylebox_override(state, idle)
 	b.add_theme_stylebox_override("pressed", line)
@@ -252,6 +267,9 @@ func show_tab(i: int) -> void:
 	active_tab = i
 	for n in range(tab_buttons.size()):
 		tab_buttons[n].button_pressed = n == i
+		var caption = tab_buttons[n].get_node_or_null("Contents/Row/Caption")
+		if caption:
+			caption.add_theme_color_override("font_color", ACTIVE_TEXT if n == i else GameHud.INK)
 	for t in buttons.keys():
 		buttons[t].visible = int(tile_tab.get(t, 0)) == i
 
@@ -334,7 +352,7 @@ func _make_tile(spec: Array, slot: int) -> Button:
 	var key = _plain_label(str(slot), 13, GameHud.INK)
 	key.name = "Key"
 	key.position = Vector2(7, 6)
-	key.custom_minimum_size = Vector2(22, 22)
+	key.custom_minimum_size = Vector2(26, 26)
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	b.add_child(key)
@@ -371,6 +389,9 @@ func _style_key(t: String, active: bool) -> void:
 		flat.set_corner_radius_all(5)
 		sb = flat
 	key.add_theme_stylebox_override("normal", sb)
+	# A Label draws its skin behind glyphs only when its full rect is expanded.
+	key.size = key.custom_minimum_size
+	GameHud.bold(key)
 	key.add_theme_color_override("font_color", Color.WHITE if active else GameHud.INK)
 
 

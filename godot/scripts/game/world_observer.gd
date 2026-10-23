@@ -295,7 +295,7 @@ func _setup_hud() -> void:
 	priority_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	priority_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	priority_panel.offset_right = -16
-	priority_panel.offset_top = 66
+	priority_panel.offset_top = 90
 	priority_panel.priorities_requested.connect(func(pr): ws_client.send_command({"type": "setPriorities", "colony": player_colony, "priorities": pr}))
 	priority_panel.auto_manage_requested.connect(func(on): ws_client.send_command({"type": "setAutoManage", "colony": player_colony, "value": on}))
 	priority_panel.firing_requested.connect(func(paused): ws_client.send_command({"type": "setFiring", "colony": player_colony, "paused": paused}))
@@ -308,7 +308,7 @@ func _setup_hud() -> void:
 	minimap.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	minimap.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	minimap.offset_right = -BuildController.DOCK_EDGE
-	minimap.offset_bottom = -BuildController.DOCK_EDGE
+	minimap.offset_bottom = -BuildController.DOCK_EDGE - 6
 	minimap.focus_requested.connect(func(p): world_view.focus_on_point(p))
 	# Zoom buttons on the minimap's right edge (mock-up): camera closer / farther.
 	zoom_box = VBoxContainer.new()
@@ -320,7 +320,7 @@ func _setup_hud() -> void:
 		var zb = Button.new()
 		zb.text = spec[0]
 		zb.focus_mode = Control.FOCUS_NONE
-		zb.custom_minimum_size = Vector2(34, 34)
+		zb.custom_minimum_size = Vector2(40, 40)
 		zb.tooltip_text = spec[3]
 		if not HudArt.skin_button(zb, "btn_zoom", [4, 4, 4, 4]):
 			HudArt.skin_button(zb, "btn_square", [4, 4, 4, 4])
@@ -433,8 +433,8 @@ func _load_ui_scale() -> int:
 
 ## The mother sits on the minimap's top edge: her portrait centred over it,
 ## sunk a little so her arms rest on the frame; the bubble opens to the left.
-const PERCH_OVERLAP := 30.0
-const HANDS_SIZE := Vector2(170, 43)
+const PERCH_OVERLAP := 16.0
+const HANDS_SIZE := Vector2(140, 35)
 var zoom_box: VBoxContainer
 var mother_hands: TextureRect
 
@@ -445,13 +445,13 @@ func _place_mother() -> void:
 	var bottom = minimap.offset_bottom - minimap.size.y + PERCH_OVERLAP
 	mother_speaker.offset_bottom = bottom
 	mother_speaker.offset_top = bottom
-	mother_speaker.offset_right = minimap.offset_right - (minimap.size.x - portrait_w) * 0.5
+	mother_speaker.offset_right = minimap.offset_right - (minimap.size.x - portrait_w) * 0.5 + 32
 	mother_speaker.offset_left = mother_speaker.offset_right
 	if zoom_box:
 		zoom_box.offset_right = minimap.offset_right - 14
-		zoom_box.offset_left = zoom_box.offset_right - 34
-		zoom_box.offset_top = minimap.offset_bottom - minimap.size.y + 26
-		zoom_box.offset_bottom = zoom_box.offset_top + 74
+		zoom_box.offset_left = zoom_box.offset_right - 40
+		zoom_box.offset_top = minimap.offset_bottom - minimap.size.y + 18
+		zoom_box.offset_bottom = zoom_box.offset_top + 86
 	if mother_hands:
 		var edge = minimap.offset_bottom - minimap.size.y
 		mother_hands.offset_bottom = edge + HANDS_SIZE.y * 0.7

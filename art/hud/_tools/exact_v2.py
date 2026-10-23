@@ -65,6 +65,8 @@ def reference_cut(name):
         # The pill's outer edge crosses this crop; it is not part of the sun.
         bg=np.array((251,240,216),float)
         binary=(a[:,:,0]>a[:,:,1]*1.12)&(a[:,:,1]>a[:,:,2]*1.3)&(a[:,:,0]>150)
+        yy,xx=np.indices((h,w))
+        binary &= (xx-27)**2+(yy-25)**2<=22**2
     if name in ('build_hut','build_house','build_kiln','build_idol'):
         binary=binary_fill_holes(cv2.morphologyEx(binary.astype('uint8'),cv2.MORPH_CLOSE,np.ones((3,3),'uint8')).astype(bool))
     if name.startswith('build_'):
@@ -125,7 +127,7 @@ def cfg(name,old):
     elif name in ('ui_panel','ui_panel_dark','ui_list_bg'):s.update(size=[128,128],v2_kind='panel',v2_shape='rounded',slice=[24,24,24,24])
     elif name=='ui_tooltip':s.update(size=[128,96],v2_kind='panel',v2_shape='rounded',slice=[24,24,24,24])
     elif name.startswith('ui_button_wide_'):s.update(size=[192,48],v2_kind='button',v2_shape='rounded',slice=[16,16,16,16])
-    elif name.startswith(('ui_btn_plus_','ui_btn_minus_')):s.update(size=[32,32],v2_kind='button',v2_shape='bevel',slice=[10,10,10,10])
+    elif name.startswith(('ui_btn_plus_','ui_btn_minus_')):s.update(size=[32,32],v2_kind='button',v2_shape='rounded',slice=[10,10,10,10])
     elif name.startswith('ui_bar_'):s.update(size=[128,18],v2_kind='bar',v2_shape='bar',slice=[8,5,8,5])
     elif name=='mother_bubble':s.update(size=[320,128],v2_kind='panel',v2_shape='bubble',slice=[24,24,72,40])
     elif name=='minimap_frame':s.update(size=[256,256],v2_kind='frame',v2_shape='frame',slice=[24,24,24,24],v2_center='transparent')
@@ -190,6 +192,8 @@ def shaped(size,name,shape):
     if shape=='bevel' and active:top=np.array((255,187,72),float);bottom=np.array((248,164,47),float)
     if disabled:top=np.array((229,224,211),float);bottom=np.array((216,207,190),float)
     if name=='ui_list_bg':top=np.array((255,248,234),float);bottom=np.array((255,242,219),float)
+    if name.startswith(('ui_btn_plus_','ui_btn_minus_')) and not active and not disabled:
+        top=np.array((238,216,187),float);bottom=np.array((221,191,151),float)
     if name.endswith('_hover'):
         top+=(255-top)*.35;bottom+=(255-bottom)*.20
     if name=='ui_toast':top=np.array((107,158,71),float);bottom=np.array((69,116,40),float)

@@ -20,7 +20,7 @@ var portrait_size := 132
 ## shown to the waist with her arms on the map's edge, and the speech bubble
 ## has a tail pointing at her mouth. Set before adding to the tree.
 var perched := false
-const PERCH_SIZE := Vector2(200, 190)
+const PERCH_SIZE := Vector2(176, 166)
 var tail: Control
 const TYPE_CHARS_PER_SEC := 55.0
 const VOICE_DIR := "res://audio/mother/"
@@ -71,7 +71,7 @@ func _ready() -> void:
 		tail.size_flags_vertical = Control.SIZE_FILL
 		row.add_child(tail)
 		_build_portrait(row)
-		bubble.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		bubble.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	else:
 		_build_portrait(row)
 		_build_bubble(row)
@@ -174,7 +174,7 @@ func _build_bubble(parent: Control) -> void:
 	bubble.theme = GameHud.ink_theme()
 	bubble.mouse_filter = Control.MOUSE_FILTER_STOP
 	bubble.mouse_force_pass_scroll_events = false
-	bubble.custom_minimum_size = Vector2(380, 0)
+	bubble.custom_minimum_size = Vector2(350, 0)
 	bubble.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	parent.add_child(bubble)
 	var box = VBoxContainer.new()
@@ -208,8 +208,9 @@ func _build_bubble(parent: Control) -> void:
 	text_label = Label.new()
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_label.custom_minimum_size = Vector2(300, 0)
-	text_label.add_theme_font_size_override("font_size", 17)
+	text_label.custom_minimum_size = Vector2(250, 0)
+	text_label.add_theme_font_size_override("font_size", 15)
+	GameHud.bold(text_label)
 	line.add_child(text_label)
 	where_button = _small_button("где", func(): _show_where())
 	where_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -361,25 +362,22 @@ func _process(delta: float) -> void:
 	mouth.scale = Vector3(1.3, open, 0.5)
 
 
-## Painted speech bubble (art/hud mother_bubble), mirrored so its tail points
-## right and down, to her mouth; null keeps the flat bubble and drawn tail.
+## HUD v2 already has a right-bottom tail in its source texture.
 static func _painted_bubble() -> StyleBoxTexture:
 	var t = HudArt.tex("mother_bubble")
 	if t == null:
 		return null
-	var img = t.get_image()
-	img.flip_x()
 	var s: Array = HudArt.meta().get("slice", {}).get("mother_bubble", [96, 32, 64, 48])
 	var sb = StyleBoxTexture.new()
-	sb.texture = ImageTexture.create_from_image(img)
-	sb.texture_margin_left = s[2]
+	sb.texture = t
+	sb.texture_margin_left = s[0]
 	sb.texture_margin_top = s[1]
-	sb.texture_margin_right = s[0]
+	sb.texture_margin_right = s[2]
 	sb.texture_margin_bottom = s[3]
-	sb.content_margin_left = 18
-	sb.content_margin_top = 12
-	sb.content_margin_right = 18
-	sb.content_margin_bottom = 34
+	sb.content_margin_left = 16
+	sb.content_margin_top = 8
+	sb.content_margin_right = 16
+	sb.content_margin_bottom = 20
 	return sb
 
 

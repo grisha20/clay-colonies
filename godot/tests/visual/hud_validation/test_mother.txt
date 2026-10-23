@@ -1,0 +1,21 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS panel_auto_switch 
+PASS panel_switch_to_manual [false]
+PASS panel_manual_switch 
+PASS panel_switch_back [false, true]
+PASS feed_hidden_when_quiet 
+PASS feed_visible 
+PASS feed_new_flash ["huts"]
+PASS feed_where_button 
+PASS feed_where_emits_pos [(100.0, 100.0)]
+PASS feed_only_new_flashes ["rain"]
+PASS feed_no_where_without_pos 
+PASS mother_exists 
+PASS mother_by_hearth (100.092, 0.0, 102.7992)
+PASS mother_faces_fire 1.0
+PASS mother_tooltip Праматерь племени A · лепит новых жителей из глины
+PASS no_birth_on_first_snapshot 
+PASS birth_molds [1, 0]
+PASS dead_mother_hidden 
+MOTHER_FAILURES=0

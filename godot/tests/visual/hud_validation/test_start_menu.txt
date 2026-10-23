@@ -1,0 +1,15 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS menu_opens_on_launch 
+PASS menu_connects_and_world_shows 
+PASS menu_actions_enabled 
+PASS new_game_needs_confirmation 
+PASS menu_closes_on_new_game 
+PASS new_game_brings_new_random_map seed 575897381 -> 469965741.0
+PASS previous_match_autosaved 
+PASS save_button_adds_slot 
+PASS menu_closes_on_load 
+PASS load_restores_saved_map 
+loading second slot save-mvl8eb8i
+PASS load_second_slot 
+START_MENU_FAILURES=0

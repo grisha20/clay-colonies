@@ -1,0 +1,61 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+RESIDENT_ASSET PASS Resident mesh, skeleton and animation player resolve
+RESIDENT_ASSET PASS three material surfaces
+RESIDENT_ASSET PASS surface 0 is ClayBody
+RESIDENT_ASSET PASS surface 1 is DarkEyes
+RESIDENT_ASSET PASS surface 2 is GrassCord
+RESIDENT_ASSET PASS triangle budget <= 8000
+RESIDENT_ASSET PASS explicit current model remains available in candidate QA
+RESIDENT_ASSET PASS instances share mesh and texture resources
+RESIDENT_ASSET PASS v3 textured PBR surface 0
+RESIDENT_ASSET PASS v3 texture <= 2K surface 0
+RESIDENT_ASSET PASS v3 textured PBR surface 1
+RESIDENT_ASSET PASS v3 texture <= 2K surface 1
+RESIDENT_ASSET PASS v3 textured PBR surface 2
+RESIDENT_ASSET PASS v3 texture <= 2K surface 2
+RESIDENT_ASSET PASS height 1.70..1.80 and soles at zero
+RESIDENT_ASSET PASS exactly 19 contract bones
+RESIDENT_ASSET PASS bone Root
+RESIDENT_ASSET PASS bone Hips
+RESIDENT_ASSET PASS bone Spine
+RESIDENT_ASSET PASS bone Head
+RESIDENT_ASSET PASS bone Socket_Head
+RESIDENT_ASSET PASS bone Socket_Cargo
+RESIDENT_ASSET PASS bone Socket_Tool_R
+RESIDENT_ASSET PASS bone UpperArm.L
+RESIDENT_ASSET PASS bone LowerArm.L
+RESIDENT_ASSET PASS bone Hand.L
+RESIDENT_ASSET PASS bone UpperLeg.L
+RESIDENT_ASSET PASS bone LowerLeg.L
+RESIDENT_ASSET PASS bone Foot.L
+RESIDENT_ASSET PASS bone UpperArm.R
+RESIDENT_ASSET PASS bone LowerArm.R
+RESIDENT_ASSET PASS bone Hand.R
+RESIDENT_ASSET PASS bone UpperLeg.R
+RESIDENT_ASSET PASS bone LowerLeg.R
+RESIDENT_ASSET PASS bone Foot.R
+RESIDENT_ASSET PASS head socket above 1.70m
+RESIDENT_ASSET PASS eyes face Godot +Z
+RESIDENT_ASSET PASS clip idle
+RESIDENT_ASSET PASS loop and 1s idle
+RESIDENT_ASSET PASS clip walk
+RESIDENT_ASSET PASS loop and 1s walk
+RESIDENT_ASSET PASS clip carry_idle
+RESIDENT_ASSET PASS loop and 1s carry_idle
+RESIDENT_ASSET PASS clip carry_walk
+RESIDENT_ASSET PASS loop and 1s carry_walk
+RESIDENT_ASSET PASS clip work_gather
+RESIDENT_ASSET PASS loop and 1s work_gather
+RESIDENT_ASSET PASS clip work_chop
+RESIDENT_ASSET PASS loop and 1s work_chop
+RESIDENT_ASSET PASS clip work_mine
+RESIDENT_ASSET PASS loop and 1s work_mine
+RESIDENT_ASSET PASS clip work_build
+RESIDENT_ASSET PASS loop and 1s work_build
+RESIDENT_ASSET PASS clip work_dig
+RESIDENT_ASSET PASS loop and 1s work_dig
+RESIDENT_ASSET PASS clip work_fish
+RESIDENT_ASSET PASS loop and 1s work_fish
+RESIDENT_ASSET PASS right hand strike moves > 0.4m
+RESIDENT_ASSET triangles=7674 height=1.75 hand_travel=1.01933884620667 failures=0

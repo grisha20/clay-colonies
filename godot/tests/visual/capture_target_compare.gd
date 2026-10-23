@@ -48,7 +48,13 @@ func run() -> void:
 	fixture["objectives"] = [{"id":"settle","text":"Построить поселение","done":true},{"id":"ritual","text":"Завершить ритуал","done":true}]
 	fixture["surface"] = {"buildings":[{"type":"kiln","stage":"built","colonyId":"colony-1"}],"resourceNodes":[],"fish":[],"animals":[]}
 	scene.hud.update_from_snapshot(fixture,39)
+	scene.hud.tasks_done = 12
+	scene.hud.tasks_total = 12
+	scene.hud._update_tasks_title()
 	scene.priority_panel.update_from_snapshot(fixture,0)
+	scene.build.update_from_snapshot(fixture,0)
+	scene.build.buttons.hut.button_pressed = true
+	scene.build._style_key("hut",true)
 	scene.mother_speaker.update_from_snapshot(fixture,0)
 	scene.mother_speaker.text_label.visible_ratio = 1
 	scene.hud.show_toast("Ритуал Идола завершён","check",120)
@@ -60,11 +66,16 @@ func run() -> void:
 	for node in [scene.hud,scene.priority_panel,scene.minimap,scene.mother_speaker,scene.build.toolbar]: collect_rects(node,rects)
 	var file = FileAccess.open(out.path_join("target_rects.json"),FileAccess.WRITE)
 	file.store_string(JSON.stringify(rects,"\t")); file.close()
-	compare(shot)
-	print("TARGET_CAPTURE_OK ",shot.get_size()," DISPLAY_FIXTURE_ONLY")
+	var compared = await compare(shot)
+	if compared: print("TARGET_CAPTURE_OK ",shot.get_size()," DISPLAY_FIXTURE_ONLY")
 	scene.ws_client.disconnect_from_server(); scene.free()
 	await process_frame
-	quit(0)
+	# Custom cursor images are cached statically; release them while RS is alive.
+	for shape in HudArt.CURSORS:
+		Input.set_custom_mouse_cursor(null,shape)
+	HudArt._cache.clear()
+	await process_frame
+	quit(0 if compared else 3)
 
 func collect_rects(node: Node, rects: Dictionary) -> void:
 	if node is Control and node.is_visible_in_tree():
@@ -72,7 +83,7 @@ func collect_rects(node: Node, rects: Dictionary) -> void:
 		rects[str(node.get_path())] = [r.position.x,r.position.y,r.size.x,r.size.y]
 	for child in node.get_children(): collect_rects(child,rects)
 
-func compare(shot: Image) -> void:
+func compare(shot: Image) -> bool:
 	var target = Image.load_from_file(ProjectSettings.globalize_path("res://../docs/godot/reference/hud_target.png"))
 	target.convert(Image.FORMAT_RGBA8)
 	target.resize(1920,1080,Image.INTERPOLATE_LANCZOS)
@@ -93,4 +104,12 @@ func compare(shot: Image) -> void:
 			var scale_by = minf(960.0/crop.get_width(),float(slot.size.y)/crop.get_height())
 			crop.resize(roundi(crop.get_width()*scale_by),roundi(crop.get_height()*scale_by),Image.INTERPOLATE_LANCZOS)
 			board.blit_rect(crop,Rect2i(Vector2i.ZERO,crop.get_size()),slot.position+Vector2i(side*960,0))
-	board.save_png(out.path_join("target_compare.png"))
+	var pending = out.path_join("target_compare_pending.png")
+	if board.save_png(pending) != OK: return false
+	# Desktop image previews can briefly hold a Windows read handle on the old
+	# PNG. Replace atomically once that handle is released.
+	for attempt in range(50):
+		if DirAccess.rename_absolute(pending,out.path_join("target_compare.png")) == OK: return true
+		await create_timer(0.1).timeout
+	push_error("Comparison PNG could not be saved")
+	return false

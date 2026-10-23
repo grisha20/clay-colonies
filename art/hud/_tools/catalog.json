@@ -1001,7 +1001,7 @@
     "title": "Кнопка плюс — рамка",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_plus_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "slice": [
       10,
@@ -1016,7 +1016,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1038,7 +1038,7 @@
     "title": "Кнопка плюс — рамка — hover",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_plus_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "hover",
     "slice": [
@@ -1053,7 +1053,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1075,7 +1075,7 @@
     "title": "Кнопка плюс — рамка — pressed",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_plus_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "pressed",
     "slice": [
@@ -1090,7 +1090,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1112,7 +1112,7 @@
     "title": "Кнопка плюс — рамка — disabled",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_plus_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_plus_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "disabled",
     "slice": [
@@ -1127,7 +1127,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1149,7 +1149,7 @@
     "title": "Кнопка минус — рамка",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_minus_normal. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "slice": [
       10,
@@ -1164,7 +1164,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1186,7 +1186,7 @@
     "title": "Кнопка минус — рамка — hover",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_minus_hover. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "hover",
     "slice": [
@@ -1201,7 +1201,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1223,7 +1223,7 @@
     "title": "Кнопка минус — рамка — pressed",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_minus_pressed. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "pressed",
     "slice": [
@@ -1238,7 +1238,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,
@@ -1260,7 +1260,7 @@
     "title": "Кнопка минус — рамка — disabled",
     "stage": 2,
     "where": "Общие панели, кнопки, статусы и полосы HUD",
-    "prompt": "Derived from our generated HUD target; exact_v2.py bevel recipe ui_btn_minus_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py rounded recipe ui_btn_minus_disabled. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "state": "disabled",
     "slice": [
@@ -1275,7 +1275,7 @@
     "v2_exact": true,
     "v2_margin": 4,
     "v2_kind": "button",
-    "v2_shape": "bevel",
+    "v2_shape": "rounded",
     "v2_fill_top": [
       255,
       244,

@@ -10,7 +10,7 @@ signal alarm_requested(on: bool)
 signal settings_requested
 
 const PARCHMENT := Color(0.95, 0.89, 0.74, 0.94)
-const INK := Color(0.30, 0.20, 0.12)
+const INK := Color("432818")
 const BORDER := Color(0.55, 0.38, 0.22)
 
 var resource_labels: Dictionary = {}
@@ -31,7 +31,7 @@ var toast_panel: PanelContainer
 var toast_icon: TextureRect
 var toast_label: Label
 var toast_until := 0
-const TOAST_INK = {"check": Color(0.30, 0.20, 0.12), "warn": Color(0.62, 0.36, 0.08), "danger": Color(0.70, 0.18, 0.10)}
+const TOAST_INK = {"check": Color("fff8e9"), "warn": Color("fff0cf"), "danger": Color("fff0cf")}
 var tasks_count: Label
 var tasks_done_ids: Dictionary = {}
 var tasks_seen := false
@@ -51,6 +51,10 @@ const TASKS_SHOWN := 4
 const RATE_WINDOW := 1200
 var rate_labels: Dictionary = {}
 var history: Array = []
+
+
+func _exit_tree() -> void:
+	HudArt.release_cursors()
 
 
 func _ready() -> void:
@@ -195,9 +199,9 @@ func _build_brand() -> void:
 	if logo:
 		var pic = icon_rect(logo, 0)
 		pic.name = "Brand"
-		pic.custom_minimum_size = Vector2(230, 64)
+		pic.custom_minimum_size = Vector2(250, 72)
 		pic.size = pic.custom_minimum_size
-		pic.position = Vector2(18, 10)
+		pic.position = Vector2(14, 12)
 		add_child(pic)
 		return
 	var brand = PanelContainer.new()
@@ -225,7 +229,7 @@ func _build_top_bar() -> void:
 	bar.mouse_force_pass_scroll_events = false
 	add_child(bar)
 	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 22)
+	row.add_theme_constant_override("separation", 28)
 	bar.add_child(row)
 	for spec in [["clay", "Глина"], ["special", "Особая глина — питает ритуал Идола; её дают источники на своей земле"], ["food", "Еда"], ["wood", "Дерево"], ["stone", "Камень"], ["people", "Жители"]]:
 		var cell = HBoxContainer.new()
@@ -270,19 +274,19 @@ func _build_top_bar() -> void:
 	quick_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	quick_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	quick_panel.offset_right = -16
-	quick_panel.offset_top = 12
+	quick_panel.offset_top = 22
 	quick_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	quick_panel.mouse_force_pass_scroll_events = false
 	add_child(quick_panel)
 	row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", 0)
 	quick_panel.add_child(row)
 	for spec in [[0, "Пауза", "glyph_pause", "Пауза"], [1, "1×", "glyph_play", "Обычная скорость"], [5, "5×", "glyph_fast", "Скорость 5×"], [20, "20×", "glyph_faster", "Скорость 20×"]]:
 		var b = Button.new()
 		b.text = spec[1]
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(54, 54)
+		b.custom_minimum_size = Vector2(62, 62)
 		b.tooltip_text = spec[3]
 		HudArt.glyph_button(b, spec[2])
 		var v: int = spec[0]
@@ -293,14 +297,14 @@ func _build_top_bar() -> void:
 	alarm_button.text = "Тревога"
 	alarm_button.toggle_mode = true
 	alarm_button.focus_mode = Control.FOCUS_NONE
-	alarm_button.custom_minimum_size = Vector2(54, 54)
+	alarm_button.custom_minimum_size = Vector2(62, 62)
 	alarm_button.tooltip_text = "Тревога: все жители бросают работу и бегут защищать лагерь"
 	HudArt.glyph_button(alarm_button, "glyph_alarm", 34)
 	alarm_button.pressed.connect(func(): alarm_requested.emit(not alarm_on))
 	row.add_child(alarm_button)
 	settings_button = Button.new()
 	settings_button.text = "⚙"
-	settings_button.custom_minimum_size = Vector2(54, 54)
+	settings_button.custom_minimum_size = Vector2(62, 62)
 	settings_button.add_theme_font_size_override("font_size", 22)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	settings_button.tooltip_text = "Меню: сохранить, лагеря и озёра, сервер, управление"
@@ -315,9 +319,9 @@ func _build_top_bar() -> void:
 func _build_tasks() -> void:
 	tasks_panel = PanelContainer.new()
 	tasks_panel.name = "TasksPanel"
-	tasks_panel.add_theme_stylebox_override("panel", parchment([16, 10, 16, 12]))
-	tasks_panel.position = Vector2(16, 84)
-	tasks_panel.custom_minimum_size = Vector2(320, 0)
+	tasks_panel.add_theme_stylebox_override("panel", parchment([20, 12, 20, 18]))
+	tasks_panel.position = Vector2(16, 90)
+	tasks_panel.custom_minimum_size = Vector2(342, 0)
 	tasks_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	tasks_panel.mouse_force_pass_scroll_events = false
 	add_child(tasks_panel)
@@ -335,14 +339,30 @@ func _build_tasks() -> void:
 	tasks_toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	tasks_toggle.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	tasks_toggle.expand_icon = true
-	tasks_toggle.add_theme_constant_override("icon_max_width", 18)
-	tasks_toggle.add_theme_font_size_override("font_size", 19)
+	tasks_toggle.add_theme_constant_override("icon_max_width", 26)
+	tasks_toggle.add_theme_font_size_override("font_size", 20)
+	tasks_toggle.add_theme_font_override("font", preload("res://assets/fonts/nunito_hud_heading.tres"))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
 		tasks_toggle.add_theme_color_override(state, INK)
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		tasks_toggle.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	bold(tasks_toggle)
 	tasks_toggle.tooltip_text = "Свернуть или развернуть цели"
+	tasks_toggle.custom_minimum_size = Vector2(208, 30)
+	var badge = PanelContainer.new()
+	badge.name = "FoldBadge"
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	badge.offset_left = -27; badge.offset_right = -1
+	badge.offset_top = -13; badge.offset_bottom = 13
+	var badge_style = StyleBoxFlat.new()
+	badge_style.bg_color = Color("ead4b0")
+	badge_style.set_corner_radius_all(13)
+	badge_style.set_content_margin_all(4)
+	badge.add_theme_stylebox_override("panel", badge_style)
+	var fold_pic = icon_rect(null, 0)
+	fold_pic.name = "FoldGlyph"
+	badge.add_child(fold_pic)
+	tasks_toggle.add_child(badge)
 	tasks_toggle.pressed.connect(func():
 		tasks_box.visible = not tasks_box.visible
 		_update_tasks_title())
@@ -379,7 +399,8 @@ static func header_button(text: String, size: int = 18) -> Button:
 
 func _update_tasks_title() -> void:
 	var chevron = HudArt.tex("glyph_chevron_down" if tasks_box.visible else "glyph_chevron_right")
-	tasks_toggle.icon = chevron
+	tasks_toggle.icon = null
+	(tasks_toggle.get_node("FoldBadge/FoldGlyph") as TextureRect).texture = chevron
 	tasks_toggle.text = "Цели поселения" + ("" if chevron else (" ▾" if tasks_box.visible else " ▸"))
 	tasks_count.text = "%d из %d" % [tasks_done, tasks_total] if tasks_total > 0 else ""
 
@@ -392,7 +413,7 @@ func _build_alert() -> void:
 	toasts.add_theme_constant_override("separation", 6)
 	toasts.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	toasts.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	toasts.offset_top = 84
+	toasts.offset_top = 78
 	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)
 	var toast = _toast_panel("EventToast")
@@ -409,7 +430,7 @@ func _build_alert() -> void:
 func _toast_panel(node_name: String) -> Array:
 	var panel = PanelContainer.new()
 	panel.name = node_name
-	var sb = HudArt.box("ui_toast", [18, 8, 22, 8])
+	var sb = HudArt.box("ui_toast", [18, 10, 22, 10])
 	panel.add_theme_stylebox_override("panel", sb if sb else parchment([18, 8, 22, 8]))
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -601,12 +622,12 @@ func _task_row(o: Dictionary) -> Control:
 	var text = full.substr(0, cut) if cut > 0 else full
 	line.tooltip_text = full
 	if box_pic:
-		var pic = icon_rect(box_pic, 22)
+		var pic = icon_rect(box_pic, 28)
 		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		line.add_child(pic)
 	else:
 		text = ("✓ " if done else "○ ") + text
-	var title = _label(text, 16, INK.lightened(0.1) if done else INK)
+	var title = _label(text, 18, INK.lightened(0.1) if done else INK)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.custom_minimum_size = Vector2(200, 0)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL

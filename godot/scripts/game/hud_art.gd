@@ -111,6 +111,17 @@ static func install_cursors() -> void:
 		set_cursor(shape, CURSORS[shape])
 
 
+## Free generated cursor textures before RenderingServer shuts down.
+static func release_cursors() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	for shape in CURSORS:
+		Input.set_custom_mouse_cursor(null, shape)
+	for key in _cache.keys():
+		if str(key).begins_with("_cursor_"):
+			_cache.erase(key)
+
+
 ## Sets one cursor shape to a painted cursor (scaled to CURSOR_SIZE).
 static func set_cursor(shape: int, name: String) -> void:
 	if DisplayServer.get_name() == "headless":
