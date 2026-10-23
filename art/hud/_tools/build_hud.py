@@ -103,6 +103,16 @@ def build_one(name, spec, images):
         master=Image.new('RGBA',(size[0]*4,size[1]*4))
         for part in spec['parts']:
             base=Image.open(ROOT/'_source'/f"{part['name']}.png")
+            if part.get('crop'):
+                base=raster.texture_mask(base)
+                x0,y0,x1,y1=part['crop']
+                base=base.crop((round(base.width*x0),round(base.height*y0),round(base.width*x1),round(base.height*y1)))
+            if part.get('select')=='water_drops':
+                data=np.array(base.convert('RGBA'))
+                rgb=data[:,:,:3].astype(float)
+                water=(rgb[:,:,2]>rgb[:,:,0]*1.6)&(rgb[:,:,2]>rgb[:,:,1]*1.12)
+                data[~water,3]=0
+                base=Image.fromarray(data)
             if part.get('flip'):
                 base=base.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
             if part.get('rotate'):

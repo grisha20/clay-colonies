@@ -1,0 +1,90 @@
+{
+  "defs": {
+    "alert_spider": {
+      "stage": 5,
+      "size": [
+        64,
+        64
+      ],
+      "group": "alert",
+      "title": "Паук",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky stylized brown spider seen from slightly above, large round abdomen, small round head, eight short thick bent legs, two simple dark eyes. Cute dangerous sandbox creature, no web or ground.",
+      "where": "HUD Clayfolk · alert"
+    },
+    "alert_beetle": {
+      "stage": 5,
+      "size": [
+        64,
+        64
+      ],
+      "group": "alert",
+      "title": "Жук",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One stout dark olive-brown beetle seen from above, round split shell, small head, six short thick legs and two short antennae. Simple compact readable insect silhouette.",
+      "where": "HUD Clayfolk · alert"
+    },
+    "alert_monster": {
+      "stage": 5,
+      "size": [
+        64,
+        64
+      ],
+      "group": "alert",
+      "title": "Чудовище",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One squat chunky dark earthy clay sandbox monster, broad round body, two short arms, two stubby legs, two small blunt stone-like horns, two dark eyes and a stern downturned mouth. Cute rather than horror. No gore.",
+      "where": "HUD Clayfolk · alert"
+    },
+    "weather_clouds": {
+      "stage": 5,
+      "size": [
+        48,
+        48
+      ],
+      "group": "weather",
+      "title": "Облачно",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. Two overlapping chunky rounded grey-blue clay clouds, one large cloud and one small cloud. Minimal broad lobes and soft internal shading. No sun or rain or ground.",
+      "where": "HUD Clayfolk · weather"
+    },
+    "weather_rain": {
+      "stage": 5,
+      "size": [
+        48,
+        48
+      ],
+      "group": "weather",
+      "title": "Дождь",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky grey-blue clay cloud with THREE broad blue raindrops below it. Compact clear weather glyph, no background or lightning.",
+      "where": "HUD Clayfolk · weather"
+    },
+    "time_day": {
+      "stage": 5,
+      "size": [
+        48,
+        48
+      ],
+      "group": "time",
+      "title": "День",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One warm amber clay sun disc with six short broad blunt triangular rays, no face. Simple readable daylight symbol.",
+      "where": "HUD Clayfolk · time"
+    },
+    "time_night": {
+      "stage": 5,
+      "size": [
+        48,
+        48
+      ],
+      "group": "time",
+      "title": "Ночь",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One pale parchment-coloured clay crescent moon, a broad thick curve opening to the right, plus one small four-point ochre star nearby. No face, sky or background.",
+      "where": "HUD Clayfolk · time"
+    }
+  },
+  "paths": {
+    "alert_spider": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-bb826a3f-ef70-47bf-985e-c5e0cfa6e397.png",
+    "alert_beetle": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-f803214a-2f4d-4b6b-abf1-871da25611a6.png",
+    "alert_monster": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-43800efb-4b3b-4502-aadc-fc90c5cb1222.png",
+    "weather_clouds": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-0e68f921-3c70-4614-b03f-3b1579ae5eca.png",
+    "weather_rain": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-ff52fc0e-9c7d-4733-b4d4-85dc758c25cd.png",
+    "time_day": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-1a328854-89a5-4ba5-b569-79a249d1a47d.png",
+    "time_night": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-29d8ec3a-d558-4c9d-8afa-6021bddf9105.png"
+  }
+}
