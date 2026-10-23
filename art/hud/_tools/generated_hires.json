@@ -1,0 +1,163 @@
+[
+  {
+    "name": "tab_defense",
+    "prompt": "Use case: stylized-concept. Production game HUD icon for Clayfolk. Input image is a STYLE AND SHAPE REFERENCE, not an edit of the screenshot. Recreate ONLY the small plain gray-taupe shield in the bottom 'Оборона' tab as a large, sharp, fully rendered isolated object. Simple medieval heater shield, broad curved top, two complete shoulders, slightly convex matte clay face, narrow beveled brown-gray rim, pointed rounded bottom, NO emblem. It must read unmistakably as a whole shield, not a cropped vertical slab. Straight-on near frontal view, like reference, soft upper-left light, warm palette. Native high-detail rendering at about 1024px; crisp silhouette, subtle clay shading, no blur/no glow/no thick dark ink. Transparent RGBA background. Center the entire object within 15% transparent margins on EVERY side, with all edges visible. No text, no frame, no UI, no grass, no shadow plane. One shield only.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-c6ec1e4a-c498-4e3c-8fe4-68796ada8a8e.png",
+    "hires": true
+  },
+  {
+    "name": "res_clay",
+    "prompt": "Use case: stylized-concept. Clayfolk production HUD sprite. Supplied screenshot is a STYLE/SHAPE REFERENCE only. Recreate this ONE icon at native large resolution with new sharp detail: A compact triangular pile of THREE smooth orange-red clay lumps: two plump rounded lumps below, one smaller pointed lump above; match resource clay in the reference top bar. No bowl or face. Soft tactile matte clay/toy render, same warm saturated palette and proportions as reference, light from upper left, narrow natural material-shaded edge, NO thick dark outline. High-quality clean silhouette and readable material features at small sizes, NOT a blurred enlarged screenshot. Center the whole single object, occupying about 78% of a square canvas, generous transparent margin on all sides. Genuine transparent RGBA background, no backdrop or ground, no cast shadow plane, no glow, no text, no additional items, no UI. At least 1024px render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-e85f2506-582b-42d8-82b1-e96766ecb20b.png",
+    "hires": true
+  },
+  {
+    "name": "res_food",
+    "prompt": "Use case: stylized-concept. Clayfolk production HUD sprite. Supplied screenshot is a STYLE/SHAPE REFERENCE only. Recreate this ONE icon at native large resolution with new sharp detail: A compact bunch of FIVE ripe red berries (raspberry-red and cranberry-red), one or two small fresh green leaves at the top; match the top-bar food berries. Clear separate berry shapes; no plate. Soft tactile matte clay/toy render, same warm saturated palette and proportions as reference, light from upper left, narrow natural material-shaded edge, NO thick dark outline. High-quality clean silhouette and readable material features at small sizes, NOT a blurred enlarged screenshot. Center the whole single object, occupying about 78% of a square canvas, generous transparent margin on all sides. Genuine transparent RGBA background, no backdrop or ground, no cast shadow plane, no glow, no text, no additional items, no UI. At least 1024px render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-213d2cb2-f4e5-4d6f-8e51-7fbc3fab93bd.png",
+    "hires": true
+  },
+  {
+    "name": "res_wood",
+    "prompt": "Use case: stylized-concept. Clayfolk production HUD sprite. Supplied screenshot is a STYLE/SHAPE REFERENCE only. Recreate this ONE icon at native large resolution with new sharp detail: ONE short thick brown log diagonal from lower-left to upper-right. Cut circular end with clear end-grain rings visible at the lower-left end; thick ridged bark along the log; like top resource wood. No bundle, no axe. Soft tactile matte clay/toy render, same warm saturated palette and proportions as reference, light from upper left, narrow natural material-shaded edge, NO thick dark outline. High-quality clean silhouette and readable material features at small sizes, NOT a blurred enlarged screenshot. Center the whole single object, occupying about 78% of a square canvas, generous transparent margin on all sides. Genuine transparent RGBA background, no backdrop or ground, no cast shadow plane, no glow, no text, no additional items, no UI. At least 1024px render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-09845c79-5daa-4f40-b756-ae9b46dcac1e.png",
+    "hires": true
+  },
+  {
+    "name": "res_stone",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite. Screenshot is a STYLE AND SHAPE REFERENCE, NOT an image to enlarge. Natively redraw ONLY this icon in crisp large resolution: THREE chunky smooth rounded gray stones stacked in a low triangular pile, mid-gray with slightly blue-gray shadows and pale stone highlights, matching the top-bar stone resource. Match reference stylized softly rounded toy/clay material, simple broad shapes, warm highlights from upper-left, clean medium contrast. Use restrained smooth material, not gritty photorealism. Clean sharp silhouette and small readable details. No painted black outlines, glow, blur, grass, scenery, UI, words or numbers. Single object centered in square canvas with about 12% transparent padding around ALL sides; genuine transparent RGBA backdrop, no floor or cast shadow plane. Render at1024px or larger before export.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-a1cc2c7a-7de5-4b87-ac66-0bbd07f8f651.png",
+    "hires": true
+  },
+  {
+    "name": "res_special",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite. Screenshot is a STYLE AND SHAPE REFERENCE, NOT an image to enlarge. Natively redraw ONLY this icon in crisp large resolution: THREE smooth rounded turquoise-blue special clay lumps in a compact triangular pile, large lower-right lump and two smaller lumps; saturated cyan/turquoise, same proportions as orange clay pile. Match reference stylized softly rounded toy/clay material, simple broad shapes, warm highlights from upper-left, clean medium contrast. Use restrained smooth material, not gritty photorealism. Clean sharp silhouette and small readable details. No painted black outlines, glow, blur, grass, scenery, UI, words or numbers. Single object centered in square canvas with about 12% transparent padding around ALL sides; genuine transparent RGBA backdrop, no floor or cast shadow plane. Render at1024px or larger before export.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-60189897-ebc6-456e-9b03-2ec4e0608716.png",
+    "hires": true
+  },
+  {
+    "name": "res_people",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite. Screenshot is a STYLE AND SHAPE REFERENCE, NOT an image to enlarge. Natively redraw ONLY this icon in crisp large resolution: One small spherical orange clay resident HEAD only, tiny attached clay ears, two small black oval dot eyes, very small neutral smiling mouth. Same simple friendly round head as top-bar population icon, no torso, hair, hat or limbs. Match reference stylized softly rounded toy/clay material, simple broad shapes, warm highlights from upper-left, clean medium contrast. Use restrained smooth material, not gritty photorealism. Clean sharp silhouette and small readable details. No painted black outlines, glow, blur, grass, scenery, UI, words or numbers. Single object centered in square canvas with about 12% transparent padding around ALL sides; genuine transparent RGBA backdrop, no floor or cast shadow plane. Render at1024px or larger before export.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-75d800d0-1564-4eff-b593-fa84f1783282.png",
+    "hires": true
+  },
+  {
+    "name": "job_build",
+    "prompt": "Use case: stylized-concept. Clayfolk production game HUD sprite. Screenshot supplied only as shape/material reference. Natively redraw ONLY: ONE primitive stone hammer: gray block-shaped stone head on a short brown wooden handle, diagonal handle pointing down-left and stone head upper-right. Match the hammer in the Works list. Entire handle and hammer head visible. Reference's soft polished clay/toy aesthetic, bold readable simple silhouette, careful large-resolution detail, matte surfaces, warm upper-left light, very restrained grain. Sharp antialiased boundaries, no blur/glow, no thick dark ink outline. Center whole object with 12% free transparent padding on every side, 1024px or larger, actual transparent RGBA background. One isolated object, no text/UI, scenery, cast shadow plane or extra objects.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-c07ab9cb-28ac-47a2-8a2f-ae6ec00b5c11.png",
+    "hires": true
+  },
+  {
+    "name": "job_guard",
+    "prompt": "Use case: stylized-concept. Clayfolk production game HUD sprite. Screenshot supplied only as shape/material reference. Natively redraw ONLY: ONE primitive guard spear diagonal lower-left to upper-right, a warm reddish-brown wooden shaft with a small pointed gray flint spearhead lashed at the top. Match Works guard icon; no person or other weapon. Reference's soft polished clay/toy aesthetic, bold readable simple silhouette, careful large-resolution detail, matte surfaces, warm upper-left light, very restrained grain. Sharp antialiased boundaries, no blur/glow, no thick dark ink outline. Center whole object with 12% free transparent padding on every side, 1024px or larger, actual transparent RGBA background. One isolated object, no text/UI, scenery, cast shadow plane or extra objects.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-ea429cb6-8387-43fd-b398-68b947348d28.png",
+    "hires": true
+  },
+  {
+    "name": "job_fish",
+    "prompt": "Use case: stylized-concept. Clayfolk production game HUD sprite. Screenshot supplied only as shape/material reference. Natively redraw ONLY: ONE thick rounded iron fishing hook, J-shaped with a small closed loop at the upper end and pointed barbed end at left. Dark desaturated gray metal, a thin pale winding around neck, like the Works fishing icon. No fish or rod. Reference's soft polished clay/toy aesthetic, bold readable simple silhouette, careful large-resolution detail, matte surfaces, warm upper-left light, very restrained grain. Sharp antialiased boundaries, no blur/glow, no thick dark ink outline. Center whole object with 12% free transparent padding on every side, 1024px or larger, actual transparent RGBA background. One isolated object, no text/UI, scenery, cast shadow plane or extra objects.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-803bfe2c-2349-40e4-9c3b-02d73dbbee8f.png",
+    "hires": true
+  },
+  {
+    "name": "job_hunt",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite; screenshot is shape/style reference. Natively draw ONLY this one small icon in clean large resolution: ONE small thick red meat steak with an ivory bone center and narrow cream fat rim, diagonal lower-left to upper-right, like the Works hunting icon. Rich brick-red meat, simplified toy clay surface, NO knife, plate or garnish. Match soft rounded matte toy/clay render of reference, warm upper-left light, restrained volume and simple readable contours. Sharp edges, no blurry enlarged pixels, no gritty texture, no thick black ink outline, no glow. Fully visible centered single object, generous 12% TRANSPARENT padding on all four sides, transparent RGBA background. 1024px or larger. No text, UI frame, scenery, numbers, separate cast shadow or extra objects.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-d97de3c5-d5da-46ea-b003-fb429f8d27f4.png",
+    "hires": true
+  },
+  {
+    "name": "tab_settlement",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite; screenshot is shape/style reference. Natively draw ONLY this one small icon in clean large resolution: ONE very simple small warm terracotta house emblem: square clay house wall with a pitched orange roof, frontal upright view, a tiny dark doorway. Same minimal home emblem in the Settlement tab; NOT the thatched village hut. Match soft rounded matte toy/clay render of reference, warm upper-left light, restrained volume and simple readable contours. Sharp edges, no blurry enlarged pixels, no gritty texture, no thick black ink outline, no glow. Fully visible centered single object, generous 12% TRANSPARENT padding on all four sides, transparent RGBA background. 1024px or larger. No text, UI frame, scenery, numbers, separate cast shadow or extra objects.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-c91a0de0-437a-4d98-a13d-d0613746f654.png",
+    "hires": true
+  },
+  {
+    "name": "tab_land",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite; screenshot is shape/style reference. Natively draw ONLY this one small icon in clean large resolution: ONE simple two-leaf sprout emblem, upright thin short clay-brown stem and two broad opposite leaves, left leaf higher and right leaf slightly lower, muted olive-brown clay like the reference Land tab. No pot, soil mound or environment. Match soft rounded matte toy/clay render of reference, warm upper-left light, restrained volume and simple readable contours. Sharp edges, no blurry enlarged pixels, no gritty texture, no thick black ink outline, no glow. Fully visible centered single object, generous 12% TRANSPARENT padding on all four sides, transparent RGBA background. 1024px or larger. No text, UI frame, scenery, numbers, separate cast shadow or extra objects.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-ce88408c-a6a5-4a5a-a272-8d7fc778b3fd.png",
+    "hires": true
+  },
+  {
+    "name": "build_hut",
+    "prompt": "Use case: stylized-concept. Clayfolk high-resolution game BUILD CARD icon. Screenshot is STYLE, CAMERA and SHAPE reference. Natively recreate only the first build-card HUT: one tiny round orange clay hut with a broad pale-golden conical straw roof, small brown doorway at front, short red-brown cap on top. Match its shape/camera in reference, roof slightly overhangs round walls. No stone platform or fence. Fixed isometric three-quarter top-down view like reference lower card, soft rounded handcrafted clay/wood/straw, simple chunky geometry, clean material detail, upper-left soft light. Crisp silhouette and roof/straw details readable when reduced, not an enlarged screenshot. Preserve proportions, palette and the individual building identity. Transparent RGBA backdrop, complete isolated building centered in generous 12% margins, no ground plane or cast ground shadow, no scenery, UI card, text, numbers, badges or outline stroke. 1024px or larger original.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-a3dae961-24bc-4c21-bc45-090f0b894618.png",
+    "hires": true
+  },
+  {
+    "name": "build_house",
+    "prompt": "Use case: stylized-concept. Clayfolk high-resolution game BUILD CARD icon. Screenshot is STYLE, CAMERA and SHAPE reference. Natively recreate only the second build-card CLAN HOUSE: one tiny circular warm clay hut with a layered brown straw conical roof with horizontal straw tiers, thick roof eaves, a dark front door, squat round walls, short rounded brown cap. Different from the pale plain-roof first hut. No surrounding props. Fixed isometric three-quarter top-down view like reference lower card, soft rounded handcrafted clay/wood/straw, simple chunky geometry, clean material detail, upper-left soft light. Crisp silhouette and roof/straw details readable when reduced, not an enlarged screenshot. Preserve proportions, palette and the individual building identity. Transparent RGBA backdrop, complete isolated building centered in generous 12% margins, no ground plane or cast ground shadow, no scenery, UI card, text, numbers, badges or outline stroke. 1024px or larger original.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-8b82717f-cb73-49ff-91d6-54ff7bb78d7c.png",
+    "hires": true
+  },
+  {
+    "name": "build_storage",
+    "prompt": "Use case: stylized-concept. Clayfolk high-resolution game BUILD CARD icon. Screenshot is STYLE, CAMERA and SHAPE reference. Natively recreate only the third build-card STOREHOUSE: a low open-front lean-to storage shed on stout brown logs, pitched golden straw roof with visibly tied logs at edges, two pale gray rounded stone piles inside/beside the open front. Match front three-quarter view and squat wide silhouette. No doors or wheels. Fixed isometric three-quarter top-down view like reference lower card, soft rounded handcrafted clay/wood/straw, simple chunky geometry, clean material detail, upper-left soft light. Crisp silhouette and roof/straw details readable when reduced, not an enlarged screenshot. Preserve proportions, palette and the individual building identity. Transparent RGBA backdrop, complete isolated building centered in generous 12% margins, no ground plane or cast ground shadow, no scenery, UI card, text, numbers, badges or outline stroke. 1024px or larger original.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-1099450b-07ba-44a0-8b6c-ff99b3097fa2.png",
+    "hires": true
+  },
+  {
+    "name": "build_workshop",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the fourth build-card WORKSHOP: a tiny squat warm brown timber-and-clay workshop cottage. Pitched golden straw roof edged with thick dark timber beams, stout corner posts, front door, circular cog-like wooden workshop detail on the front. Isometric three-quarter view like reference. Keep the clear compact cottage silhouette, no surrounding props. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-7fcaf68d-ec31-4917-b507-bcbf4f1f7dbf.png",
+    "hires": true
+  },
+  {
+    "name": "build_kiln",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the fifth build-card KILN: a squat rounded terracotta clay dome oven with a short cylindrical chimney and thick dark arched open fire mouth. A small warm orange-yellow fire glows inside. Simple one-piece orange clay structure, slightly three-quarter frontal view. No bricks, pizza, tools or floor. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-e18b19c5-bab7-40f8-b8c0-c3375b6de61a.png",
+    "hires": true
+  },
+  {
+    "name": "build_idol",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the sixth build-card IDOL: a tiny dark brown carved clay-and-wood tribal idol standing upright on a round clay foot. Broad round head with two small turquoise eye inlays and one small round turquoise forehead/upper-face mark, stubby arms by its sides, a short carved cylindrical body. Like the dark friendly idol on the reference card. No huge headdress or ornaments. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-92be9e6e-b1e7-4275-921a-b093f36c2733.png",
+    "hires": true
+  },
+  {
+    "name": "icon_works",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the small WORKS HEADER ICON: one tiny smooth orange clay human bust with a plain round head and broad rounded shoulders/upper torso, like a friendly generic person symbol rendered in terracotta. No face, arms or feet, no necklace. Near-frontal icon view. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-78a23c55-2377-43c2-b239-4ca26ac447c1.png",
+    "hires": true
+  },
+  {
+    "name": "logo_hud",
+    "hires": true,
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-74cffec4-5e36-49ed-82bd-38f3d57f0976.png",
+    "prompt": "Native transparent Clayfolk logo generated earlier with built-in image_gen, reused instead of enlarging the screenshot crop. Exact text Clayfolk. Original prompt/provenance: generated_exact_initial.json, logo_hud."
+  },
+  {
+    "name": "job_clay",
+    "hires": true,
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-e85f2506-582b-42d8-82b1-e96766ecb20b.png",
+    "source_asset": "res_clay",
+    "prompt": "High-resolution derivative of native generated res_clay; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_clay"
+  },
+  {
+    "name": "job_stone",
+    "hires": true,
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-a1cc2c7a-7de5-4b87-ac66-0bbd07f8f651.png",
+    "source_asset": "res_stone",
+    "prompt": "High-resolution derivative of native generated res_stone; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_stone"
+  },
+  {
+    "name": "job_wood",
+    "hires": true,
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-09845c79-5daa-4f40-b756-ae9b46dcac1e.png",
+    "source_asset": "res_wood",
+    "prompt": "High-resolution derivative of native generated res_wood; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_wood"
+  },
+  {
+    "name": "icon_kiln",
+    "hires": true,
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-e18b19c5-bab7-40f8-b8c0-c3375b6de61a.png",
+    "source_asset": "build_kiln",
+    "prompt": "High-resolution derivative of native generated build_kiln; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / build_kiln"
+  },
+  {
+    "name": "icon_mother",
+    "hires": true,
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-75d800d0-1564-4eff-b593-fa84f1783282.png",
+    "source_asset": "res_people",
+    "prompt": "High-resolution derivative of native generated res_people; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_people"
+  }
+]

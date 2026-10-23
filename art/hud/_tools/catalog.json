@@ -1,27 +1,21 @@
 {
   "res_clay": {
     "size": [
-      128,
-      128
+      256,
+      256
     ],
     "group": "res",
     "title": "Глина",
     "stage": 0,
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (489, 23, 526, 57): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk production HUD sprite. Supplied screenshot is a STYLE/SHAPE REFERENCE only. Recreate this ONE icon at native large resolution with new sharp detail: A compact triangular pile of THREE smooth orange-red clay lumps: two plump rounded lumps below, one smaller pointed lump above; match resource clay in the reference top bar. No bowl or face. Soft tactile matte clay/toy render, same warm saturated palette and proportions as reference, light from upper left, narrow natural material-shaded edge, NO thick dark outline. High-quality clean silhouette and readable material features at small sizes, NOT a blurred enlarged screenshot. Center the whole single object, occupying about 78% of a square canvas, generous transparent margin on all sides. Genuine transparent RGBA background, no backdrop or ground, no cast shadow plane, no glow, no text, no additional items, no UI. At least 1024px render.",
     "where": "game_hud.gd · верхняя панель ресурсов",
     "style_version": 2,
     "v2_stage": 2,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      489,
-      23,
-      526,
-      57
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -32,31 +26,26 @@
       168,
       119
     ],
-    "v2_recipe": "res_clay"
+    "v2_recipe": "res_clay",
+    "v2_hires": true
   },
   "res_wood": {
     "size": [
-      128,
-      128
+      256,
+      256
     ],
     "group": "res",
     "title": "Дерево",
     "stage": 0,
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (767, 21, 806, 57): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk production HUD sprite. Supplied screenshot is a STYLE/SHAPE REFERENCE only. Recreate this ONE icon at native large resolution with new sharp detail: ONE short thick brown log diagonal from lower-left to upper-right. Cut circular end with clear end-grain rings visible at the lower-left end; thick ridged bark along the log; like top resource wood. No bundle, no axe. Soft tactile matte clay/toy render, same warm saturated palette and proportions as reference, light from upper left, narrow natural material-shaded edge, NO thick dark outline. High-quality clean silhouette and readable material features at small sizes, NOT a blurred enlarged screenshot. Center the whole single object, occupying about 78% of a square canvas, generous transparent margin on all sides. Genuine transparent RGBA background, no backdrop or ground, no cast shadow plane, no glow, no text, no additional items, no UI. At least 1024px render.",
     "where": "game_hud.gd · верхняя панель ресурсов",
     "style_version": 2,
     "v2_stage": 0,
     "mode": "v2",
     "v2_kind": "sprite",
     "source_max": 1024,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_exact": true,
-    "v2_ref": [
-      767,
-      21,
-      806,
-      57
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -67,12 +56,13 @@
       168,
       119
     ],
-    "v2_recipe": "res_wood"
+    "v2_recipe": "res_wood",
+    "v2_hires": true
   },
   "glyph_pause": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Пауза",
@@ -101,27 +91,21 @@
   },
   "build_hut": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Хижина",
     "stage": 0,
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (461, 787, 548, 863): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk high-resolution game BUILD CARD icon. Screenshot is STYLE, CAMERA and SHAPE reference. Natively recreate only the first build-card HUT: one tiny round orange clay hut with a broad pale-golden conical straw roof, small brown doorway at front, short red-brown cap on top. Match its shape/camera in reference, roof slightly overhangs round walls. No stone platform or fence. Fixed isometric three-quarter top-down view like reference lower card, soft rounded handcrafted clay/wood/straw, simple chunky geometry, clean material detail, upper-left soft light. Crisp silhouette and roof/straw details readable when reduced, not an enlarged screenshot. Preserve proportions, palette and the individual building identity. Transparent RGBA backdrop, complete isolated building centered in generous 12% margins, no ground plane or cast ground shadow, no scenery, UI card, text, numbers, badges or outline stroke. 1024px or larger original.",
     "where": "Нижняя панель построек — изображение над подписью и ценой",
     "style_version": 2,
     "v2_stage": 3,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      461,
-      787,
-      548,
-      863
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -132,7 +116,8 @@
       168,
       119
     ],
-    "v2_recipe": "build_hut"
+    "v2_recipe": "build_hut",
+    "v2_hires": true
   },
   "btn_square_normal": {
     "size": [
@@ -190,13 +175,13 @@
   },
   "res_special": {
     "size": [
-      128,
-      128
+      256,
+      256
     ],
     "group": "res",
     "title": "Особая глина",
     "subject": "A compact pile of two rounded turquoise-blue special clay lumps #3FA7B5, a small pale cyan facet-like highlight and TWO tiny turquoise glints near the upper-right. Matte magical clay, restrained luminous accent inside silhouette, NO outer glow.",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (596, 22, 635, 57): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite. Screenshot is a STYLE AND SHAPE REFERENCE, NOT an image to enlarge. Natively redraw ONLY this icon in crisp large resolution: THREE smooth rounded turquoise-blue special clay lumps in a compact triangular pile, large lower-right lump and two smaller lumps; saturated cyan/turquoise, same proportions as orange clay pile. Match reference stylized softly rounded toy/clay material, simple broad shapes, warm highlights from upper-left, clean medium contrast. Use restrained smooth material, not gritty photorealism. Clean sharp silhouette and small readable details. No painted black outlines, glow, blur, grass, scenery, UI, words or numbers. Single object centered in square canvas with about 12% transparent padding around ALL sides; genuine transparent RGBA backdrop, no floor or cast shadow plane. Render at1024px or larger before export.",
     "stage": 1,
     "where": "game_hud.gd · верхняя панель ресурсов",
     "style_version": 2,
@@ -204,14 +189,8 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      596,
-      22,
-      635,
-      57
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -222,17 +201,18 @@
       168,
       119
     ],
-    "v2_recipe": "res_special"
+    "v2_recipe": "res_special",
+    "v2_hires": true
   },
   "res_food": {
     "size": [
-      128,
-      128
+      256,
+      256
     ],
     "group": "res",
     "title": "Еда",
     "subject": "A compact pile of three red berries with one green leaf and a small clearly recognizable whole blue-grey fish lying beside them. Simple abundant food symbol, generous individual shapes, not a meal on a plate.",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (670, 21, 709, 59): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk production HUD sprite. Supplied screenshot is a STYLE/SHAPE REFERENCE only. Recreate this ONE icon at native large resolution with new sharp detail: A compact bunch of FIVE ripe red berries (raspberry-red and cranberry-red), one or two small fresh green leaves at the top; match the top-bar food berries. Clear separate berry shapes; no plate. Soft tactile matte clay/toy render, same warm saturated palette and proportions as reference, light from upper left, narrow natural material-shaded edge, NO thick dark outline. High-quality clean silhouette and readable material features at small sizes, NOT a blurred enlarged screenshot. Center the whole single object, occupying about 78% of a square canvas, generous transparent margin on all sides. Genuine transparent RGBA background, no backdrop or ground, no cast shadow plane, no glow, no text, no additional items, no UI. At least 1024px render.",
     "stage": 1,
     "where": "game_hud.gd · верхняя панель ресурсов",
     "style_version": 2,
@@ -240,14 +220,8 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      670,
-      21,
-      709,
-      59
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -258,7 +232,8 @@
       168,
       119
     ],
-    "v2_recipe": "res_food"
+    "v2_recipe": "res_food",
+    "v2_hires": true
   },
   "res_berries": {
     "size": [
@@ -301,13 +276,13 @@
   },
   "res_stone": {
     "size": [
-      128,
-      128
+      256,
+      256
     ],
     "group": "res",
     "title": "Камень",
     "subject": "A compact triangular heap of three chunky grey stones #8A8F96, one rounded rock above two broad rocks. Only a few large soft facets, no small scattered chips.",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (858, 21, 900, 59): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite. Screenshot is a STYLE AND SHAPE REFERENCE, NOT an image to enlarge. Natively redraw ONLY this icon in crisp large resolution: THREE chunky smooth rounded gray stones stacked in a low triangular pile, mid-gray with slightly blue-gray shadows and pale stone highlights, matching the top-bar stone resource. Match reference stylized softly rounded toy/clay material, simple broad shapes, warm highlights from upper-left, clean medium contrast. Use restrained smooth material, not gritty photorealism. Clean sharp silhouette and small readable details. No painted black outlines, glow, blur, grass, scenery, UI, words or numbers. Single object centered in square canvas with about 12% transparent padding around ALL sides; genuine transparent RGBA backdrop, no floor or cast shadow plane. Render at1024px or larger before export.",
     "stage": 1,
     "where": "game_hud.gd · верхняя панель ресурсов",
     "style_version": 2,
@@ -315,14 +290,8 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      858,
-      21,
-      900,
-      59
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -333,7 +302,8 @@
       168,
       119
     ],
-    "v2_recipe": "res_stone"
+    "v2_recipe": "res_stone",
+    "v2_hires": true
   },
   "res_water": {
     "size": [
@@ -350,13 +320,13 @@
   },
   "res_people": {
     "size": [
-      128,
-      128
+      256,
+      256
     ],
     "group": "res",
     "title": "Жители",
     "subject": "The same Clayfolk resident face throughout the set: a simple softly rounded slightly tall orange terracotta head #D66C34, tiny rounded ears at the sides, bald smooth dome, two small round dark-brown bead eyes, tiny round clay nose, simple mouth sculpted into clay. Front view, face only, no torso, hair, hat, clothing or accessories. Neutral friendly expression: gently upturned closed mouth and relaxed eyes. Match an innocent hand-moulded clay villager.",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (949, 22, 986, 59): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite. Screenshot is a STYLE AND SHAPE REFERENCE, NOT an image to enlarge. Natively redraw ONLY this icon in crisp large resolution: One small spherical orange clay resident HEAD only, tiny attached clay ears, two small black oval dot eyes, very small neutral smiling mouth. Same simple friendly round head as top-bar population icon, no torso, hair, hat or limbs. Match reference stylized softly rounded toy/clay material, simple broad shapes, warm highlights from upper-left, clean medium contrast. Use restrained smooth material, not gritty photorealism. Clean sharp silhouette and small readable details. No painted black outlines, glow, blur, grass, scenery, UI, words or numbers. Single object centered in square canvas with about 12% transparent padding around ALL sides; genuine transparent RGBA backdrop, no floor or cast shadow plane. Render at1024px or larger before export.",
     "stage": 1,
     "where": "game_hud.gd · верхняя панель ресурсов",
     "style_version": 2,
@@ -364,14 +334,8 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      949,
-      22,
-      986,
-      59
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -382,7 +346,8 @@
       168,
       119
     ],
-    "v2_recipe": "res_people"
+    "v2_recipe": "res_people",
+    "v2_hires": true
   },
   "res_bones": {
     "size": [
@@ -549,8 +514,8 @@
   },
   "glyph_pause_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Пауза — светлый глиф",
@@ -580,8 +545,8 @@
   "glyph_play": {
     "stage": 2,
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Скорость 1×",
@@ -610,8 +575,8 @@
   "glyph_settings": {
     "stage": 2,
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Настройки",
@@ -640,8 +605,8 @@
   "glyph_alarm": {
     "stage": 2,
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Тревога",
@@ -670,8 +635,8 @@
   "glyph_alarm_on": {
     "stage": 2,
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Тревога включена",
@@ -1290,8 +1255,8 @@
   },
   "glyph_plus": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Плюс",
@@ -1321,8 +1286,8 @@
   },
   "glyph_minus": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Минус",
@@ -1352,8 +1317,8 @@
   },
   "glyph_fast": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Скорость 5×",
@@ -1382,8 +1347,8 @@
   },
   "glyph_faster": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Скорость 20×",
@@ -1808,8 +1773,8 @@
   },
   "glyph_play_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Скорость 1× — светлый",
@@ -1838,8 +1803,8 @@
   },
   "glyph_settings_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Настройки — светлый",
@@ -1868,8 +1833,8 @@
   },
   "glyph_alarm_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Тревога — светлый",
@@ -1898,8 +1863,8 @@
   },
   "glyph_alarm_on_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Тревога включена — светлый",
@@ -1928,8 +1893,8 @@
   },
   "glyph_plus_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Плюс — светлый",
@@ -1958,8 +1923,8 @@
   },
   "glyph_minus_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Минус — светлый",
@@ -1988,8 +1953,8 @@
   },
   "glyph_fast_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Скорость 5× — светлый",
@@ -2018,8 +1983,8 @@
   },
   "glyph_faster_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Скорость 20× — светлый",
@@ -2048,27 +2013,21 @@
   },
   "build_house": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Дом рода",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (589, 787, 688, 864): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk high-resolution game BUILD CARD icon. Screenshot is STYLE, CAMERA and SHAPE reference. Natively recreate only the second build-card CLAN HOUSE: one tiny circular warm clay hut with a layered brown straw conical roof with horizontal straw tiers, thick roof eaves, a dark front door, squat round walls, short rounded brown cap. Different from the pale plain-roof first hut. No surrounding props. Fixed isometric three-quarter top-down view like reference lower card, soft rounded handcrafted clay/wood/straw, simple chunky geometry, clean material detail, upper-left soft light. Crisp silhouette and roof/straw details readable when reduced, not an enlarged screenshot. Preserve proportions, palette and the individual building identity. Transparent RGBA backdrop, complete isolated building centered in generous 12% margins, no ground plane or cast ground shadow, no scenery, UI card, text, numbers, badges or outline stroke. 1024px or larger original.",
     "style_version": 2,
     "v2_stage": 3,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      589,
-      787,
-      688,
-      864
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2079,31 +2038,26 @@
       168,
       119
     ],
-    "v2_recipe": "build_house"
+    "v2_recipe": "build_house",
+    "v2_hires": true
   },
   "build_storage": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Склад",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (719, 791, 823, 863): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk high-resolution game BUILD CARD icon. Screenshot is STYLE, CAMERA and SHAPE reference. Natively recreate only the third build-card STOREHOUSE: a low open-front lean-to storage shed on stout brown logs, pitched golden straw roof with visibly tied logs at edges, two pale gray rounded stone piles inside/beside the open front. Match front three-quarter view and squat wide silhouette. No doors or wheels. Fixed isometric three-quarter top-down view like reference lower card, soft rounded handcrafted clay/wood/straw, simple chunky geometry, clean material detail, upper-left soft light. Crisp silhouette and roof/straw details readable when reduced, not an enlarged screenshot. Preserve proportions, palette and the individual building identity. Transparent RGBA backdrop, complete isolated building centered in generous 12% margins, no ground plane or cast ground shadow, no scenery, UI card, text, numbers, badges or outline stroke. 1024px or larger original.",
     "style_version": 2,
     "v2_stage": 3,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      719,
-      791,
-      823,
-      863
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2114,31 +2068,26 @@
       168,
       119
     ],
-    "v2_recipe": "build_storage"
+    "v2_recipe": "build_storage",
+    "v2_hires": true
   },
   "build_workshop": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Мастерская",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (852, 786, 950, 863): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the fourth build-card WORKSHOP: a tiny squat warm brown timber-and-clay workshop cottage. Pitched golden straw roof edged with thick dark timber beams, stout corner posts, front door, circular cog-like wooden workshop detail on the front. Isometric three-quarter view like reference. Keep the clear compact cottage silhouette, no surrounding props. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
     "style_version": 2,
     "v2_stage": 3,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      852,
-      786,
-      950,
-      863
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2149,31 +2098,26 @@
       168,
       119
     ],
-    "v2_recipe": "build_workshop"
+    "v2_recipe": "build_workshop",
+    "v2_hires": true
   },
   "build_kiln": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Печь обжига",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (993, 786, 1077, 865): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the fifth build-card KILN: a squat rounded terracotta clay dome oven with a short cylindrical chimney and thick dark arched open fire mouth. A small warm orange-yellow fire glows inside. Simple one-piece orange clay structure, slightly three-quarter frontal view. No bricks, pizza, tools or floor. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
     "style_version": 2,
     "v2_stage": 3,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      993,
-      786,
-      1077,
-      865
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2184,31 +2128,26 @@
       168,
       119
     ],
-    "v2_recipe": "build_kiln"
+    "v2_recipe": "build_kiln",
+    "v2_hires": true
   },
   "build_idol": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Идол",
     "stage": 3,
     "where": "Нижняя панель построек — изображение над подписью и ценой",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1135, 784, 1219, 865): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the sixth build-card IDOL: a tiny dark brown carved clay-and-wood tribal idol standing upright on a round clay foot. Broad round head with two small turquoise eye inlays and one small round turquoise forehead/upper-face mark, stubby arms by its sides, a short carved cylindrical body. Like the dark friendly idol on the reference card. No huge headdress or ornaments. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
     "style_version": 2,
     "v2_stage": 3,
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1135,
-      784,
-      1219,
-      865
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2219,12 +2158,13 @@
       168,
       119
     ],
-    "v2_recipe": "build_idol"
+    "v2_recipe": "build_idol",
+    "v2_hires": true
   },
   "build_wall": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Ограда",
@@ -2236,7 +2176,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2252,8 +2192,8 @@
   },
   "build_gate": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Ворота",
@@ -2265,7 +2205,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2281,8 +2221,8 @@
   },
   "build_post": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Пост обороны",
@@ -2294,7 +2234,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2310,8 +2250,8 @@
   },
   "build_totem": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Тотем рода",
@@ -2323,7 +2263,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2339,8 +2279,8 @@
   },
   "build_harvest": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Зона добычи",
@@ -2352,7 +2292,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2368,8 +2308,8 @@
   },
   "build_forbid": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Запрет",
@@ -2381,7 +2321,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2397,8 +2337,8 @@
   },
   "build_erase": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Ластик",
@@ -2410,7 +2350,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2426,8 +2366,8 @@
   },
   "build_campfire": {
     "size": [
-      128,
-      112
+      256,
+      224
     ],
     "group": "build",
     "title": "Костёр",
@@ -2439,7 +2379,7 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 5,
+    "v2_margin": 10,
     "v2_kind": "sprite",
     "v2_fill_top": [
       255,
@@ -2778,27 +2718,21 @@
   },
   "job_guard": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Стража",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1356, 368, 1399, 408): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk production game HUD sprite. Screenshot supplied only as shape/material reference. Natively redraw ONLY: ONE primitive guard spear diagonal lower-left to upper-right, a warm reddish-brown wooden shaft with a small pointed gray flint spearhead lashed at the top. Match Works guard icon; no person or other weapon. Reference's soft polished clay/toy aesthetic, bold readable simple silhouette, careful large-resolution detail, matte surfaces, warm upper-left light, very restrained grain. Sharp antialiased boundaries, no blur/glow, no thick dark ink outline. Center whole object with 12% free transparent padding on every side, 1024px or larger, actual transparent RGBA background. One isolated object, no text/UI, scenery, cast shadow plane or extra objects.",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1356,
-      368,
-      1399,
-      408
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2809,31 +2743,26 @@
       168,
       119
     ],
-    "v2_recipe": "job_guard"
+    "v2_recipe": "job_guard",
+    "v2_hires": true
   },
   "job_fish": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Рыбалка",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1356, 408, 1399, 449): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk production game HUD sprite. Screenshot supplied only as shape/material reference. Natively redraw ONLY: ONE thick rounded iron fishing hook, J-shaped with a small closed loop at the upper end and pointed barbed end at left. Dark desaturated gray metal, a thin pale winding around neck, like the Works fishing icon. No fish or rod. Reference's soft polished clay/toy aesthetic, bold readable simple silhouette, careful large-resolution detail, matte surfaces, warm upper-left light, very restrained grain. Sharp antialiased boundaries, no blur/glow, no thick dark ink outline. Center whole object with 12% free transparent padding on every side, 1024px or larger, actual transparent RGBA background. One isolated object, no text/UI, scenery, cast shadow plane or extra objects.",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1356,
-      408,
-      1399,
-      449
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2844,7 +2773,8 @@
       168,
       119
     ],
-    "v2_recipe": "job_fish"
+    "v2_recipe": "job_fish",
+    "v2_hires": true
   },
   "job_food": {
     "size": [
@@ -2890,27 +2820,21 @@
   },
   "job_clay": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Добыча глины",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1358, 214, 1399, 248): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "High-resolution derivative of native generated res_clay; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_clay",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1358,
-      214,
-      1399,
-      248
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2921,31 +2845,26 @@
       168,
       119
     ],
-    "v2_recipe": "job_clay"
+    "v2_recipe": "job_clay",
+    "v2_hires": true
   },
   "job_wood": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Рубка дерева",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1357, 254, 1399, 289): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "High-resolution derivative of native generated res_wood; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_wood",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1357,
-      254,
-      1399,
-      289
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2956,31 +2875,26 @@
       168,
       119
     ],
-    "v2_recipe": "job_wood"
+    "v2_recipe": "job_wood",
+    "v2_hires": true
   },
   "job_stone": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Добыча камня",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1356, 290, 1399, 328): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "High-resolution derivative of native generated res_stone; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_stone",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1356,
-      290,
-      1399,
-      328
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -2991,31 +2905,26 @@
       168,
       119
     ],
-    "v2_recipe": "job_stone"
+    "v2_recipe": "job_stone",
+    "v2_hires": true
   },
   "job_build": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Стройка",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1354, 329, 1402, 369): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Clayfolk production game HUD sprite. Screenshot supplied only as shape/material reference. Natively redraw ONLY: ONE primitive stone hammer: gray block-shaped stone head on a short brown wooden handle, diagonal handle pointing down-left and stone head upper-right. Match the hammer in the Works list. Entire handle and hammer head visible. Reference's soft polished clay/toy aesthetic, bold readable simple silhouette, careful large-resolution detail, matte surfaces, warm upper-left light, very restrained grain. Sharp antialiased boundaries, no blur/glow, no thick dark ink outline. Center whole object with 12% free transparent padding on every side, 1024px or larger, actual transparent RGBA background. One isolated object, no text/UI, scenery, cast shadow plane or extra objects.",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 0,
     "v2_kind": "sprite",
     "source_max": 1024,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_exact": true,
-    "v2_ref": [
-      1354,
-      329,
-      1402,
-      369
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -3026,31 +2935,26 @@
       168,
       119
     ],
-    "v2_recipe": "job_build"
+    "v2_recipe": "job_build",
+    "v2_hires": true
   },
   "job_hunt": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "job",
     "title": "Охота",
     "stage": 4,
     "where": "Правая панель «Работы»",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1357, 448, 1399, 490): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite; screenshot is shape/style reference. Natively draw ONLY this one small icon in clean large resolution: ONE small thick red meat steak with an ivory bone center and narrow cream fat rim, diagonal lower-left to upper-right, like the Works hunting icon. Rich brick-red meat, simplified toy clay surface, NO knife, plate or garnish. Match soft rounded matte toy/clay render of reference, warm upper-left light, restrained volume and simple readable contours. Sharp edges, no blurry enlarged pixels, no gritty texture, no thick black ink outline, no glow. Fully visible centered single object, generous 12% TRANSPARENT padding on all four sides, transparent RGBA background. 1024px or larger. No text, UI frame, scenery, numbers, separate cast shadow or extra objects.",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1357,
-      448,
-      1399,
-      490
-    ],
     "v2_fill_top": [
       255,
       244,
@@ -3061,7 +2965,8 @@
       168,
       119
     ],
-    "v2_recipe": "job_hunt"
+    "v2_recipe": "job_hunt",
+    "v2_hires": true
   },
   "job_heal": {
     "size": [
@@ -3792,8 +3697,8 @@
   "weather_clouds": {
     "stage": 5,
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "weather",
     "title": "Облачно",
@@ -3821,8 +3726,8 @@
   "weather_rain": {
     "stage": 5,
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "weather",
     "title": "Дождь",
@@ -3850,12 +3755,12 @@
   "time_day": {
     "stage": 5,
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "time",
     "title": "День",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1054, 15, 1108, 65): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py sun recipe time_day. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Верхняя панель — время суток",
     "style_version": 2,
     "v2_stage": 2,
@@ -3875,18 +3780,13 @@
       119
     ],
     "v2_recipe": "time_day",
-    "v2_ref": [
-      1054,
-      15,
-      1108,
-      65
-    ]
+    "v2_shape": "sun"
   },
   "time_night": {
     "stage": 5,
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "time",
     "title": "Ночь",
@@ -4277,14 +4177,14 @@
   },
   "weather_clear": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "weather",
     "title": "Ясно",
     "stage": 5,
     "where": "Верхняя панель — погода",
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1054, 15, 1108, 65): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py sun recipe weather_clear. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "mode": "v2",
     "style_version": 2,
     "v2_stage": 2,
@@ -4303,17 +4203,12 @@
       119
     ],
     "v2_recipe": "weather_clear",
-    "v2_ref": [
-      1054,
-      15,
-      1108,
-      65
-    ]
+    "v2_shape": "sun"
   },
   "time_dawn": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "time",
     "title": "Рассвет",
@@ -4341,8 +4236,8 @@
   },
   "time_dusk": {
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "group": "time",
     "title": "Сумерки",
@@ -4811,22 +4706,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 8,
     "title": "Логотип Clayfolk для HUD",
     "where": "HUD v2 · logo_hud",
     "group": "logo",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      12,
-      7,
-      234,
-      80
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (12, 7, 234, 80): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Native transparent Clayfolk logo generated earlier with built-in image_gen, reused instead of enlarging the screenshot crop. Exact text Clayfolk. Original prompt/provenance: generated_exact_initial.json, logo_hud.",
     "size": [
-      512,
-      144
+      1024,
+      288
     ],
     "v2_fill_top": [
       255,
@@ -4838,7 +4727,8 @@
       168,
       119
     ],
-    "v2_recipe": "logo_hud"
+    "v2_recipe": "logo_hud",
+    "v2_hires": true
   },
   "ui_topbar": {
     "style_version": 2,
@@ -5071,8 +4961,8 @@
     "v2_kind": "sprite",
     "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_down. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "size": [
-      32,
-      32
+      64,
+      64
     ],
     "v2_shape": "glyph",
     "v2_fill_top": [
@@ -5101,8 +4991,8 @@
     "v2_kind": "sprite",
     "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_right. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "size": [
-      32,
-      32
+      64,
+      64
     ],
     "v2_shape": "glyph",
     "v2_fill_top": [
@@ -5196,22 +5086,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "title": "Вкладка «Поселение»",
     "where": "HUD v2 · tab_settlement",
     "group": "tab",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      573,
-      741,
-      599,
-      770
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (573, 741, 599, 770): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite; screenshot is shape/style reference. Natively draw ONLY this one small icon in clean large resolution: ONE very simple small warm terracotta house emblem: square clay house wall with a pitched orange roof, frontal upright view, a tiny dark doorway. Same minimal home emblem in the Settlement tab; NOT the thatched village hut. Match soft rounded matte toy/clay render of reference, warm upper-left light, restrained volume and simple readable contours. Sharp edges, no blurry enlarged pixels, no gritty texture, no thick black ink outline, no glow. Fully visible centered single object, generous 12% TRANSPARENT padding on all four sides, transparent RGBA background. 1024px or larger. No text, UI frame, scenery, numbers, separate cast shadow or extra objects.",
     "size": [
-      48,
-      48
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5223,7 +5107,8 @@
       168,
       119
     ],
-    "v2_recipe": "tab_settlement"
+    "v2_recipe": "tab_settlement",
+    "v2_hires": true
   },
   "tab_defense": {
     "style_version": 2,
@@ -5231,22 +5116,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "title": "Вкладка «Оборона»",
     "where": "HUD v2 · tab_defense",
     "group": "tab",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      785,
-      742,
-      812,
-      773
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (785, 742, 812, 773): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production game HUD icon for Clayfolk. Input image is a STYLE AND SHAPE REFERENCE, not an edit of the screenshot. Recreate ONLY the small plain gray-taupe shield in the bottom 'Оборона' tab as a large, sharp, fully rendered isolated object. Simple medieval heater shield, broad curved top, two complete shoulders, slightly convex matte clay face, narrow beveled brown-gray rim, pointed rounded bottom, NO emblem. It must read unmistakably as a whole shield, not a cropped vertical slab. Straight-on near frontal view, like reference, soft upper-left light, warm palette. Native high-detail rendering at about 1024px; crisp silhouette, subtle clay shading, no blur/no glow/no thick dark ink. Transparent RGBA background. Center the entire object within 15% transparent margins on EVERY side, with all edges visible. No text, no frame, no UI, no grass, no shadow plane. One shield only.",
     "size": [
-      48,
-      48
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5258,7 +5137,8 @@
       168,
       119
     ],
-    "v2_recipe": "tab_defense"
+    "v2_recipe": "tab_defense",
+    "v2_hires": true
   },
   "tab_land": {
     "style_version": 2,
@@ -5266,22 +5146,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "title": "Вкладка «Земля»",
     "where": "HUD v2 · tab_land",
     "group": "tab",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      979,
-      740,
-      1007,
-      775
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (979, 740, 1007, 775): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. Production Clayfolk HUD sprite; screenshot is shape/style reference. Natively draw ONLY this one small icon in clean large resolution: ONE simple two-leaf sprout emblem, upright thin short clay-brown stem and two broad opposite leaves, left leaf higher and right leaf slightly lower, muted olive-brown clay like the reference Land tab. No pot, soil mound or environment. Match soft rounded matte toy/clay render of reference, warm upper-left light, restrained volume and simple readable contours. Sharp edges, no blurry enlarged pixels, no gritty texture, no thick black ink outline, no glow. Fully visible centered single object, generous 12% TRANSPARENT padding on all four sides, transparent RGBA background. 1024px or larger. No text, UI frame, scenery, numbers, separate cast shadow or extra objects.",
     "size": [
-      48,
-      48
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5293,7 +5167,8 @@
       168,
       119
     ],
-    "v2_recipe": "tab_land"
+    "v2_recipe": "tab_land",
+    "v2_hires": true
   },
   "ui_key_badge_normal": {
     "style_version": 2,
@@ -5559,22 +5434,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "title": "Значок работ",
     "where": "HUD v2 · icon_works",
     "group": "icon",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1358,
-      91,
-      1389,
-      128
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1358, 91, 1389, 128): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Use case: stylized-concept. High-resolution production icon for Clayfolk HUD. Screenshot is SHAPE/STYLE reference. Natively recreate ONLY the small WORKS HEADER ICON: one tiny smooth orange clay human bust with a plain round head and broad rounded shoulders/upper torso, like a friendly generic person symbol rendered in terracotta. No face, arms or feet, no necklace. Near-frontal icon view. Match reference warm soft toy/clay/wood material and proportions, rounded chunky forms and restrained texture, warm upper-left light. Sharp clean render with readable modeling detail, no blur or enlarged screenshot pixels, no thick black painted outline. Entire one object centered, about 12% genuine transparent padding on ALL sides, RGBA transparent background. No surrounding ground plane or cast shadow, scenery, UI card, writing, numbers, watermark or extra objects. 1024px or larger native render.",
     "size": [
-      48,
-      48
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5586,7 +5455,8 @@
       168,
       119
     ],
-    "v2_recipe": "icon_works"
+    "v2_recipe": "icon_works",
+    "v2_hires": true
   },
   "icon_person": {
     "style_version": 2,
@@ -5600,16 +5470,10 @@
     "group": "icon",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1357,
-      129,
-      1383,
-      154
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1357, 129, 1383, 154): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py person recipe icon_person. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "size": [
-      32,
-      32
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5621,7 +5485,8 @@
       168,
       119
     ],
-    "v2_recipe": "icon_person"
+    "v2_recipe": "icon_person",
+    "v2_shape": "person"
   },
   "icon_kiln": {
     "style_version": 2,
@@ -5629,22 +5494,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "title": "Печь для полосы обжига",
     "where": "HUD v2 · icon_kiln",
     "group": "icon",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1358,
-      496,
-      1410,
-      555
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1358, 496, 1410, 555): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "High-resolution derivative of native generated build_kiln; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / build_kiln",
     "size": [
-      64,
-      64
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5656,7 +5515,8 @@
       168,
       119
     ],
-    "v2_recipe": "icon_kiln"
+    "v2_recipe": "icon_kiln",
+    "v2_hires": true
   },
   "icon_mother": {
     "style_version": 2,
@@ -5664,22 +5524,16 @@
     "mode": "v2",
     "source_max": 1024,
     "v2_exact": true,
-    "v2_margin": 4,
+    "v2_margin": 10,
     "title": "Головка Праматери",
     "where": "HUD v2 · icon_mother",
     "group": "icon",
     "stage": 8,
     "v2_kind": "sprite",
-    "v2_ref": [
-      1236,
-      656,
-      1260,
-      680
-    ],
-    "prompt": "Derived from our generated docs/godot/reference/hud_target.png, native crop (1236, 656, 1260, 680): target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.",
+    "prompt": "High-resolution derivative of native generated res_people; matching HUD icon, alpha-preserving downsample. Original prompt: generated_hires.json / res_people",
     "size": [
-      32,
-      32
+      128,
+      128
     ],
     "v2_fill_top": [
       255,
@@ -5691,7 +5545,8 @@
       168,
       119
     ],
-    "v2_recipe": "icon_mother"
+    "v2_recipe": "icon_mother",
+    "v2_hires": true
   },
   "btn_pin_normal": {
     "style_version": 2,
@@ -5911,8 +5766,8 @@
     "v2_kind": "sprite",
     "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_down_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "size": [
-      32,
-      32
+      64,
+      64
     ],
     "v2_shape": "glyph",
     "v2_fill_top": [
@@ -5941,8 +5796,8 @@
     "v2_kind": "sprite",
     "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_chevron_right_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "size": [
-      32,
-      32
+      64,
+      64
     ],
     "v2_shape": "glyph",
     "v2_fill_top": [

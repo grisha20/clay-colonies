@@ -121,7 +121,7 @@ def cfg(name,old):
         s['v2_ref']=list(CROPS[name])
         s['prompt']='Derived from our generated docs/godot/reference/hud_target.png, native crop '+str(CROPS[name])+': target-faithful foreground extraction, cream matte removal, alpha cleanup; no new scene/text. Original generation: Clayfolk HUD redesign in this chat.'
     elif s.get('prompt') is None:s['prompt']='Derived from our generated Clayfolk HUD target; exact_v2.py recipe '+name
-    if name.startswith(('time_','weather_')):s['size']=[64,64]
+    if name.startswith(('time_','weather_')):s['size']=[128,128]
     if name.startswith('btn_square_'):s.update(size=[96,96],v2_kind='button',v2_shape='bevel',slice=[20,20,20,20])
     elif name.startswith('card_build_'):s.update(size=[128,144],v2_kind='card',v2_shape='rounded',slice=[22,22,22,22])
     elif name in ('ui_panel','ui_panel_dark','ui_list_bg'):s.update(size=[128,128],v2_kind='panel',v2_shape='rounded',slice=[24,24,24,24])
@@ -139,14 +139,22 @@ def cfg(name,old):
     elif name.startswith('ui_key_badge_'):s.update(size=[32,32],v2_kind='button',v2_shape='rounded',slice=[10,10,10,10])
     elif name.startswith('btn_zoom_'):s.update(size=[40,40],v2_kind='button',v2_shape='bevel',slice=[12,12,12,12])
     elif name.startswith('btn_pin_'):s.update(size=[48,48],v2_shape='pin')
-    elif name.startswith('glyph_chevron_'):s.update(size=[32,32],v2_shape='glyph')
-    elif name.startswith('glyph_'):s.update(size=[48,48],v2_shape='glyph')
+    elif name.startswith('glyph_chevron_'):s.update(size=[64,64],v2_shape='glyph')
+    elif name.startswith('glyph_'):s.update(size=[96,96],v2_shape='glyph')
     elif name=='logo_hud':s.update(size=[512,144],v2_margin=4)
     elif name in ('ui_checkbox_on','ui_checkbox_off','ui_check','icon_person','icon_mother'):s.setdefault('size',[32,32])
     elif name in ('ui_toast_check','ui_toast_warn','ui_toast_danger','icon_works','tab_settlement','tab_defense','tab_land'):s.setdefault('size',[48,48])
     elif name=='icon_kiln':s['size']=[64,64]
     if name.startswith(('res_','build_')):s['v2_margin']=5
+    if name.startswith('build_'):s.update(size=[256,224],v2_margin=10)
+    if s.get('v2_hires'):
+        s.pop('v2_ref',None)
+        s['size']=[256,224] if name.startswith('build_') else ([256,256] if name.startswith('res_') else ([1024,288] if name=='logo_hud' else [128,128]))
+        s['v2_margin']=10 if name!='logo_hud' else 8
+        s['prompt']=old.get('prompt',s['prompt'])
     if name in ('res_wood','job_build'):s.pop('v2_flip',None)
+    if name in ('time_day','weather_clear'):s.update(size=[128,128],v2_shape='sun');s.pop('v2_ref',None)
+    if name=='icon_person':s.update(size=[128,128],v2_shape='person');s.pop('v2_ref',None)
     s['v2_fill_top']=[255,244,224]
     s['v2_border']=[207,168,119]
     s['v2_recipe']=name
@@ -245,7 +253,8 @@ def shaped(size,name,shape):
 
 
 def symbol(size,name):
-    w,h=size;W,H=w*K,h*K
+    w,h=(32,32) if name.startswith('glyph_chevron_') or name=='icon_person' else ((48,48) if name.startswith('glyph_') else ((64,64) if name in ('time_day','weather_clear','time_dawn','time_dusk') else size))
+    W,H=w*K,h*K
     im=Image.new('RGBA',(W,H));d=ImageDraw.Draw(im)
     ink=INK+(255,);paper=(255,250,236,255)
     def line(points,color=ink,width=4):d.line([(round(x*K),round(y*K)) for x,y in points],fill=color,width=round(width*K),joint='curve')
@@ -275,6 +284,9 @@ def symbol(size,name):
             if n.endswith('_on'):
                 d.arc((7*K,10*K,21*K,36*K),120,240,fill=ink,width=2*K)
                 d.arc((27*K,10*K,41*K,36*K),300,420,fill=ink,width=2*K)
+    elif name=='icon_person':
+        d.ellipse((11*K,3*K,21*K,13*K),fill=(134,94,65,255))
+        d.ellipse((7*K,13*K,25*K,30*K),fill=(134,94,65,255))
     elif name in ('ui_check','ui_checkbox_on','ui_checkbox_off') or name.startswith('ui_toast_'):
         if name.startswith('ui_toast_'):
             col=(90,143,55,255) if name.endswith('check') else ((225,139,42,255) if name.endswith('warn') else (198,64,47,255))
@@ -291,6 +303,12 @@ def symbol(size,name):
         d.ellipse((17*K,12*K,31*K,26*K),fill=paper);poly([(17,21),(24,35),(31,21)],paper)
         d.ellipse((21*K,16*K,27*K,22*K),fill=(207,101,44,255))
     elif name=='ui_tab_underline':rr((4,3,124,6),(190,88,28,255),2)
+    elif name in ('time_day','weather_clear'):
+        col=(248,165,36,255)
+        d.ellipse((21*K,21*K,43*K,43*K),fill=col)
+        for angle in range(0,360,45):
+            t=math.radians(angle)
+            line([(32+18*math.cos(t),32+18*math.sin(t)),(32+25*math.cos(t),32+25*math.sin(t))],col,3)
     elif name in ('time_dawn','time_dusk'):
         col=(245,172,64,255) if name.endswith('dawn') else (221,111,46,255)
         d.ellipse((16*K,19*K,48*K,51*K),fill=col)
@@ -329,7 +347,7 @@ def soften_legacy(source):
 def render(source,size,spec):
     name=spec['v2_recipe'];shape=spec.get('v2_shape')
     if shape in ('bevel','rounded','bar','bubble','frame','segment','tabbar'):return shaped(size,name,shape)
-    if shape in ('glyph','pin','underline') or name.startswith(('ui_toast_','ui_checkbox_')) or name in ('ui_check','time_dawn','time_dusk'):return symbol(size,name)
+    if shape in ('glyph','pin','underline','sun','person') or name.startswith(('ui_toast_','ui_checkbox_')) or name in ('ui_check','time_dawn','time_dusk'):return symbol(size,name)
     result=sprite(source,size,spec.get('v2_margin',4))
     data=np.array(result);rgb=data[:,:,:3]
     white=(data[:,:,3]>0)&(data[:,:,3]<255)&(rgb.min(axis=2)>235)&(rgb.max(axis=2)-rgb.min(axis=2)<20)

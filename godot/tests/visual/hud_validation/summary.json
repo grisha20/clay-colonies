@@ -3,7 +3,7 @@
     "script": "godot/tests/game/test_build_rules.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.38,
+    "seconds": 0.41,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -11,7 +11,7 @@
     "script": "godot/tests/game/test_dominance.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.64,
+    "seconds": 0.66,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -19,7 +19,7 @@
     "script": "godot/tests/game/test_game_hud.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.55,
+    "seconds": 0.64,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -27,7 +27,7 @@
     "script": "godot/tests/game/test_hud_tooltip.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.64,
+    "seconds": 0.75,
     "errors": [],
     "engine_diagnostics": [
       "ERROR: 4 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
@@ -49,7 +49,7 @@
     "script": "godot/tests/game/test_minimap.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 1.01,
+    "seconds": 1.02,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -65,7 +65,7 @@
     "script": "godot/tests/game/test_mother_speaker.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.38,
+    "seconds": 0.36,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -73,7 +73,7 @@
     "script": "godot/tests/game/test_observer_controls.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 1.0,
+    "seconds": 1.02,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -81,7 +81,7 @@
     "script": "godot/tests/game/test_priority_panel.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.73,
+    "seconds": 0.75,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -89,7 +89,7 @@
     "script": "godot/tests/game/test_territory.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.75,
+    "seconds": 0.73,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -115,7 +115,7 @@
     "script": "godot/tests/world/test_attack_feedback.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.47,
+    "seconds": 0.56,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -123,7 +123,7 @@
     "script": "godot/tests/world/test_camera_controls.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.45,
+    "seconds": 0.47,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -139,7 +139,7 @@
     "script": "godot/tests/world/test_gate_swing.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.47,
+    "seconds": 0.55,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -147,7 +147,7 @@
     "script": "godot/tests/world/test_hunting_view.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 0.62,
+    "seconds": 0.66,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -155,7 +155,7 @@
     "script": "godot/tests/world/test_network_interpolation.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 1.86,
+    "seconds": 1.84,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -195,7 +195,7 @@
     "script": "godot/tests/world/test_world_dressing.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 2.48,
+    "seconds": 2.5,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -203,7 +203,7 @@
     "script": "godot/tests/integration/test_build_tools.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 2.5,
+    "seconds": 2.86,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -211,7 +211,7 @@
     "script": "godot/tests/integration/test_start_menu.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 2.03,
+    "seconds": 2.3,
     "errors": [],
     "engine_diagnostics": []
   },
@@ -219,7 +219,7 @@
     "script": "godot/tests/visual/capture_pause_menu.gd",
     "pass": true,
     "exit": 0,
-    "seconds": 4.56,
+    "seconds": 4.86,
     "errors": [],
     "engine_diagnostics": []
   }

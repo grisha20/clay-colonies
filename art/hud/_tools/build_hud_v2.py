@@ -106,6 +106,7 @@ def main():
         for name in names:
             if name in SAMPLES and name not in V2_STAGES[1] and args.stage<2:continue
             old=catalog.get(name,{})
+            if imported.get(name,{}).get('hires'):old=dict(old,v2_hires=True)
             spec=cfg(name,old)
             if name.endswith('_light'):spec['group']='extra'
             path=ROOT/'_source'/f'{name}.png'
