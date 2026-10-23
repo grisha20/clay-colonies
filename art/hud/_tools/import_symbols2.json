@@ -1,0 +1,30 @@
+{
+  "defs": {
+    "ui_check": {
+      "stage": 2,
+      "size": [
+        32,
+        32
+      ],
+      "group": "ui",
+      "title": "Выполнено",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One bold green clay checkmark #5C8C33, a clean familiar tick shape, two chunky joined strokes, no disc or frame.",
+      "where": "HUD Clayfolk · ui"
+    },
+    "ui_star": {
+      "stage": 2,
+      "size": [
+        32,
+        32
+      ],
+      "group": "ui",
+      "title": "Победная задача",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky five-pointed amber clay star #F0B85A, broad blunt points and a soft internal upper-left highlight. No backing disc or sparkles.",
+      "where": "HUD Clayfolk · ui"
+    }
+  },
+  "paths": {
+    "ui_check": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-879df97c-ce2d-4dca-9202-da9e63962c14.png",
+    "ui_star": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-bfd851e6-37fe-4e13-b315-9b312b6f61d4.png"
+  }
+}

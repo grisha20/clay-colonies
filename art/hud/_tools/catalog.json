@@ -338,5 +338,902 @@
     "base": "glyph_pause",
     "where": "Тёмные панели и красная кнопка тревоги",
     "prompt": "Derived from generated glyph_pause silhouette: exact parchment #F2E3BD fill, opaque #4D331F contour; identical alpha to the base glyph."
+  },
+  "glyph_play": {
+    "stage": 2,
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Скорость 1×",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One broad right-pointing triangular PLAY symbol, made of dark matte brown clay #4D331F with a small subtle upper-left warm highlight. Rounded handmade corners. No button frame.",
+    "where": "HUD Clayfolk · правая верхняя панель"
+  },
+  "glyph_settings": {
+    "stage": 2,
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Настройки",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky cogwheel carved from dark brown stone or clay. Six broad blunt teeth, one circular hole in the middle. Clear gear silhouette, no metal, no button frame.",
+    "where": "HUD Clayfolk · правая верхняя панель"
+  },
+  "glyph_alarm": {
+    "stage": 2,
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Тревога",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One short thick curved primitive animal-horn trumpet, ochre brown, broad bell opening facing upper-right and short mouthpiece lower-left, bound at its middle with simple grass fibre. No sound waves, no hand, no frame.",
+    "where": "HUD Clayfolk · правая верхняя панель"
+  },
+  "glyph_alarm_on": {
+    "stage": 2,
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Тревога включена",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One short thick curved primitive animal-horn trumpet, ochre brown, broad bell opening facing upper-right and mouthpiece lower-left, bound at its middle with grass fibre. Two thick short curved sound-wave arcs just beyond the bell. No glow or hand or frame.",
+    "where": "HUD Clayfolk · правая верхняя панель"
+  },
+  "ui_panel": {
+    "stage": 2,
+    "size": [
+      128,
+      128
+    ],
+    "group": "ui",
+    "title": "Пергаментная панель",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One EMPTY square parchment UI panel. Front-facing, axis aligned, mildly rounded corners, constant-width brown clay border #8C6138 with exact crisp #4D331F contour. Large perfectly flat center #F2E3BD, no central texture, no ornaments, no lettering, no uneven silhouette. Suitable for 9-slice, light only within frame. Transparent outside corners.",
+    "where": "HUD Clayfolk · общие панели",
+    "mode": "panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "btn_square_hover": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "btn",
+    "title": "Квадратная кнопка — hover",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated btn_square_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "btn_square_normal",
+    "state": "hover",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "btn_square_pressed": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "btn",
+    "title": "Квадратная кнопка — pressed",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated btn_square_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "btn_square_normal",
+    "state": "pressed",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "btn_square_disabled": {
+    "size": [
+      64,
+      64
+    ],
+    "group": "btn",
+    "title": "Квадратная кнопка — disabled",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated btn_square_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "btn_square_normal",
+    "state": "disabled",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "ui_button_wide_normal": {
+    "size": [
+      192,
+      48
+    ],
+    "group": "ui",
+    "title": "Широкая кнопка",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ],
+    "state": "normal"
+  },
+  "ui_button_wide_hover": {
+    "size": [
+      192,
+      48
+    ],
+    "group": "ui",
+    "title": "Широкая кнопка — hover",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_button_wide_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_button_wide_normal",
+    "state": "hover",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "ui_button_wide_pressed": {
+    "size": [
+      192,
+      48
+    ],
+    "group": "ui",
+    "title": "Широкая кнопка — pressed",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_button_wide_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_button_wide_normal",
+    "state": "pressed",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "ui_button_wide_disabled": {
+    "size": [
+      192,
+      48
+    ],
+    "group": "ui",
+    "title": "Широкая кнопка — disabled",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_button_wide_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_button_wide_normal",
+    "state": "disabled",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ]
+  },
+  "ui_btn_plus_normal": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка плюс — рамка",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "state": "normal"
+  },
+  "ui_btn_plus_hover": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка плюс — рамка — hover",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_btn_plus_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_btn_plus_normal",
+    "state": "hover",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "ui_btn_plus_pressed": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка плюс — рамка — pressed",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_btn_plus_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_btn_plus_normal",
+    "state": "pressed",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "ui_btn_plus_disabled": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка плюс — рамка — disabled",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_btn_plus_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_btn_plus_normal",
+    "state": "disabled",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "ui_btn_minus_normal": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка минус — рамка",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "state": "normal"
+  },
+  "ui_btn_minus_hover": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка минус — рамка — hover",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_btn_minus_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_btn_minus_normal",
+    "state": "hover",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "ui_btn_minus_pressed": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка минус — рамка — pressed",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_btn_minus_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_btn_minus_normal",
+    "state": "pressed",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "ui_btn_minus_disabled": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Кнопка минус — рамка — disabled",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_btn_minus_normal material; state; no external assets.",
+    "mode": "state",
+    "base": "ui_btn_minus_normal",
+    "state": "disabled",
+    "slice": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "glyph_plus": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Плюс",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
+    "mode": "symbol",
+    "shape": "plus",
+    "base": "res_clay"
+  },
+  "glyph_minus": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Минус",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
+    "mode": "symbol",
+    "shape": "minus",
+    "base": "res_clay"
+  },
+  "glyph_fast": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Скорость 5×",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated glyph_play material; composite; no external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "glyph_play",
+        "box": [
+          2,
+          5,
+          20,
+          38
+        ],
+        "stretch": true,
+        "margin": 4
+      },
+      {
+        "name": "glyph_play",
+        "box": [
+          21,
+          5,
+          20,
+          38
+        ],
+        "stretch": true,
+        "margin": 4
+      }
+    ]
+  },
+  "glyph_faster": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "glyph",
+    "title": "Скорость 20×",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated glyph_play material; composite; no external assets.",
+    "mode": "composite",
+    "parts": [
+      {
+        "name": "glyph_play",
+        "box": [
+          2,
+          5,
+          14,
+          38
+        ],
+        "stretch": true,
+        "margin": 4
+      },
+      {
+        "name": "glyph_play",
+        "box": [
+          15,
+          5,
+          14,
+          38
+        ],
+        "stretch": true,
+        "margin": 4
+      },
+      {
+        "name": "glyph_play",
+        "box": [
+          28,
+          5,
+          14,
+          38
+        ],
+        "stretch": true,
+        "margin": 4
+      }
+    ]
+  },
+  "ui_panel_dark": {
+    "size": [
+      128,
+      128
+    ],
+    "group": "ui",
+    "title": "Тёмная панель",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ],
+    "fill": [
+      76,
+      56,
+      38
+    ]
+  },
+  "ui_header": {
+    "size": [
+      192,
+      40
+    ],
+    "group": "ui",
+    "title": "Заголовок панели",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      13,
+      16,
+      13
+    ],
+    "fill": [
+      235,
+      209,
+      153
+    ]
+  },
+  "ui_tooltip": {
+    "size": [
+      128,
+      96
+    ],
+    "group": "ui",
+    "title": "Подсказка",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      16,
+      16,
+      16
+    ],
+    "fill": [
+      250,
+      239,
+      211
+    ]
+  },
+  "ui_bar_bg": {
+    "size": [
+      128,
+      18
+    ],
+    "group": "ui",
+    "title": "Подложка полосы",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      6,
+      16,
+      6
+    ],
+    "fill": [
+      93,
+      76,
+      52
+    ]
+  },
+  "ui_bar_fill_green": {
+    "size": [
+      128,
+      18
+    ],
+    "group": "ui",
+    "title": "Прогресс / здоровье",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      6,
+      16,
+      6
+    ],
+    "fill": [
+      92,
+      140,
+      51
+    ]
+  },
+  "ui_bar_fill_amber": {
+    "size": [
+      128,
+      18
+    ],
+    "group": "ui",
+    "title": "Прогресс стройки",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      6,
+      16,
+      6
+    ],
+    "fill": [
+      240,
+      184,
+      90
+    ]
+  },
+  "ui_bar_fill_red": {
+    "size": [
+      128,
+      18
+    ],
+    "group": "ui",
+    "title": "Здоровье врага",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      16,
+      6,
+      16,
+      6
+    ],
+    "fill": [
+      192,
+      57,
+      43
+    ]
+  },
+  "ui_scroll_track": {
+    "size": [
+      16,
+      128
+    ],
+    "group": "ui",
+    "title": "Дорожка прокрутки",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      5,
+      16,
+      5,
+      16
+    ],
+    "fill": [
+      119,
+      96,
+      62
+    ]
+  },
+  "ui_scroll_grabber": {
+    "size": [
+      16,
+      48
+    ],
+    "group": "ui",
+    "title": "Ползунок прокрутки",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated ui_panel material; panel; no external assets.",
+    "mode": "panel",
+    "base": "ui_panel",
+    "slice": [
+      5,
+      16,
+      5,
+      16
+    ],
+    "fill": [
+      210,
+      165,
+      101
+    ]
+  },
+  "ui_separator_h": {
+    "size": [
+      128,
+      8
+    ],
+    "group": "ui",
+    "title": "Разделитель",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
+    "mode": "symbol",
+    "shape": "bar",
+    "base": "res_clay",
+    "slice": [
+      4,
+      2,
+      4,
+      2
+    ],
+    "fill": [
+      140,
+      97,
+      56
+    ]
+  },
+  "ui_dot_green": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Статус задачи — green",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
+    "mode": "symbol",
+    "shape": "dot",
+    "base": "res_clay",
+    "fill": [
+      92,
+      140,
+      51
+    ]
+  },
+  "ui_dot_yellow": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Статус задачи — yellow",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
+    "mode": "symbol",
+    "shape": "dot",
+    "base": "res_clay",
+    "fill": [
+      240,
+      184,
+      90
+    ]
+  },
+  "ui_dot_red": {
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Статус задачи — red",
+    "stage": 2,
+    "where": "HUD Clayfolk · общие элементы",
+    "prompt": "Offline derivative of generated res_clay material; symbol; no external assets.",
+    "mode": "symbol",
+    "shape": "dot",
+    "base": "res_clay",
+    "fill": [
+      192,
+      57,
+      43
+    ]
+  },
+  "ui_check": {
+    "stage": 2,
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Выполнено",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One bold green clay checkmark #5C8C33, a clean familiar tick shape, two chunky joined strokes, no disc or frame.",
+    "where": "HUD Clayfolk · ui"
+  },
+  "ui_star": {
+    "stage": 2,
+    "size": [
+      32,
+      32
+    ],
+    "group": "ui",
+    "title": "Победная задача",
+    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky five-pointed amber clay star #F0B85A, broad blunt points and a soft internal upper-left highlight. No backing disc or sparkles.",
+    "where": "HUD Clayfolk · ui"
+  },
+  "glyph_play_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Скорость 1× — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_play",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_play: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_settings_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Настройки — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_settings",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_settings: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_alarm_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Тревога — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_alarm",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_alarm: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_alarm_on_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Тревога включена — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_alarm_on",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_alarm_on: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_plus_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Плюс — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_plus",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_plus: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_minus_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Минус — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_minus",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_minus: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_fast_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Скорость 5× — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_fast",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_fast: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
+  },
+  "glyph_faster_light": {
+    "size": [
+      48,
+      48
+    ],
+    "group": "extra",
+    "title": "Скорость 20× — светлый",
+    "stage": 2,
+    "mode": "light",
+    "base": "glyph_faster",
+    "where": "Тёмные панели и красная кнопка тревоги",
+    "prompt": "Derived from glyph_faster: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette."
   }
 }

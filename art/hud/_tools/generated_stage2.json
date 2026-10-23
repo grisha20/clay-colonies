@@ -1,0 +1,73 @@
+{
+  "defs": {
+    "glyph_play": {
+      "stage": 2,
+      "size": [
+        48,
+        48
+      ],
+      "group": "glyph",
+      "title": "Скорость 1×",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One broad right-pointing triangular PLAY symbol, made of dark matte brown clay #4D331F with a small subtle upper-left warm highlight. Rounded handmade corners. No button frame.",
+      "where": "HUD Clayfolk · правая верхняя панель"
+    },
+    "glyph_settings": {
+      "stage": 2,
+      "size": [
+        48,
+        48
+      ],
+      "group": "glyph",
+      "title": "Настройки",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One chunky cogwheel carved from dark brown stone or clay. Six broad blunt teeth, one circular hole in the middle. Clear gear silhouette, no metal, no button frame.",
+      "where": "HUD Clayfolk · правая верхняя панель"
+    },
+    "glyph_alarm": {
+      "stage": 2,
+      "size": [
+        48,
+        48
+      ],
+      "group": "glyph",
+      "title": "Тревога",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One short thick curved primitive animal-horn trumpet, ochre brown, broad bell opening facing upper-right and short mouthpiece lower-left, bound at its middle with simple grass fibre. No sound waves, no hand, no frame.",
+      "where": "HUD Clayfolk · правая верхняя панель"
+    },
+    "glyph_alarm_on": {
+      "stage": 2,
+      "size": [
+        48,
+        48
+      ],
+      "group": "glyph",
+      "title": "Тревога включена",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One short thick curved primitive animal-horn trumpet, ochre brown, broad bell opening facing upper-right and mouthpiece lower-left, bound at its middle with grass fibre. Two thick short curved sound-wave arcs just beyond the bell. No glow or hand or frame.",
+      "where": "HUD Clayfolk · правая верхняя панель"
+    },
+    "ui_panel": {
+      "stage": 2,
+      "size": [
+        128,
+        128
+      ],
+      "group": "ui",
+      "title": "Пергаментная панель",
+      "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. One EMPTY square parchment UI panel. Front-facing, axis aligned, mildly rounded corners, constant-width brown clay border #8C6138 with exact crisp #4D331F contour. Large perfectly flat center #F2E3BD, no central texture, no ornaments, no lettering, no uneven silhouette. Suitable for 9-slice, light only within frame. Transparent outside corners.",
+      "where": "HUD Clayfolk · общие панели",
+      "mode": "panel",
+      "slice": [
+        16,
+        16,
+        16,
+        16
+      ]
+    }
+  },
+  "paths": {
+    "glyph_play": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-706ee758-9dcd-48c5-96f2-5bc5e66bcf8c.png",
+    "glyph_settings": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-68eacedb-42c8-457a-8bdb-884fe41b6d0c.png",
+    "glyph_alarm": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-24fe8ab4-84f1-4639-8fdc-5b1dc51ed1d6.png",
+    "glyph_alarm_on": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-1924b20c-93a0-491f-a532-5025d32d71eb.png",
+    "ui_panel": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-415922ee-4dfb-4e3d-8263-e9efa5743508.png"
+  }
+}

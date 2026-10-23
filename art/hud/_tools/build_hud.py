@@ -34,7 +34,43 @@ def build_one(name, spec, images):
     mode=spec.get('mode','icon')
     size=tuple(spec['size'])
     source_path=ROOT/'_source'/f'{name}.png'
-    if mode=='light':
+    if mode=='symbol':
+        k=4
+        large=(size[0]*k,size[1]*k)
+        mask=Image.new('L',large)
+        d=ImageDraw.Draw(mask)
+        shape=spec['shape']
+        w,h=large
+        pad=5*k
+        if shape=='dot':
+            d.ellipse((pad,pad,w-pad-1,h-pad-1),fill=255)
+        elif shape=='plus':
+            d.rounded_rectangle((w*.41,pad,w*.59,h-pad),radius=k,fill=255)
+            d.rounded_rectangle((pad,h*.41,w-pad,h*.59),radius=k,fill=255)
+        elif shape=='minus':
+            d.rounded_rectangle((pad,h*.41,w-pad,h*.59),radius=k,fill=255)
+        elif shape=='cross':
+            d.line((pad,pad,w-pad,h-pad),fill=255,width=5*k)
+            d.line((w-pad,pad,pad,h-pad),fill=255,width=5*k)
+        elif shape=='ban':
+            d.ellipse((pad,pad,w-pad-1,h-pad-1),outline=255,width=5*k)
+            d.line((pad+3*k,pad+3*k,w-pad-3*k,h-pad-3*k),fill=255,width=5*k)
+        elif shape=='bar':
+            d.rounded_rectangle((4*k,3*k,w-4*k-1,5*k-1),radius=k,fill=255)
+        else:
+            raise ValueError(shape)
+        source=Image.open(ROOT/'_source'/f"{spec['base']}.png")
+        # Use generated material as a subtle interior texture under the new mask.
+        texture=source.convert('RGB').resize(large,Image.Resampling.LANCZOS)
+        color=spec.get('fill',(139,90,43))
+        data=np.array(texture).astype(float)
+        light=np.clip(data.mean(axis=2)/110,.87,1.08)
+        data=np.clip(np.array(color)[None,None,:]*light[:,:,None],0,255).astype('uint8')
+        texture=Image.fromarray(data)
+        master=raster.paint_contour(texture,np.array(mask)>0,0,(.6 if shape=='bar' else 1.5)*k)
+        master.save(source_path)
+        result=raster.finish(master,size)
+    elif mode=='light':
         # Exactly matching silhouette: color changes only inside the existing ink.
         result=recolor(images[spec['base']],raster.PAPER)
         master=Image.open(ROOT/'_source'/f"{spec['base']}.png")
@@ -50,6 +86,12 @@ def build_one(name, spec, images):
             target=np.array((240,184,90) if state=='pressed' else (161,157,146))
             amount=.65 if state=='pressed' else .8
             data[interior,:3]=(data[interior,:3]*(1-amount)+target*amount).astype('uint8')
+            if state=='pressed':
+                yy=np.indices(interior.shape)[0]
+                top=interior&(yy>=3)&(yy<7)
+                bottom=interior&(yy>=size[1]-7)&(yy<size[1]-3)
+                data[top,:3]=(data[top,:3]*.70).astype('uint8')
+                data[bottom,:3]=np.clip(data[bottom,:3]*1.12,0,255).astype('uint8')
             result=Image.fromarray(data)
         result.resize((size[0]*4,size[1]*4),Image.Resampling.NEAREST).save(source_path)
     elif mode=='reuse':
@@ -61,11 +103,15 @@ def build_one(name, spec, images):
         for part in spec['parts']:
             base=Image.open(ROOT/'_source'/f"{part['name']}.png")
             x,y,w,h=part['box']
-            piece=raster.icon(base,(w*4,h*4),fill=tuple(part['fill']) if 'fill' in part else None)
+            if part.get('stretch'):
+                base=raster.texture_mask(base).resize((w*8,h*8),Image.Resampling.LANCZOS)
+            piece=raster.icon(base,(w*4,h*4),fill=tuple(part['fill']) if 'fill' in part else None,margin=part.get('margin'))
             master.alpha_composite(piece,(x*4,y*4))
         master.save(source_path)
         result=raster.finish(master,size)
     else:
+        if not source_path.is_file() and spec.get('base'):
+            Image.open(ROOT/'_source'/f"{spec['base']}.png").save(source_path)
         source=Image.open(source_path).convert('RGBA')
         source=clean_alpha(source)
         source.save(source_path)
@@ -85,6 +131,8 @@ def build_one(name, spec, images):
             result.putalpha(255)
         else:
             result=raster.icon(source,size)
+        if 'fill' in spec:
+            result=recolor(result,tuple(spec['fill']))
     result.save(ROOT/f'{name}.png')
     return result
 
