@@ -9,12 +9,15 @@ func run() -> void:
 	var args = OS.get_cmdline_user_args()
 	var port = ""
 	var label = "baseline"
+	var mix = "huts"
 	for i in range(args.size()):
 		if args[i] == "--qa-port" and i + 1 < args.size(): port = args[i + 1]
 		if args[i] == "--label" and i + 1 < args.size(): label = args[i + 1]
+		if args[i] == "--mix" and i + 1 < args.size(): mix = args[i + 1]
 	if not port.begins_with("88"):
 		push_error("Explicit isolated QA 88xx required"); quit(2); return
 	var path = "res://../tmp/qa/buildings_v2_measure_snapshot.json"
+	if mix!="huts":path="res://../tmp/qa/buildings_v2_"+mix+"_measure_snapshot.json"
 	var scene = load("res://scenes/game/world_observer.tscn").instantiate() as WorldObserver
 	root.add_child(scene)
 	scene.set_ui_scale(100, false)
@@ -27,9 +30,11 @@ func run() -> void:
 		snapshot = scene.world_view.last_snapshot.duplicate(true)
 		var camp = snapshot.surface.entrances[0]
 		snapshot.surface.buildings = []
+		var columns=8 if mix=="huts" else 6
 		for y in range(6):
-			for x in range(8):
-				snapshot.surface.buildings.append({"id":"bench-%d-%d" % [x,y], "type":"hut", "stage":"built", "colonyId":"colony-1", "hp":100,"pos":{"x":float(camp.x)+(x-3.5)*9,"y":float(camp.y)+(y-2.5)*6}})
+			for x in range(columns):
+				var type="hut" if mix=="huts" else ["hut","storage","workshop"][x%3]
+				snapshot.surface.buildings.append({"id":"bench-%d-%d" % [x,y], "type":type, "level":2 if mix!="huts" and type=="hut" else 1,"stage":"built", "colonyId":"colony-1", "hp":100,"pos":{"x":float(camp.x)+(x-(columns-1)*.5)*9,"y":float(camp.y)+(y-2.5)*6}})
 		var file = FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify(snapshot)); file.close()
 	else:
@@ -57,7 +62,7 @@ func run() -> void:
 	for d in deltas: average += d
 	average /= deltas.size()
 	deltas.sort()
-	print("BUILDINGS_PERF label=%s huts=48 resolution=%s avg_ms=%.3f p50_ms=%.3f p95_ms=%.3f frames=%d render=%s" % [label,root.size,average,deltas[deltas.size()/2],deltas[int(deltas.size()*.95)],deltas.size(),RenderingServer.get_current_rendering_method()])
+	print("BUILDINGS_PERF label=%s mix=%s buildings=%d resolution=%s avg_ms=%.3f p50_ms=%.3f p95_ms=%.3f frames=%d render=%s" % [label,mix,snapshot.surface.buildings.size(),root.size,average,deltas[deltas.size()/2],deltas[int(deltas.size()*.95)],deltas.size(),RenderingServer.get_current_rendering_method()])
 	scene.free()
 	await process_frame
 	quit()

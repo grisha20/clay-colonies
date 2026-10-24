@@ -1052,17 +1052,28 @@ func _update_buildings(buildings: Array) -> void:
 func _make_building(b_type: String, built: bool, vertical: bool, span: int, colony_idx: int = 0, level: int = 1) -> Node3D:
 	match b_type:
 		"hut":
-			# Stage-0 sample: keep clan houses on their accepted legacy model
-			# until their own art stage; missing v2 art falls back to the old hut.
+			# Authored building models; keep the original hut/decor as fallback.
 			var hut_path = "res://assets/models/hut.glb"
+			var clan_model = false
 			if level < 2 and ResourceLoader.exists("res://assets/models/buildings/hut_v2.glb"):
 				hut_path = "res://assets/models/buildings/hut_v2.glb"
+			elif level >= 2 and ResourceLoader.exists("res://assets/models/buildings/house_v2.glb"):
+				hut_path = "res://assets/models/buildings/house_v2.glb"
+				clan_model = true
 			var hut_scene = load(hut_path) as PackedScene
 			var root = Node3D.new()
 			var hut: Node3D = hut_scene.instantiate() if hut_scene else Node3D.new()
-			hut.scale = HUT_SCALE
-			hut.position = Vector3(0, 0, 0.5)
+			hut.scale = Vector3.ONE if clan_model else HUT_SCALE
+			hut.position = Vector3.ZERO if clan_model else Vector3(0, 0, 0.5)
 			root.add_child(hut)
+			if clan_model:
+				hut.name = "HouseDecor"
+				var accent = hut.find_child("TribeAccent", true, false) as MeshInstance3D
+				if accent:
+					var material = StandardMaterial3D.new()
+					material.albedo_color = POST_COLORS[clampi(colony_idx, 0, 1)]
+					material.roughness = 0.9
+					accent.material_override = material
 			# A warm glow at the doorway after dusk.
 			var door = OmniLight3D.new()
 			door.name = "DoorLight"
@@ -1074,7 +1085,7 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 			door.visible = false
 			root.add_child(door)
 			hut_lights.append(door)
-			if level >= 2:
+			if level >= 2 and not clan_model:
 				# House of the clan: a bigger home with a chimney, a tribe band and a mask.
 				hut.scale = HUT_SCALE * 1.18
 				var decor = MeshInstance3D.new()
@@ -1117,10 +1128,30 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 				root.add_child(post)
 			return root
 		"storage":
+			if ResourceLoader.exists("res://assets/models/buildings/storage_v2.glb"):
+				var storage_scene = load("res://assets/models/buildings/storage_v2.glb") as PackedScene
+				if storage_scene:
+					var model = storage_scene.instantiate()
+					var mesh = model.find_child("StorageV2", true, false) as MeshInstance3D
+					if mesh:
+						mesh.get_parent().remove_child(mesh)
+						model.free()
+						return mesh
+					return model
 			var s = MeshInstance3D.new()
 			s.mesh = PropFactory.storage()
 			return s
 		"workshop":
+			if ResourceLoader.exists("res://assets/models/buildings/workshop_v2.glb"):
+				var workshop_scene = load("res://assets/models/buildings/workshop_v2.glb") as PackedScene
+				if workshop_scene:
+					var model = workshop_scene.instantiate()
+					var mesh = model.find_child("WorkshopV2", true, false) as MeshInstance3D
+					if mesh:
+						mesh.get_parent().remove_child(mesh)
+						model.free()
+						return mesh
+					return model
 			var w = MeshInstance3D.new()
 			w.mesh = PropFactory.workshop()
 			return w

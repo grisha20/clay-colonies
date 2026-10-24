@@ -51,7 +51,7 @@ func run() -> void:
 	check("casts_shadows",audit.shadows)
 	check("door_light_preserved",hut.get_node_or_null("DoorLight")!=null and hut.get_node("DoorLight").position.z>0)
 	var house=view._make_building("hut",true,false,1,0,2)
-	check("clan_house_unchanged_until_stage1",house.find_child("HutV2",true,false)==null and house.get_node_or_null("HouseDecor")!=null)
+	check("clan_house_stage1_model",house.find_child("HouseV2",true,false)!=null and house.find_child("HutV2",true,false)==null)
 	root.add_child(hut)
 	view._hit_building("sample",hut)
 	check("hit_shake_and_dust_preserved",float(hut.get_meta("hit_until",0))>0 and hut.get_node_or_null("HitDust")!=null)

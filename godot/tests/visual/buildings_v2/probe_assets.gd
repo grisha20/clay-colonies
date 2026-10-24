@@ -31,6 +31,9 @@ func run() -> void:
 		var box = bounds(node)
 		print("ASSET ", type, " min=", box.position, " size=", box.size, " triangles=", triangles(node))
 		node.free()
+	var house=view._make_building("hut",true,false,1,0,2)
+	print("ASSET house min=",bounds(house).position," size=",bounds(house).size," triangles=",triangles(house))
+	house.free()
 	var old = load("res://assets/models/hut.glb").instantiate()
 	old.scale = WorldView.HUT_SCALE
 	old.position.z = 0.5
