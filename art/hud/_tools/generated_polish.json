@@ -1,0 +1,6 @@
+{
+  "bell": {
+    "prompt": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges.",
+    "generated_path": "C:\\Users\\Степан\\.codex\\generated_images\\01a16795-2d58-72b1-a8fa-b728fb18f3b8\\exec-051a7506-a834-4d02-9360-6b2a7bb2aace.png"
+  }
+}

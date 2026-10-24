@@ -161,6 +161,9 @@ def cfg(name,old):
     state=name.rsplit('_',1)[-1]
     if state in ('normal','hover','pressed','disabled','active'):s['state']=state
     if s.get('v2_shape'):s['prompt']='Derived from our generated HUD target; exact_v2.py '+s['v2_shape']+' recipe '+name+'. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.'
+    if old.get('polish_source'):
+        s.pop('v2_shape',None);s.pop('v2_ref',None)
+        s.update(size=old['size'],prompt=old['prompt'],v2_margin=old.get('v2_margin',8),polish_source=True)
     return s
 
 
@@ -227,6 +230,10 @@ def shaped(size,name,shape):
         dip[distance>=rim+2]=0
         rgb=np.where((distance<=rim)[:,:,None],rim_color,rgb*(1-dip[:,:,None]))
         rgb[distance<.85]=outer
+        if name.startswith('btn_square_'):
+            # Keep dimensions/slice/alpha; strengthen only the outside rim.
+            rgb[(distance>0)&(distance<1.8)]=(185,142,98)
+            rgb[(distance>=1.8)&(distance<2.5)]=(201,162,122)
     else:rgb[(distance>0)&(distance<edge)]=border
     if shape=='frame':
         # Light wooden rim; fully transparent map centre.

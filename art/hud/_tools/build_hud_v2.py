@@ -130,6 +130,9 @@ def main():
         if catalog[name].get('style_version')!=2:
             raise ValueError('Import all six v2 sources first')
         images[name]=build_one(name,catalog[name],images)
+    # Claude's ad8dd94 recipe is authoritative for acceleration silhouettes.
+    from make_speed_glyphs import main as rebuild_speed_glyphs
+    rebuild_speed_glyphs()
     images={n:Image.open(ROOT/f'{n}.png').convert('RGBA') for n in catalog}
     make_sheets(images,catalog,8)
     style_board(catalog)

@@ -1,0 +1,16 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS first_snapshot_silent 
+PASS new_line_spoken_once ["spider"]
+PASS typed_out 
+PASS danger_border 
+PASS no_where_without_place 
+PASS not_repeated ["spider", "x"]
+PASS gone_line_falls_back_to_first 1/2
+PASS paging 2/2
+PASS paging_wraps 1/2
+PASS where_sends_place 
+PASS finishes_talking 
+PASS silent_without_advice 
+PASS no_voice_file 
+MOTHER_SPEAKER_FAILURES=0

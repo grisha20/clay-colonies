@@ -1,0 +1,15 @@
+SCOPE: v1 stage all; 221 game assets; 703 PNG manifest rows.
+1. Inventory: PASS
+2. Dimensions / PNG RGBA / metadata: PASS
+3. Transparent corners: PASS
+4. No white matte / clean alpha (v2 cream AA allowed): PASS
+5. Margins >= 4 px (9-slice exempt): PASS
+6. 9-slice / cursor metadata: PASS
+7. State families: PASS
+8. Legacy v1 contour / boundary / light glyphs: PASS
+9. 9-slice centers / corners / transparent frames / bubble joins: PASS
+10. Revised sources <=1024 px / act-task scale: PASS
+11. V2 palette / soft shadows / no ink / sources <=1024 px: PASS
+Protected files: 49 SHA-256 comparisons.
+Claude ad8dd94 speed glyphs/recipe: SHA-256 audit.
+RESULT: PASS — 0 errors.

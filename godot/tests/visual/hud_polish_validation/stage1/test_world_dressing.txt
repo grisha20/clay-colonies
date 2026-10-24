@@ -1,0 +1,34 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS tree_mature_prop Resource_tree-a:<MeshInstance3D#38671484495>
+PASS tree_sapling_prop 
+PASS tree_has_mesh [P: (-2.017256, -0.025283, -1.860192), S: (4.052296, 3.867041, 3.595544)]
+PASS deposit_site_hidden 
+PASS deposit_drawn_half_full deposit:clay:2
+PASS empty_node_hidden 
+PASS bush_with_berries 
+PASS picked_bush_stays_bare 
+PASS respawning_fish_hidden 
+PASS fish_under_water_surface 
+PASS spider_prop 
+PASS tree_thins_in_place tree:mature:1:2
+PASS hut_present 
+PASS construction_ghosted 0.44999998807907
+PASS built_is_solid 
+PASS fence_rails rails=2
+PASS dead_fire_hidden 
+PASS live_fire_visible 
+PASS creature_glides x=300.481
+PASS creature_arrives 
+PASS trail_worn_by_walking value=89
+PASS standing_does_not_wear value=4
+PASS no_trail_in_water 
+PASS decor_populated instances=28386
+PASS decor_not_in_water in_water=0
+PASS decor_not_in_camp in_camp=0
+PASS rebuild_does_not_block ms=1.0
+PASS rebuild_settles instances=40538
+PASS terrain_switch_rebuilds_water 1
+PASS legacy_terrain_restored 
+PASS props_removed 
+WORLD_DRESSING_FAILURES=0

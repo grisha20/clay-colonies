@@ -1,0 +1,226 @@
+[
+  {
+    "script": "godot/tests/game/test_build_rules.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.36,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_dominance.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.55,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_game_hud.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.53,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_hud_tooltip.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.64,
+    "errors": [],
+    "engine_diagnostics": [
+      "ERROR: 4 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+      "ERROR: 4 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "WARNING: 1 RID of type \"CanvasItem\" was leaked.",
+      "WARNING: 24 ObjectDB instances were leaked at exit (run with `--verbose` for details).",
+      "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+    ]
+  },
+  {
+    "script": "godot/tests/game/test_kiln.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.55,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_minimap.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.91,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_mother.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.55,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_mother_speaker.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.36,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_observer_controls.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.92,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_priority_panel.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.62,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/game/test_territory.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.64,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/net/test_packet_decoder.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.17,
+    "errors": [],
+    "engine_diagnostics": [
+      "ERROR: Parse JSON failed. Error at line 0: Expected key"
+    ]
+  },
+  {
+    "script": "godot/tests/world/test_atmosphere.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.64,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_attack_feedback.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.44,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_camera_controls.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.45,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_entity_registry.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.36,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_gate_swing.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.45,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_hunting_view.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.55,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_network_interpolation.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 1.75,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_resident_asset.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.36,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_resident_work.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.36,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_surface_navigation.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.45,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_surface_terrain.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 0.28,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/world/test_world_dressing.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 2.39,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/integration/test_build_tools.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 2.3,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/integration/test_start_menu.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 1.94,
+    "errors": [],
+    "engine_diagnostics": []
+  },
+  {
+    "script": "godot/tests/visual/capture_pause_menu.gd",
+    "pass": true,
+    "exit": 0,
+    "seconds": 4.27,
+    "errors": [],
+    "engine_diagnostics": []
+  }
+]

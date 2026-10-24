@@ -1,0 +1,38 @@
+[
+  {
+    "path": "art/hud/glyph_fast.png",
+    "hash": "8BAC7F6FDBD68ABD9369F0D0242C7082CEBB4E5F1DF88DD75D891D603AA191CF"
+  },
+  {
+    "path": "art/hud/glyph_faster.png",
+    "hash": "EE2011B600E529A0B3FC75BA89A26199AA26F444C308C5F4D1167F5241EC58AB"
+  },
+  {
+    "path": "art/hud/glyph_fast_light.png",
+    "hash": "8746BE2EA312F0FEA3BA88539148658D8773AF862FB80C59BA428EEA21CBFC77"
+  },
+  {
+    "path": "art/hud/glyph_faster_light.png",
+    "hash": "7B79AB9C9C5AB9284F88B993A0017C4840E8DF87BA3891EEC3CF8098E38E6B22"
+  },
+  {
+    "path": "godot/assets/ui/glyph_fast.png",
+    "hash": "8BAC7F6FDBD68ABD9369F0D0242C7082CEBB4E5F1DF88DD75D891D603AA191CF"
+  },
+  {
+    "path": "godot/assets/ui/glyph_faster.png",
+    "hash": "EE2011B600E529A0B3FC75BA89A26199AA26F444C308C5F4D1167F5241EC58AB"
+  },
+  {
+    "path": "godot/assets/ui/glyph_fast_light.png",
+    "hash": "8746BE2EA312F0FEA3BA88539148658D8773AF862FB80C59BA428EEA21CBFC77"
+  },
+  {
+    "path": "godot/assets/ui/glyph_faster_light.png",
+    "hash": "7B79AB9C9C5AB9284F88B993A0017C4840E8DF87BA3891EEC3CF8098E38E6B22"
+  },
+  {
+    "path": "art/hud/_tools/make_speed_glyphs.py",
+    "hash": "D413A7FDDF7802CC5764467105127905622A504260989DBDAE4F17DBA1E851FE"
+  }
+]

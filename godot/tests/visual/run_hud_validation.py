@@ -7,11 +7,13 @@ ROOT=Path(__file__).resolve().parents[3]
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--qa-port',type=int,required=True)
+    parser.add_argument('--report-dir',default='godot/tests/visual/hud_validation')
     args=parser.parse_args()
     if not 8800<=args.qa_port<=8899:raise ValueError('Only isolated QA 88xx ports')
     exe=shutil.which('godot_console')
-    reports=ROOT/'godot/tests/visual/hud_validation'
-    reports.mkdir(exist_ok=True)
+    reports=(ROOT/args.report_dir).resolve()
+    if not reports.is_relative_to(ROOT/'godot/tests/visual'):raise ValueError('Reports must remain in visual tests')
+    reports.mkdir(parents=True,exist_ok=True)
     scripts=sorted(p for group in ('world','game','net') for p in (ROOT/'godot/tests'/group).glob('*.gd'))
     scripts += [ROOT/'godot/tests/integration'/n for n in ('test_build_tools.gd','test_start_menu.gd')]
     scripts += [ROOT/'godot/tests/visual/capture_pause_menu.gd']

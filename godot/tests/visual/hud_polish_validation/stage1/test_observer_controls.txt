@@ -1,0 +1,22 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+OBSERVER_CONTROLS PASS inspection never connects or sends a game command
+OBSERVER_CONTROLS PASS camp buttons use snapshot entrances
+OBSERVER_CONTROLS PASS wheel zoom is bounded and smooth
+OBSERVER_CONTROLS PASS keyboard pan moves and stays in map
+OBSERVER_CONTROLS PASS gear opens the settings menu
+OBSERVER_CONTROLS PASS typing address does not pan camera
+OBSERVER_CONTROLS PASS physics rays pick residents of both tribes
+OBSERVER_CONTROLS PASS viewport click selects and highlights resident
+OBSERVER_CONTROLS PASS HUD click does not clear world selection
+OBSERVER_CONTROLS PASS HUD consumes mouse wheel
+OBSERVER_CONTROLS PASS selection uses stable ID after snapshot reorder
+OBSERVER_CONTROLS PASS F follows selected resident
+OBSERVER_CONTROLS PASS manual pan releases follow without changing selection
+OBSERVER_CONTROLS PASS inspector refreshes occupation and displayed cargo
+OBSERVER_CONTROLS PASS despawn clears selection and stale inspector
+OBSERVER_CONTROLS PASS Escape clears selection and ring
+OBSERVER_CONTROLS PASS Escape with nothing open shows the pause menu
+OBSERVER_CONTROLS PASS Escape closes the pause menu
+OBSERVER_CONTROLS PASS reconnect clears selection
+OBSERVER_CONTROLS_FAILURES=0
