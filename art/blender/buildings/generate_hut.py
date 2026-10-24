@@ -32,7 +32,7 @@ def png(path, rgb):
 
 def atlas():
     # sRGB bytes, not bright linear base-color factors (the old roof was pale).
-    colors = [(214,100,37), (239,177,61), (224,154,44), (245,190,78),
+    colors = [(214,100,37), (220,147,61), (212,139,53), (227,155,67),
               (117,65,32), (57,27,15), (185,78,35), (159,70,31),
               (111,111,102), (149,142,120), (85,52,28), (67,38,22),
               (72,147,160), (183,76,44), (105,137,52), (244,202,113)]
@@ -47,7 +47,7 @@ def atlas():
             clay -= rng.uniform(.015,.07)*np.exp(-((x-cx)**2+(y-cy)**2)/(radius*radius))
         if i in (1,2,3,15):
             # Broad longitudinal straw fibres, already legible at a small mip.
-            texture = .052*np.sin(x*116+np.sin(y*19)*.8) + .022*np.sin(x*360+y*5) + noise
+            texture = .022*np.sin(x*116+np.sin(y*19)*3) + .014*np.sin(x*360+np.sin(y*31)*5) + noise*.7
         elif i in (4,10,11):
             texture = .07*np.sin(x*62+np.sin(y*9)*2) + .025*np.sin(x*172+y*4) + noise
         else:
@@ -92,21 +92,21 @@ def lathe(profile, segments, tile, origin=(0,0,0), axis=None):
 def walls():
     radius = 1.28
     gap = math.asin(.28/radius)
-    segments = 30
-    profile = [(1.26,0), (1.30,.12), (1.28,.77), (1.23,1.10)]
+    segments = 28
+    profile = [(1.26,0), (1.30,.12), (1.28,.95), (1.23,1.36)]
     vertices, uvs, faces = [], [], []
     for r,z in profile:
         for i in range(segments+1):
             angle = -math.pi/2 + gap + (TAU-2*gap)*i/segments
             vertices.append((r*math.cos(angle),r*math.sin(angle),z))
-            uvs.append((i/segments,z/1.10))
+            uvs.append((i/segments,z/1.36))
     for row in range(len(profile)-1):
         for i in range(segments):
             a=row*(segments+1)+i
             faces.append((a,a+1,a+segments+2,a+segments+1))
     part(vertices,faces,uvs,0)
     # Real gap through the outer wall, with a dark recessed interior behind it.
-    part([(-.28,-1.255,.93),(.28,-1.255,.93),(.28,-1.20,1.10),(-.28,-1.20,1.10)],[(0,1,2,3)],[(0,0),(1,0),(1,1),(0,1)],0)
+    part([(-.28,-1.255,.93),(.28,-1.255,.93),(.28,-1.20,1.36),(-.28,-1.20,1.36)],[(0,1,2,3)],[(0,0),(1,0),(1,1),(0,1)],0)
     part([(-.285,-1.29,0),(.285,-1.29,0),(.285,-.96,0),(-.285,-.96,0),
           (-.285,-1.29,.93),(.285,-1.29,.93),(.285,-.96,.93),(-.285,-.96,.93)],
          [(0,1,2,3),(0,3,7,4),(1,5,6,2),(3,2,6,7),(4,7,6,5)],
@@ -119,26 +119,37 @@ def walls():
 
 
 def thatch(count, profile, upper=False):
-    # Each closed bundle is a softened seven-sided wedge. Rounded outer ends
-    # produce the scalloped eave on the card, rather than a smooth cone.
-    cross = [(-1,-.01),(-.94,.025),(-.56,.075),(0,.09),(.56,.075),(.94,.025),(1,-.01)]
-    sides = len(cross)
-    for index in range(count):
-        angle = TAU*(index+.5*(1 if upper else 0))/count
-        vertices, uvs, faces = [], [], []
-        for k,(radius,z,width) in enumerate(profile):
-            wobble = .012*math.sin(index*2.37)
-            for transverse,height in cross:
-                a = angle + transverse * math.pi/count * .985 * width
-                vertices.append((radius*math.cos(a),radius*math.sin(a),z+height+wobble))
-                uvs.append(((transverse+1)/2,k/(len(profile)-1)))
-        for k in range(len(profile)-1):
-            for j in range(sides):
-                a=k*sides+j; b=k*sides+(j+1)%sides
-                faces.append((a,b,b+sides,a+sides))
-        faces.append(tuple(reversed(range(sides))))
-        faces.append(tuple(range((len(profile)-1)*sides,len(profile)*sides)))
-        part(vertices,faces,uvs,1+(index%3))
+    # Individual closed, narrow straw rolls. A five-sided rounded section is
+    # smooth shaded; the centreline bends down into a small rounded tip.
+    rng = np.random.default_rng(1837 if upper else 4871)
+    widths = rng.uniform(.80,1.20,count)
+    edges = np.r_[0,np.cumsum(widths/widths.sum()*TAU)]
+    phase = .037 if upper else 0
+    for strand in range(count):
+        vertices=[];uvs=[];faces=[]
+        center=phase+(edges[strand]+edges[strand+1])*.5
+        half_angle=(edges[strand+1]-edges[strand])*.51
+        length=1+rng.uniform(-.015,.015)
+        lump=rng.uniform(.9,1.15)
+        for row,(radius,z,width) in enumerate(profile):
+            t=row/(len(profile)-1)
+            angle=center+.009*math.sin(strand*2.71+t*4)*math.sin(t*math.pi)
+            r=radius*length
+            droop=(.015+.028*(.5+.5*math.sin(strand*2.33)))*t**3
+            ripple=.009*math.sin(strand*3.19+t*6)
+            cross=[(-1,-.02),(-.70,.045),(0,.085),(.70,.045),(1,-.02)]
+            for side,(across,depth) in enumerate(cross):
+                a=angle+across*half_angle*width
+                height=z+depth*width*lump+ripple-droop
+                vertices.append((r*math.cos(a),r*math.sin(a),height))
+                uvs.append((side/4,t))
+        for row in range(len(profile)-1):
+            for side in range(5):
+                a=row*5+side;b=row*5+(side+1)%5
+                faces.append((a,b,b+5,a+5))
+        faces += [(4,3,2,1,0),tuple(range((len(profile)-1)*5,len(profile)*5))]
+        tile=int(rng.choice([1,1,1,2,3]))
+        part(vertices,faces,uvs,tile)
 
 
 def main():
@@ -147,21 +158,23 @@ def main():
     bpy.context.preferences.filepaths.save_version = 0
     texture = atlas()
     walls()
-    thatch(30,[(.27,2.08,.6),(.90,1.78,1),(1.49,1.14,1),(1.54,1.09,.8)])
-    thatch(20,[(.22,2.18,.6),(.77,1.88,1),(.81,1.80,.8)],upper=True)
+    thatch(48,[(.22,2.46,.55),(.68,2.17,1),(1.32,1.50,1),(1.40,1.39,.65)])
+    thatch(24,[(.20,2.49,.55),(.66,2.29,1),(.80,2.17,.70)],upper=True)
     # A hidden inner skin keeps the seams dark straw instead of open sky.
-    vertices=[(0,0,2.18)]+[(1.51*math.cos(TAU*i/32),1.51*math.sin(TAU*i/32),1.10) for i in range(32)]
+    vertices=[(0,0,2.46)]+[(1.33*math.cos(TAU*i/32),1.33*math.sin(TAU*i/32),1.35) for i in range(32)]
     part(vertices,[(0,i+1,(i+1)%32+1) for i in range(32)],
          [(.5,.5)]+[(.5+.45*math.cos(TAU*i/32),.5+.45*math.sin(TAU*i/32)) for i in range(32)],2)
-    # Two soft terracotta discs at the top, echoing the card's clay cap.
-    lathe([(0,0),(.22,.015),(.29,.045),(.30,.10),(.25,.15),(0,.17)],16,6,(0,0,2.12))
-    lathe([(0,0),(.18,.015),(.245,.045),(.24,.11),(.19,.16),(0,.18)],16,6,(0,0,2.27))
+    # Two distinct rounded clay lobes, tapering upward like the card's finial.
+    lathe([(0,0),(.24,.01),(.30,.06),(.28,.13),(.20,.17),(0,.18)],14,6,(0,0,2.46))
+    lathe([(0,0),(.17,.01),(.23,.06),(.225,.13),(.16,.18),(0,.20)],14,6,(0,0,2.60))
 
     mesh=bpy.data.meshes.new('HutV2Mesh'); mesh.from_pydata(VERTS,[],FACES); mesh.update()
     uv=mesh.uv_layers.new(name='PaletteUV')
     for polygon in mesh.polygons:
         for loop in polygon.loop_indices:uv.data[loop].uv=UVS[mesh.loops[loop].vertex_index]
-    bm=bmesh.new();bm.from_mesh(mesh);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(mesh);bm.free()
+    bm=bmesh.new();bm.from_mesh(mesh)
+    bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=1e-6)
+    bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(mesh);bm.free()
     for polygon in mesh.polygons:polygon.use_smooth=True
     obj=bpy.data.objects.new('HutV2',mesh);bpy.context.collection.objects.link(obj)
     bpy.context.view_layer.objects.active=obj;obj.select_set(True)

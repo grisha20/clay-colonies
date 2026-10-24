@@ -3,7 +3,7 @@ extends SceneTree
 ## Actual QA building, unchanged game lighting and 52-degree camera. Only
 ## the close-up hides the HUD. No world fixtures, build/save/speed commands.
 var scene: WorldObserver
-var out := "res://tests/visual/buildings_v2"
+var out := "res://../docs/godot/screenshots/buildings_v2"
 
 func _initialize() -> void: call_deferred("run")
 
@@ -34,6 +34,8 @@ func run() -> void:
 	for i in range(args.size()):
 		if args[i]=="--qa-port" and i+1<args.size():port=args[i+1]
 	if not port.begins_with("88"): push_error("QA 88xx required");quit(2);return
+	out=ProjectSettings.globalize_path(out)
+	DirAccess.make_dir_recursive_absolute(out)
 	scene = load("res://scenes/game/world_observer.tscn").instantiate()
 	root.add_child(scene)
 	scene.set_ui_scale(100,false)
@@ -53,7 +55,7 @@ func run() -> void:
 	focus(scene.world_view.colony_focus_points[0],24)
 	await capture("hut_ingame")
 	scene.get_node("HUD").visible=false
-	focus(selected.position+Vector3(0,1.65,.5),8)
+	focus(selected.position+Vector3(0,2.45,.5),8.8)
 	await capture("hut_close")
 	scene.ws_client.disconnect_from_server()
 	scene.free();await process_frame;quit()

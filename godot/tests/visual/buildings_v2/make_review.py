@@ -5,7 +5,7 @@ import struct
 from PIL import Image,ImageDraw,ImageFont
 
 ROOT=Path(__file__).resolve().parents[4]
-HERE=Path(__file__).resolve().parent
+HERE=ROOT/'docs/godot/screenshots/buildings_v2'
 
 def font(size,bold=False):
     return ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf' if bold else 'C:/Windows/Fonts/arial.ttf',size)

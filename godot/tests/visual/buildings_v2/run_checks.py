@@ -25,7 +25,7 @@ def main():
         if graphical:command+=['--resolution','1920x1080']
         command+=['--script','res://'+path.relative_to(ROOT/'godot').as_posix()]
         if 'integration' in path.parts:command+=['--','--server-port',str(args.qa_port)]
-        if graphical:command+=['--','--qa-port',str(args.qa_port),'--out-dir','res://tests/visual/buildings_v2']
+        if graphical:command+=['--','--qa-port',str(args.qa_port),'--out-dir','res://../docs/godot/screenshots/buildings_v2']
         run=subprocess.run(command,cwd=ROOT,capture_output=True,encoding='utf-8',errors='replace',timeout=300)
         text=run.stdout+run.stderr
         (output/(path.stem+'.txt')).write_text(text,encoding='utf-8')
