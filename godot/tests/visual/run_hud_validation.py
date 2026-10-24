@@ -17,6 +17,8 @@ def main():
     scripts=sorted(p for group in ('world','game','net') for p in (ROOT/'godot/tests'/group).glob('*.gd'))
     scripts += [ROOT/'godot/tests/integration'/n for n in ('test_build_tools.gd','test_start_menu.gd')]
     scripts += [ROOT/'godot/tests/visual/capture_pause_menu.gd']
+    card_test=ROOT/'godot/tests/visual/test_resident_card.gd'
+    if card_test.is_file():scripts.append(card_test)
     summary=[]
     for path in scripts:
         graphical=path.name=='capture_pause_menu.gd'

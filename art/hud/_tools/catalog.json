@@ -2598,14 +2598,32 @@
   "glyph_follow": {
     "stage": 4,
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Следовать",
-    "prompt": "Use case: stylized-concept. Clayfolk game HUD icon: warm hand-painted matte hand-moulded clay, simple chunky shapes readable at 24px, sparse modelling marks. Exact crisp solid #4D331F brown contour; NO blurry brown halo, no cast shadow. Light from upper-left with internal lower-right shading. Earth palette: parchment #F2E3BD, brown #8C6138, terracotta #D66C34, straw #D9BA72, grass #5C8C33. Isolated complete centered subject on genuine transparent RGBA, generous 10% empty margin. No text, letters, numbers, watermarks, tile, ground, scenery, metal, neon, photo realism or pixelation. Two simple chunky primitive footprints viewed from above, diagonally staggered, made of warm brown clay. Each print has one broad sole and three little rounded toes merged near the sole. Compact follow/trail icon, no background tile.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_follow. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "where": "Карточка выбранного жителя — кнопки действий",
-    "source_max": 1024
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_follow"
   },
   "glyph_hand": {
     "stage": 4,
@@ -2634,53 +2652,97 @@
   "act_sleep": {
     "stage": 4,
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Спит",
-    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A relaxed rounded orange Clayfolk resident HEAD on the LOWER LEFT, front view, eyes firmly CLOSED as TWO clear dark curved eyelids, sleepy expression. Above and to the RIGHT is one LARGE warm parchment/ochre CRESCENT MOON, clearly separate from the head. Head diameter about 65% of combined icon width, moon about 45% of combined height. NO question mark, no Z or letters, no hat, no pillow.",
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A relaxed rounded orange Clayfolk resident HEAD on the LOWER LEFT, front view, eyes firmly CLOSED as TWO clear dark curved eyelids, sleepy expression. Above and to the RIGHT is one LARGE warm parchment/ochre CRESCENT MOON, clearly separate from the head. Head diameter about 65% of combined icon width, moon about 45% of combined height. NO question mark, no Z or letters, no hat, no pillow.",
     "where": "Карточка выбранного жителя — текущее занятие",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
     "tight_parts": true,
-    "mode": "icon"
+    "mode": "v2",
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_sleep",
+    "polish_source": true
   },
   "glyph_deselect": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Снять выбор",
     "stage": 4,
     "where": "Карточка выбранного жителя — кнопки действий",
-    "prompt": "Offline derivative of generated res_clay; symbol; no text or external assets.",
-    "mode": "symbol",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_deselect. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "shape": "cross",
-    "base": "res_clay",
-    "fill": [
-      139,
-      90,
-      43
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
     ],
-    "source_max": 1024
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_deselect"
   },
   "glyph_next_resident": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "glyph",
     "title": "Следующий житель",
     "stage": 4,
     "where": "Карточка выбранного жителя — кнопки действий",
-    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A large friendly Clayfolk resident HEAD on the LEFT, front view, tiny ears, two clearly OPEN dark round eyes and small simple smile, same character as the reference. Beside and slightly overlapping lower-right of the head is one short thick RIGHT-POINTING ARROW with a RECTANGULAR SHAFT and triangular arrowhead. Head about two thirds of total width, arrow about half total width. NOT an isolated triangle. Keep eyes and smile in solid dark-brown ink, no tiny detail.",
-    "mode": "icon",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_next_resident. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "source_max": 1024,
-    "ink_details": true
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_next_resident"
   },
   "glyph_gather": {
     "size": [
@@ -3106,432 +3168,479 @@
   },
   "act_idle": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Бездействует",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A friendly rounded orange Clayfolk resident HEAD on the LOWER LEFT, front view, eyes clearly OPEN as TWO LARGE dark circular dots; relaxed awake neutral expression. Above and to the RIGHT is one LARGE thick ochre QUESTION MARK pictogram, with a clearly separated dot, signifying idle/unsure. Only this one question-mark symbol is allowed, NO other writing. Head diameter about 65% of combined icon width, question mark about 45% of combined height, fully visible separate silhouette.",
-    "mode": "icon",
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: A friendly rounded orange Clayfolk resident HEAD on the LOWER LEFT, front view, eyes clearly OPEN as TWO LARGE dark circular dots; relaxed awake neutral expression. Above and to the RIGHT is one LARGE thick ochre QUESTION MARK pictogram, with a clearly separated dot, signifying idle/unsure. Only this one question-mark symbol is allowed, NO other writing. Head diameter about 65% of combined icon width, question mark about 45% of combined height, fully visible separate silhouette.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_idle",
+    "polish_source": true
   },
   "act_walk": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Идёт",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated glyph_follow; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "glyph_follow",
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated glyph_follow; reuse; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_walk",
+    "polish_source": true
   },
   "act_guard": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Охраняет",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated tool_spear; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "tool_spear",
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated tool_spear; reuse; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_guard",
+    "polish_source": true
   },
   "act_carry": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Несёт груз",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One small orange Clayfolk RESIDENT in three-quarter SIDE VIEW facing LEFT, oversized rounded clay head with two tiny dark eyes, simple plump orange clay torso and two short legs. A very LARGE obvious straw WOVEN BASKET is strapped to its BACK on the RIGHT, about as big as its torso, filled with just two chunky sticks protruding. Thick basket rim and a few broad woven bands; simple readable backpack silhouette. Resident carries basket ON BACK, not in hands. No hand-only icon, no ground.",
-    "mode": "icon",
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One small orange Clayfolk RESIDENT in three-quarter SIDE VIEW facing LEFT, oversized rounded clay head with two tiny dark eyes, simple plump orange clay torso and two short legs. A very LARGE obvious straw WOVEN BASKET is strapped to its BACK on the RIGHT, about as big as its torso, filled with just two chunky sticks protruding. Thick basket rim and a few broad woven bands; simple readable backpack silhouette. Resident carries basket ON BACK, not in hands. No hand-only icon, no ground.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_carry",
+    "polish_source": true
   },
   "act_chop": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Рубит",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "tool_axe",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_wood",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_chop",
+    "polish_source": true
   },
   "act_dig": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Копает",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "tool_pickaxe",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_clay",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_dig",
+    "polish_source": true
   },
   "act_mine": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Добывает камень",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "tool_pickaxe",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_stone",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_mine",
+    "polish_source": true
   },
   "act_build": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Строит",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "build_hut",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "tool_axe",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_build",
+    "polish_source": true
   },
   "act_fish": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Рыбачит",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "tool_rod",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_fish",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_fish",
+    "polish_source": true
   },
   "act_hunt": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Охотится",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "tool_spear",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_meat",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_hunt",
+    "polish_source": true
   },
   "act_eat": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Ест",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "res_people",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "res_berries",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_eat",
+    "polish_source": true
   },
   "act_flee": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Убегает",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One clearly RUNNING little orange Clayfolk RESIDENT in side view facing RIGHT: oversized round clay head, tiny ear and open eye, simple plump clay torso, two arms bent and two legs visibly stretched in opposite directions in a sprint. Three SHORT THICK horizontal ochre SPEED LINES behind the body on the LEFT, with clear air gaps. Compact running silhouette; focus on readable arms/legs and motion, no equipment or triangle, no question mark, no floor.",
-    "mode": "icon",
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Use case: stylized-concept. Asset type: replacement raster HUD icon for Clayfolk, final use 48x48 and 24x24 pixels. Input image is ONLY a style/character reference; draw the requested new subject, NOT the reference composition. Warm hand-painted matte hand-moulded clay, simple chunky shapes, very sparse modelling marks. Broad crisp solid dark-brown #4D331F contours including important interior details, no brown glow or external cast shadow. Soft upper-left light, shading confined inside objects. Palette terracotta #D66C34, ochre #C49A52, parchment #F2E3BD, dark ink #4D331F. Single compact complete centered icon occupying 85% of a square transparent canvas, about 7.5% clear margin, isolated on genuine transparent RGBA. Keep small-size readability, essential features exaggerated. No panel, grid, other icons, scenery, watermark, letters or words. Primary request: One clearly RUNNING little orange Clayfolk RESIDENT in side view facing RIGHT: oversized round clay head, tiny ear and open eye, simple plump clay torso, two arms bent and two legs visibly stretched in opposite directions in a sprint. Three SHORT THICK horizontal ochre SPEED LINES behind the body on the LEFT, with clear air gaps. Compact running silhouette; focus on readable arms/legs and motion, no equipment or triangle, no question mark, no floor.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_flee",
+    "polish_source": true
   },
   "act_wounded": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Ранен",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "mood_sad",
-        "box": [
-          0,
-          0,
-          45,
-          45
-        ]
-      },
-      {
-        "name": "ui_heart",
-        "box": [
-          16,
-          16,
-          32,
-          32
-        ],
-        "flip": false
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_wounded",
+    "polish_source": true
   },
   "act_fight": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "act",
     "title": "Сражается",
     "stage": 4,
     "where": "Карточка выбранного жителя — текущее занятие",
-    "prompt": "Offline derivative of generated HUD assets; composite; no text or external assets.",
-    "mode": "composite",
-    "parts": [
-      {
-        "name": "tool_spear",
-        "box": [
-          0,
-          0,
-          48,
-          48
-        ]
-      },
-      {
-        "name": "tool_spear",
-        "box": [
-          0,
-          0,
-          48,
-          48
-        ],
-        "flip": true
-      }
-    ],
+    "prompt": "Native generated activity; HUD v2 soft material without v1 ink; Native generated activity; HUD v2 soft material without v1 ink; Offline derivative of generated HUD assets; composite; no text or external assets.",
+    "mode": "v2",
     "source_max": 1024,
     "margin": 4,
     "outer": 0,
     "inner": 1,
-    "tight_parts": true
+    "tight_parts": true,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "act_fight",
+    "polish_source": true
   },
   "card_resident_panel": {
     "size": [
@@ -3562,30 +3671,63 @@
     "title": "Рамка портрета жителя",
     "stage": 4,
     "where": "Левая нижняя карточка выбранного жителя",
-    "prompt": "Offline derivative of generated ui_panel; frame; no text or external assets.",
-    "mode": "frame",
-    "base": "ui_panel",
+    "prompt": "Derived from our generated HUD target; exact_v2.py frame recipe card_resident_portrait_frame. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "mode": "v2",
     "slice": [
-      12,
-      12,
-      12,
-      12
+      24,
+      24,
+      24,
+      24
     ],
-    "source_max": 1024
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "frame",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "card_resident_portrait_frame",
+    "v2_shape": "frame",
+    "v2_center": "transparent"
   },
   "glyph_follow_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Следовать — светлый",
     "stage": 4,
-    "mode": "light",
-    "base": "glyph_follow",
+    "mode": "v2",
     "where": "Карточка выбранного жителя — кнопки действий · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_follow: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
-    "source_max": 1024
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_follow_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_follow_light"
   },
   "glyph_hand_light": {
     "size": [
@@ -3603,32 +3745,63 @@
   },
   "glyph_deselect_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Снять выбор — светлый",
     "stage": 4,
-    "mode": "light",
-    "base": "glyph_deselect",
+    "mode": "v2",
     "where": "Карточка выбранного жителя — кнопки действий · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_deselect: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
-    "source_max": 1024
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_deselect_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_deselect_light"
   },
   "glyph_next_resident_light": {
     "size": [
-      48,
-      48
+      96,
+      96
     ],
     "group": "extra",
     "title": "Следующий житель — светлый",
     "stage": 4,
-    "mode": "light",
-    "base": "glyph_next_resident",
+    "mode": "v2",
     "where": "Карточка выбранного жителя — кнопки действий · светлый вариант для тёмной / красной подложки",
-    "prompt": "Derived from glyph_next_resident: exact #F2E3BD fill, solid #4D331F contour, unchanged alpha silhouette.",
+    "prompt": "Derived from our generated HUD target; exact_v2.py glyph recipe glyph_next_resident_light. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
     "source_max": 1024,
-    "ink_details": true
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_shape": "glyph",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "glyph_next_resident_light"
   },
   "glyph_gather_light": {
     "size": [
@@ -5811,5 +5984,131 @@
       119
     ],
     "v2_recipe": "glyph_chevron_right_light"
+  },
+  "ui_bar_fill_blue": {
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "title": "Синяя полоса промокания",
+    "where": "HUD v2 · ui_bar_fill_blue",
+    "group": "ui",
+    "stage": 8,
+    "v2_kind": "bar",
+    "prompt": "Derived from our generated HUD target; exact_v2.py bar recipe ui_bar_fill_blue. Volumetric rim, clean stretchable centre, alpha shadow; no text except logo.",
+    "size": [
+      128,
+      18
+    ],
+    "v2_shape": "bar",
+    "slice": [
+      8,
+      5,
+      8,
+      5
+    ],
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "ui_bar_fill_blue"
+  },
+  "resident_clay_raw": {
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "title": "Сырой житель",
+    "where": "HUD v2 · resident_clay_raw",
+    "group": "resident",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from native res_clay; clay state icon",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "resident_clay_raw",
+    "size": [
+      96,
+      96
+    ],
+    "polish_source": true
+  },
+  "resident_clay_fired": {
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "title": "Обожжённый житель",
+    "where": "HUD v2 · resident_clay_fired",
+    "group": "resident",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from native res_clay; clay state icon",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "resident_clay_fired",
+    "size": [
+      96,
+      96
+    ],
+    "polish_source": true
+  },
+  "resident_clay_firing": {
+    "style_version": 2,
+    "v2_stage": 1,
+    "mode": "v2",
+    "source_max": 1024,
+    "v2_exact": true,
+    "v2_margin": 8,
+    "title": "Идёт на обжиг",
+    "where": "HUD v2 · resident_clay_firing",
+    "group": "resident",
+    "stage": 8,
+    "v2_kind": "sprite",
+    "prompt": "Derived from native icon_kiln; clay state icon",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "resident_clay_firing",
+    "size": [
+      96,
+      96
+    ],
+    "polish_source": true
   }
 }

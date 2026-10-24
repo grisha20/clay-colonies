@@ -1,0 +1,13 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS to_map 
+PASS to_world_clamped 
+PASS terrain_painted_in_background 
+PASS terrain_painted_once 
+PASS click_and_drag_focus [(120.0, 360.0), (240.0, 240.0)]
+PASS view_quad_kept 
+PASS minimap_bottom_right [P: (1698.0, 1692.0), S: (208.0, 208.0)]
+PASS mother_sits_on_minimap [P: (1746.0, 1542.0), S: (176.0, 166.0)] vs [P: (1698.0, 1692.0), S: (208.0, 208.0)]
+PASS works_panel_separate_top_right 
+PASS build_bar_bottom 
+MINIMAP_FAILURES=0

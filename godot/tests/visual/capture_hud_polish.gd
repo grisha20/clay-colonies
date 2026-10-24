@@ -43,6 +43,18 @@ func run() -> void:
 		scene.hud.alarm_button.icon=HudArt.tex("glyph_alarm_on")
 		scene.hud.alarm_button.button_pressed=true
 		await capture("polish_stage1_bell_on")
+	elif phase=="resident":
+		var selected: NetworkResident=scene.entity_registry.residents.values()[0]
+		scene.select_resident(selected)
+		await frames(30)
+		await capture("polish_stage2_resident")
+		# Presentation-only water example, disconnected from subsequent snapshots.
+		scene.ws_client.snapshot_received.disconnect(scene._on_snapshot_received)
+		scene.set_process(false)
+		var card=scene.insp_panel as ResidentCard
+		var fixture={"ants":[{"id":selected.ant_id,"energy":540,"waterExposure":48}],"surface":{}}
+		card.update_resident(selected,fixture,WorldObserver.resident_name(selected.ant_id),false)
+		await capture("polish_stage2_resident_wet_example")
 	scene.ws_client.disconnect_from_server()
 	scene.free()
 	await process_frame

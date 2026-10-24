@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== RUNNING M2 ENTITY REGISTRY TESTS ===
+  PASS: test_spawn_and_population_tracking
+  PASS: test_update_in_place_without_node_recreation
+  PASS: test_despawn_missing_entities
+  PASS: test_clean_reconnect_zero_duplicates
+=== ENTITY REGISTRY RESULTS: 4/4 PASSED ===
+ALL ENTITY REGISTRY TESTS PASSED!

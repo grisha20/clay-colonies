@@ -212,6 +212,7 @@ def shaped(size,name,shape):
         top=np.array((237,214,180),float);bottom=np.array((230,200,158),float)
         if 'amber' in name:top=np.array((255,195,61),float);bottom=np.array((245,149,25),float)
         elif 'green' in name:top=np.array((139,188,80),float);bottom=np.array((83,142,49),float)
+        elif 'blue' in name:top=np.array((116,198,233),float);bottom=np.array((54,139,197),float)
     yy=np.clip(np.arange(H)/(H-1),0,1)
     rgb=np.broadcast_to(top[None,None,:]*(1-yy[:,None,None])+bottom[None,None,:]*yy[:,None,None],(H,W,3)).copy()
     border=np.array((200,158,110) if not active else (220,131,28),float)
@@ -239,6 +240,9 @@ def shaped(size,name,shape):
         # Light wooden rim; fully transparent map centre.
         rgb[:]=np.array((183,133,79))
         rgb[(distance>1)&(distance<4)]=(240,199,138)
+        if name=='card_resident_portrait_frame':
+            rgb[:]=(198,160,117)
+            rgb[(distance>1)&(distance<5)]=(255,242,216)
         inside &= distance<7
     alpha=np.where(inside,255,0).astype('uint8')
     shadow=mask.filter(ImageFilter.GaussianBlur((1.4 if tiny else 2)*K))
@@ -278,6 +282,17 @@ def symbol(size,name):
         elif n=='minus':rr((7,20,41,28),ink,2)
         elif n.startswith('chevron'):
             line([(9,12),(16,20),(23,12)] if n.endswith('down') else [(12,9),(20,16),(12,23)],ink,4)
+        elif n=='follow':
+            d.ellipse((11*K,11*K,37*K,37*K),outline=ink,width=4*K)
+            d.ellipse((20*K,20*K,28*K,28*K),fill=ink)
+            for a,b in [((24,4),(24,14)),((24,34),(24,44)),((4,24),(14,24)),((34,24),(44,24))]:line([a,b],ink,4)
+        elif n=='deselect':
+            line([(11,11),(37,37)],ink,6);line([(37,11),(11,37)],ink,6)
+        elif n=='next_resident':
+            d.ellipse((8*K,8*K,27*K,28*K),fill=ink)
+            rr((6,28,29,39),ink,5)
+            line([(29,24),(42,24)],ink,4)
+            poly([(36,17),(44,24),(36,31)],ink)
         elif n=='settings':
             pts=[]
             for i in range(48):

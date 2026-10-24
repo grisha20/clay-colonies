@@ -253,35 +253,21 @@ func _setup_hud() -> void:
 
 	# Resident card at the bottom left above the build bar, as in 2D; shown
 	# only while a resident is selected.
-	insp_panel = PanelContainer.new()
-	insp_panel.mouse_force_pass_scroll_events = false
-	insp_panel.name = "ResidentInspector"
-	insp_panel.add_theme_stylebox_override("panel", GameHud.parchment())
-	insp_panel.theme = GameHud.ink_theme()
+	insp_panel = ResidentCard.new()
 	insp_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	insp_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	insp_panel.offset_left = 16
-	# Bottom left, beside the centred build bar.
-	insp_panel.offset_top = -220
-	insp_panel.offset_right = 376
+	insp_panel.offset_right = 440
+	insp_panel.offset_top = -16
 	insp_panel.offset_bottom = -16
 	canvas.add_child(insp_panel)
-	var inspector_box = VBoxContainer.new()
-	insp_panel.add_child(inspector_box)
-
-	inspector_label = Label.new()
-	inspector_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	inspector_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	inspector_box.add_child(inspector_label)
-	var inspector_actions = HBoxContainer.new()
-	inspector_box.add_child(inspector_actions)
-	follow_button = Button.new()
-	follow_button.text = "Следовать (F)"
+	var card = insp_panel as ResidentCard
+	inspector_label = card.inspector_label
+	follow_button = card.follow_button
+	clear_selection_button = card.clear_selection_button
 	follow_button.pressed.connect(_toggle_follow_selected)
-	inspector_actions.add_child(follow_button)
-	clear_selection_button = Button.new()
-	clear_selection_button.text = "Снять выбор (Esc)"
 	clear_selection_button.pressed.connect(func(): select_resident(null))
-	inspector_actions.add_child(clear_selection_button)
+	card.next_button.pressed.connect(_cycle_resident_focus)
 
 	hud = GameHud.new()
 	canvas.add_child(hud)
@@ -877,3 +863,4 @@ func _update_inspector() -> void:
 		resident_name(target.ant_id), rank, tribe, target.ant_id, clay_state,
 		tasks.get(target.job_name, target.job_name if not target.job_name.is_empty() else "нет"),
 		cargo, target.position.x, target.position.z]
+	(insp_panel as ResidentCard).update_resident(target, world_view.last_snapshot, resident_name(target.ant_id), world_view.focused_target == target)
