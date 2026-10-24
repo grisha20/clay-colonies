@@ -1052,7 +1052,12 @@ func _update_buildings(buildings: Array) -> void:
 func _make_building(b_type: String, built: bool, vertical: bool, span: int, colony_idx: int = 0, level: int = 1) -> Node3D:
 	match b_type:
 		"hut":
-			var hut_scene = load("res://assets/models/hut.glb") as PackedScene
+			# Stage-0 sample: keep clan houses on their accepted legacy model
+			# until their own art stage; missing v2 art falls back to the old hut.
+			var hut_path = "res://assets/models/hut.glb"
+			if level < 2 and ResourceLoader.exists("res://assets/models/buildings/hut_v2.glb"):
+				hut_path = "res://assets/models/buildings/hut_v2.glb"
+			var hut_scene = load(hut_path) as PackedScene
 			var root = Node3D.new()
 			var hut: Node3D = hut_scene.instantiate() if hut_scene else Node3D.new()
 			hut.scale = HUT_SCALE

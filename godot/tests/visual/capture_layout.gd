@@ -13,10 +13,12 @@ func frames(n: int) -> void:
 
 func run() -> void:
 	var port = ""
+	var output_override = ""
 	var args = OS.get_cmdline_user_args()
 	for i in range(args.size()):
 		if args[i] == "--qa-port" and i + 1 < args.size(): port = args[i + 1]
-	var out = ProjectSettings.globalize_path("res://../docs/godot/screenshots/hud_layout")
+		if args[i] == "--out-dir" and i + 1 < args.size(): output_override = args[i + 1]
+	var out = ProjectSettings.globalize_path(output_override if output_override != "" else "res://../docs/godot/screenshots/hud_layout")
 	DirAccess.make_dir_recursive_absolute(out)
 	scene = load("res://scenes/game/world_observer.tscn").instantiate()
 	root.add_child(scene)
