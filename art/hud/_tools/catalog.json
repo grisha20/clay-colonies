@@ -4568,60 +4568,93 @@
   },
   "minimap_camp_own": {
     "size": [
-      24,
-      24
+      48,
+      48
     ],
     "group": "minimap",
     "title": "Наш лагерь",
     "stage": 6,
     "where": "Правая нижняя миникарта",
-    "prompt": "Offline derivative of generated build_hut; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "build_hut",
-    "fill": [
-      92,
-      140,
-      51
+    "prompt": "Native v2 hut with gold own-camp flag; reduced 48px map symbol",
+    "mode": "v2",
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
     ],
-    "source_max": 1024
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "minimap_camp_own",
+    "polish_source": true
   },
   "minimap_camp_enemy": {
     "size": [
-      24,
-      24
+      48,
+      48
     ],
     "group": "minimap",
     "title": "Чужой лагерь",
     "stage": 6,
     "where": "Правая нижняя миникарта",
-    "prompt": "Offline derivative of generated build_hut; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "build_hut",
-    "fill": [
-      192,
-      57,
-      43
+    "prompt": "Native v2 hut with red other-camp flag; reduced 48px map symbol",
+    "mode": "v2",
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
     ],
-    "source_max": 1024
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "minimap_camp_enemy",
+    "polish_source": true
   },
   "minimap_enemy": {
     "size": [
-      24,
-      24
+      48,
+      48
     ],
     "group": "minimap",
     "title": "Враг",
     "stage": 6,
     "where": "Правая нижняя миникарта",
-    "prompt": "Offline derivative of generated alert_spider; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "alert_spider",
-    "fill": [
-      192,
-      57,
-      43
+    "prompt": "Native generated alert_spider; v2 map overlay, no v1 ink; 48px",
+    "mode": "v2",
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
     ],
-    "source_max": 1024
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "minimap_enemy",
+    "polish_source": true
   },
   "minimap_resident": {
     "size": [
@@ -4644,37 +4677,64 @@
   },
   "minimap_totem": {
     "size": [
-      24,
-      24
+      48,
+      48
     ],
     "group": "minimap",
     "title": "Тотем",
     "stage": 6,
     "where": "Правая нижняя миникарта",
-    "prompt": "Offline derivative of generated build_totem; reuse; no text or external assets.",
-    "mode": "reuse",
-    "base": "build_totem",
-    "source_max": 1024
+    "prompt": "Native generated build_totem; v2 map overlay, no v1 ink; 48px",
+    "mode": "v2",
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "minimap_totem",
+    "polish_source": true
   },
   "minimap_lake": {
     "size": [
-      24,
-      24
+      48,
+      48
     ],
     "group": "minimap",
     "title": "Озеро",
     "stage": 6,
     "where": "Правая нижняя миникарта",
-    "prompt": "Offline derivative of generated res_clay; symbol; no text or external assets.",
-    "mode": "symbol",
+    "prompt": "V2 water-pool overlay, turquoise volumetric basin and two broad cream wave highlights, 48px",
+    "mode": "v2",
     "shape": "dot",
-    "base": "res_clay",
-    "fill": [
-      63,
-      143,
-      208
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "sprite",
+    "v2_fill_top": [
+      255,
+      244,
+      224
     ],
-    "source_max": 1024
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "minimap_lake",
+    "polish_source": true
   },
   "menu_panel": {
     "size": [

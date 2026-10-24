@@ -1,0 +1,38 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS chop_tree { "kind": "chop", "target": (50.0, 0.0, 50.0), "target_id": "tree-1" }
+PASS sticks_by_hand 
+PASS mine_rock 
+PASS dig_quarry_targets_deposit { "kind": "dig", "target": (80.0, 0.0, 50.0), "target_id": "deposit-clay-a" }
+PASS too_far_is_not_work 
+PASS no_hits_yet_is_not_work 
+PASS empty_node_is_not_work 
+PASS carrying_is_not_work 
+PASS rain_stops_work 
+PASS alarm_stops_work 
+PASS build_site 
+PASS built_hut_is_not_work 
+PASS fishing 
+PASS tribes_differ_in_clay_and_cord 
+PASS work_clip_plays 
+PASS axe_in_hand 
+PASS faces_the_tree facing=(-1.0, 0.0, -0.000285)
+PASS chips_fly 
+PASS job_clip_chop work_chop
+PASS job_clip_mine work_mine
+PASS job_clip_build work_build
+PASS job_clip_dig work_dig
+PASS job_clip_gather work_gather
+PASS job_clip_fish work_fish
+PASS basket_on_back 
+PASS basket_behind_below_head (0.0, 0.7, -0.389999)
+PASS clay_dug_by_hand 
+PASS idle_after_work 
+PASS carries_wood 
+PASS carries_stone 
+PASS carries_clay 
+PASS carries_fish 
+PASS carries_meat 
+PASS carries_fruit 
+PASS carrying_never_works 
+RESIDENT_WORK_FAILURES=0

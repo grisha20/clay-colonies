@@ -42,6 +42,36 @@ def bell_sources(catalog,entry):
         data[data[:,:,3]==0]=0
         source_spec(catalog,name+'_light',Image.fromarray(data),entry['prompt']+' Ivory-bronze light material; keep volume and silhouette.')
 
+def map_sources(catalog):
+    names=[]
+    for name,color in [('minimap_camp_own',(247,183,49,255)),('minimap_camp_enemy',(220,64,43,255))]:
+        image=Image.new('RGBA',(384,384))
+        hut=clean_source(Image.open(ROOT/'_source/build_hut.png'))
+        hut=sprite(hut,(308,270),12)
+        image.alpha_composite(hut,(20,100))
+        d=ImageDraw.Draw(image)
+        d.line([(270,225),(270,42)],fill=(147,91,45,255),width=12)
+        d.polygon([(277,42),(353,62),(277,96)],fill=color)
+        d.line([(280,45),(346,63)],fill=(255,225,159,255),width=5)
+        source_spec(catalog,name,image,'Native v2 hut with '+('gold own-camp' if name.endswith('_own') else 'red other-camp')+' flag; reduced 48px map symbol',size=(48,48),margin=4)
+        names.append(name)
+    for name,base in [('minimap_enemy','alert_spider'),('minimap_totem','build_totem')]:
+        source=Image.open(ROOT/'_source'/f'{base}.png').convert('RGBA')
+        if catalog[base].get('style_version')!=2:source=soften_legacy(source)
+        source_spec(catalog,name,source,'Native generated '+base+'; v2 map overlay, no v1 ink; 48px',size=(48,48),margin=4)
+        names.append(name)
+    # Extend the existing water icon system with a small pool and broad waves.
+    image=Image.new('RGBA',(384,384));d=ImageDraw.Draw(image)
+    d.ellipse((26,82,358,304),fill=(35,113,153,255))
+    d.ellipse((33,82,351,288),fill=(65,159,196,255))
+    d.ellipse((48,88,334,263),fill=(99,194,219,255))
+    d.arc((81,107,278,188),15,165,fill=(225,246,235,255),width=12)
+    d.arc((108,172,307,243),15,165,fill=(209,240,234,255),width=12)
+    name='minimap_lake'
+    source_spec(catalog,name,image,'V2 water-pool overlay, turquoise volumetric basin and two broad cream wave highlights, 48px',size=(48,48),margin=4)
+    names.append(name)
+    return names
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--stage',type=int,choices=range(1,5),required=True)
@@ -89,8 +119,8 @@ def main():
         catalog[name]=s
         source=shaped((128,128),name,'rounded').resize((512,512),Image.Resampling.LANCZOS)
         clean_source(source).save(ROOT/'_source'/f'{name}.png',optimize=True);names.append(name)
-    else:
-        raise ValueError('Stage not implemented yet')
+    elif args.stage==4:
+        names=map_sources(catalog)
     CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     for name in names:build_one(name,catalog[name],{})
     images={n:Image.open(ROOT/f'{n}.png').convert('RGBA') for n in catalog}

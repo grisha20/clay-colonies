@@ -1,0 +1,21 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS own dominance countdown Мы держим 2 источника: победа через 900 с.
+PASS rival all-spring warning Соседи держат 3 источника: поражение через 600 с. Осадите их тотем!
+PASS finale scores Дождь: жители прячутся, стены размокают.
+Великий ливень! Счёт племён: A 54 — B 16. Сильнейший победит.
+PASS finale is announced Великий ливень — финал партии — через 100 с.
+PASS healthy totem stands straight 
+PASS damaged totem leans 0.15999999642372
+PASS hit throws dust 
+PASS tooltip shows strength Тотем рода племени A · прочность 75 / 150
+PASS house: own hut under cursor 
+PASS house: needs special clay 
+PASS house: rival hut refused 
+PASS house: nothing under cursor 
+PASS house: cost text 12 глина, 6 дерево, 8 особая глина
+PASS house tool listed 
+PASS plain hut has no house decor 
+PASS house of the clan gets its decor 
+PASS house tooltip Дом рода племени A · прочность 120 / 120
+DOMINANCE_FAILURES=0

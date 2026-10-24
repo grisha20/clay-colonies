@@ -1,0 +1,8 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS gate_has_leaves 
+PASS closed_when_alone 
+PASS stranger_does_not_open 0.0
+PASS owner_opens 1.70000004768372
+PASS closes_after_passing 0.0
+GATE_FAILURES=0

@@ -128,7 +128,11 @@ func _draw_map() -> void:
 	else:
 		canvas.draw_rect(r, GRASS)
 	var surface = snapshot.get("surface", {})
+	# Only the overlay uses HUD textures; the terrain worker never loads art.
+	var markers: Array = []
 	if typeof(surface) == TYPE_DICTIONARY:
+		for lake in SurfaceTerrain.get_lakes():
+			markers.append(["minimap_lake", to_map(lake.box.get_center()), 15.0])
 		for n in surface.get("resourceNodes", []):
 			if typeof(n) == TYPE_DICTIONARY and str(n.get("kind", "")) == "tree" and float(n.get("amount", 0)) > 0:
 				canvas.draw_circle(to_map(_p(n.get("pos"))), 1.2, Color(0.20, 0.40, 0.17))
@@ -140,6 +144,9 @@ func _draw_map() -> void:
 				continue
 			var col: Color = TRIBE.get(str(b.get("colonyId", "")), Color.WHITE)
 			var t = str(b.get("type", ""))
+			if t == "totem":
+				markers.append(["minimap_totem", to_map(_p(b.get("pos"))), 18.0])
+				continue
 			var s = 1.5 if t in ["wall", "gate"] else 3.0
 			canvas.draw_rect(Rect2(to_map(_p(b.get("pos"))) - Vector2(s, s) * 0.5, Vector2(s, s)), col.darkened(0.25))
 		for a in surface.get("animals", []):
@@ -150,13 +157,23 @@ func _draw_map() -> void:
 			canvas.draw_circle(to_map(_p(ant.get("pos"))), 1.3, TRIBE.get(str(ant.get("colonyId", "")), Color.WHITE))
 	for e in snapshot.get("enemies", []):
 		if typeof(e) == TYPE_DICTIONARY and float(e.get("hp", 1)) > 0:
-			canvas.draw_circle(to_map(_p(e.get("pos"))), 3.0, Color(0.85, 0.12, 0.10))
+			markers.append(["minimap_enemy", to_map(_p(e.get("pos"))), 17.0])
 	if typeof(surface) == TYPE_DICTIONARY:
 		var entrances = surface.get("entrances", [])
+		var session = snapshot.get("session", {})
+		var own = int(session.get("playerColonyIndex", 0)) if typeof(session) == TYPE_DICTIONARY else 0
 		for i in range(entrances.size()):
 			var c = to_map(_p(entrances[i]))
-			canvas.draw_circle(c, 5.0, Color(1.0, 0.82, 0.3))
-			canvas.draw_arc(c, 5.0, 0, TAU, 16, TRIBE.get("colony-%d" % (i + 1), Color.WHITE), 1.5)
+			markers.append(["minimap_camp_own" if i == own else "minimap_camp_enemy", c, 22.0])
+	for marker in markers:
+		var texture = HudArt.tex(marker[0])
+		var extent = Vector2.ONE * float(marker[2])
+		# Keep markers at the edge fully inside the map, including the flag.
+		var center: Vector2 = marker[1].clamp(extent * 0.5, canvas.size - extent * 0.5)
+		if texture:
+			canvas.draw_texture_rect(texture, Rect2(center - extent * 0.5, extent), false)
+		else:
+			canvas.draw_circle(center, 3.0, Color(0.85, 0.45, 0.15))
 	if view_quad.size() == 4:
 		var pts = PackedVector2Array()
 		for p in view_quad:

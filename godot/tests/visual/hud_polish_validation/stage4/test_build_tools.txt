@@ -1,0 +1,26 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS connected 
+PASS found_hut_spot 
+PASS refused_spot_reason Слишком близко к костру
+PASS refused_spot_sends_nothing 
+PASS valid_spot_green 
+PASS hut_site_appears 
+PASS tool_released_after_place 
+PASS site_at_cursor 
+PASS fence_cells_sent free=8 got=8
+PASS harvest_zone_painted expected +20
+PASS zone_overlay_drawn 
+PASS eraser_removes_zone 
+PASS r_rotates_gate 
+PASS gate_placed 
+PASS tab_key_switches_tab 
+PASS hotkey_selects_post 
+PASS defense_post_moved 
+PASS post_banner_drawn 
+PASS priority_reaches_server 
+PASS esc_cancels_tool 
+PASS hotkey_selects_workshop 
+PASS right_press_keeps_tool 
+PASS right_click_cancels 
+BUILD_TOOLS_FAILURES=0

@@ -69,6 +69,21 @@ func run() -> void:
 		await capture("polish_stage3_start")
 		scene.start_menu.saves_panel.visible=true
 		await capture("polish_stage3_saves")
+	elif phase=="map":
+		await capture("polish_stage4_minimap")
+		# Isolated presentation example: add an enemy and totem only to the map
+		# snapshot, never to the server or the world's entity registry.
+		scene.ws_client.snapshot_received.disconnect(scene._on_snapshot_received)
+		scene.set_process(false)
+		var terrain_before=scene.minimap.terrain_tex
+		var example=scene.minimap.snapshot.duplicate(true)
+		example["surface"]["buildings"].append({"type":"totem","pos":{"x":245,"y":250},"colonyId":"colony-1"})
+		example["enemies"].append({"hp":10,"pos":{"x":280,"y":140}})
+		scene.minimap.update_from_snapshot(example)
+		await capture("polish_stage4_minimap_markers_example")
+		if scene.minimap.terrain_tex!=terrain_before:
+			push_error("Overlay update unexpectedly rebuilt terrain");quit(3);return
+		print("PASS minimap marker overlay reuses terrain texture")
 	scene.ws_client.disconnect_from_server()
 	scene.free()
 	await process_frame

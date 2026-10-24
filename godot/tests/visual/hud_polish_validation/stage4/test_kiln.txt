@@ -1,0 +1,19 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS kiln_mesh 
+PASS kiln_footprint 
+PASS kiln_cost 10 глина, 6 камень
+PASS kiln_built_node 
+PASS kiln_cold_without_firing 
+PASS kiln_cold_while_resident_walks 
+PASS kiln_fire_while_firing 
+PASS kiln_tooltip Печь обжига племени A
+PASS firing_row_shown 
+PASS firing_row_text Обжиг · 1 из 2 · печь горит
+PASS firing_pause_request [true]
+PASS water_button_offered Обучить стражу водяной стрельбе (6 дерево, 4 камень)
+PASS water_request 
+PASS water_trained_shown Стража стреляет водой
+PASS fired_flag_reaches_resident 
+PASS fired_is_darker_and_glazed (0.7778, 0.6875, 0.6667, 1.0) vs (1.0, 1.0, 1.0, 1.0)
+KILN_FAILURES=0

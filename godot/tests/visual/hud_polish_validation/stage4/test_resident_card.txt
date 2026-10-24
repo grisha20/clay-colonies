@@ -1,0 +1,16 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS energy uses 900-point server scale
+PASS wetness uses real waterExposure ticks
+PASS displayed actor cargo amount
+PASS cargo occupation is readable
+PASS live resident_v3 portrait loaded
+PASS portrait uses selected tribe material
+PASS fired clay information
+PASS portrait updates fired material
+PASS waterDamage compatibility
+PASS empty cargo hidden, guard occupation shown
+PASS kiln summons status
+PASS missing data is not invented
+PASS hidden portrait stops rendering
+RESIDENT_CARD_FAILURES=0

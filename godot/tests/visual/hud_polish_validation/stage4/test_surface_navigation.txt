@@ -1,0 +1,14 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== RUNNING SURFACE NAVIGATION & SAFE TRAJECTORY TESTS ===
+  PASS: test_empty_map_direct_movement (no artificial audit_hut, direct chord preserved)
+  PASS: test_real_building_full_path_outside_foundations (0/120 samples inside hut)
+  PASS: test_mirrored_directions_and_multiple_positions (4/4 directions & locations clean)
+  PASS: test_wall_and_gate_semantics (wall blocks, friendly gate open, enemy gate closed, site open)
+  PASS: test_water_shoreline_detour (shoreline bypass on dry land)
+  PASS: test_extrapolation_and_stop_reconciliation (safe target clamp, delta=0.000000 >= 0.0)
+  PASS: test_sealed_enclosure_safe_route_failure (holds position, 0 wall penetration)
+  PASS: test_160ms_gap_smooth_pacing_and_walk_state (linear movement to target, clean IDLE transition, zero overshoot)
+  PASS: test_map_bounds_and_out_of_world_rejection (strict boundaries matching shared)
+=== SURFACE NAVIGATION RESULTS: 9/9 PASSED ===
+ALL SURFACE NAVIGATION TESTS PASSED!

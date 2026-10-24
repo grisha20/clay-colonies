@@ -1,0 +1,26 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS noon_is_light 
+PASS dusk_ramps 
+PASS night_is_dark 
+PASS dawn_ramps 
+PASS next_day_light 
+PASS day_sun_bright energy=1.35
+PASS no_rain_by_day 
+PASS hut_door_dark_by_day 
+PASS night_fades_in darkness=0.14
+PASS night_reached 
+PASS moonlight_dim_not_black energy=0.32
+PASS moonlight_is_blue 
+PASS hearth_wider_at_night range 12.0 -> 20.0
+PASS hut_door_glows_at_night 
+PASS rain_starts_gradually 
+PASS rain_falls 
+PASS ground_wet 
+PASS lake_rippled 
+PASS wind_stronger 
+PASS haze_in_rain 
+PASS rain_follows_camera 
+PASS rain_stops 
+PASS join_at_night_in_rain 
+ATMOSPHERE_FAILURES=0
