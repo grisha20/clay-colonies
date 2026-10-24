@@ -71,10 +71,10 @@ func _ready() -> void:
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
 
-	var logo = HudArt.tex("logo_clayfolk")
+	var logo = HudArt.tex("logo_hud")
 	if logo:
 		var pic = GameHud.icon_rect(logo, 0)
-		pic.custom_minimum_size = Vector2(320, 120)
+		pic.custom_minimum_size = Vector2(320, 90)
 		box.add_child(pic)
 	else:
 		var title = Label.new()
@@ -88,6 +88,7 @@ func _ready() -> void:
 	box.add_child(subtitle)
 
 	continue_button = _button(box, "Продолжить", func(): continue_requested.emit())
+	HudArt.menu_action(continue_button, true)
 	new_random_button = _button(box, "Новая игра — случайная карта", func(): _ask_new_game(0))
 	new_classic_button = _button(box, "Новая игра — классическая карта", func(): _ask_new_game(1))
 	load_button = _button(box, "Загрузить сохранение", func(): saves_panel.visible = not saves_panel.visible)
@@ -104,12 +105,14 @@ func _ready() -> void:
 	addr_label.text = "Сервер"
 	addr_row.add_child(addr_label)
 	address_edit = LineEdit.new()
+	HudArt.skin_field(address_edit)
 	address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	address_edit.text_submitted.connect(func(t): address_submitted.emit(t))
 	addr_row.add_child(address_edit)
 	status_label = Label.new()
 	status_label.text = "Подключаемся…"
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_font_size_override("font_size", 14)
 	box.add_child(status_label)
 
 	saves_panel = PanelContainer.new()
@@ -123,9 +126,17 @@ func _ready() -> void:
 	var saves_title = Label.new()
 	saves_title.text = "Сохранения"
 	saves_title.add_theme_font_size_override("font_size", 22)
+	GameHud.bold(saves_title)
 	saves_outer.add_child(saves_title)
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(330, 440)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	saves_outer.add_child(scroll)
 	saves_box = VBoxContainer.new()
-	saves_outer.add_child(saves_box)
+	saves_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	saves_box.add_theme_constant_override("separation", 10)
+	scroll.add_child(saves_box)
 	_refresh_buttons()
 	_rebuild_saves()
 
@@ -133,7 +144,9 @@ func _ready() -> void:
 func _button(parent: Control, text: String, action: Callable) -> Button:
 	var b = Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 40)
+	b.custom_minimum_size = Vector2(0, 48)
+	b.add_theme_font_size_override("font_size", 18)
+	HudArt.menu_action(b, false)
 	b.pressed.connect(action)
 	parent.add_child(b)
 	return b
@@ -144,11 +157,19 @@ func _ask_new_game(kind: int) -> void:
 	if pending_new_game == kind:
 		pending_new_game = -1
 		confirm_label.visible = false
+		_refresh_highlights()
 		new_game_requested.emit(kind == 1)
 		return
 	pending_new_game = kind
 	confirm_label.text = "Нажмите ещё раз, чтобы начать новую партию. Текущая будет сохранена в «Сохранения»."
 	confirm_label.visible = true
+	_refresh_highlights()
+
+
+func _refresh_highlights() -> void:
+	HudArt.menu_action(continue_button, pending_new_game == -1)
+	HudArt.menu_action(new_random_button, pending_new_game == 0)
+	HudArt.menu_action(new_classic_button, pending_new_game == 1)
 
 
 func set_connected(value: bool, text: String) -> void:
@@ -181,7 +202,7 @@ func _rebuild_saves() -> void:
 		c.queue_free()
 	if saves.is_empty():
 		var empty = Label.new()
-		empty.text = "Пока нет сохранений. Кнопка «Сохранить» есть на верхней панели."
+		empty.text = "Пока нет сохранений. Откройте ⚙ → Игра → Сохранить."
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		saves_box.add_child(empty)
 		return
@@ -190,11 +211,37 @@ func _rebuild_saves() -> void:
 			continue
 		# savedAt is UTC milliseconds; show the player's local time.
 		var local_unix = int(float(meta.get("savedAt", 0)) / 1000.0) + int(Time.get_time_zone_from_system().get("bias", 0)) * 60
-		var when = Time.get_datetime_string_from_unix_time(local_unix, true)
+		var when = Time.get_datetime_string_from_unix_time(local_unix, true).substr(0, 16)
 		var pop: Array = meta.get("population", [])
 		var map_name = "классическая карта" if int(meta.get("mapSeed", 0)) == 0 else "карта #%d" % int(meta.get("mapSeed", 0))
-		var text = "%s\nшаг %d · %s · жителей %s · %s" % [str(meta.get("name", "")), int(meta.get("tick", 0)), map_name, " / ".join(pop.map(func(v): return str(int(v)))), when]
 		var id = str(meta.get("id", ""))
-		var b = _button(saves_box, text, func(): load_requested.emit(id))
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 52)
+		var b = _button(saves_box, "", func(): load_requested.emit(id))
+		b.custom_minimum_size = Vector2(0, 110)
+		b.tooltip_text = map_name
+		for state in ["normal", "hover", "pressed"]:
+			b.add_theme_stylebox_override(state, HudArt.box("card_build_pressed" if state == "pressed" else "card_build_normal", [14, 10, 14, 10]))
+		# Labels ignore mouse input, so the entire save card still loads its slot.
+		var margin = MarginContainer.new()
+		margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		for side in ["left", "right"]: margin.add_theme_constant_override("margin_" + side, 16)
+		for side in ["top", "bottom"]: margin.add_theme_constant_override("margin_" + side, 12)
+		margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(margin)
+		var details = VBoxContainer.new()
+		details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		margin.add_child(details)
+		var title = Label.new()
+		title.text = str(meta.get("name", "Сохранение"))
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		title.add_theme_font_size_override("font_size", 18)
+		GameHud.bold(title)
+		details.add_child(title)
+		var date = Label.new()
+		date.text = when
+		date.add_theme_font_size_override("font_size", 14)
+		details.add_child(date)
+		var info = Label.new()
+		info.text = "День %d · Жители %s" % [int(int(meta.get("tick", 0)) / GameHud.DAY_TICKS) + 1, " / ".join(pop.map(func(v): return str(int(v))))]
+		info.add_theme_font_size_override("font_size", 15)
+		details.add_child(info)
+		for label in details.get_children(): label.mouse_filter = Control.MOUSE_FILTER_IGNORE

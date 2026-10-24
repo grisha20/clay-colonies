@@ -1,0 +1,14 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS counts_like_2d { "clay": 1, "wood": 1, "stone": 1, "build": 1, "guard": 1, "fish": 0, "hunt": 0, "food": 2 }
+PASS free_hands 0
+PASS header Жители 7 · Свободно 0
+PASS reason_food_for_gathering ["Для добычи нужно 8 жителей", "Не хватает удочек"]
+PASS reason_rods_for_fishing ["Для добычи нужно 8 жителей", "Не хватает удочек"]
+PASS plus_blocked_without_free_hands 
+PASS minus_emits_next [{ "clay": 1, "wood": 1, "stone": 1, "build": 1, "guard": 0, "fish": 1, "hunt": 0 }]
+PASS unmet_alarm 
+PASS unmet_pick 
+PASS met_no_reason 
+PASS resident_names Кривой Глинко
+PRIORITY_PANEL_FAILURES=0

@@ -83,6 +83,12 @@ def main():
             if brightness!=1:
                 a=np.array(image);a[:,:,:3]=np.rint(a[:,:,:3]*brightness).astype('uint8');image=Image.fromarray(a)
             source_spec(catalog,name,image,'Derived from native '+base+'; clay state icon',size=(96,96));names.append(name)
+    elif args.stage==3:
+        name='menu_panel';s=cfg(name,catalog[name])
+        s.update(size=[128,128],slice=[24,24,24,24],v2_kind='panel',v2_shape='rounded')
+        catalog[name]=s
+        source=shaped((128,128),name,'rounded').resize((512,512),Image.Resampling.LANCZOS)
+        clean_source(source).save(ROOT/'_source'/f'{name}.png',optimize=True);names.append(name)
     else:
         raise ValueError('Stage not implemented yet')
     CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

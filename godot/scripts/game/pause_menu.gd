@@ -36,21 +36,23 @@ func _ready() -> void:
 	var box = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
-	var logo = HudArt.tex("logo_clayfolk")
+	var logo = HudArt.tex("logo_hud")
 	if logo:
 		var pic = GameHud.icon_rect(logo, 0)
-		pic.custom_minimum_size = Vector2(240, 90)
+		pic.custom_minimum_size = Vector2(280, 80)
 		box.add_child(pic)
 	var title = Label.new()
 	title.text = "Пауза"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 20)
+	GameHud.bold(title)
 	box.add_child(title)
 	for spec in [["continue", "Продолжить", continue_requested], ["save", "Сохранить", save_requested], ["load", "Загрузить", load_requested], ["menu", "Выйти в главное меню", main_menu_requested], ["quit", "Выйти из игры", quit_requested]]:
 		var b = Button.new()
 		b.name = "Pause_" + spec[0]
 		b.text = spec[1]
-		b.custom_minimum_size = Vector2(0, 44)
+		b.custom_minimum_size = Vector2(0, 48)
+		HudArt.menu_action(b, spec[0] == "continue")
 		b.add_theme_font_size_override("font_size", 18)
 		b.focus_mode = Control.FOCUS_NONE
 		var sig: Signal = spec[2]

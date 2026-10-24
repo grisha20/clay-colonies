@@ -152,25 +152,47 @@ func _setup_hud() -> void:
 	top_panel.mouse_force_pass_scroll_events = false
 	top_panel.name = "ObserverPanel"
 	top_panel.theme = GameHud.ink_theme()
-	top_panel.add_theme_stylebox_override("panel", GameHud.parchment())
+	top_panel.add_theme_stylebox_override("panel", GameHud.parchment([22, 18, 22, 18], "menu_panel"))
 	top_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	top_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	top_panel.offset_right = -16
-	top_panel.offset_top = 66
-	top_panel.custom_minimum_size = Vector2(0, 0)
+	top_panel.offset_top = 90
+	top_panel.custom_minimum_size = Vector2(430, 0)
 	top_panel.visible = false
 	settings_panel = top_panel
 
 	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
 	top_panel.add_child(vbox)
+	var settings_title = Label.new()
+	settings_title.text = "Настройки"
+	settings_title.add_theme_font_size_override("font_size", 24)
+	GameHud.bold(settings_title)
+	vbox.add_child(settings_title)
+	var sections = {}
+	for section_name in ["Игра", "Интерфейс", "Камера", "Сервер", "Управление"]:
+		vbox.add_child(HSeparator.new())
+		var section = VBoxContainer.new()
+		section.add_theme_constant_override("separation", 6)
+		vbox.add_child(section)
+		var heading = Label.new()
+		heading.text = section_name
+		heading.add_theme_font_size_override("font_size", 17)
+		GameHud.bold(heading)
+		section.add_child(heading)
+		sections[section_name] = section
+	var game_row = HBoxContainer.new()
+	sections["Игра"].add_child(game_row)
 
 	# Row 1: Connection & URL
 	var row_conn = HBoxContainer.new()
-	vbox.add_child(row_conn)
+	sections["Сервер"].add_child(row_conn)
 
 	server_line_edit = LineEdit.new()
 	server_line_edit.text = ws_client.server_url
-	server_line_edit.custom_minimum_size = Vector2(170, 30)
+	server_line_edit.custom_minimum_size = Vector2(230, 40)
+	server_line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	HudArt.skin_field(server_line_edit)
 	row_conn.add_child(server_line_edit)
 
 	connect_button = Button.new()
@@ -181,12 +203,13 @@ func _setup_hud() -> void:
 	status_label = Label.new()
 	status_label.text = "Нет соединения"
 	status_label.clip_text = true
-	status_label.custom_minimum_size = Vector2(150, 0)
-	row_conn.add_child(status_label)
+	status_label.custom_minimum_size = Vector2(150, 24)
+	status_label.add_theme_font_size_override("font_size", 14)
+	sections["Сервер"].add_child(status_label)
 
 	# Row 2: Telemetry
 	var row_telemetry = HBoxContainer.new()
-	vbox.add_child(row_telemetry)
+	sections["Сервер"].add_child(row_telemetry)
 	# Tick/speed/population now live in the player HUD; keep the labels for
 	# diagnostics and tests but out of the way.
 	row_telemetry.visible = false
@@ -208,8 +231,11 @@ func _setup_hud() -> void:
 	row_telemetry.add_child(pop_label)
 
 	# Row 3: Navigation buttons
-	var row_nav = HBoxContainer.new()
-	vbox.add_child(row_nav)
+	var row_nav = GridContainer.new()
+	row_nav.columns = 2
+	row_nav.add_theme_constant_override("h_separation", 8)
+	row_nav.add_theme_constant_override("v_separation", 6)
+	sections["Камера"].add_child(row_nav)
 
 	var btn_c1 = Button.new()
 	btn_c1.text = "Лагерь A"
@@ -230,13 +256,18 @@ func _setup_hud() -> void:
 	btn_lake_s.text = "Южное озеро"
 	btn_lake_s.pressed.connect(func(): world_view.focus_on_lake("south"))
 	row_nav.add_child(btn_lake_s)
+	for navigation_button in row_nav.get_children():
+		navigation_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		navigation_button.custom_minimum_size.y = 36
 
 	var btn_cycle = Button.new()
 	btn_cycle.text = "Следующий житель"
 	btn_cycle.pressed.connect(_cycle_resident_focus)
 	# Second row keeps the panel narrow enough to sit beside the resource bar.
 	var row_nav2 = HBoxContainer.new()
-	vbox.add_child(row_nav2)
+	sections["Камера"].add_child(row_nav2)
+	btn_cycle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_cycle.custom_minimum_size.y = 36
 	row_nav2.add_child(btn_cycle)
 
 	var btn_save = Button.new()
@@ -244,12 +275,15 @@ func _setup_hud() -> void:
 	btn_save.pressed.connect(func():
 		ws_client.send_command({"type": "saveGame"})
 		status_label.text = "Сохранено")
-	row_nav2.add_child(btn_save)
+	game_row.add_child(btn_save)
+	btn_save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_save.custom_minimum_size.y = 40
 
 	var btn_menu = Button.new()
-	btn_menu.text = "Меню"
+	btn_menu.text = "Выйти в меню"
 	btn_menu.pressed.connect(open_start_menu)
-	row_nav2.add_child(btn_menu)
+	game_row.add_child(btn_menu)
+	btn_menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	# Resident card at the bottom left above the build bar, as in 2D; shown
 	# only while a resident is selected.
@@ -369,26 +403,23 @@ func _setup_hud() -> void:
 	start_menu.address_submitted.connect(_on_menu_address)
 	var help_label = Label.new()
 	help_label.name = "ControlsHelp"
-	help_label.text = "WASD, зажатое колесо — камера · зажатая ПКМ — поворот\nколесо — масштаб · Home — север вверх · ЛКМ — выбрать\n1–6 — карточка вкладки, Tab — следующая вкладка · Esc/ПКМ — отмена"
+	help_label.text = "WASD / зажатое колесо — камера\nЗажатая ПКМ — поворот · колесо — масштаб\nHome — север вверх · ЛКМ — выбрать\n1–6 — постройка · Tab — вкладка\nF — следовать · Esc / ПКМ — отмена"
 	help_label.add_theme_font_size_override("font_size", 14)
-	vbox.add_child(HSeparator.new())
-	vbox.add_child(help_label)
+	sections["Управление"].add_child(help_label)
 	# Interface size: on big screens the HUD grows with the window; this shrinks it.
 	var scale_row = HBoxContainer.new()
 	scale_row.add_theme_constant_override("separation", 4)
-	var scale_label = Label.new()
-	scale_label.text = "Интерфейс"
-	scale_row.add_child(scale_label)
 	for pct in UI_SCALES:
 		var sb = Button.new()
 		sb.text = "%d%%" % pct
 		sb.toggle_mode = true
 		sb.focus_mode = Control.FOCUS_NONE
-		sb.custom_minimum_size = Vector2(54, 0)
+		sb.custom_minimum_size = Vector2(70, 36)
+		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sb.pressed.connect(func(): set_ui_scale(pct))
 		scale_row.add_child(sb)
 		ui_scale_buttons[pct] = sb
-	vbox.add_child(scale_row)
+	sections["Интерфейс"].add_child(scale_row)
 	set_ui_scale(_load_ui_scale(), false)
 	_update_inspector()
 

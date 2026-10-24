@@ -1,0 +1,11 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS tiny_wiggle_does_not_turn 
+PASS plain_right_click_not_swallowed 
+PASS right_drag_turns 1.6
+PASS turn_applies_to_pivot 
+PASS turn_marks_release 
+PASS middle_drag_pans_against_cursor (0.0, 0.0, 1.119019)
+PASS no_pan_after_release 
+PASS home_resets_north 
+CAMERA_FAILURES=0

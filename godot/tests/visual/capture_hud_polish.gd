@@ -55,6 +55,20 @@ func run() -> void:
 		var fixture={"ants":[{"id":selected.ant_id,"energy":540,"waterExposure":48}],"surface":{}}
 		card.update_resident(selected,fixture,WorldObserver.resident_name(selected.ant_id),false)
 		await capture("polish_stage2_resident_wet_example")
+	elif phase=="menus":
+		scene.settings_panel.visible=true
+		await capture("polish_stage3_settings")
+		scene.set_ui_scale(115,false)
+		await capture("polish_stage3_settings_115")
+		scene.set_ui_scale(100,false)
+		scene.settings_panel.visible=false
+		scene.open_pause_menu()
+		await capture("polish_stage3_pause")
+		scene.close_pause_menu()
+		scene.open_start_menu()
+		await capture("polish_stage3_start")
+		scene.start_menu.saves_panel.visible=true
+		await capture("polish_stage3_saves")
 	scene.ws_client.disconnect_from_server()
 	scene.free()
 	await process_frame

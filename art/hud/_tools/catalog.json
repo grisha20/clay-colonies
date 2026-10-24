@@ -4678,23 +4678,39 @@
   },
   "menu_panel": {
     "size": [
-      512,
-      640
+      128,
+      128
     ],
     "group": "menu",
     "title": "Панель меню",
     "stage": 6,
     "where": "Стартовое меню",
     "prompt": "Offline derivative of generated ui_panel; panel; no text or external assets.",
-    "mode": "panel",
-    "base": "ui_panel",
+    "mode": "v2",
     "slice": [
       24,
       24,
       24,
       24
     ],
-    "source_max": 1024
+    "source_max": 1024,
+    "style_version": 2,
+    "v2_stage": 1,
+    "v2_exact": true,
+    "v2_margin": 4,
+    "v2_kind": "panel",
+    "v2_fill_top": [
+      255,
+      244,
+      224
+    ],
+    "v2_border": [
+      207,
+      168,
+      119
+    ],
+    "v2_recipe": "menu_panel",
+    "v2_shape": "rounded"
   },
   "cursor_hover": {
     "stage": 7,

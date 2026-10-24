@@ -74,6 +74,29 @@ static func ink_button_text(b: Button, ink: Color) -> void:
 	b.add_theme_color_override("font_disabled_color", Color(ink, 0.45))
 
 
+## A menu's primary/pending action uses the same orange as the HUD selection.
+static func menu_action(b: Button, highlighted: bool) -> void:
+	skin_button(b, "ui_button_wide", [18, 10, 18, 10])
+	if highlighted:
+		b.add_theme_stylebox_override("normal", box("ui_button_wide_pressed", [18, 10, 18, 10]))
+		b.add_theme_stylebox_override("hover", box("ui_button_wide_pressed", [18, 10, 18, 10]))
+	ink_button_text(b, GameHud.INK)
+
+
+## Parchment address field; keyboard editing/focus behavior stays native.
+static func skin_field(field: LineEdit) -> void:
+	field.add_theme_stylebox_override("normal", box("ui_button_wide_normal", [14, 8, 14, 8]))
+	var focus = StyleBoxFlat.new()
+	focus.bg_color = Color.TRANSPARENT
+	focus.border_color = Color("df8d38")
+	focus.set_border_width_all(2)
+	focus.set_corner_radius_all(10)
+	field.add_theme_stylebox_override("focus", focus)
+	field.add_theme_color_override("font_color", GameHud.INK)
+	field.add_theme_color_override("caret_color", GameHud.INK)
+	field.add_theme_color_override("selection_color", Color("ebbe83"))
+
+
 ## Square icon button: painted frame plus a glyph. Keeps the text as the
 ## fallback when the glyph is missing.
 static func glyph_button(b: Button, glyph: String, size: int = 30) -> void:

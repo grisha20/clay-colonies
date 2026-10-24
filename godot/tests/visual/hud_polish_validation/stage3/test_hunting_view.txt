@@ -1,0 +1,21 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS deer_drawn 
+PASS hare_drawn 
+PASS animal_tooltip Олень · дичь: охотники с копьями приносят мясо
+PASS dead_game_hidden 
+PASS hunt_work_when_in_range { "kind": "hunt", "target": (200.0, 0.0, 200.0), "target_id": "deer-1" }
+PASS no_throw_while_stalking 
+PASS hunter_is_bigger (1.15, 1.15, 1.15)
+PASS spear_while_stalking 
+PASS throw_clip work_chop
+PASS forager_normal_size_no_spear 
+PASS forager_no_gear 
+PASS warrior_bigger_with_spear 
+PASS warrior_headband_and_pauldron 
+PASS hunter_headband_only 
+PASS hunt_row_with_spears ["Глина: просим 0, заняты 0", "Дерево: просим 0, заняты 0 · топоры: 0", "Камень: просим 0, заняты 0 · кирки: 0", "Стройка: просим 0, заняты 0", "Стража: просим 0, заняты 0", "Рыбалка: просим 0, заняты 0 · удочки: 0", "Охота: просим 2, заняты 1 · копья: 1\nНе хватает копий: их делает мастерская", "    Не хватает копий: их делает мастерская", "Глина", "0", "Дерево", "0", "Камень", "0", "Стройка", "0", "Стража", "0", "Рыбалка", "0", "Охота", "2"]
+PASS warrior_button_needs_special_clay Воинов: 0 · Нужно 4 особой глины
+PASS warrior_button_ready Посвятить воина (4 особой глины, копьё) · воинов: 0
+PASS warrior_request 
+HUNT_VIEW_FAILURES=0
