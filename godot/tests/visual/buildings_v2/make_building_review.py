@@ -25,7 +25,8 @@ def main():
         raw=(ROOT/'godot/assets/models/buildings'/(name+'_v2.glb')).read_bytes();length=struct.unpack_from('<I',raw,12)[0];gltf=json.loads(raw[20:20+length])
         triangles=sum(gltf['accessors'][p['indices']]['count']//3 for mesh in gltf['meshes'] for p in mesh['primitives'])
         d.text((28,990),f'Игровая камера 52° · свет QA-мира · {triangles} треугольников',font=font(25),fill='#4D331F')
-        d.text((28,1030),'Солома — округлые бугристые пучки, без древесных волокон',font=font(23),fill='#775436')
+        caption={'1':'Солома — округлые бугристые пучки, без древесных волокон','2':'Новая неподвижная модель · огонь и угли управляются прежней логикой','3':'Объёмная глиняная резьба · цвет племени задаётся отдельно'}[args.stage]
+        d.text((28,1030),caption,font=font(23),fill='#775436')
         board.save(OUT/(name+'_compare.png'),optimize=True)
         mini=board.resize((996,560),Image.Resampling.LANCZOS)
         # Full comparison sheets remain separate at 1920x1080; this index is

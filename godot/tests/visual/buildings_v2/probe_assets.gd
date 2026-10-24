@@ -39,5 +39,8 @@ func run() -> void:
 	old.position.z = 0.5
 	print("LEGACY_HUT ", bounds(old), " triangles=", triangles(old))
 	old.free()
+	var camp=load("res://assets/models/campfire.glb").instantiate()
+	print("LEGACY_CAMPFIRE ",bounds(camp)," triangles=",triangles(camp))
+	camp.free()
 	view.free()
 	quit()

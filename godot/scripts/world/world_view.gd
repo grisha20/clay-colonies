@@ -847,7 +847,8 @@ func _update_campfires(entrances: Array) -> void:
 		seen_campfires[i] = true
 		var e_pos = Vector3(float(ent.get("x", 0.0)), 0.0, float(ent.get("y", 0.0)))
 		if not active_campfires.has(i):
-			var camp_scene = load("res://assets/models/campfire.glb") as PackedScene
+			var camp_path = "res://assets/models/buildings/campfire_v2.glb" if ResourceLoader.exists("res://assets/models/buildings/campfire_v2.glb") else "res://assets/models/campfire.glb"
+			var camp_scene = load(camp_path) as PackedScene
 			var camp_node: Node3D = camp_scene.instantiate() if camp_scene else Node3D.new()
 			camp_node.name = "Campfire_Colony_%d" % (i + 1)
 			camp_node.position = _ground(e_pos)
@@ -1162,6 +1163,15 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 		"kiln":
 			var oven = MeshInstance3D.new()
 			oven.mesh = PropFactory.kiln()
+			if ResourceLoader.exists("res://assets/models/buildings/kiln_v2.glb"):
+				var kiln_scene = load("res://assets/models/buildings/kiln_v2.glb") as PackedScene
+				if kiln_scene:
+					var model = kiln_scene.instantiate()
+					var mesh = model.find_child("KilnV2", true, false) as MeshInstance3D
+					if mesh:
+						oven.mesh = mesh.mesh
+						oven.name = "KilnV2"
+					model.free()
 			if built:
 				var glow = MeshInstance3D.new()
 				glow.name = "Glow"

@@ -41,6 +41,13 @@ func run() -> void:
 	center.y=SurfaceTerrain.height_at(center.x,center.z)
 	for type in groups[stage]:
 		var model=view._make_building("hut" if type=="house" else type,true,false,1,0,2 if type=="house" else 1)
+		if type=="campfire":
+			model.free()
+			model=view.active_campfires[0].duplicate()
+			for child in model.get_children():
+				if child.name not in ["CampfireV2","Flame","FireLight"]:child.free()
+		if type=="kiln":
+			model.get_node("Glow").visible=true;model.get_node("KilnLight").visible=true
 		view.add_child(model);model.position=center
 		var box=Audit.bounds(model)
 		view.focused_target=null;view.camera_navigated=true
@@ -48,10 +55,16 @@ func run() -> void:
 		view.camera_yaw=deg_to_rad(25);view.camera_angle_deg=52
 		view.camera.rotation_degrees.x=-52
 		view.target_camera_distance=maxf(7.5,box.size.x*1.35);view.camera_distance=view.target_camera_distance
+		if type=="campfire":view.target_camera_distance=2.8;view.camera_distance=2.8
 		await frames(40);await RenderingServer.frame_post_draw
 		var path=output.path_join(type+"_close.png")
 		var error=root.get_texture().get_image().save_png(path)
 		if error!=OK:push_error("Capture failed");quit(3);return
 		print("BUILDING_CAPTURE ",path)
+		if type in ["kiln","campfire"]:
+			model.get_node("Glow" if type=="kiln" else "Flame").visible=false
+			model.get_node("KilnLight" if type=="kiln" else "FireLight").visible=false
+			await frames(10);await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png(output.path_join(type+"_cold.png"))
 		model.free()
 	scene.ws_client.disconnect_from_server();scene.free();await process_frame;quit()

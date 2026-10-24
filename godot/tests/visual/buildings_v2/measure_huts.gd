@@ -10,10 +10,12 @@ func run() -> void:
 	var port = ""
 	var label = "baseline"
 	var mix = "huts"
+	var legacy_stage2=false
 	for i in range(args.size()):
 		if args[i] == "--qa-port" and i + 1 < args.size(): port = args[i + 1]
 		if args[i] == "--label" and i + 1 < args.size(): label = args[i + 1]
 		if args[i] == "--mix" and i + 1 < args.size(): mix = args[i + 1]
+		if args[i] == "--legacy-stage2":legacy_stage2=true
 	if not port.begins_with("88"):
 		push_error("Explicit isolated QA 88xx required"); quit(2); return
 	var path = "res://../tmp/qa/buildings_v2_measure_snapshot.json"
@@ -33,7 +35,8 @@ func run() -> void:
 		var columns=8 if mix=="huts" else 6
 		for y in range(6):
 			for x in range(columns):
-				var type="hut" if mix=="huts" else ["hut","storage","workshop"][x%3]
+				var types={"stage1":["hut","storage","workshop"],"stage2":["kiln","storage","hut"],"stage3":["idol","totem","hut"]}
+				var type="hut" if mix=="huts" else types[mix][x%3]
 				snapshot.surface.buildings.append({"id":"bench-%d-%d" % [x,y], "type":type, "level":2 if mix!="huts" and type=="hut" else 1,"stage":"built", "colonyId":"colony-1", "hp":100,"pos":{"x":float(camp.x)+(x-(columns-1)*.5)*9,"y":float(camp.y)+(y-2.5)*6}})
 		var file = FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify(snapshot)); file.close()
@@ -42,6 +45,14 @@ func run() -> void:
 	scene.ws_client.snapshot_received.disconnect(scene._on_snapshot_received)
 	scene.ws_client.disconnect_from_server()
 	scene._on_snapshot_received(snapshot)
+	if legacy_stage2:
+		# Matched control on the same fixture, without changing production files.
+		for b in snapshot.surface.buildings:
+			if b.type=="kiln":(scene.world_view.active_buildings[b.id] as MeshInstance3D).mesh=PropFactory.kiln()
+		for camp in scene.world_view.active_campfires.values():
+			var authored=camp.get_node_or_null("CampfireV2")
+			if authored:authored.free()
+			camp.add_child(load("res://assets/models/campfire.glb").instantiate())
 	scene.close_start_menu()
 	scene.world_view.focus_on_colony(0)
 	scene.world_view.target_camera_distance = 52
