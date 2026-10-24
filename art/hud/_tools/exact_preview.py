@@ -12,7 +12,7 @@ def overview(catalog):
     sheet=Image.new('RGBA',(cols*cw,190+math.ceil(len(names)/cols)*ch),'#EEE7D9')
     d=ImageDraw.Draw(sheet)
     d.text((22,15),'CLAYFOLK · HUD v2 · полный набор для сравнения с макетом',font=font(28,True),fill='#5A3A22')
-    d.text((22,57),f'{len(V2_REQUIRED)} обязательных файлов + {len(names)-len(V2_REQUIRED)} светлых глифов · исходники ≤1024 px',font=font(20),fill='#75543B')
+    d.text((22,57),f'{len(V2_REQUIRED)} обязательных файлов + {len(names)-len(V2_REQUIRED)} дополнительных элементов · исходники ≤1024 px',font=font(20),fill='#75543B')
     logo=Image.open(ROOT/'logo_hud.png').convert('RGBA');logo.thumbnail((330,85),Image.Resampling.LANCZOS)
     sheet.alpha_composite(logo,(26,92))
     for j,n in enumerate(['btn_square_normal','btn_square_pressed','card_build_pressed','res_clay','res_food','res_wood','job_build','build_hut','build_house','build_idol']):

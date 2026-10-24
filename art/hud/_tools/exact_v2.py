@@ -124,7 +124,8 @@ def cfg(name,old):
     if name.startswith(('time_','weather_')):s['size']=[128,128]
     if name.startswith('btn_square_'):s.update(size=[96,96],v2_kind='button',v2_shape='bevel',slice=[20,20,20,20])
     elif name.startswith('card_build_'):s.update(size=[128,144],v2_kind='card',v2_shape='rounded',slice=[22,22,22,22])
-    elif name in ('ui_panel','ui_panel_dark','ui_list_bg'):s.update(size=[128,128],v2_kind='panel',v2_shape='rounded',slice=[24,24,24,24])
+    elif name in ('ui_panel','ui_panel_dark','ui_list_bg','menu_panel'):s.update(size=[128,128],v2_kind='panel',v2_shape='rounded',slice=[24,24,24,24])
+    elif name=='card_resident_portrait_frame':s.update(size=[112,112],v2_kind='frame',v2_shape='frame',slice=[24,24,24,24],v2_center='transparent')
     elif name=='ui_tooltip':s.update(size=[128,96],v2_kind='panel',v2_shape='rounded',slice=[24,24,24,24])
     elif name.startswith('ui_button_wide_'):s.update(size=[192,48],v2_kind='button',v2_shape='rounded',slice=[16,16,16,16])
     elif name.startswith(('ui_btn_plus_','ui_btn_minus_')):s.update(size=[32,32],v2_kind='button',v2_shape='rounded',slice=[10,10,10,10])

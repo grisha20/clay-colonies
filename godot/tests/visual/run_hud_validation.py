@@ -40,7 +40,6 @@ def main():
                 expected=(path.stem=='test_packet_decoder' and diagnostic.startswith('ERROR: Parse JSON failed.')) or (path.stem=='test_hud_tooltip' and any(t in diagnostic for t in ('leaked','resources still in use')))
                 if diagnostic.startswith('ERROR:') and not expected:errors.append(diagnostic)
             passed=run.returncode==0 and not errors
-            passed=run.returncode==0 and not errors
             code=run.returncode
         except subprocess.TimeoutExpired as e:
             output='TIMEOUT 300 seconds\n'+str(e.stdout);passed=False;code=124;errors=['TIMEOUT'];diagnostics=[]

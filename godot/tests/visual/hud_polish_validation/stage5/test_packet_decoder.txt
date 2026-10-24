@@ -1,0 +1,21 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== RUNNING PRODUCTION M2 PACKET DECODER TESTS ===
+  PASS: test_valid_v21_snapshot
+  PASS: test_asymmetric_version_rejections (both 21/999 and 999/21 rejected)
+  PASS: test_version_type_validations (non-numeric types strictly rejected)
+  PASS: test_fractional_and_nonfinite_versions (fractional 21.9/21.5/100.5 rejected)
+  PASS: test_mandatory_fields_validation (missing tick, negative tick, missing colonies/ants caught)
+  PASS: test_surface_and_session_dictionary_types (surface=[], session=[], bad speed caught)
+  PASS: test_ant_schema_validation (invalid ant structures caught)
+  PASS: test_ant_coordinates_and_duplicates (infinite coords and duplicate IDs caught)
+  PASS: test_malformed_json_and_syntax
+  PASS: test_client_error_state_persistence (ERROR state persists without overwrite)
+=== PACKET DECODER RESULTS: 10/10 PASSED ===
+ALL PACKET DECODER TESTS PASSED!
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: parse_string (core/io/json.cpp:629)
+   GDScript backtrace (most recent call first):
+       [0] decode_and_validate_packet (res://scripts/net/ws_client.gd:138)
+       [1] test_malformed_json_and_syntax (res://tests/net/test_packet_decoder.gd:292)
+       [2] _init (res://tests/net/test_packet_decoder.gd:51)

@@ -1,0 +1,20 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== RUNNING M2 NETWORK INTERPOLATION TESTS ===
+  PASS: test_model_faces_direction_of_movement (+Z forward, dot > 0.95 in all 4 directions)
+  PASS: test_pause_and_stall_preserves_exact_bone_pose (zero bone jump, clip frozen in place)
+  PASS: test_real_packet_timing_at_5x_speed_no_jerks (continuous motion across 100ms window)
+  PASS: test_high_speed_stride_policy_and_bounds (capped at 8.0x, accurate translation at 50x)
+  PASS: test_dynamic_teleport_threshold (dynamic threshold distinguishes fast walk from jump)
+  PASS: test_render_timeline_series_smoothness_and_jitter (±5% steady tolerance, no packet pulse, clean stop)
+  PASS: test_cargo_retention_across_process_frames (numeric carrying preserved across frames for both colonies)
+  PASS: test_unload_timing_matches_displayed_history (cargo stays visible during transit, unloads at destination)
+  PASS: test_server_tick_units_and_gap_speeds (tick gaps 1..20 and speeds 1..50x have strictly consistent time units)
+  PASS: test_recovery_and_speed_change_timeline_rebase (gap20 recovery peak <= 1.35, 50x->1x peak <= 67.5, clean stop)
+  PASS: test_buffered_snapshot_batches_bound_time_and_motion (26 batches, both tribes, 1/5/20/50x, bounded delay, safe endpoint, clean unload/stop)
+DELIVERY_110MS colony-1 min=0.90866088867188 max=0.909423828125 expected=0.90909090909091 held_frames=0
+DELIVERY_110MS colony-2 min=0.90866088867188 max=0.909423828125 expected=0.90909090909091 held_frames=0
+DELIVERY_120MS colony-1 min=0.8331298828125 max=0.83389282226563 expected=0.83333333333333 held_frames=0
+DELIVERY_120MS colony-2 min=0.83160400390625 max=0.83389282226563 expected=0.83333333333333 held_frames=0
+=== NETWORK INTERPOLATION RESULTS: 12/12 PASSED ===
+ALL NETWORK INTERPOLATION TESTS PASSED!

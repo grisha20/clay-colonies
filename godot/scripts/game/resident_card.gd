@@ -173,7 +173,7 @@ static func activity_for(target: NetworkResident, raw: Dictionary, snapshot: Dic
 	if state in ["sleep","sleeping"]:return ["act_sleep","Спит"]
 	if state in ["flee","fleeing"]:return ["act_flee","Убегает"]
 	var kind=str(target.work.get("kind",""))
-	var work={"chop":["act_chop","Рубит дерево"],"mine":["act_mine","Добывает камень"],"dig":["act_dig","Копает глину"],"build":["act_build","Строит"],"fish":["act_fish","Ловит рыбу"],"hunt":["act_fight","Охотится"]}
+	var work={"chop":["act_chop","Рубит дерево"],"mine":["act_mine","Добывает камень"],"dig":["act_dig","Копает глину"],"build":["act_build","Строит"],"fish":["act_fish","Ловит рыбу"],"hunt":["act_hunt","Охотится"]}
 	if work.has(kind):return work[kind]
 	if target.kiln_called:return ["act_walk","Идёт к печи"]
 	if state=="feed" or target.job_name=="nurse":return ["act_eat","Заботится о малышах"]

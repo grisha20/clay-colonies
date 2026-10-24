@@ -1,0 +1,24 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS player_tribe_stores 
+PASS night_and_rain_label День 1 · ночь · дождь
+PASS speed_button_follows_server 
+PASS alarm_button_follows_server 
+PASS tasks_listed 
+PASS raid_and_rain_alerts Пауки готовят набег! Через 60 с. Стройте ограду и собирайте воинов.
+Дождь: жители прячутся, стены размокают.
+Великий ливень — финал партии — через 90 с.
+Тревога включена: работа остановлена.
+PASS speed_button_emits 
+PASS tooltip_shows 
+PASS tooltip_hides 
+PASS describe_tree Дерево · 6 дерева · нужен топор
+PASS describe_sapling 
+PASS describe_quarry Каменный карьер · 100 / 7200 · 6 рабочих мест · нужна кирка
+PASS describe_bare_bush 
+PASS describe_site Хижина племени B · строится 40%
+PASS describe_spider 
+PASS describe_campfire 
+PASS describe_lake 
+PASS open_ground_is_silent 
+GAME_HUD_FAILURES=0

@@ -1,5 +1,6 @@
 """Incremental HUD polish; never rebuild unrelated assets/Claude speed glyphs."""
 import argparse,json,sys
+from pathlib import Path
 sys.dont_write_bytecode=True
 import numpy as np
 from PIL import Image,ImageDraw
@@ -25,6 +26,11 @@ def source_spec(catalog,name,source,title=None,size=(96,96),margin=8):
     catalog[name]=s
 
 def bell_sources(catalog,entry):
+    if not Path(entry['generated_path']).is_file():
+        # The portable pack contains the prepared sources of all four variants.
+        for name in ('glyph_alarm','glyph_alarm_on','glyph_alarm_light','glyph_alarm_on_light'):
+            if not (ROOT/'_source'/f'{name}.png').is_file():raise FileNotFoundError(name)
+        return
     source=clean_source(Image.open(entry['generated_path']))
     base=sprite(source,(768,768),90)
     for active in (False,True):
@@ -74,7 +80,7 @@ def map_sources(catalog):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--stage',type=int,choices=range(1,5),required=True)
+    parser.add_argument('--stage',type=int,choices=range(1,6),required=True)
     args=parser.parse_args()
     catalog=load_catalog();names=[]
     if args.stage==1:
@@ -121,6 +127,10 @@ def main():
         clean_source(source).save(ROOT/'_source'/f'{name}.png',optimize=True);names.append(name)
     elif args.stage==4:
         names=map_sources(catalog)
+    elif args.stage==5:
+        # Refresh inventory/overview without touching any game image.
+        for name,title in TITLES.items():
+            if name in catalog:catalog[name]['title']=title
     CATALOG.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     for name in names:build_one(name,catalog[name],{})
     images={n:Image.open(ROOT/f'{n}.png').convert('RGBA') for n in catalog}

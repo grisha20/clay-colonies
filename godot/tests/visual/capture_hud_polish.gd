@@ -84,6 +84,11 @@ func run() -> void:
 		if scene.minimap.terrain_tex!=terrain_before:
 			push_error("Overlay update unexpectedly rebuilt terrain");quit(3);return
 		print("PASS minimap marker overlay reuses terrain texture")
+	elif phase=="final":
+		scene.select_resident(scene.entity_registry.residents.values()[0])
+		Input.warp_mouse(Vector2(900,120))
+		await frames(30)
+		await capture("polish_final_%dx%d" % [root.size.x,root.size.y])
 	scene.ws_client.disconnect_from_server()
 	scene.free()
 	await process_frame

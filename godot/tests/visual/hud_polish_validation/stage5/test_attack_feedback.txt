@@ -1,0 +1,10 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS spider_drawn 
+PASS no_lunge_without_attack 
+PASS lunges_on_fresh_attack -0.34468272328377
+PASS hit_building_shakes 
+PASS lunge_settles 
+PASS shake_settles 
+PASS old_attack_no_lunge 
+ATTACK_FEEDBACK_FAILURES=0

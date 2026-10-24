@@ -609,7 +609,7 @@
       96
     ],
     "group": "glyph",
-    "title": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges.",
+    "title": "Бронзовый колокол тревоги",
     "prompt": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges.",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой",
     "source_max": 1024,
@@ -639,7 +639,7 @@
       96
     ],
     "group": "glyph",
-    "title": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges. Tilted -13 degrees with sound arcs.",
+    "title": "Звучащий бронзовый колокол",
     "prompt": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges. Tilted -13 degrees with sound arcs.",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой",
     "source_max": 1024,
@@ -1837,7 +1837,7 @@
       96
     ],
     "group": "extra",
-    "title": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges. Ivory-bronze light material; keep volume and silhouette.",
+    "title": "Светлый бронзовый колокол",
     "stage": 2,
     "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
@@ -1867,7 +1867,7 @@
       96
     ],
     "group": "extra",
-    "title": "Use case: stylized-concept. Production icon for Clayfolk game HUD. Reference image is ONLY a style reference: recreate the small volumetric warm bronze alarm bell in the upper-right quick bar, as one isolated large object. A complete simple bronze bell, rounded domed shoulder, little top handle, gently flaring sides, thick rolled lip, dark inside cavity and a small visible bronze clapper. Slight three-quarter frontal view; warm bronze/copper (#A96D32 to #DDA357), clear soft pale-gold highlight at upper-left and shaded lower-right, tactile polished clay-like stylized 3D material, not a flat solid symbol. Bold simple silhouette, modest surface detail readable at 32px. Upright resting bell, no sound waves in this base version. Transparent RGBA background with generous 12% clear margin on every side; no ground, scene, grass, writing, UI frame, glow or extra objects. Render at native1024px or larger, sharp edges. Ivory-bronze light material; keep volume and silhouette.",
+    "title": "Звучащий светлый колокол",
     "stage": 2,
     "mode": "v2",
     "where": "Правая верхняя панель — управление временем / настройками / тревогой · светлый вариант для тёмной / красной подложки",
