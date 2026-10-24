@@ -5,6 +5,9 @@ All outputs stay in the two new buildings/ folders. No old source is opened.
 The one opaque palette/texture atlas is ready to share with later buildings.
 """
 from pathlib import Path
+import sys
+sys.dont_write_bytecode=True
+sys.path.insert(0,str(Path(__file__).resolve().parent))
 import json
 import math
 import struct
@@ -46,8 +49,8 @@ def atlas():
             cx,cy=rng.uniform(0,1,2);radius=rng.uniform(.003,.018)
             clay -= rng.uniform(.015,.07)*np.exp(-((x-cx)**2+(y-cy)**2)/(radius*radius))
         if i in (1,2,3,15):
-            # Broad longitudinal straw fibres, already legible at a small mip.
-            texture = .022*np.sin(x*116+np.sin(y*19)*3) + .014*np.sin(x*360+np.sin(y*31)*5) + noise*.7
+            # Soft isotropic clay dimples, never longitudinal wood fibres.
+            texture = clay*.42
         elif i in (4,10,11):
             texture = .07*np.sin(x*62+np.sin(y*9)*2) + .025*np.sin(x*172+y*4) + noise
         else:
@@ -119,37 +122,30 @@ def walls():
 
 
 def thatch(count, profile, upper=False):
-    # Individual closed, narrow straw rolls. A five-sided rounded section is
-    # smooth shaded; the centreline bends down into a small rounded tip.
+    # Full rounded rolls, rather than a shallow strip with wood-grain shading.
+    # Use the same bumpy, closed bundle geometry as storage and workshop.
+    from building_kit import Builder
+    builder=Builder('HutStraw')
     rng = np.random.default_rng(1837 if upper else 4871)
     widths = rng.uniform(.80,1.20,count)
     edges = np.r_[0,np.cumsum(widths/widths.sum()*TAU)]
     phase = .037 if upper else 0
     for strand in range(count):
-        vertices=[];uvs=[];faces=[]
         center=phase+(edges[strand]+edges[strand+1])*.5
         half_angle=(edges[strand+1]-edges[strand])*.51
         length=1+rng.uniform(-.015,.015)
-        lump=rng.uniform(.9,1.15)
-        for row,(radius,z,width) in enumerate(profile):
-            t=row/(len(profile)-1)
-            angle=center+.009*math.sin(strand*2.71+t*4)*math.sin(t*math.pi)
-            r=radius*length
-            droop=(.015+.028*(.5+.5*math.sin(strand*2.33)))*t**3
-            ripple=.009*math.sin(strand*3.19+t*6)
-            cross=[(-1,-.02),(-.70,.045),(0,.085),(.70,.045),(1,-.02)]
-            for side,(across,depth) in enumerate(cross):
-                a=angle+across*half_angle*width
-                height=z+depth*width*lump+ripple-droop
-                vertices.append((r*math.cos(a),r*math.sin(a),height))
-                uvs.append((side/4,t))
-        for row in range(len(profile)-1):
-            for side in range(5):
-                a=row*5+side;b=row*5+(side+1)%5
-                faces.append((a,b,b+5,a+5))
-        faces += [(4,3,2,1,0),tuple(range((len(profile)-1)*5,len(profile)*5))]
+        start=profile[0];end=profile[-1]
+        middle=((start[0]+end[0])*.5,(start[1]+end[1])*.5+.025)
+        points=[]
+        for row,(radius,z) in enumerate([(start[0],start[1]),middle,(end[0],end[1])]):
+            a=center+.009*math.sin(strand*2.71+row*2)
+            droop=(.015+.028*(.5+.5*math.sin(strand*2.33)))*(row*.5)**3
+            points.append((radius*length*math.cos(a),radius*length*math.sin(a),z-droop))
         tile=int(rng.choice([1,1,1,2,3]))
-        part(vertices,faces,uvs,tile)
+        builder.straw(points,end[0]*half_angle*.98,8000+strand+(100 if upper else 0),tile)
+    offset=len(VERTS)
+    VERTS.extend(builder.vertices);FACES.extend(tuple(offset+i for i in face) for face in builder.faces)
+    UVS.extend(builder.uv)
 
 
 def main():

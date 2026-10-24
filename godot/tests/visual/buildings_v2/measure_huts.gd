@@ -11,11 +11,13 @@ func run() -> void:
 	var label = "baseline"
 	var mix = "huts"
 	var legacy_stage2=false
+	var legacy_all=false
 	for i in range(args.size()):
 		if args[i] == "--qa-port" and i + 1 < args.size(): port = args[i + 1]
 		if args[i] == "--label" and i + 1 < args.size(): label = args[i + 1]
 		if args[i] == "--mix" and i + 1 < args.size(): mix = args[i + 1]
 		if args[i] == "--legacy-stage2":legacy_stage2=true
+		if args[i] == "--legacy-all":legacy_all=true
 	if not port.begins_with("88"):
 		push_error("Explicit isolated QA 88xx required"); quit(2); return
 	var path = "res://../tmp/qa/buildings_v2_measure_snapshot.json"
@@ -32,12 +34,13 @@ func run() -> void:
 		snapshot = scene.world_view.last_snapshot.duplicate(true)
 		var camp = snapshot.surface.entrances[0]
 		snapshot.surface.buildings = []
-		var columns=8 if mix=="huts" else 6
+		var columns=8 if mix=="huts" else 7 if mix=="all" else 6
 		for y in range(6):
 			for x in range(columns):
-				var types={"stage1":["hut","storage","workshop"],"stage2":["kiln","storage","hut"],"stage3":["idol","totem","hut"]}
-				var type="hut" if mix=="huts" else types[mix][x%3]
-				snapshot.surface.buildings.append({"id":"bench-%d-%d" % [x,y], "type":type, "level":2 if mix!="huts" and type=="hut" else 1,"stage":"built", "colonyId":"colony-1", "hp":100,"pos":{"x":float(camp.x)+(x-(columns-1)*.5)*9,"y":float(camp.y)+(y-2.5)*6}})
+				var types={"stage1":["hut","storage","workshop"],"stage2":["kiln","storage","hut"],"stage3":["idol","totem","hut"],"all":["hut","house","storage","workshop","kiln","idol","totem"]}
+				var type="hut" if mix=="huts" else types[mix][x%types[mix].size()]
+				var level=2 if type=="house" or (mix not in ["huts","all"] and type=="hut") else 1
+				snapshot.surface.buildings.append({"id":"bench-%d-%d" % [x,y], "type":"hut" if type=="house" else type, "level":level,"stage":"built", "colonyId":"colony-1", "hp":100,"pos":{"x":float(camp.x)+(x-(columns-1)*.5)*9,"y":float(camp.y)+(y-2.5)*6}})
 		var file = FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify(snapshot)); file.close()
 	else:
@@ -45,7 +48,22 @@ func run() -> void:
 	scene.ws_client.snapshot_received.disconnect(scene._on_snapshot_received)
 	scene.ws_client.disconnect_from_server()
 	scene._on_snapshot_received(snapshot)
-	if legacy_stage2:
+	if legacy_all:
+		for b in snapshot.surface.buildings:
+			var model=scene.world_view.active_buildings[b.id]
+			if b.type=="hut":
+				for child in model.get_children():
+					if not child is Light3D:child.free()
+				var old=load("res://assets/models/hut.glb").instantiate()
+				old.scale=WorldView.HUT_SCALE*(1.18 if int(b.level)>=2 else 1.0);old.position.z=.5
+				model.add_child(old)
+				if int(b.level)>=2:
+					var decor=MeshInstance3D.new();decor.mesh=PropFactory.house_decor(WorldView.POST_COLORS[0]);decor.scale=Vector3.ONE*1.18;model.add_child(decor)
+			else:
+				if b.type=="totem":model.get_node("TribeAccent").free()
+				var meshes={"storage":PropFactory.storage,"workshop":PropFactory.workshop,"kiln":PropFactory.kiln,"idol":PropFactory.idol,"totem":PropFactory.totem.bind(WorldView.POST_COLORS[0])}
+				(model as MeshInstance3D).mesh=meshes[b.type].call()
+	if legacy_stage2 or legacy_all:
 		# Matched control on the same fixture, without changing production files.
 		for b in snapshot.surface.buildings:
 			if b.type=="kiln":(scene.world_view.active_buildings[b.id] as MeshInstance3D).mesh=PropFactory.kiln()
