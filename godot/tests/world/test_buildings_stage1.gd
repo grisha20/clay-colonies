@@ -9,7 +9,7 @@ func check(label: String, ok: bool) -> void:
 	print("PASS " if ok else "FAIL ",label)
 	if not ok:failures+=1
 
-func inspect(node: Node, transform: Transform3D, radius: Vector2, offset: float) -> Dictionary:
+static func inspect(node: Node, transform: Transform3D, radius: Vector2, offset: float) -> Dictionary:
 	var result={"ellipse":0.0,"opaque":true,"fade":true,"atlas":0}
 	if node is Node3D:transform*=node.transform
 	if node is MeshInstance3D and node.mesh:

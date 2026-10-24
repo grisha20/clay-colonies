@@ -50,7 +50,12 @@ func run() -> void:
 	var lands = view.ground_material.get_shader_parameter("land_count")
 	check("land_discs_to_shader", int(lands) == 3, str(lands))
 	var totem_node = view.active_buildings.get("t-colony-2-300") as MeshInstance3D
-	check("totem_built_node", totem_node != null and totem_node.mesh == PropFactory.totem(WorldView.POST_COLORS[1]))
+	var accent = totem_node.get_node_or_null("TribeAccent") as MeshInstance3D if totem_node else null
+	var tribe_material = accent.material_override as StandardMaterial3D if accent else null
+	var authored = load("res://assets/models/buildings/totem_v2.glb").instantiate()
+	var authored_mesh = (authored.get_node("TotemV2") as MeshInstance3D).mesh
+	check("totem_built_node", totem_node != null and totem_node.mesh == authored_mesh and tribe_material != null and tribe_material.albedo_color == WorldView.POST_COLORS[1])
+	authored.free()
 	view.queue_free()
 
 	var hud = GameHud.new()

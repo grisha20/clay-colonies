@@ -1159,6 +1159,24 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 		"totem":
 			var totem = MeshInstance3D.new()
 			totem.mesh = PropFactory.totem(POST_COLORS[clampi(colony_idx, 0, 1)])
+			if ResourceLoader.exists("res://assets/models/buildings/totem_v2.glb"):
+				var totem_scene = load("res://assets/models/buildings/totem_v2.glb") as PackedScene
+				if totem_scene:
+					var model = totem_scene.instantiate()
+					var mesh = model.find_child("TotemV2", true, false) as MeshInstance3D
+					if mesh:
+						totem.mesh = mesh.mesh
+						totem.name = "TotemV2"
+						var accent = model.find_child("TribeAccent", true, false) as MeshInstance3D
+						if accent:
+							accent.get_parent().remove_child(accent)
+							accent.owner = null
+							var material = StandardMaterial3D.new()
+							material.albedo_color = POST_COLORS[clampi(colony_idx, 0, 1)]
+							material.roughness = 0.9
+							accent.material_override = material
+							totem.add_child(accent)
+					model.free()
 			return totem
 		"kiln":
 			var oven = MeshInstance3D.new()
@@ -1195,6 +1213,20 @@ func _make_building(b_type: String, built: bool, vertical: bool, span: int, colo
 				oven.add_child(light)
 				kiln_nodes.append(oven)
 			return oven
+		"idol":
+			if ResourceLoader.exists("res://assets/models/buildings/idol_v2.glb"):
+				var idol_scene = load("res://assets/models/buildings/idol_v2.glb") as PackedScene
+				if idol_scene:
+					var model = idol_scene.instantiate()
+					var mesh = model.find_child("IdolV2", true, false) as MeshInstance3D
+					if mesh:
+						mesh.get_parent().remove_child(mesh)
+						model.free()
+						return mesh
+					return model
+			var idol = MeshInstance3D.new()
+			idol.mesh = PropFactory.idol()
+			return idol
 		_:
 			var i = MeshInstance3D.new()
 			i.mesh = PropFactory.idol()
